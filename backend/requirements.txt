@@ -1,55 +1,25 @@
-# My Pharma - Production Dependencies
-
-# Django and DRF
+# Django 4+ & DRF
 Django>=4.2,<5.0
-djangorestframework>=3.14.0
+djangorestframework>=3.14,<4.0
+django-cors-headers>=4.3.0
+django-filter>=23.5
+
+# MySQL
+mysqlclient>=2.2.0
+
+# JWT
 djangorestframework-simplejwt>=5.3.0
 
-# Database
-mysqlclient>=2.2.0
-PyMySQL>=1.1.0
-
-# Redis
+# Redis & Celery
 redis>=5.0.0
 django-redis>=5.4.0
+celery[redis]>=5.3.0
+django-celery-beat>=2.5.0
 
-# Celery
-celery>=5.3.0
-
-# Security
+# Security & validation
 PyJWT>=2.8.0
-cryptography>=41.0.0
-
-# Configuration
+phonenumbers>=8.13.0
 python-dotenv>=1.0.0
 
-# Validation
-pydantic>=2.5.0
-
-# Async
-channels>=4.0.0
-daphne>=4.0.0
-
-# Documentation
-drf-yasg>=1.21.7
-
-# Rate limiting
-django-ratelimit>=4.1.0
-
-# Audit logging
-django-auditlog>=2.3.0
-
-# Filters
-django-filter>=23.5.0
-
-# CORS
-django-cors-headers>=4.3.0
-
-# Testing
-pytest>=7.4.0
-pytest-django>=4.7.0
-pytest-cov>=4.1.0
-
-# Code quality
-flake8>=6.1.0
-black>=23.11.0
+# Utils
+drf-spectacular>=0.27.0
