@@ -7,6 +7,8 @@ Single reference for **all current auth API endpoints**: request/response schema
 
 **→ User hierarchy & role permissions:** [RBAC.md](RBAC.md) (Super Admin, Pharmacy Admin, Doctor, Registered User, Guest; permissions matrix and admin/API access).
 
+**→ Admin panel REST API (users, products, orders, prescriptions, consultations, CMS):** [ADMIN_API.md](ADMIN_API.md).
+
 ---
 
 ## 1. General

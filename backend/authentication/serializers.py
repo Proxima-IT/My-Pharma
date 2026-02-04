@@ -202,6 +202,50 @@ class UserMeSerializer(serializers.ModelSerializer):
         return e
 
 
+class UserManagementSerializer(serializers.ModelSerializer):
+    """Admin user management (SUPER_ADMIN only)."""
+    role_display = serializers.CharField(source="get_role_display", read_only=True)
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    password = serializers.CharField(write_only=True, required=False, min_length=8)
+
+    class Meta:
+        model = User
+        fields = (
+            "id", "username", "email", "phone", "password", "role", "role_display",
+            "status", "status_display", "email_verified", "phone_verified",
+            "profile_picture", "address", "is_active", "is_staff", "is_superuser",
+            "created_at", "updated_at",
+        )
+        read_only_fields = ("id", "created_at", "updated_at")
+        extra_kwargs = {"password": {"write_only": True, "required": False}}
+
+    def validate(self, attrs):
+        if self.instance is None:
+            if not attrs.get("password"):
+                raise serializers.ValidationError({"password": "Password is required for new users."})
+            email = (attrs.get("email") or "").strip()
+            phone = (attrs.get("phone") or "").strip()
+            if not email and not phone:
+                raise serializers.ValidationError("Provide email or phone.")
+        return attrs
+
+    def create(self, validated_data):
+        password = validated_data.pop("password", None)
+        user = User.objects.create_user(**validated_data)
+        user.set_password(password)
+        user.save(update_fields=["password"])
+        return user
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop("password", None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password:
+            instance.set_password(password)
+        instance.save()
+        return instance
+
+
 class TokenResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()

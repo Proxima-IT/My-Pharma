@@ -83,10 +83,28 @@ Public registration (request-otp → verify-otp → register/complete, or regist
 
 ---
 
-## 6. References
+## 6. Admin Panel REST API
+
+The backend exposes REST APIs for the admin panel (and for customers: place order, upload prescription, request consultation). All endpoints are protected by the permissions above.
+
+- **Full endpoint list:** [ADMIN_API.md](ADMIN_API.md) – Users, Categories, Products, Orders, Prescriptions, Consultations, CMS Pages.
+
+| API prefix                           | Purpose                                                                    |
+| ------------------------------------ | -------------------------------------------------------------------------- |
+| `/api/auth/admin/users/`             | Manage All Users (SUPER_ADMIN only)                                        |
+| `/api/categories/`, `/api/products/` | Manage Products, Inventory (Pharmacy/Super)                                |
+| `/api/orders/`                       | View/Manage Orders (Pharmacy/Super all; User own); Place order (User only) |
+| `/api/prescriptions/`                | Verify Prescriptions (Pharmacy/Super); Upload (User only)                  |
+| `/api/consultations/`                | Doctor Consultations (Doctor/Super respond; User request)                  |
+| `/api/pages/`                        | CMS (Super full; Pharmacy limited)                                         |
+
+---
+
+## 7. References
 
 - Permission classes: `authentication/permissions.py`
 - Admin restrictions: `authentication/admin.py`
 - Role constants: `authentication/constants.py` (`UserRole`)
-- API reference: [API_REFERENCE.md](API_REFERENCE.md)
+- Admin REST API: [ADMIN_API.md](ADMIN_API.md)
+- Auth API reference: [API_REFERENCE.md](API_REFERENCE.md)
 - Security checklist: [SECURITY_CHECKLIST.md](SECURITY_CHECKLIST.md)

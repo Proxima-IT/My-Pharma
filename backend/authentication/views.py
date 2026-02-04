@@ -3,7 +3,7 @@ Auth API views: phone OTP, email register, login, refresh, logout, password-rese
 Throttling and permissions applied per endpoint.
 """
 import logging
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -13,7 +13,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from .constants import AuditAction
 from .exceptions import AccountLockedError, InvalidOTPError, InvalidRegistrationTokenError, OTPRateLimitError
 from .models import User
-from .permissions import IsRegisteredUser
+from .permissions import IsRegisteredUser, IsSuperAdmin
 from .serializers import (
     RequestOTPSerializer,
     RegisterPhoneRequestSerializer,
@@ -23,6 +23,7 @@ from .serializers import (
     LoginRequestSerializer,
     PasswordResetRequestSerializer,
     UserMeSerializer,
+    UserManagementSerializer,
 )
 from .services import (
     request_otp_for_phone,
@@ -332,3 +333,19 @@ class MeView(APIView):
         if not user or user.deleted_at:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
         return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
+class UserManagementViewSet(viewsets.ModelViewSet):
+    """Manage All Users – SUPER_ADMIN only. List, create, retrieve, update, delete users."""
+    queryset = User.objects.exclude(deleted_at__isnull=False).order_by("-created_at")
+    serializer_class = UserManagementSerializer
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    filterset_fields = ["role", "status", "is_active"]
+    search_fields = ["username", "email", "phone"]
+    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return User.objects.filter(deleted_at__isnull=True).order_by("-created_at")
+
+    def perform_destroy(self, instance):
+        instance.soft_delete()

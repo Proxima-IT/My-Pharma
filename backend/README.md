@@ -67,6 +67,7 @@ python manage.py runserver
 
 - **[docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md)** – Deployment and compliance (including Bangladesh digital health norms).
 - **[docs/RBAC.md](docs/RBAC.md)** – **User hierarchy & role permissions matrix:** Super Admin, Pharmacy Admin, Doctor, Registered User, Guest; which roles can manage users, products, prescriptions, inventory, orders, consultations, CMS, and purchase/upload prescriptions; admin panel access (SUPER_ADMIN only for Users and Audit Logs).
+- **[docs/ADMIN_API.md](docs/ADMIN_API.md)** – **Admin panel REST API:** Users (`/api/auth/admin/users/`), Categories, Products, Orders, Prescriptions, Consultations, CMS Pages (`/api/...`); all protected by RBAC.
 
 ## Project layout
 
