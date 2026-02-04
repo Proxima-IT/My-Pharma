@@ -15,6 +15,7 @@ from .exceptions import AccountLockedError, InvalidOTPError, InvalidRegistration
 from .models import User
 from .permissions import IsRegisteredUser
 from .serializers import (
+    RequestOTPSerializer,
     RegisterPhoneRequestSerializer,
     VerifyOTPRequestSerializer,
     RegisterCompleteRequestSerializer,
@@ -25,7 +26,9 @@ from .serializers import (
 )
 from .services import (
     request_otp_for_phone,
+    request_otp_for_email,
     verify_otp_only,
+    verify_otp_only_email,
     complete_registration,
     register_with_email,
     perform_login_email,
@@ -38,18 +41,57 @@ from .throttling import LoginRateThrottle, OTPSendRateThrottle, OTPVerifyRateThr
 logger = logging.getLogger(__name__)
 
 
-def _token_response_for_user(user):
+def _token_response_for_user(user, request=None):
     refresh = RefreshToken.for_user(user)
-    access = str(refresh.access_token)
-    refresh_str = str(refresh)
+    context = {"request": request} if request else {}
     return Response(
         {
-            "access": access,
-            "refresh": refresh_str,
-            "user": UserMeSerializer(user).data,
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "user": UserMeSerializer(user, context=context).data,
         },
         status=status.HTTP_200_OK,
     )
+
+
+class RequestOTPView(APIView):
+    """POST /api/auth/request-otp/ – Request OTP by email or phone (unified). Sends OTP to SMS or email."""
+    permission_classes = [AllowAny]
+    throttle_classes = [OTPSendRateThrottle]
+
+    def post(self, request):
+        ser = RequestOTPSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        email = ser.validated_data.get("email", "")
+        phone = ser.validated_data.get("phone", "")
+        try:
+            if email:
+                request_otp_for_email(
+                    email,
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+                create_audit_log(None, AuditAction.OTP_SENT, request=request, metadata={"channel": "email", "email_masked": email[:2] + "***"})
+                return Response(
+                    {"message": "OTP sent successfully.", "detail": "Check your email for the code."},
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                request_otp_for_phone(
+                    phone,
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+                create_audit_log(None, AuditAction.OTP_SENT, request=request, metadata={"channel": "phone", "phone_masked": phone[-4:]})
+                return Response(
+                    {"message": "OTP sent successfully.", "detail": "Check your phone for the code."},
+                    status=status.HTTP_200_OK,
+                )
+        except OTPRateLimitError:
+            return Response(
+                {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
 
 
 class RegisterPhoneView(APIView):
@@ -80,50 +122,64 @@ class RegisterPhoneView(APIView):
 
 
 class VerifyOTPView(APIView):
-    """POST /api/auth/verify-otp/ – Verify OTP only; returns registration_token for the completion form (no user yet)."""
+    """POST /api/auth/verify-otp/ – Verify OTP by email or phone; returns registration_token and verified identifier for completion form."""
     permission_classes = [AllowAny]
     throttle_classes = [OTPVerifyRateThrottle]
 
     def post(self, request):
         ser = VerifyOTPRequestSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        phone = ser.validated_data["phone"]
+        email = ser.validated_data.get("email", "")
+        phone = ser.validated_data.get("phone", "")
         otp = ser.validated_data["otp"]
         try:
-            registration_token, verified_phone = verify_otp_only(phone, otp)
+            if email:
+                registration_token, verified_type, verified_value = verify_otp_only_email(email, otp)
+                metadata = {"channel": "email", "email_masked": verified_value[:2] + "***"}
+            else:
+                registration_token, verified_type, verified_value = verify_otp_only(phone, otp)
+                metadata = {"channel": "phone", "phone_masked": verified_value[-4:]}
         except InvalidOTPError:
             return Response(
                 {"detail": "Invalid or expired OTP.", "code": "invalid_otp"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         from .utils import get_registration_token_ttl_seconds
-        create_audit_log(None, AuditAction.OTP_VERIFIED, request=request, metadata={"phone_masked": verified_phone[-4:]})
-        return Response(
-            {
-                "message": "OTP verified. Complete your registration.",
-                "registration_token": registration_token,
-                "phone": verified_phone,
-                "expires_in": get_registration_token_ttl_seconds(),
-            },
-            status=status.HTTP_200_OK,
-        )
+        create_audit_log(None, AuditAction.OTP_VERIFIED, request=request, metadata=metadata)
+        payload = {
+            "message": "OTP verified. Complete your registration.",
+            "registration_token": registration_token,
+            "verified_identifier_type": verified_type,
+            "verified_identifier_value": verified_value,
+            "expires_in": get_registration_token_ttl_seconds(),
+        }
+        if verified_type == "phone":
+            payload["phone"] = verified_value
+        else:
+            payload["email"] = verified_value
+        return Response(payload, status=status.HTTP_200_OK)
 
 
 class RegisterCompleteView(APIView):
-    """POST /api/auth/register/complete/ – Complete registration with password and optional profile (after OTP). Returns JWT + user."""
+    """POST /api/auth/register/complete/ – Complete registration: username, password, email or phone (other than verified), profile_picture, address. Accepts JSON or multipart/form-data."""
     permission_classes = [AllowAny]
 
     def post(self, request):
-        ser = RegisterCompleteRequestSerializer(data=request.data)
+        data = request.data.copy()
+        if request.FILES:
+            data.update(request.FILES)
+        ser = RegisterCompleteRequestSerializer(data=data)
         ser.is_valid(raise_exception=True)
         data = ser.validated_data
         try:
             user = complete_registration(
                 registration_token=data["registration_token"],
                 password=data["password"],
+                username=data["username"],
                 email=data.get("email") or None,
-                first_name=data.get("first_name") or None,
-                last_name=data.get("last_name") or None,
+                phone=data.get("phone") or None,
+                profile_picture=data.get("profile_picture"),
+                address=data.get("address") or None,
             )
         except InvalidRegistrationTokenError as e:
             return Response(
@@ -132,7 +188,7 @@ class RegisterCompleteView(APIView):
             )
         create_audit_log(user.id, AuditAction.REGISTER_COMPLETE, request=request)
         create_audit_log(user.id, AuditAction.LOGIN, request=request)
-        return _token_response_for_user(user)
+        return _token_response_for_user(user, request=request)
 
 
 class RegisterEmailView(APIView):
@@ -147,7 +203,7 @@ class RegisterEmailView(APIView):
             password=ser.validated_data["password"],
         )
         create_audit_log(user.id, AuditAction.REGISTER_EMAIL, request=request)
-        return _token_response_for_user(user)
+        return _token_response_for_user(user, request=request)
 
 
 class LoginView(APIView):
@@ -177,7 +233,7 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         create_audit_log(user.id, AuditAction.LOGIN, request=request)
-        return _token_response_for_user(user)
+        return _token_response_for_user(user, request=request)
 
 
 class TokenRefreshViewCustom(TokenRefreshView):
@@ -275,4 +331,4 @@ class MeView(APIView):
         user = User.objects.filter(pk=request.user.pk).first()
         if not user or user.deleted_at:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-        return Response(UserMeSerializer(user).data, status=status.HTTP_200_OK)
+        return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)

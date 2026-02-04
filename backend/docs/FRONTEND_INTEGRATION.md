@@ -21,17 +21,23 @@ All auth endpoints expect **JSON** and return **JSON**.
 
 ## 2. How to register an account
 
-You have two flows: **phone (OTP)** and **email + password**.
+You have **unified (email or phone OTP)** and **legacy** flows.
 
-### Option A: Register with phone (OTP) – 3 steps
+### Option A: Unified – Request OTP by email or phone (recommended)
 
-**Step 1 – Request OTP**
+**Step 1 – Request OTP** (user enters email OR phone; backend sends OTP to that channel)
 
 ```http
-POST /api/auth/register/phone/
+POST /api/auth/request-otp/
 Content-Type: application/json
 
 {"phone": "01712345678"}
+```
+
+or
+
+```json
+{ "email": "user@example.com" }
 ```
 
 **Success (200):**
@@ -45,7 +51,7 @@ Content-Type: application/json
 
 **Step 2 – Verify OTP (no account created yet)**
 
-User enters the 6-digit OTP (from SMS or, in dev, from server log `logs/my_pharma.log`):
+User enters the 6-digit OTP (from SMS or email; in dev, check server log `logs/my_pharma.log`):
 
 ```http
 POST /api/auth/verify-otp/
@@ -54,12 +60,20 @@ Content-Type: application/json
 {"phone": "01712345678", "otp": "123456"}
 ```
 
-**Success (200):** You get a **registration_token** and **phone**. Show the **user completion form** (password, name, email, etc.).
+or
+
+```json
+{ "email": "user@example.com", "otp": "123456" }
+```
+
+**Success (200):** You get **registration_token**, **verified_identifier_type** ("phone" or "email"), **verified_identifier_value**. Show the **user completion form**: display the verified value as **uneditable**; collect **username**, **password**, and optionally the **other** identifier (email if verified was phone, phone if verified was email), **profile_picture**, **address**, first_name, last_name.
 
 ```json
 {
   "message": "OTP verified. Complete your registration.",
   "registration_token": "550e8400-e29b-41d4-a716-446655440000",
+  "verified_identifier_type": "phone",
+  "verified_identifier_value": "01712345678",
   "phone": "01712345678",
   "expires_in": 600
 }
@@ -67,7 +81,7 @@ Content-Type: application/json
 
 **Step 3 – Complete registration (user creation form)**
 
-User fills password and optional fields (email, first_name, last_name). Send the **registration_token** from step 2:
+User fills **username**, **password**, and optionally the other identifier (email or phone), **profile_picture** (file), **address**, first_name, last_name. Use **multipart/form-data** when sending a profile picture.
 
 ```http
 POST /api/auth/register/complete/
@@ -76,37 +90,26 @@ Content-Type: application/json
 {
   "registration_token": "550e8400-e29b-41d4-a716-446655440000",
   "password": "SecurePass1!",
+  "username": "johndoe",
   "email": "user@example.com",
+  "address": "123 Main St, Dhaka",
   "first_name": "John",
   "last_name": "Doe"
 }
 ```
 
-**Success (200):** You get access + refresh tokens and user profile. Store tokens and treat user as logged in.
+(If verified was email, send **phone** instead of email. Omit profile_picture for JSON; use multipart/form-data to upload an image.)
 
-```json
-{
-  "access": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "refresh": "eyJ0eXAiOiJKV1QiLCJhbGc...",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "phone": "01712345678",
-    "first_name": "John",
-    "last_name": "Doe",
-    "role": "REGISTERED_USER",
-    "status": "ACTIVE",
-    "email_verified": false,
-    "phone_verified": true,
-    "created_at": "2025-02-02T10:00:00Z"
-  }
-}
-```
+**Success (200):** You get access + refresh tokens and user profile (including username, profile_picture, address). Store tokens and treat user as logged in.
 
-- **registration_token** is valid for 10 minutes (configurable). If it expires, the user must repeat steps 1 and 2.
-- **password** is required; **email**, **first_name**, **last_name** are optional.
+- **registration_token** is valid for 10 minutes. If it expires, repeat steps 1 and 2.
+- **username** and **password** are required; the other identifier, profile_picture, address, first_name, last_name are optional.
 
-### Option B: Register with email + password
+### Option B: Register with phone only (legacy)
+
+Use `POST /api/auth/register/phone/` with `{"phone": "01712345678"}`, then verify-otp and register/complete (same as Option A steps 2–3, but completion form was previously password + optional email, first_name, last_name; now also requires **username** and supports profile_picture, address). Prefer Option A (request-otp) for unified email/phone flow.
+
+### Option C: Register with email + password (one step, no OTP)
 
 One request; no OTP.
 

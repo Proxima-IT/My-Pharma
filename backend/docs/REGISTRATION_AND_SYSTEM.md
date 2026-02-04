@@ -1,39 +1,39 @@
 # My Pharma – Registration Flow & Total System Instructions
 
-This document describes the **phone registration flow** (3 steps) and gives **total instructions** for integrating and running the auth system (app and web).
+This document describes the **unified registration flow** (email or phone → OTP → verify → user creation form) and gives **total instructions** for integrating and running the auth system (app and web).
 
 ---
 
-## Phone registration flow (3 steps)
+## Unified registration flow (recommended)
 
-The flow is: **Phone number → OTP send → OTP verified → User completion form (password and optional fields) → Account created.**
+User submits **email or phone** → backend sends OTP to that channel (SMS for phone, email for email) → user enters OTP → backend returns **registration_token** and verified identifier → frontend shows **user creation form** (verified value **uneditable**; collect username, password, other identifier optional, profile_picture, address) → backend creates account and returns JWT + user.
 
-| Step  | Endpoint                            | What happens                                                                                                                                                                                        |
-| ----- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **1** | `POST /api/auth/register/phone/`    | User enters phone. Backend sends 6-digit OTP (SMS in prod; in dev see `logs/my_pharma.log`).                                                                                                        |
-| **2** | `POST /api/auth/verify-otp/`        | User enters OTP. Backend verifies it and returns a **registration_token** (valid 10 min). **No user is created yet.**                                                                               |
-| **3** | `POST /api/auth/register/complete/` | Frontend shows a form: **password** (required), **email**, **first_name**, **last_name** (optional). User submits with the **registration_token**. Backend creates the user and returns JWT + user. |
+| Step  | Endpoint                            | What happens                                                                                                                                                                                                                                                                    |
+| ----- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **1** | `POST /api/auth/request-otp/`       | User enters **email or phone**. Backend sends 6-digit OTP (SMS for phone, email for email).                                                                                                                                                                                     |
+| **2** | `POST /api/auth/verify-otp/`        | User enters OTP. Backend verifies and returns **registration_token**, **verified_identifier_type** ("phone" or "email"), **verified_identifier_value**. No user created yet.                                                                                                    |
+| **3** | `POST /api/auth/register/complete/` | Form: **username**, **password** (required); verified value shown **uneditable**; optionally the **other** identifier (email if verified phone, phone if verified email), **profile_picture**, **address**, first_name, last_name. Backend creates user and returns JWT + user. |
 
-### Request/response summary
+### Request/response summary (unified)
 
 **Step 1 – Request OTP**
 
-- **Request:** `POST /api/auth/register/phone/`  
-  Body: `{"phone": "01712345678"}`
-- **Response (200):** `{"message": "OTP sent successfully.", "detail": "Check your phone for the code."}`
+- **Request:** `POST /api/auth/request-otp/`  
+  Body: `{"phone": "01712345678"}` or `{"email": "user@example.com"}`
+- **Response (200):** `{"message": "OTP sent successfully.", "detail": "Check your phone/email for the code."}`
 
 **Step 2 – Verify OTP**
 
 - **Request:** `POST /api/auth/verify-otp/`  
-  Body: `{"phone": "01712345678", "otp": "123456"}`
+  Body: `{"phone": "01712345678", "otp": "123456"}` or `{"email": "user@example.com", "otp": "123456"}`
 - **Response (200):**  
-  `{"message": "OTP verified. Complete your registration.", "registration_token": "<uuid>", "phone": "01712345678", "expires_in": 600}`  
-  → Store **registration_token** and show the completion form.
+  `{"message": "OTP verified. Complete your registration.", "registration_token": "<uuid>", "verified_identifier_type": "phone", "verified_identifier_value": "01712345678", "phone": "01712345678", "expires_in": 600}`  
+  → Store **registration_token**; show completion form with verified value **uneditable**.
 
 **Step 3 – Complete registration**
 
-- **Request:** `POST /api/auth/register/complete/`  
-  Body: `{"registration_token": "<from step 2>", "password": "SecurePass1!", "email": "user@example.com", "first_name": "John", "last_name": "Doe"}`
+- **Request:** `POST /api/auth/register/complete/` (JSON or multipart/form-data for profile_picture)  
+  Body: `{"registration_token": "<from step 2>", "password": "SecurePass1!", "username": "johndoe", "email": "user@example.com", "address": "123 Main St", "first_name": "John", "last_name": "Doe"}`
 - **Response (200):**  
   `{"access": "<jwt>", "refresh": "<jwt>", "user": { ... }}`  
   → Store tokens and user; user is logged in.
@@ -44,19 +44,20 @@ If **registration_token** is expired or invalid, response is **400** with `code:
 
 ## Auth API endpoints (overview)
 
-| Method | Endpoint                       | Description                                                      |
-| ------ | ------------------------------ | ---------------------------------------------------------------- |
-| POST   | `/api/auth/register/phone/`    | Step 1: request OTP for phone                                    |
-| POST   | `/api/auth/verify-otp/`        | Step 2: verify OTP, get registration_token                       |
-| POST   | `/api/auth/register/complete/` | Step 3: complete registration with password and optional profile |
-| POST   | `/api/auth/register/email/`    | Register with email + password (one step)                        |
-| POST   | `/api/auth/login/`             | Login with email or phone + password                             |
-| POST   | `/api/auth/token/refresh/`     | Rotate refresh token                                             |
-| POST   | `/api/auth/logout/`            | Logout (blacklist tokens)                                        |
-| POST   | `/api/auth/password-reset/`    | Request password reset email                                     |
-| GET    | `/api/auth/me/`                | Current user (requires auth)                                     |
+| Method | Endpoint                       | Description                                                                   |
+| ------ | ------------------------------ | ----------------------------------------------------------------------------- |
+| POST   | `/api/auth/request-otp/`       | Request OTP by **email or phone** (unified)                                   |
+| POST   | `/api/auth/verify-otp/`        | Verify OTP (email or phone), get registration_token                           |
+| POST   | `/api/auth/register/complete/` | Complete registration: username, password, other id, profile_picture, address |
+| POST   | `/api/auth/register/phone/`    | Request OTP for phone only (legacy)                                           |
+| POST   | `/api/auth/register/email/`    | Register with email + password (one step)                                     |
+| POST   | `/api/auth/login/`             | Login with email or phone + password                                          |
+| POST   | `/api/auth/token/refresh/`     | Rotate refresh token                                                          |
+| POST   | `/api/auth/logout/`            | Logout (blacklist tokens)                                                     |
+| POST   | `/api/auth/password-reset/`    | Request password reset email                                                  |
+| GET    | `/api/auth/me/`                | Current user (requires auth)                                                  |
 
-All POST bodies must be **JSON** with header **`Content-Type: application/json`**.
+POST bodies: **JSON** (`Content-Type: application/json`). For **profile_picture** upload use **multipart/form-data**.
 
 ---
 

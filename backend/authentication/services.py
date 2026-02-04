@@ -58,10 +58,22 @@ def _generate_otp() -> str:
     return "".join(str(random.randint(0, 9)) for _ in range(length))
 
 
-def verify_otp_only(phone: str, otp: str) -> tuple[str, str]:
+def request_otp_for_email(email: str, ip: str = "", user_agent: str = "") -> None:
+    """Validate resend limit, generate OTP, store in cache, enqueue Celery send. Raises OTPRateLimitError."""
+    normalized = email.lower().strip()
+    if not utils.otp_can_resend(normalized):
+        raise OTPRateLimitError()
+    from .tasks import send_otp_email
+    otp = _generate_otp()
+    utils.otp_set(normalized, otp)
+    utils.otp_resend_increment(normalized)
+    send_otp_email.delay(normalized, otp)
+    logger.info("OTP requested for email (masked); resend count incremented.")
+
+
+def verify_otp_only(phone: str, otp: str) -> tuple[str, str, str]:
     """
-    Verify OTP only; do not create user. Returns (registration_token, phone).
-    Frontend uses registration_token to call complete_registration with password and other fields.
+    Verify OTP for phone only; do not create user. Returns (registration_token, "phone", phone_value).
     Raises InvalidOTPError.
     """
     normalized = normalize_phone(phone)
@@ -71,49 +83,113 @@ def verify_otp_only(phone: str, otp: str) -> tuple[str, str]:
     utils.otp_delete(normalized)
     import uuid
     token = str(uuid.uuid4())
-    utils.registration_token_set(token, normalized)
-    return token, normalized
+    utils.registration_token_set(token, "phone", normalized)
+    return token, "phone", normalized
+
+
+def verify_otp_only_email(email: str, otp: str) -> tuple[str, str, str]:
+    """
+    Verify OTP for email only; do not create user. Returns (registration_token, "email", email_value).
+    Raises InvalidOTPError.
+    """
+    normalized = email.lower().strip()
+    stored = utils.otp_get(normalized)
+    if not stored or stored != otp:
+        raise InvalidOTPError()
+    utils.otp_delete(normalized)
+    import uuid
+    token = str(uuid.uuid4())
+    utils.registration_token_set(token, "email", normalized)
+    return token, "email", normalized
 
 
 def complete_registration(
     registration_token: str,
     password: str,
+    username: str,
     email: str | None = None,
-    first_name: str | None = None,
-    last_name: str | None = None,
+    phone: str | None = None,
+    profile_picture=None,
+    address: str | None = None,
 ) -> User:
     """
     Create user after OTP verification using the registration token.
-    Phone comes from token; password required; email, first_name, last_name optional.
+    Token holds verified_identifier (type: phone|email, value). The other identifier is optional.
+    Required: username, password. Optional: email (if verified was phone), phone (if verified was email),
+    profile_picture, address, first_name, last_name.
     Raises InvalidRegistrationTokenError, ValidationError.
     """
-    phone = utils.registration_token_get(registration_token)
-    if not phone:
+    payload = utils.registration_token_get(registration_token)
+    if not payload:
+        raise InvalidRegistrationTokenError()
+    ident_type = payload.get("type")
+    ident_value = payload.get("value")
+    if not ident_type or not ident_value:
         raise InvalidRegistrationTokenError()
     utils.registration_token_delete(registration_token)
+
     ok, msg = validate_password_strength(password)
     if not ok:
         from rest_framework.exceptions import ValidationError
         raise ValidationError({"password": msg})
-    if email:
-        email = email.lower().strip()
-        if User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).exists():
+
+    username = (username or "").strip()
+    if not username:
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError({"username": "Username is required."})
+    if User.objects.filter(username__iexact=username).exclude(deleted_at__isnull=False).exists():
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError({"username": "A user with this username already exists."})
+
+    if ident_type == "phone":
+        phone_fixed = ident_value
+        email_fixed = (email or "").strip().lower() if email else None
+        if email_fixed and User.objects.filter(email__iexact=email_fixed).exclude(deleted_at__isnull=False).exists():
             from rest_framework.exceptions import ValidationError
             raise ValidationError({"email": "A user with this email already exists."})
-    if User.objects.filter(phone=phone).exclude(deleted_at__isnull=False).exists():
-        from rest_framework.exceptions import ValidationError
-        raise ValidationError({"phone": "A user with this phone number already exists."})
-    user = User.objects.create_user(
-        phone=phone,
-        email=email or None,
-        password=password,
-        role=UserRole.REGISTERED_USER,
-        first_name=(first_name or "").strip(),
-        last_name=(last_name or "").strip(),
-    )
-    user.phone_verified = True
+        if User.objects.filter(phone=phone_fixed).exclude(deleted_at__isnull=False).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"phone": "A user with this phone number already exists."})
+        user = User.objects.create_user(
+            phone=phone_fixed,
+            email=email_fixed or f"p_{phone_fixed}@ph.local",
+            password=password,
+            role=UserRole.REGISTERED_USER,
+            username=username,
+        )
+        user.phone_verified = True
+        user.email_verified = bool(email_fixed)
+        if profile_picture:
+            user.profile_picture = profile_picture
+        user.address = (address or "").strip()
+        user.save(update_fields=["phone_verified", "email_verified", "profile_picture", "address", "updated_at"])
+    else:
+        email_fixed = ident_value
+        phone_fixed = normalize_phone(phone) if phone else ""
+        if phone_fixed and len(phone_fixed) < 10:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"phone": "Invalid phone number."})
+        if User.objects.filter(email__iexact=email_fixed).exclude(deleted_at__isnull=False).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"email": "A user with this email already exists."})
+        if phone_fixed and User.objects.filter(phone=phone_fixed).exclude(deleted_at__isnull=False).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({"phone": "A user with this phone number already exists."})
+        user = User.objects.create_user(
+            email=email_fixed,
+            phone=phone_fixed or "",
+            password=password,
+            role=UserRole.REGISTERED_USER,
+            username=username,
+        )
+        user.email_verified = True
+        user.phone_verified = bool(phone_fixed)
+        if profile_picture:
+            user.profile_picture = profile_picture
+        user.address = (address or "").strip()
+        user.save(update_fields=["email_verified", "phone_verified", "profile_picture", "address", "updated_at"])
     user.status = UserStatus.ACTIVE
-    user.save(update_fields=["phone_verified", "status", "updated_at"])
+    user.save(update_fields=["status", "updated_at"])
     return user
 
 

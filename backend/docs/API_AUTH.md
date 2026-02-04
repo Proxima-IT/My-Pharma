@@ -4,7 +4,9 @@ This document describes the **REST Authentication API** for the My Pharma MVP. U
 
 **→ For a single reference of all current endpoints (schemas, errors, rate limits):** [API_REFERENCE.md](API_REFERENCE.md).
 
-**→ Phone registration is 3 steps:** [register/phone] → [verify-otp] → [register/complete]. See [REGISTRATION_AND_SYSTEM.md](REGISTRATION_AND_SYSTEM.md) for flow and [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md) for code examples.
+**→ Unified registration (recommended):** User submits **email or phone** → [request-otp] → OTP sent to SMS or email → [verify-otp] → [register/complete] with username, password, other identifier (optional), profile_picture, address. See [API_REFERENCE.md](API_REFERENCE.md) §3.1–3.3 and [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md).
+
+**→ Legacy:** [register/phone] → [verify-otp] → [register/complete]. See [REGISTRATION_AND_SYSTEM.md](REGISTRATION_AND_SYSTEM.md).
 
 **Base URL:** `https://api.mypharma.com` (replace with your host in development, e.g. `http://localhost:8000`).
 
@@ -16,7 +18,24 @@ This document describes the **REST Authentication API** for the My Pharma MVP. U
 
 ---
 
-## 1. Register with Phone (OTP)
+## 0. Unified: Request OTP by Email or Phone (recommended)
+
+**Endpoint:** `POST /api/auth/request-otp/`
+
+**Description:** User enters **email or phone**; backend sends a 6-digit OTP to that channel (SMS for phone, email for email). Exactly one of `email` or `phone` is required.
+
+**Request body (phone):** `{"phone": "01712345678"}`  
+**Request body (email):** `{"email": "user@example.com"}`
+
+**Response – 200 OK:** `{"message": "OTP sent successfully.", "detail": "Check your phone/email for the code."}`
+
+**Errors:** 400 (both/neither or invalid); 429 `otp_rate_limit` (max 3 per hour per identifier). OTP expires in 5 minutes.
+
+Then use **Verify OTP** (§2) with the same identifier + `otp`, and **Complete Registration** (§3) with `registration_token`, `username`, `password`, and optionally the **other** identifier (email if verified by phone, phone if verified by email), `profile_picture`, `address`, `first_name`, `last_name`. The verified identifier is returned as `verified_identifier_type` and `verified_identifier_value` – show it in the form as **uneditable**.
+
+---
+
+## 1. Register with Phone (OTP) – legacy
 
 **Endpoint:** `POST /api/auth/register/phone/`
 
@@ -118,6 +137,8 @@ This document describes the **REST Authentication API** for the My Pharma MVP. U
 ## 3. Complete Registration (Step 3 – user creation form)
 
 **Endpoint:** `POST /api/auth/register/complete/`
+
+**Required:** `registration_token`, `password`, `username`. **Optional:** the **other** identifier (email if verified by phone; phone if verified by email), `profile_picture` (file; use `multipart/form-data`), `address`, `first_name`, `last_name`. The verified identifier from verify-otp is fixed; show it in the form as uneditable.
 
 **Description:** After OTP verification, send the **registration_token** plus **password** and optional profile fields. Creates the user and returns JWT access + refresh and user profile.
 

@@ -31,6 +31,26 @@ def send_otp_sms(self, phone: str, otp: str):
 
 
 @shared_task(bind=True, max_retries=3)
+def send_otp_email(self, email: str, otp: str):
+    """
+    Send OTP via email. Uses Django's send_mail; configure EMAIL_* in production.
+    Placeholder logs OTP for development when CELERY_TASK_ALWAYS_EAGER.
+    """
+    try:
+        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+            logger.info("OTP for email (masked): %s (dev mode)", email[:2] + "***", otp)
+            return
+        subject = "My Pharma – Your verification code"
+        message = f"Your verification code is: {otp}. It is valid for 5 minutes. Do not share it."
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@mypharma.com")
+        send_mail(subject, message, from_email, [email], fail_silently=False)
+        logger.info("OTP email sent to %s***", email[:2])
+    except Exception as exc:
+        logger.warning("OTP email failed: %s", exc)
+        raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(bind=True, max_retries=3)
 def send_password_reset_email(self, user_id: int):
     """Send password reset link/token to user email. Implement token generation and link in production."""
     from .models import User

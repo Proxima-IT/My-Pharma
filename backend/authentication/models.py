@@ -38,13 +38,14 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
-    Custom User: email (optional), phone (optional), role, status, soft delete.
+    Custom User: username (display), email (optional), phone (optional), profile_picture, address, role, status, soft delete.
     Indexed on email, phone for lookups and rate-limiting keys.
     """
+    username = models.CharField(max_length=150, unique=True, null=True, blank=True, db_index=True)
     email = models.EmailField(max_length=255, unique=True, db_index=True)
     phone = models.CharField(max_length=20, blank=True, db_index=True)
-    first_name = models.CharField(max_length=150, blank=True)
-    last_name = models.CharField(max_length=150, blank=True)
+    profile_picture = models.ImageField(upload_to="profile_pics/%Y/%m/", blank=True, null=True)
+    address = models.TextField(blank=True, default="")
     role = models.CharField(
         max_length=32,
         choices=UserRole.choices,
@@ -77,6 +78,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     class Meta:
         db_table = "auth_user"
         indexes = [
+            models.Index(fields=["username"]),
             models.Index(fields=["email"]),
             models.Index(fields=["phone"]),
             models.Index(fields=["role", "status"]),

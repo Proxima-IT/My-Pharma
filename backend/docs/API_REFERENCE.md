@@ -45,20 +45,23 @@ Validation errors (400):
 
 Returned as `user` in token responses and in `GET /api/auth/me/`:
 
-| Field            | Type    | Description                                                  |
-| ---------------- | ------- | ------------------------------------------------------------ |
-| `id`             | integer | User ID                                                      |
-| `email`          | string  | Email (empty if phone-only)                                  |
-| `phone`          | string  | Phone (e.g. `01712345678`)                                   |
-| `first_name`     | string  | First name                                                   |
-| `last_name`      | string  | Last name                                                    |
-| `role`           | string  | `SUPER_ADMIN`, `PHARMACY_ADMIN`, `DOCTOR`, `REGISTERED_USER` |
-| `role_display`   | string  | Display label for role                                       |
-| `status`         | string  | `ACTIVE`, `INACTIVE`, `LOCKED`, `PENDING_VERIFICATION`       |
-| `status_display` | string  | Display label for status                                     |
-| `email_verified` | boolean | Email verified                                               |
-| `phone_verified` | boolean | Phone verified                                               |
-| `created_at`     | string  | ISO 8601 datetime                                            |
+| Field             | Type    | Description                                                  |
+| ----------------- | ------- | ------------------------------------------------------------ |
+| `id`              | integer | User ID                                                      |
+| `username`        | string  | Display username (from registration)                         |
+| `email`           | string  | Email (empty if phone-only)                                  |
+| `phone`           | string  | Phone (e.g. `01712345678`)                                   |
+| `first_name`      | string  | First name                                                   |
+| `last_name`       | string  | Last name                                                    |
+| `profile_picture` | string  | URL to profile image (null if not set)                       |
+| `address`         | string  | Address (from registration)                                  |
+| `role`            | string  | `SUPER_ADMIN`, `PHARMACY_ADMIN`, `DOCTOR`, `REGISTERED_USER` |
+| `role_display`    | string  | Display label for role                                       |
+| `status`          | string  | `ACTIVE`, `INACTIVE`, `LOCKED`, `PENDING_VERIFICATION`       |
+| `status_display`  | string  | Display label for status                                     |
+| `email_verified`  | boolean | Email verified                                               |
+| `phone_verified`  | boolean | Phone verified                                               |
+| `created_at`      | string  | ISO 8601 datetime                                            |
 
 ### 1.5 Token response shape
 
@@ -81,147 +84,98 @@ Endpoints that return tokens return:
 
 ## 2. Endpoints overview
 
-| Method | Path                           | Auth | Throttle         | Description                                |
-| ------ | ------------------------------ | ---- | ---------------- | ------------------------------------------ |
-| POST   | `/api/auth/register/phone/`    | No   | 3/hour per phone | Request OTP                                |
-| POST   | `/api/auth/verify-otp/`        | No   | 10/min per IP    | Verify OTP, get registration token         |
-| POST   | `/api/auth/register/complete/` | No   | —                | Complete registration (password + profile) |
-| POST   | `/api/auth/register/email/`    | No   | —                | Register with email + password             |
-| POST   | `/api/auth/login/`             | No   | 5/min per IP     | Login (email or phone + password)          |
-| POST   | `/api/auth/token/refresh/`     | No   | —                | Get new access + refresh                   |
-| POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                  |
-| POST   | `/api/auth/password-reset/`    | No   | —                | Request password reset email               |
-| GET    | `/api/auth/me/`                | Yes  | —                | Current user profile                       |
+| Method | Path                           | Auth | Throttle         | Description                                                                   |
+| ------ | ------------------------------ | ---- | ---------------- | ----------------------------------------------------------------------------- |
+| POST   | `/api/auth/request-otp/`       | No   | 3/hour per id    | Request OTP by **email or phone** (unified)                                   |
+| POST   | `/api/auth/verify-otp/`        | No   | 10/min per IP    | Verify OTP (email or phone), get registration token                           |
+| POST   | `/api/auth/register/complete/` | No   | —                | Complete registration: username, password, other id, profile_picture, address |
+| POST   | `/api/auth/register/phone/`    | No   | 3/hour per phone | Request OTP phone only (legacy)                                               |
+| POST   | `/api/auth/register/email/`    | No   | —                | Register with email + password (one step)                                     |
+| POST   | `/api/auth/login/`             | No   | 5/min per IP     | Login (email or phone + password)                                             |
+| POST   | `/api/auth/token/refresh/`     | No   | —                | Get new access + refresh                                                      |
+| POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                                                     |
+| POST   | `/api/auth/password-reset/`    | No   | —                | Request password reset email                                                  |
+| GET    | `/api/auth/me/`                | Yes  | —                | Current user profile                                                          |
 
 ---
 
 ## 3. Endpoint details
 
-### 3.1 POST `/api/auth/register/phone/`
+### 3.1 POST `/api/auth/request-otp/` (unified)
 
-Request OTP for the given phone. OTP is stored in cache and sent via Celery (SMS in production).
+User submits **email or phone**; backend sends OTP to that channel (SMS for phone, email for email). Exactly one of `email` or `phone` is required.
 
 **Auth:** None  
-**Throttle:** 3 requests per hour per phone (and per-IP).
+**Throttle:** 3 requests per hour per identifier (phone or email).
 
-**Request body:**
+**Request body (phone):** `{"phone": "01712345678"}`  
+**Request body (email):** `{"email": "user@example.com"}`
 
-```json
-{
-  "phone": "01712345678"
-}
-```
+| Field   | Type   | Required | Validation                          |
+| ------- | ------ | -------- | ----------------------------------- |
+| `email` | string | Yes\*    | Valid email                         |
+| `phone` | string | Yes\*    | Min 10 digits (BD format supported) |
 
-| Field   | Type   | Required | Validation                                              |
-| ------- | ------ | -------- | ------------------------------------------------------- |
-| `phone` | string | Yes      | Min 10 digits after normalization (BD format supported) |
+\*Provide **exactly one** of `email` or `phone`.
 
-**Success (200):**
+**Success (200):** If phone: "Check your phone for the code." If email: "Check your email for the code."
 
-```json
-{
-  "message": "OTP sent successfully.",
-  "detail": "Check your phone for the code."
-}
-```
-
-**Errors:**
-
-| Status | Code             | Condition                                                   |
-| ------ | ---------------- | ----------------------------------------------------------- |
-| 400    | —                | Invalid phone (e.g. `{"phone": ["Invalid phone number."]}`) |
-| 429    | `otp_rate_limit` | More than 3 OTP requests per hour for this phone            |
-
-**Rules:** OTP is 6 digits, expires in 5 minutes. Max 3 resend per hour per phone.
+**Errors:** 400 both/neither or invalid; 429 `otp_rate_limit`. OTP 6 digits, 5 min expiry, max 3/hour per identifier.
 
 ---
 
 ### 3.2 POST `/api/auth/verify-otp/`
 
-Verify OTP. Does **not** create a user. Returns a short-lived `registration_token` for the completion step.
+Verify OTP by **email or phone** (same identifier as request-otp). Returns `registration_token` and verified identifier (frontend shows verified value as **uneditable** in completion form).
 
 **Auth:** None  
 **Throttle:** 10 requests per minute per IP.
 
-**Request body:**
+**Request body (phone):** `{"phone": "01712345678", "otp": "123456"}`  
+**Request body (email):** `{"email": "user@example.com", "otp": "123456"}`
 
-```json
-{
-  "phone": "01712345678",
-  "otp": "123456"
-}
-```
+| Field   | Type   | Required | Validation          |
+| ------- | ------ | -------- | ------------------- |
+| `email` | string | Yes\*    | Same as request-otp |
+| `phone` | string | Yes\*    | Same as request-otp |
+| `otp`   | string | Yes      | 6 digits            |
 
-| Field   | Type   | Required | Validation                    |
-| ------- | ------ | -------- | ----------------------------- |
-| `phone` | string | Yes      | Same format as register/phone |
-| `otp`   | string | Yes      | 6 digits                      |
+\*Provide **exactly one** of `email` or `phone`.
 
-**Success (200):**
+**Success (200):** `registration_token`, `verified_identifier_type` ("phone" or "email"), `verified_identifier_value`, `phone` or `email` (for backward compat), `expires_in` (seconds).
 
-```json
-{
-  "message": "OTP verified. Complete your registration.",
-  "registration_token": "550e8400-e29b-41d4-a716-446655440000",
-  "phone": "01712345678",
-  "expires_in": 600
-}
-```
-
-| Field                | Description                                                              |
-| -------------------- | ------------------------------------------------------------------------ |
-| `registration_token` | Use in `POST /api/auth/register/complete/` (valid 10 minutes by default) |
-| `phone`              | Verified phone (for display/prefill)                                     |
-| `expires_in`         | Token validity in seconds                                                |
-
-**Errors:**
-
-| Status | Code          | Condition                |
-| ------ | ------------- | ------------------------ |
-| 400    | `invalid_otp` | Wrong or expired OTP     |
-| 429    | —             | Too many verify attempts |
+**Errors:** 400 `invalid_otp`; 429 too many attempts.
 
 ---
 
 ### 3.3 POST `/api/auth/register/complete/`
 
-Complete registration after OTP: create user with password and optional profile. Returns tokens and user.
+User creation form after OTP. **Required:** `registration_token`, `password`, `username`. **Optional:** the **other** identifier (if verified by phone, add `email`; if by email, add `phone`), `profile_picture` (file), `address`, `first_name`, `last_name`. Use `multipart/form-data` when sending `profile_picture`.
 
-**Auth:** None  
-**Throttle:** None.
+| Field                      | Type   | Required | Validation                                |
+| -------------------------- | ------ | -------- | ----------------------------------------- |
+| `registration_token`       | string | Yes      | From verify-otp                           |
+| `password`                 | string | Yes      | Min 8; upper, lower, number, special char |
+| `username`                 | string | Yes      | Unique display name                       |
+| `email`                    | string | No\*     | If verified was **phone**                 |
+| `phone`                    | string | No\*     | If verified was **email** (min 10 digits) |
+| `profile_picture`          | file   | No       | Image (JPEG/PNG)                          |
+| `address`                  | string | No       | Max 500 chars                             |
+| `first_name` / `last_name` | string | No       | Max 150 chars each                        |
 
-**Request body:**
+**Success (200):** Token response (access, refresh, user with `username`, `profile_picture`, `address`).
 
-```json
-{
-  "registration_token": "550e8400-e29b-41d4-a716-446655440000",
-  "password": "SecurePass1!",
-  "email": "user@example.com",
-  "first_name": "John",
-  "last_name": "Doe"
-}
-```
-
-| Field                | Type   | Required | Validation                                      |
-| -------------------- | ------ | -------- | ----------------------------------------------- |
-| `registration_token` | string | Yes      | From verify-otp response                        |
-| `password`           | string | Yes      | Min 8 chars; upper, lower, number, special char |
-| `email`              | string | No       | Valid email; must be unique if provided         |
-| `first_name`         | string | No       | Max 150 chars                                   |
-| `last_name`          | string | No       | Max 150 chars                                   |
-
-**Success (200):** Token response (access, refresh, user).
-
-**Errors:**
-
-| Status | Code                         | Condition                                                                                          |
-| ------ | ---------------------------- | -------------------------------------------------------------------------------------------------- |
-| 400    | `invalid_registration_token` | Token invalid or expired                                                                           |
-| 400    | —                            | Validation (e.g. `{"password": ["..."]}`, `{"email": ["A user with this email already exists."]}`) |
+**Errors:** 400 `invalid_registration_token` or validation (username/email/phone duplicate, weak password).
 
 ---
 
-### 3.4 POST `/api/auth/register/email/`
+### 3.4 POST `/api/auth/register/phone/` (legacy)
+
+Request OTP for phone only. Prefer **request-otp** for unified flow. Body: `{"phone": "01712345678"}`. Success: "Check your phone for the code." Errors: 400 invalid phone; 429 `otp_rate_limit`.
+
+---
+
+### 3.5 POST `/api/auth/register/email/`
 
 Register with email and password in one step. Returns tokens and user.
 
@@ -252,7 +206,7 @@ Register with email and password in one step. Returns tokens and user.
 
 ---
 
-### 3.5 POST `/api/auth/login/`
+### 3.6 POST `/api/auth/login/`
 
 Login with **email or phone** (the same identifier used at registration) and password. Returns tokens and user.
 
@@ -298,7 +252,7 @@ Login with **email or phone** (the same identifier used at registration) and pas
 
 ---
 
-### 3.6 POST `/api/auth/token/refresh/`
+### 3.7 POST `/api/auth/token/refresh/`
 
 Exchange a valid refresh token for new access and refresh tokens (rotation). May include current user in response.
 
@@ -336,7 +290,7 @@ Exchange a valid refresh token for new access and refresh tokens (rotation). May
 
 ---
 
-### 3.7 POST `/api/auth/logout/`
+### 3.8 POST `/api/auth/logout/`
 
 Blacklist the current access token and, if provided, the refresh token. Requires a valid access token.
 
@@ -366,7 +320,7 @@ Blacklist the current access token and, if provided, the refresh token. Requires
 
 ---
 
-### 3.8 POST `/api/auth/password-reset/`
+### 3.9 POST `/api/auth/password-reset/`
 
 Request a password reset for the given email. If the user exists, a reset email is sent (via Celery). Response is same whether or not the email exists (security).
 
@@ -395,7 +349,7 @@ Request a password reset for the given email. If the user exists, a reset email 
 
 ---
 
-### 3.9 GET `/api/auth/me/`
+### 3.10 GET `/api/auth/me/`
 
 Return the current authenticated user profile.
 

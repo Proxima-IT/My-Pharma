@@ -95,22 +95,34 @@ def token_blacklist_exists(jti: str) -> bool:
     return cache.get(f"{BLACKLIST_PREFIX}:{jti}") is not None
 
 
-# Registration completion: short-lived token after OTP verify (phone only, no user yet)
+# Registration completion: short-lived token after OTP verify (phone or email, no user yet)
 def get_registration_token_ttl_seconds() -> int:
     minutes = getattr(settings, "AUTH_REGISTRATION_TOKEN_EXPIRY_MINUTES", 10)
     return int(minutes) * 60
 
 
-def registration_token_set(token: str, phone: str) -> None:
-    """Store verified phone for this registration token; used to complete signup."""
+def registration_token_set(token: str, identifier_type: str, identifier_value: str) -> None:
+    """Store verified identifier (phone or email) for this registration token. type is 'phone' or 'email'."""
+    import json
     key = f"{REGISTRATION_TOKEN_PREFIX}:{token}"
-    cache.set(key, phone, timeout=get_registration_token_ttl_seconds())
+    payload = {"type": identifier_type, "value": identifier_value}
+    cache.set(key, json.dumps(payload), timeout=get_registration_token_ttl_seconds())
 
 
-def registration_token_get(token: str) -> str | None:
-    """Return verified phone for this token, or None if invalid/expired."""
+def registration_token_get(token: str) -> dict | None:
+    """Return {"type": "phone"|"email", "value": "..."} for this token, or None if invalid/expired."""
+    import json
     key = f"{REGISTRATION_TOKEN_PREFIX}:{token}"
-    return cache.get(key)
+    raw = cache.get(key)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except (TypeError, ValueError):
+        # Legacy: stored as plain string (phone only)
+        if isinstance(raw, str):
+            return {"type": "phone", "value": raw}
+        return None
 
 
 def registration_token_delete(token: str) -> None:
