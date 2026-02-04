@@ -59,7 +59,7 @@ Use this checklist for deployment and audits (including Bangladesh digital healt
 
 - [ ] **Data locality:** Prefer storing health-related and PII within jurisdiction where required.
 - [ ] **Consent & purpose:** Collect only what’s needed; document purpose and consent for health data.
-- [ ] **Access control:** RBAC (SUPER_ADMIN, PHARMACY_ADMIN, DOCTOR, REGISTERED_USER) with explicit permissions.
+- [ ] **Access control:** RBAC per [RBAC.md](RBAC.md): SUPER_ADMIN (full), PHARMACY_ADMIN (inventory/orders/products/prescriptions), DOCTOR (consultations), REGISTERED_USER (purchase/prescriptions), GUEST (browse). Admin panel restricted to SUPER_ADMIN for Users and Audit Logs.
 - [ ] **Retention:** Define and enforce retention for audit logs and inactive accounts; soft delete supports recovery and audit.
 - [ ] **Incident response:** Process for lockout, breach, and revocation (blacklist + short-lived tokens).
 

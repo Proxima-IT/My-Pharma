@@ -1,6 +1,7 @@
 """
 Admin for custom User and AuditLog.
 Uses email (not username) for login and user creation.
+Access: Only SUPER_ADMIN can access Users and Audit Logs (RBAC – Manage All Users).
 """
 from django import forms
 from django.contrib import admin
@@ -8,7 +9,15 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm as BaseUserChangeForm
 from django.contrib.auth.forms import UserCreationForm as BaseUserCreationForm
 
+from .constants import UserRole
 from .models import User, AuditLog
+
+
+def _is_super_admin(request):
+    """True if the requesting user has role SUPER_ADMIN."""
+    if not getattr(request, "user", None) or not request.user.is_authenticated:
+        return False
+    return getattr(request.user, "role", None) == UserRole.SUPER_ADMIN
 
 
 class CustomUserCreationForm(BaseUserCreationForm):
@@ -53,6 +62,7 @@ class CustomUserChangeForm(BaseUserChangeForm):
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
+    """User management – only SUPER_ADMIN (Manage All Users)."""
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
     list_display = ("id", "username", "email", "phone", "role", "status", "email_verified", "phone_verified", "created_at")
@@ -72,11 +82,42 @@ class UserAdmin(BaseUserAdmin):
         (None, {"classes": ("wide",), "fields": ("username", "email", "phone", "password1", "password2")}),
     )
 
+    def has_module_permission(self, request):
+        return _is_super_admin(request)
+
+    def has_view_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
+    def has_add_permission(self, request):
+        return _is_super_admin(request)
+
+    def has_change_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
 
 @admin.register(AuditLog)
 class AuditLogAdmin(admin.ModelAdmin):
+    """Audit log – only SUPER_ADMIN (Full System Access)."""
     list_display = ("id", "user", "action", "ip_address", "created_at")
     list_filter = ("action",)
     search_fields = ("user__email", "user__phone", "ip_address")
     readonly_fields = ("user", "action", "ip_address", "user_agent", "metadata", "created_at")
     date_hierarchy = "created_at"
+
+    def has_module_permission(self, request):
+        return _is_super_admin(request)
+
+    def has_view_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
+    def has_add_permission(self, request):
+        return False  # Audit logs are created by the system only
+
+    def has_change_permission(self, request, obj=None):
+        return False  # Audit logs are immutable
+
+    def has_delete_permission(self, request, obj=None):
+        return _is_super_admin(request)

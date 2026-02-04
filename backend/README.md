@@ -63,9 +63,10 @@ python manage.py runserver
 - **[docs/API_AUTH.md](docs/API_AUTH.md)** – Detailed auth API docs.
 - **[docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md)** – Frontend code examples (fetch, axios, cURL).
 
-## Security
+## Security & RBAC
 
-See **[docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md)** for deployment and compliance (including Bangladesh digital health norms).
+- **[docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md)** – Deployment and compliance (including Bangladesh digital health norms).
+- **[docs/RBAC.md](docs/RBAC.md)** – **User hierarchy & role permissions matrix:** Super Admin, Pharmacy Admin, Doctor, Registered User, Guest; which roles can manage users, products, prescriptions, inventory, orders, consultations, CMS, and purchase/upload prescriptions; admin panel access (SUPER_ADMIN only for Users and Audit Logs).
 
 ## Project layout
 
@@ -73,7 +74,7 @@ See **[docs/SECURITY_CHECKLIST.md](docs/SECURITY_CHECKLIST.md)** for deployment 
 backend/
 ├── authentication/       # Auth app: models, serializers, views, permissions, tasks
 ├── my_pharma/           # Project: settings, urls, celery
-├── docs/                # API_REFERENCE.md (all endpoints), API_AUTH.md, FRONTEND_INTEGRATION.md, REGISTRATION_AND_SYSTEM.md, SECURITY_CHECKLIST.md
+├── docs/                # API_REFERENCE.md, RBAC.md, API_AUTH.md, FRONTEND_INTEGRATION.md, REGISTRATION_AND_SYSTEM.md, SECURITY_CHECKLIST.md
 ├── .env.example
 ├── requirements.txt
 └── README.md

@@ -5,6 +5,8 @@ Single reference for **all current auth API endpoints**: request/response schema
 **Base URL:** `http://localhost:8001` (or your API host)  
 **Auth prefix:** `/api/auth/`
 
+**→ User hierarchy & role permissions:** [RBAC.md](RBAC.md) (Super Admin, Pharmacy Admin, Doctor, Registered User, Guest; permissions matrix and admin/API access).
+
 ---
 
 ## 1. General
@@ -51,8 +53,6 @@ Returned as `user` in token responses and in `GET /api/auth/me/`:
 | `username`        | string  | Display username (from registration)                         |
 | `email`           | string  | Email (empty if phone-only)                                  |
 | `phone`           | string  | Phone (e.g. `01712345678`)                                   |
-| `first_name`      | string  | First name                                                   |
-| `last_name`       | string  | Last name                                                    |
 | `profile_picture` | string  | URL to profile image (null if not set)                       |
 | `address`         | string  | Address (from registration)                                  |
 | `role`            | string  | `SUPER_ADMIN`, `PHARMACY_ADMIN`, `DOCTOR`, `REGISTERED_USER` |
@@ -62,6 +62,8 @@ Returned as `user` in token responses and in `GET /api/auth/me/`:
 | `email_verified`  | boolean | Email verified                                               |
 | `phone_verified`  | boolean | Phone verified                                               |
 | `created_at`      | string  | ISO 8601 datetime                                            |
+
+**RBAC:** Role determines API and admin access. See **[docs/RBAC.md](RBAC.md)** for user hierarchy and permissions matrix.
 
 ### 1.5 Token response shape
 
