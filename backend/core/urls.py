@@ -6,6 +6,8 @@ from . import views
 
 router = DefaultRouter()
 router.register(r"categories", views.CategoryViewSet, basename="category")
+router.register(r"brands", views.BrandViewSet, basename="brand")
+router.register(r"ingredients", views.IngredientViewSet, basename="ingredient")
 router.register(r"products", views.ProductViewSet, basename="product")
 router.register(r"orders", views.OrderViewSet, basename="order")
 router.register(r"prescriptions", views.PrescriptionViewSet, basename="prescription")
