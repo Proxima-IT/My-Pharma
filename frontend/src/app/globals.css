@@ -1,114 +1,89 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* =========================
-   Design System – Colors
-   ========================= */
-
-:root {
-  /* ===== Base Colors ===== */
+@theme {
+  /* ===== Required prefix: --color- for color utilities ===== */
   --color-white: #ffffff;
   --color-black: #000000;
 
-  --color-white-70: #ffffffb2; /* white with 70% opacity */
-  --color-black-70: #000000b2; /* black with 70% opacity */
+  --color-white-70: #ffffffb2;
+  --color-black-70: #000000b2;
 
-  /* ===== Gray Scale (UI Neutral) ===== */
-  --gray-25:  #fcfcfd;
-  --gray-50:  #f9fafb;
-  --gray-100: #f2f4f7;
-  --gray-200: #eaecf0;
-  --gray-300: #d0d5dd;
-  --gray-400: #98a2b3;
-  --gray-500: #667085;
-  --gray-600: #475467;
-  --gray-700: #344054;
-  --gray-800: #1d2939;
-  --gray-900: #101828;
+  /* Gray scale – override/extend default gray if you want */
+  --color-gray-25:  #fcfcfd;
+  --color-gray-50:  #f9fafb;
+  --color-gray-100: #f2f4f7;
+  --color-gray-200: #eaecf0;
+  --color-gray-300: #d0d5dd;
+  --color-gray-400: #98a2b3;
+  --color-gray-500: #667085;
+  --color-gray-600: #475467;
+  --color-gray-700: #344054;
+  --color-gray-800: #1d2939;
+  --color-gray-900: #101828;
 
-  /* ===== Primary Blue (Brand / CTA) ===== */
-  --primary-25:  #f4f5f9;
-  --primary-50:  #e9ebf4;
-  --primary-100: #bbc2db;
-  --primary-200: #9aa5ca;
-  --primary-300: #6c7cb2;
-  --primary-400: #4f62a3;
-  --primary-500: #233b8c; /* MAIN BRAND COLOR */
-  --primary-600: #20367f;
-  --primary-700: #192a63;
-  --primary-800: #13204d;
-  --primary-900: #0f193b;
+  /* Primary Blue – this generates bg-primary-500, text-primary-900, etc. */
+  --color-primary-25:  #f4f5f9;
+  --color-primary-50:  #e9ebf4;
+  --color-primary-100: #bbc2db;
+  --color-primary-200: #9aa5ca;
+  --color-primary-300: #6c7cb2;
+  --color-primary-400: #4f62a3;
+  --color-primary-500: #233b8c; /* MAIN BRAND COLOR */
+  --color-primary-600: #20367f;
+  --color-primary-700: #192a63;
+  --color-primary-800: #13204d;
+  --color-primary-900: #0f193b;
 
-  /* ===== Light Blue (Info / Accent) ===== */
-  --info-25:  #f3f3ff;
-  --info-50:  #e6e6fe;
-  --info-100: #b0b0fd;
-  --info-200: #8a8afb;
-  --info-300: #5454fa;
-  --info-400: #3333f9;
-  --info-500: #0000f7;
-  --info-600: #0000e1;
-  --info-700: #0000af;
-  --info-800: #000088;
-  --info-900: #000068;
+  /* Info / Light Blue */
+  --color-info-25:  #f3f3ff;
+  --color-info-50:  #e6e6fe;
+  --color-info-100: #b0b0fd;
+  --color-info-200: #8a8afb;
+  --color-info-300: #5454fa;
+  --color-info-400: #3333f9;
+  --color-info-500: #0000f7;
+  --color-info-600: #0000e1;
+  --color-info-700: #0000af;
+  --color-info-800: #000088;
+  --color-info-900: #000068;
 
-  /* ===== Green (Success / Price / Stock) ===== */
-  --success-25:  #f3fbf6;
-  --success-50:  #e6f7ed;
-  --success-100: #b0e5c7;
-  --success-200: #8ad8ab;
-  --success-300: #54c785;
-  --success-400: #33bc6d;
-  --success-500: #00ab49; /* MAIN SUCCESS COLOR */
-  --success-600: #009c42;
-  --success-700: #007934;
-  --success-800: #007934;
-  --success-900: #00481f;
+  /* Success / Green */
+  --color-success-25:  #f3fbf6;
+  --color-success-50:  #e6f7ed;
+  --color-success-100: #b0e5c7;
+  --color-success-200: #8ad8ab;
+  --color-success-300: #54c785;
+  --color-success-400: #33bc6d;
+  --color-success-500: #00ab49; /* MAIN SUCCESS COLOR */
+  --color-success-600: #009c42;
+  --color-success-700: #007934;
+  --color-success-800: #007934;   /* note: duplicate of 700 – fix if intentional */
+  --color-success-900: #00481f;
+
+
+
+  /* ===== Font setup ===== */
+  /* Make Inter the default sans-serif font everywhere (recommended) */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Optional: if you want a separate explicit utility like font-inter */
+  --font-inter: var(--font-inter), sans-serif;
 }
 
-/* =========================
-   Base UI Defaults
-   ========================= */
-
+/* Your other normal CSS rules are fine here */
+/* Base styles – now uses the updated --font-sans automatically */
 body {
   background-color: var(--color-white);
-  color: var(--gray-900);
-
-  font-family: var(--font-primary),
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Ubuntu,
-    "Helvetica Neue",
-    Arial,
-    "Noto Sans",
-    sans-serif;
+  color: var(--color-gray-900);
+  font-family: var(--font-sans);   /* ← this applies Inter globally */
 }
 
-/* =========================
-   Reusable Utility Classes
-   (Optional but helpful)
-   ========================= */
+/* Optional: extra utility layer if you prefer explicit font-inter class */
+@layer utilities {
+  .font-inter {
+    font-family: var(--font-inter), sans-serif;
+  }}
 
-.text-muted {
-  color: var(--gray-500);
-}
 
-.text-heading {
-  color: var(--gray-900);
-}
 
-.bg-page {
-  background-color: var(--gray-25);
-}
 
-.bg-card {
-  background-color: var(--color-white);
-}
-
-.border-default {
-  border-color: var(--gray-200);
-}
