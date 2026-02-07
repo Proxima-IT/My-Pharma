@@ -11,7 +11,6 @@ const Footer = () => {
         {/* left content  */}
         <div className="bg-white/8 rounded-2xl">
           <div className="bg-gray-100 py-2 px-4    ">
-
             <Image
               src="/logoo.png"
               alt="Logo"
@@ -35,7 +34,7 @@ const Footer = () => {
               placeholder="Email"
               className="rounded-[55px]"
             />
-            <span>abc</span>
+            <span>abc - this is another change from bayezid hsohen</span>
           </div>
         </div>
         {/* right content  */}
