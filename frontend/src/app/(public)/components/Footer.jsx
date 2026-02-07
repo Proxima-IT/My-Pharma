@@ -11,7 +11,6 @@ const Footer = () => {
         {/* left content  */}
         <div className="bg-white/8 rounded-2xl">
           <div className="bg-gray-100 py-2 px-4    ">
-
             <Image
               src="/logoo.png"
               alt="Logo"
@@ -36,6 +35,7 @@ const Footer = () => {
               className="rounded-[55px]"
             />
             <span></span>
+            <span>this is another push from bayezid hoshen</span>
           </div>
         </div>
         {/* right content  */}
