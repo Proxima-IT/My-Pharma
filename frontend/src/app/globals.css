@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* globals.css */
+@import "remixicon/fonts/remixicon.css";
+
+
 @theme {
   /* ===== Required prefix: --color- for color utilities ===== */
   --color-white: #ffffff;
