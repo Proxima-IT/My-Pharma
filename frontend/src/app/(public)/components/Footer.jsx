@@ -8,6 +8,9 @@ import { FaFacebook } from "react-icons/fa6";
 import { FaInstagram } from "react-icons/fa";
 import { FaXTwitter } from "react-icons/fa6";
 import { MdOutlineWhatsapp } from "react-icons/md";
+import { SlPhone } from "react-icons/sl";
+import { CiMail } from "react-icons/ci";
+import { CiLocationOn } from "react-icons/ci";
 
 
 const Footer = () => {
@@ -80,7 +83,7 @@ const Footer = () => {
 
         {/* right content  */}
         <div className="bg-white/8 rounded-2xl p-4 lg:p-8 w-full  lg:w-8/12 ">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             {/* column 1 */}
             <div>
               <h3 className="text-white text-base font-extrabold ">Quick Links</h3>
@@ -127,7 +130,7 @@ const Footer = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex justify-center items-center hover:scale-110 transition">
                     <Link href="/">
-                      <FaFacebook className="text-white text-sm" />
+                      <SlPhone  className="text-white text-sm" />
                     </Link>
                   </div>
 
@@ -145,7 +148,7 @@ const Footer = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex justify-center items-center hover:scale-110 transition">
                     <Link href="/">
-                      <FaFacebook className="text-white text-sm" />
+                      <CiMail  className="text-white text-sm" />
                     </Link>
                   </div>
 
@@ -163,7 +166,7 @@ const Footer = () => {
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex justify-center items-center hover:scale-110 transition">
                     <Link href="/">
-                      <FaFacebook className="text-white text-sm" />
+                      <CiLocationOn  className="text-white text-sm" />
                     </Link>
                   </div>
 
