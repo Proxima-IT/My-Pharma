@@ -1,9 +1,8 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 /* =========================
-   Design System – Colors
+  Design System – Colors
    ========================= */
 
 :root {
@@ -65,32 +64,25 @@
   --success-700: #007934;
   --success-800: #007934;
   --success-900: #00481f;
+
+  /* ===== Font ===== */
+  --font-primary: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
 
 /* =========================
-   Base UI Defaults
+  Base UI Defaults
    ========================= */
 
 body {
   background-color: var(--color-white);
   color: var(--gray-900);
 
-  font-family: var(--font-primary),
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Ubuntu,
-    "Helvetica Neue",
-    Arial,
-    "Noto Sans",
-    sans-serif;
+  font-family: var(--font-primary);
 }
 
 /* =========================
-   Reusable Utility Classes
-   (Optional but helpful)
+  Reusable Utility Classes
+  (Optional but helpful)
    ========================= */
 
 .text-muted {

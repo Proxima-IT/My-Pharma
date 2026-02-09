@@ -3,7 +3,7 @@ import Image from "next/image";
 export default function Home() {
   return (
     <div >
-      home
+      <h1 className="text-amber-300">Done Tailwind CSS Setup Successfully</h1>
     </div>
   );
 }
