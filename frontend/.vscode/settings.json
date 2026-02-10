@@ -1,0 +1,29 @@
+{
+  "tailwindCSS.experimental.classRegex": [
+    ["c\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+    ["tv\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"]
+  ],
+  "tailwindCSS.includeLanguages": {
+    "javascript": "tailwindcss",
+    "javascriptreact": "tailwindcss",
+    "typescript": "tailwindcss",
+    "typescriptreact": "tailwindcss",
+    "html": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": false,
+    "strings": true
+  },
+  "tailwindCSS.files.exclude": [
+    "**/.git/**",
+    "**/.next/**",
+    "**/node_modules/**",
+    "**/backend/**",
+    "**/staticfiles/**"
+  ],
+  "tailwindCSS.detectConflicts": true,
+  "tailwindCSS.trace": {
+    "server": "off"
+  }
+}

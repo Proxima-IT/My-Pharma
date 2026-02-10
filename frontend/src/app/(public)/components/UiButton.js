@@ -1,5 +1,4 @@
 'use client';
-
 export default function UiButton({
   children,
   variant = 'primary',
@@ -7,7 +6,6 @@ export default function UiButton({
   ...props
 }) {
   const isPrimary = variant === 'primary';
-
   // Inline styles to guarantee rendering regardless of Tailwind compiler state
   const baseStyle = {
     display: 'flex',
@@ -19,9 +17,9 @@ export default function UiButton({
     paddingLeft: '32px',
     paddingRight: '32px',
     borderRadius: '9999px',
-    border: isPrimary ? 'none' : '1px solid var(--gray-200)',
-    backgroundColor: isPrimary ? 'var(--primary-500)' : 'transparent',
-    color: isPrimary ? 'var(--color-white)' : 'var(--gray-700)',
+    border: isPrimary ? 'none' : '1px solid var(--color-gray-200)',
+    backgroundColor: isPrimary ? 'var(--color-primary-500)' : 'transparent',
+    color: isPrimary ? 'var(--color-white)' : 'var(--color-gray-700)',
     cursor: isLoading ? 'not-allowed' : 'pointer',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     outline: 'none',

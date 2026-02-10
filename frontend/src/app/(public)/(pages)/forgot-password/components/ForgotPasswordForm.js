@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import Link from 'next/link';
 import UiInput from '@/app/(public)/components/UiInput';
@@ -15,7 +14,6 @@ export default function ForgotPasswordForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     try {
       const response = await fetch(
         'http://localhost:8000/api/auth/password-reset/',
@@ -25,14 +23,12 @@ export default function ForgotPasswordForm() {
           body: JSON.stringify({ email }),
         },
       );
-
       // The backend returns 200 even if email doesn't exist for security
       if (!response.ok) {
         throw new Error(
           "We couldn't process your request. Please try again later.",
         );
       }
-
       setIsSubmitted(true);
     } catch (err) {
       setError(err.message);
@@ -62,13 +58,11 @@ export default function ForgotPasswordForm() {
           </div>
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-(--gray-900)">
-            Check your email
-          </h2>
-          <p className="text-sm text-(--gray-500) leading-relaxed">
+          <h2 className="text-xl font-bold text-gray-900">Check your email</h2>
+          <p className="text-sm text-gray-500 leading-relaxed">
             If an account exists for{' '}
-            <span className="font-semibold text-(--gray-900)">{email}</span>,
-            you will receive instructions to reset your password shortly.
+            <span className="font-semibold text-gray-900">{email}</span>, you
+            will receive instructions to reset your password shortly.
           </p>
         </div>
         <div className="pt-4">
@@ -83,7 +77,7 @@ export default function ForgotPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="p-4 rounded-xl bg-(--info-25) border border-(--info-100) text-(--info-700) font-bold text-xs animate-in fade-in slide-in-from-top-2">
+        <div className="p-4 rounded-xl bg-info-25 border border-info-100 text-info-700 font-bold text-xs animate-in fade-in slide-in-from-top-2">
           {error}
         </div>
       )}
@@ -121,7 +115,7 @@ export default function ForgotPasswordForm() {
       <div className="text-center">
         <Link
           href="/login"
-          className="text-xs font-bold text-(--gray-400) uppercase tracking-widest hover:text-(--primary-500) transition-colors"
+          className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-primary-500 transition-colors"
         >
           Back to Login
         </Link>

@@ -1,5 +1,4 @@
 'use client';
-
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
@@ -10,11 +9,9 @@ export default function CompleteRegistrationForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [error, setError] = useState('');
-
   // State for verified data
   const [verifiedValue, setVerifiedValue] = useState('');
   const [verifiedType, setVerifiedType] = useState('');
-
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -35,7 +32,6 @@ export default function CompleteRegistrationForm() {
     const token = sessionStorage.getItem('registration_token');
     const identifier = sessionStorage.getItem('verified_identifier');
     const type = sessionStorage.getItem('verified_type');
-
     if (!token || !identifier || !type) {
       // Use replace instead of push to prevent the user from "going back" to this locked page
       router.replace('/register');
@@ -50,20 +46,16 @@ export default function CompleteRegistrationForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     const token = sessionStorage.getItem('registration_token');
     const data = new FormData();
-
     data.append('registration_token', token);
     data.append('username', formData.username);
     data.append('password', formData.password);
-
     // Send the "other" identifier if provided
     if (verifiedType === 'phone' && formData.email)
       data.append('email', formData.email);
     if (verifiedType === 'email' && formData.phone)
       data.append('phone', formData.phone);
-
     if (formData.first_name) data.append('first_name', formData.first_name);
     if (formData.last_name) data.append('last_name', formData.last_name);
     if (formData.address) data.append('address', formData.address);
@@ -78,21 +70,17 @@ export default function CompleteRegistrationForm() {
           body: data,
         },
       );
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(
           result.detail ||
             "We couldn't complete your registration. Please check your details.",
         );
       }
-
       // Success: Store tokens and clear registration session
       localStorage.setItem('access_token', result.access);
       localStorage.setItem('user', JSON.stringify(result.user));
       sessionStorage.clear();
-
       router.push('/user');
     } catch (err) {
       setError(err.message);
@@ -105,7 +93,7 @@ export default function CompleteRegistrationForm() {
   if (!isAuthorized) {
     return (
       <div className="flex justify-center items-center py-20">
-        <div className="w-8 h-8 border-2 border-(--primary-500) border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -116,7 +104,7 @@ export default function CompleteRegistrationForm() {
       className="space-y-8 animate-in fade-in duration-700"
     >
       {error && (
-        <div className="flex gap-3 p-4 rounded-xl bg-(--info-25) border border-(--info-100) text-(--info-700) font-bold text-xs animate-in fade-in slide-in-from-top-2">
+        <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 text-info-700 font-bold text-xs animate-in fade-in slide-in-from-top-2">
           <p>{error}</p>
         </div>
       )}
@@ -252,7 +240,7 @@ export default function CompleteRegistrationForm() {
         />
 
         <div className="flex flex-col gap-2">
-          <label className="text-[13px] font-bold text-(--gray-600)">
+          <label className="text-[13px] font-bold text-gray-600">
             Profile Picture
           </label>
           <div className="relative group">
@@ -264,10 +252,10 @@ export default function CompleteRegistrationForm() {
               }
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
-            <div className="w-full py-5 px-4 bg-(--gray-50) border border-dashed border-(--gray-300) rounded-2xl flex items-center gap-4 group-hover:border-(--primary-500) transition-colors">
-              <div className="p-2 bg-white rounded-lg border border-(--gray-200)">
+            <div className="w-full py-5 px-4 bg-gray-50 border border-dashed border-gray-300 rounded-2xl flex items-center gap-4 group-hover:border-primary-500 transition-colors">
+              <div className="p-2 bg-white rounded-lg border border-gray-200">
                 <svg
-                  className="w-6 h-6 text-(--gray-400)"
+                  className="w-6 h-6 text-gray-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -281,12 +269,12 @@ export default function CompleteRegistrationForm() {
                 </svg>
               </div>
               <div className="flex flex-col">
-                <span className="text-sm font-bold text-(--gray-700)">
+                <span className="text-sm font-bold text-gray-700">
                   {formData.profile_picture
                     ? formData.profile_picture.name
                     : 'Choose a photo'}
                 </span>
-                <span className="text-xs text-(--gray-400)">
+                <span className="text-xs text-gray-400">
                   PNG, JPG up to 5MB
                 </span>
               </div>

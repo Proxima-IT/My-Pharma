@@ -9,7 +9,7 @@ export const metadata = {
 export default function ForgotPasswordPage() {
   // Inline style to ensure the background color applies regardless of Tailwind's state
   const pageStyle = {
-    backgroundColor: 'var(--primary-25)',
+    backgroundColor: 'var(--color-primary-25)',
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
@@ -29,12 +29,10 @@ export default function ForgotPasswordPage() {
           >
             <Logo className="h-14 w-auto" />
           </Link>
-
-          <h1 className="text-3xl font-bold text-(--gray-900) tracking-tight">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Reset Password
           </h1>
-
-          <p className="text-base font-normal text-(--gray-500) max-w-xs leading-relaxed">
+          <p className="text-base font-normal text-gray-500 max-w-xs leading-relaxed">
             No worries! Enter your email and we&apos;ll help you get back into
             your account.
           </p>
@@ -47,22 +45,22 @@ export default function ForgotPasswordPage() {
 
         {/* Professional Footer */}
         <div className="flex flex-col items-center gap-6">
-          <div className="flex flex-col items-center gap-2 pt-6 border-t border-(--gray-100) w-full">
+          <div className="flex flex-col items-center gap-2 pt-6 border-t border-gray-100 w-full">
             <div className="flex gap-4 mb-1">
               <Link
                 href="/terms"
-                className="text-[11px] font-bold text-(--gray-400) uppercase tracking-widest hover:text-(--gray-600) transition-colors"
+                className="text-[11px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
               >
                 Terms
               </Link>
               <Link
                 href="/privacy"
-                className="text-[11px] font-bold text-(--gray-400) uppercase tracking-widest hover:text-(--gray-600) transition-colors"
+                className="text-[11px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 transition-colors"
               >
                 Privacy
               </Link>
             </div>
-            <p className="text-[11px] text-(--gray-400) font-medium uppercase tracking-tighter text-center">
+            <p className="text-[11px] text-gray-400 font-medium uppercase tracking-tighter text-center">
               &copy; {new Date().getFullYear()} My Pharma. All rights reserved.
             </p>
           </div>

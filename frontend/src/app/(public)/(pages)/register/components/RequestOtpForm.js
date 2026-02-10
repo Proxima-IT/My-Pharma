@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
@@ -26,11 +25,9 @@ export default function RequestOtpForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     // Logic to determine if identifier is email or phone
     const isEmail = identifier.includes('@');
     const payload = isEmail ? { email: identifier } : { phone: identifier };
-
     try {
       const response = await fetch(
         'http://localhost:8000/api/auth/request-otp/',
@@ -40,20 +37,16 @@ export default function RequestOtpForm() {
           body: JSON.stringify(payload),
         },
       );
-
       const data = await response.json();
-
       if (!response.ok) {
         throw new Error(getFriendlyErrorMessage(response.status, data));
       }
-
       // Success: Move to verification step
       // We pass the identifier and type via URL params for the next step
       const params = new URLSearchParams({
         value: identifier,
         type: isEmail ? 'email' : 'phone',
       });
-
       router.push(`/register/verify?${params.toString()}`);
     } catch (err) {
       setError(err.message);
@@ -65,8 +58,8 @@ export default function RequestOtpForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="flex gap-3 p-4 rounded-xl bg-(--info-25) border border-(--info-100) animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="shrink-0 w-5 h-5 text-(--info-500)">
+        <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="shrink-0 w-5 h-5 text-info-500">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -76,7 +69,7 @@ export default function RequestOtpForm() {
               />
             </svg>
           </div>
-          <p className="text-sm font-bold leading-tight text-(--info-700)">
+          <p className="text-sm font-bold leading-tight text-info-700">
             {error}
           </p>
         </div>
@@ -111,7 +104,7 @@ export default function RequestOtpForm() {
         </UiButton>
       </div>
 
-      <p className="text-[11px] text-center text-(--gray-400) font-medium leading-relaxed">
+      <p className="text-[11px] text-center text-gray-400 font-medium leading-relaxed">
         By continuing, you agree to receive a one-time verification code via SMS
         or Email. Standard rates may apply.
       </p>

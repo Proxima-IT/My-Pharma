@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
@@ -35,12 +34,10 @@ export default function RegisterFlow() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     const isEmail = formData.identifier.includes('@');
     const payload = isEmail
       ? { email: formData.identifier }
       : { phone: formData.identifier };
-
     try {
       const response = await fetch(
         'http://localhost:8000/api/auth/request-otp/',
@@ -50,11 +47,9 @@ export default function RegisterFlow() {
           body: JSON.stringify(payload),
         },
       );
-
       const data = await response.json();
       if (!response.ok)
         throw new Error(getFriendlyErrorMessage(response.status, data));
-
       setStep(2);
     } catch (err) {
       setError(err.message);
@@ -67,13 +62,11 @@ export default function RegisterFlow() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     const isEmail = formData.identifier.includes('@');
     const payload = {
       [isEmail ? 'email' : 'phone']: formData.identifier,
       otp: formData.otp,
     };
-
     try {
       const response = await fetch(
         'http://localhost:8000/api/auth/verify-otp/',
@@ -83,16 +76,13 @@ export default function RegisterFlow() {
           body: JSON.stringify(payload),
         },
       );
-
       const data = await response.json();
       if (!response.ok)
         throw new Error(getFriendlyErrorMessage(response.status, data));
-
       // Store tokens and metadata for the final "Complete Registration" step
       sessionStorage.setItem('registration_token', data.registration_token);
       sessionStorage.setItem('verified_identifier', formData.identifier);
       sessionStorage.setItem('verified_type', isEmail ? 'email' : 'phone');
-
       router.push('/register/complete');
     } catch (err) {
       setError(err.message);
@@ -108,8 +98,8 @@ export default function RegisterFlow() {
         className="space-y-6"
       >
         {error && (
-          <div className="flex gap-3 p-4 rounded-xl bg-(--info-25) border border-(--info-100) animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="shrink-0 w-5 h-5 text-(--info-500)">
+          <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="shrink-0 w-5 h-5 text-info-500">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -119,7 +109,7 @@ export default function RegisterFlow() {
                 />
               </svg>
             </div>
-            <p className="text-sm font-bold leading-tight text-(--info-700)">
+            <p className="text-sm font-bold leading-tight text-info-700">
               {error}
             </p>
           </div>
@@ -179,7 +169,7 @@ export default function RegisterFlow() {
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="mt-3 text-[10px] font-black text-(--primary-500) uppercase tracking-widest hover:underline"
+              className="mt-3 text-[10px] font-black text-primary-500 uppercase tracking-widest hover:underline"
             >
               Change email/phone
             </button>

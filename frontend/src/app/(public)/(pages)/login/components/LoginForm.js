@@ -1,5 +1,4 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -37,7 +36,6 @@ export default function LoginForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
-
     const isEmail = formData.identifier.includes('@');
     const payload = {
       [isEmail ? 'email' : 'phone']: formData.identifier,
@@ -50,7 +48,6 @@ export default function LoginForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-
       const data = await response.json();
 
       if (!response.ok) {
@@ -67,6 +64,7 @@ export default function LoginForm() {
         DOCTOR: '/doctor',
         REGISTERED_USER: '/user',
       };
+
       router.push(routes[data.user.role] || '/');
     } catch (err) {
       setError(err.message);
@@ -78,8 +76,8 @@ export default function LoginForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="flex gap-3 p-4 rounded-xl bg-(--info-25) border border-(--info-100) animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="shrink-0 w-5 h-5 text-(--info-500)">
+        <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="shrink-0 w-5 h-5 text-info-500">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -89,7 +87,7 @@ export default function LoginForm() {
               />
             </svg>
           </div>
-          <p className="text-sm font-bold leading-tight text-(--info-700)">
+          <p className="text-sm font-bold leading-tight text-info-700">
             {error}
           </p>
         </div>
@@ -144,7 +142,7 @@ export default function LoginForm() {
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="p-1 text-(--gray-400) hover:text-(--primary-500) transition-colors"
+            className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
           >
             {showPassword ? (
               <svg
@@ -188,7 +186,7 @@ export default function LoginForm() {
       <div className="flex justify-end">
         <Link
           href="/forgot-password"
-          className="text-[11px] font-black uppercase tracking-widest text-(--primary-500) hover:text-(--primary-700) transition-colors"
+          className="text-[11px] font-black uppercase tracking-widest text-primary-500 hover:text-primary-700 transition-colors"
         >
           Forgot Password?
         </Link>

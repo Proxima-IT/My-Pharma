@@ -9,8 +9,10 @@ Core API views with RBAC.
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django_filters.rest_framework import DjangoFilterBackend
 
 from authentication.permissions import (
     IsSuperAdmin,
@@ -23,9 +25,12 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Category, Product, Order, OrderItem, Prescription, Consultation, Page
+from .models import Brand, Category, Ingredient, Product, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page
 from .serializers import (
+    BrandSerializer,
     CategorySerializer,
+    CategoryTreeSerializer,
+    IngredientSerializer,
     ProductListSerializer,
     ProductDetailSerializer,
     ProductWriteSerializer,
@@ -40,25 +45,67 @@ from .serializers import (
     ConsultationResponseSerializer,
     PageSerializer,
 )
+from .filters import ProductFilter
 
 
-# ---- Category (Pharmacy Admin / Super) ----
+# ---- Category (hierarchy: parent / children). Pharmacy Admin / Super ----
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.all()
+    queryset = Category.objects.select_related("parent").prefetch_related("children").all()
     serializer_class = CategorySerializer
     permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
+    filterset_fields = ["is_active", "parent"]
+    search_fields = ["name", "slug"]
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+
+    def get_serializer_class(self):
+        if self.action == "tree":
+            return CategoryTreeSerializer
+        return CategorySerializer
+
+    @action(detail=False, methods=["get"], url_path="tree")
+    def tree(self, request):
+        """Return category hierarchy (root categories with nested children). ?parent__isnull=true for roots."""
+        roots = Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related("children").order_by("name")
+        return Response(CategoryTreeSerializer(roots, many=True, context={"request": request}).data)
+
+
+# ---- Brand (autocomplete for product search). List: any; write: Pharmacy Admin / Super ----
+class BrandViewSet(viewsets.ModelViewSet):
+    queryset = Brand.objects.all()
+    serializer_class = BrandSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["is_active"]
     search_fields = ["name", "slug"]
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
 
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
-# ---- Product (Pharmacy Admin / Super). Inventory = quantity_in_stock on Product ----
+
+# ---- Ingredient (generic search: map to branded products). List: any; write: Pharmacy Admin / Super ----
+class IngredientViewSet(viewsets.ModelViewSet):
+    queryset = Ingredient.objects.all()
+    serializer_class = IngredientSerializer
+    filter_backends = [SearchFilter]
+    search_fields = ["name", "slug"]
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated(), AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+
+# ---- Product (catalog search & filter per PRODUCT_CATALOG.md). Inventory = quantity_in_stock ----
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category").all()
+    queryset = Product.objects.select_related("category", "brand", "ingredient").all()
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["category", "is_active"]
-    search_fields = ["name", "slug", "description"]
+    filterset_class = ProductFilter
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
 
@@ -103,7 +150,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
-        qs = Order.objects.select_related("user").prefetch_related("items__product").all()
+        qs = Order.objects.select_related("user", "prescription").prefetch_related("items__product").all()
         role = getattr(self.request.user, "role", None)
         if role in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
             return qs
@@ -141,9 +188,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         return self.partial_update(request, *args, **kwargs)
 
 
-# ---- Prescription: Pharmacy/Super list & verify; User upload ----
+# ---- Prescription: Pharmacy/Super list & verify; User upload (flow: PENDING -> APPROVED/REJECTED; APPROVED -> USED when linked to order) ----
 class PrescriptionViewSet(viewsets.ModelViewSet):
-    queryset = Prescription.objects.select_related("user", "verified_by").all()
+    queryset = Prescription.objects.select_related("user", "verified_by").prefetch_related("items__product").all()
     serializer_class = PrescriptionSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["status"]
@@ -171,19 +218,36 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         serializer = PrescriptionUploadSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        prescription = Prescription.objects.create(user=request.user, **serializer.validated_data)
+        data = {k: v for k, v in serializer.validated_data.items()}
+        prescription = Prescription.objects.create(user=request.user, status=Prescription.Status.PENDING, **data)
         return Response(PrescriptionSerializer(prescription).data, status=status.HTTP_201_CREATED)
 
     def partial_update(self, request, *args, **kwargs):
-        """Verify or reject prescription (Verify Prescriptions). PATCH status, notes."""
+        """Verify or reject prescription. PENDING -> APPROVED (with doctor details + items) or REJECTED."""
         prescription = self.get_object()
         serializer = PrescriptionVerifySerializer(prescription, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
-        prescription.status = serializer.validated_data.get("status", prescription.status)
-        prescription.notes = serializer.validated_data.get("notes", prescription.notes)
+        data = serializer.validated_data
+        prescription.status = data.get("status", prescription.status)
+        prescription.notes = data.get("notes", prescription.notes)
+        prescription.doctor_name = data.get("doctor_name", prescription.doctor_name)
+        prescription.doctor_reg_number = data.get("doctor_reg_number", prescription.doctor_reg_number)
+        prescription.has_signature = data.get("has_signature", prescription.has_signature)
+        prescription.patient_name_on_rx = data.get("patient_name_on_rx", prescription.patient_name_on_rx)
         prescription.verified_by = request.user
         prescription.verified_at = timezone.now()
-        prescription.save(update_fields=["status", "notes", "verified_by", "verified_at"])
+        prescription.save(update_fields=["status", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "verified_by", "verified_at"])
+        if prescription.status == Prescription.Status.APPROVED and "items" in data and data["items"]:
+            PrescriptionItem.objects.filter(prescription=prescription).delete()
+            for entry in data["items"]:
+                product_id = entry.get("product") if isinstance(entry.get("product"), int) else getattr(entry.get("product"), "id", None)
+                qty = entry.get("quantity_prescribed")
+                if product_id is not None and qty is not None and qty > 0:
+                    PrescriptionItem.objects.create(
+                        prescription=prescription,
+                        product_id=product_id,
+                        quantity_prescribed=qty,
+                    )
         return Response(PrescriptionSerializer(prescription).data)
 
     @action(detail=True, methods=["patch"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="verify")

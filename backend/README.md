@@ -1,4 +1,4 @@
-# My Pharma – Backend (MVP)
+# My Pharma – Backend (MVP) -
 
 Production-oriented Django 4+ API for the My Pharma online pharmacy platform. Authentication is API-only (REST) with JWT, Redis, and Celery.
 
