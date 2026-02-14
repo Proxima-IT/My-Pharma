@@ -6,7 +6,13 @@ module.exports = {
     "./src/pages/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+  extend: {
+    fontFamily: {
+      inter: ["var(--font-inter)"],
+      playfair: ["var(--font-playfair)"],
+    },
   },
+},
+
   plugins: [],
 };
