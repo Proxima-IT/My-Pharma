@@ -10,6 +10,8 @@ import { FiBell, FiUser } from "react-icons/fi";
 import { HiOutlineLocationMarker } from "react-icons/hi";
 import { BsCart3 } from "react-icons/bs";
 import { RiMenu4Line } from "react-icons/ri";
+import Link from "next/link";
+import Logo from "./Logo";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
@@ -39,18 +41,25 @@ const Header = () => {
         <div className="flex  items-center">
           <div className="shrink-0 w-full lg:w-auto  lg:text-left">
             <div className="inline-block">
-              <Image
+              {/* <Image
                 src="/assets/images/main-logo.png"
                 alt="Logo"
                 width={700}
                 height={475}
                 className="w-32 md:w-44 lg:w-56 h-auto mx-auto lg:mx-0"
                 priority
-              />
+              /> */}
+
+              <Link
+                href="/"
+                className=" block hover:opacity-80 transition-opacity duration-300"
+              >
+                <Logo className="h-14 w-auto" />
+              </Link>
             </div>
-            <h2 className="text-info-800 text-sm md:text-base ">
+            {/* <h2 className="text-info-800 text-sm md:text-base ">
               Simplifying life beyond medicine.
-            </h2>
+            </h2> */}
           </div>
 
           <div className="block lg:hidden ">

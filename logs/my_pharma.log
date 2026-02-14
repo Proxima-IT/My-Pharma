@@ -18,3 +18,4 @@
 2026-02-04 12:40:49,732 INFO authentication.services OTP requested for phone (masked); resend count incremented.
 2026-02-04 12:43:52,924 INFO authentication.tasks OTP for 5566: 632919 (dev mode)
 2026-02-04 12:43:52,930 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-10 21:00:56,960 INFO authentication.services OTP requested for email (masked); resend count incremented.
