@@ -22,6 +22,10 @@ from .serializers import (
     RegisterEmailRequestSerializer,
     LoginRequestSerializer,
     PasswordResetRequestSerializer,
+    ChangeEmailRequestSerializer,
+    ChangeEmailConfirmSerializer,
+    ChangePhoneRequestSerializer,
+    ChangePhoneConfirmSerializer,
     UserMeSerializer,
     UserProfileUpdateSerializer,
     UserManagementSerializer,
@@ -37,7 +41,11 @@ from .services import (
     perform_login_phone,
     check_login_lockout,
     create_audit_log,
+    confirm_change_email,
+    confirm_change_phone,
+    normalize_phone,
 )
+from . import utils
 from .throttling import LoginRateThrottle, OTPSendRateThrottle, OTPVerifyRateThrottle
 
 logger = logging.getLogger(__name__)
@@ -325,8 +333,116 @@ class PasswordResetView(APIView):
         )
 
 
+class ChangeEmailRequestView(APIView):
+    """POST /api/auth/change-email/request/ – Send OTP to new email; user must then confirm with change-email/confirm/."""
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    throttle_classes = [OTPSendRateThrottle]
+
+    def post(self, request):
+        ser = ChangeEmailRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        new_email = ser.validated_data["new_email"]
+        try:
+            request_otp_for_email(
+                new_email,
+                ip=request.META.get("REMOTE_ADDR", ""),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            )
+        except OTPRateLimitError:
+            return Response(
+                {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        utils.change_email_pending_set(request.user.id, new_email)
+        create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_email", "email_masked": new_email[:2] + "***"})
+        return Response(
+            {"message": "OTP sent to your new email.", "detail": "Use change-email/confirm/ with new_email and otp to complete."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ChangeEmailConfirmView(APIView):
+    """POST /api/auth/change-email/confirm/ – Verify OTP and update user email (body: new_email, otp)."""
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    throttle_classes = [OTPVerifyRateThrottle]
+
+    def post(self, request):
+        ser = ChangeEmailConfirmSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        new_email = ser.validated_data["new_email"]
+        otp = ser.validated_data["otp"]
+        try:
+            user = confirm_change_email(request.user.id, new_email, otp)
+        except InvalidOTPError:
+            return Response(
+                {"detail": "Invalid or expired OTP.", "code": "invalid_otp"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValueError:
+            return Response(
+                {"detail": "No pending email change or user not found.", "code": "invalid_request"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        create_audit_log(user.id, AuditAction.OTP_VERIFIED, request=request, metadata={"intent": "change_email"})
+        return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
+class ChangePhoneRequestView(APIView):
+    """POST /api/auth/change-phone/request/ – Send OTP to new phone; user must then confirm with change-phone/confirm/."""
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    throttle_classes = [OTPSendRateThrottle]
+
+    def post(self, request):
+        ser = ChangePhoneRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        new_phone = ser.validated_data["new_phone"]
+        try:
+            request_otp_for_phone(
+                new_phone,
+                ip=request.META.get("REMOTE_ADDR", ""),
+                user_agent=request.META.get("HTTP_USER_AGENT", ""),
+            )
+        except OTPRateLimitError:
+            return Response(
+                {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        utils.change_phone_pending_set(request.user.id, new_phone)
+        create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_phone", "phone_masked": new_phone[-4:]})
+        return Response(
+            {"message": "OTP sent to your new phone.", "detail": "Use change-phone/confirm/ with new_phone and otp to complete."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class ChangePhoneConfirmView(APIView):
+    """POST /api/auth/change-phone/confirm/ – Verify OTP and update user phone (body: new_phone, otp)."""
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    throttle_classes = [OTPVerifyRateThrottle]
+
+    def post(self, request):
+        ser = ChangePhoneConfirmSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        new_phone = ser.validated_data["new_phone"]
+        otp = ser.validated_data["otp"]
+        try:
+            user = confirm_change_phone(request.user.id, new_phone, otp)
+        except InvalidOTPError:
+            return Response(
+                {"detail": "Invalid or expired OTP.", "code": "invalid_otp"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except ValueError:
+            return Response(
+                {"detail": "No pending phone change or user not found.", "code": "invalid_request"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        create_audit_log(user.id, AuditAction.OTP_VERIFIED, request=request, metadata={"intent": "change_phone"})
+        return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
+
+
 class MeView(APIView):
-    """GET /api/auth/me/ – Current user profile. PUT/PATCH – Update profile (username, profile_picture, address, gender, date_of_birth)."""
+    """GET /api/auth/me/ – Current user profile. PUT/PATCH – Update profile. Add/change email or phone via OTP (send email/phone → OTP sent; send same + otp → verified and saved)."""
     permission_classes = [IsAuthenticated, IsRegisteredUser]
 
     def get(self, request):
@@ -336,11 +452,11 @@ class MeView(APIView):
         return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
 
     def put(self, request):
-        """Full or partial update of profile; only provided fields are updated."""
+        """Full or partial update of profile; only provided fields are updated. Email/phone require OTP."""
         return self._update_profile(request, partial=False)
 
     def patch(self, request):
-        """Partial update of profile; only provided fields are updated."""
+        """Partial update of profile; only provided fields are updated. Email/phone require OTP."""
         return self._update_profile(request, partial=True)
 
     def _update_profile(self, request, partial=True):
@@ -350,6 +466,130 @@ class MeView(APIView):
         data = request.data.copy()
         if request.FILES:
             data.update(request.FILES)
+
+        # --- Add/change email or phone (OTP flow from dashboard) ---
+        raw_email = (data.get("email") or "").strip().lower() if data.get("email") else None
+        raw_phone = (data.get("phone") or "").strip() if data.get("phone") else None
+        otp = (data.get("otp") or "").strip()
+
+        if raw_email and raw_phone and not otp:
+            return Response(
+                {"detail": "Send only email or only phone to add/verify one at a time."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Confirm email: body has email + otp
+        if raw_email and otp:
+            try:
+                user = confirm_change_email(request.user.id, raw_email, otp)
+            except InvalidOTPError:
+                return Response(
+                    {"detail": "Invalid or expired OTP.", "code": "invalid_otp"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValueError:
+                return Response(
+                    {"detail": "No pending email verification. Request OTP first by sending email without otp.", "code": "invalid_request"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            create_audit_log(user.id, AuditAction.OTP_VERIFIED, request=request, metadata={"intent": "change_email"})
+            # Update rest of profile (excluding email, phone, otp)
+            for k in ("email", "phone", "otp"):
+                data.pop(k, None)
+            if data:
+                serializer = UserProfileUpdateSerializer(user, data=data, partial=True, context={"request": request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
+
+        # Request OTP for new email (add/change email from dashboard)
+        if raw_email:
+            if User.objects.filter(email__iexact=raw_email).exclude(pk=user.pk).exclude(deleted_at__isnull=False).exists():
+                return Response({"detail": "A user with this email already exists.", "code": "email_taken"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                request_otp_for_email(
+                    raw_email,
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+            except OTPRateLimitError:
+                return Response(
+                    {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            utils.change_email_pending_set(request.user.id, raw_email)
+            create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_email", "email_masked": raw_email[:2] + "***"})
+            return Response(
+                {
+                    "pending_verification": "email",
+                    "message": "OTP sent to your email.",
+                    "detail": "Submit again with the same email and otp to add this email to your profile.",
+                    "identifier_masked": raw_email[:2] + "***" + raw_email[raw_email.index("@"):] if "@" in raw_email else raw_email[:2] + "***",
+                    "user": UserMeSerializer(user, context={"request": request}).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # Confirm phone: body has phone + otp
+        if raw_phone and otp:
+            normalized_phone = normalize_phone(raw_phone)
+            if len(normalized_phone) < 10:
+                return Response({"detail": "Invalid phone number.", "code": "invalid_phone"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                user = confirm_change_phone(request.user.id, normalized_phone, otp)
+            except InvalidOTPError:
+                return Response(
+                    {"detail": "Invalid or expired OTP.", "code": "invalid_otp"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            except ValueError:
+                return Response(
+                    {"detail": "No pending phone verification. Request OTP first by sending phone without otp.", "code": "invalid_request"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            create_audit_log(user.id, AuditAction.OTP_VERIFIED, request=request, metadata={"intent": "change_phone"})
+            for k in ("email", "phone", "otp"):
+                data.pop(k, None)
+            if data:
+                serializer = UserProfileUpdateSerializer(user, data=data, partial=True, context={"request": request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
+            return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
+
+        # Request OTP for new phone (add/change phone from dashboard)
+        if raw_phone:
+            normalized_phone = normalize_phone(raw_phone)
+            if len(normalized_phone) < 10:
+                return Response({"detail": "Invalid phone number.", "code": "invalid_phone"}, status=status.HTTP_400_BAD_REQUEST)
+            if User.objects.filter(phone=normalized_phone).exclude(pk=user.pk).exclude(deleted_at__isnull=False).exists():
+                return Response({"detail": "A user with this phone number already exists.", "code": "phone_taken"}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                request_otp_for_phone(
+                    normalized_phone,
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+            except OTPRateLimitError:
+                return Response(
+                    {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            utils.change_phone_pending_set(request.user.id, normalized_phone)
+            create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_phone", "phone_masked": normalized_phone[-4:]})
+            return Response(
+                {
+                    "pending_verification": "phone",
+                    "message": "OTP sent to your phone.",
+                    "detail": "Submit again with the same phone and otp to add this phone to your profile.",
+                    "identifier_masked": "****" + normalized_phone[-4:],
+                    "user": UserMeSerializer(user, context={"request": request}).data,
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        # Normal profile update (no email/phone add flow)
+        for k in ("email", "phone", "otp"):
+            data.pop(k, None)
         serializer = UserProfileUpdateSerializer(user, data=data, partial=partial, context={"request": request})
         serializer.is_valid(raise_exception=True)
         serializer.save()

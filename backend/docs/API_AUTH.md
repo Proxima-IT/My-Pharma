@@ -434,22 +434,30 @@ User not found (e.g. soft-deleted).
 
 **Headers:** `Authorization: Bearer <access_token>`
 
-**Updatable fields (all optional):** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`.
+**Updatable fields (all optional):** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`; for adding email/phone: `email`, `phone`, `otp`.
 
-| Field             | Type   | Description                                      |
-| ----------------- | ------ | ------------------------------------------------ |
-| `username`        | string | Display name (must be unique)                     |
-| `profile_picture` | file   | Image (use `multipart/form-data` if sending file) |
-| `address`         | string | Address text                                      |
-| `gender`          | string | `MALE`, `FEMALE`, or `OTHER`; null to clear      |
-| `date_of_birth`   | string | ISO date (YYYY-MM-DD); null to clear             |
+| Field             | Type   | Description                                                                 |
+| ----------------- | ------ | --------------------------------------------------------------------------- |
+| `username`        | string | Display name (must be unique)                                                |
+| `profile_picture` | file   | Image (use `multipart/form-data` if sending file)                           |
+| `address`         | string | Address text                                                                 |
+| `gender`          | string | `MALE`, `FEMALE`, or `OTHER`; null to clear                                 |
+| `date_of_birth`   | string | ISO date (YYYY-MM-DD); null to clear                                        |
+| `email`           | string | Add/change email: send once for OTP; then same email + `otp` to confirm     |
+| `phone`           | string | Add/change phone: send once for OTP; then same phone + `otp` to confirm      |
+| `otp`             | string | OTP code (with same `email` or `phone` to confirm and save)                 |
+
+**Add email or phone (dashboard):** Send only `email` or only `phone` → OTP sent; then send same value + `otp` → profile updated.
 
 **Request:** `application/json` for JSON body, or `multipart/form-data` when including `profile_picture`.
 
-**Response – 200 OK:** Full user object (same shape as GET `/api/auth/me/`).
+**Response – 200 OK:** Full user object (same shape as GET `/api/auth/me/`). When OTP requested, body also has `pending_verification`, `message`, `identifier_masked`.
 
 **Error – 400**  
-Validation error (e.g. duplicate username).
+Validation error (e.g. duplicate username); or invalid/expired OTP when confirming.
+
+**Error – 429**  
+Too many OTP requests.
 
 **Error – 401**  
 Missing or invalid/expired/revoked token.

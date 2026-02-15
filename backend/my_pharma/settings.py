@@ -2,6 +2,7 @@
 My Pharma – Django settings (production-oriented).
 API-only, MySQL, Redis, Celery, JWT.
 """
+import hashlib
 import os
 from pathlib import Path
 from datetime import timedelta
@@ -13,6 +14,8 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production")
+# JWT HMAC-SHA256 requires key >= 32 bytes (RFC 7518); avoid InsecureKeyLengthWarning
+JWT_SIGNING_KEY = hashlib.sha256(SECRET_KEY.encode()).hexdigest()
 
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 
@@ -138,6 +141,7 @@ SIMPLE_JWT = {
     "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
+    "SIGNING_KEY": JWT_SIGNING_KEY,
 }
 
 _use_redis_env = os.environ.get("USE_REDIS", "").lower()
