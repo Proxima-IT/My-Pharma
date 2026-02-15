@@ -14,6 +14,8 @@ OTP_RESEND_PREFIX = f"{KEY_PREFIX}:otp_resend"
 LOCKOUT_PREFIX = f"{KEY_PREFIX}:lockout"
 BLACKLIST_PREFIX = f"{KEY_PREFIX}:blacklist"
 REGISTRATION_TOKEN_PREFIX = f"{KEY_PREFIX}:reg_token"
+CHANGE_EMAIL_PENDING_PREFIX = f"{KEY_PREFIX}:change_email_pending"
+CHANGE_PHONE_PENDING_PREFIX = f"{KEY_PREFIX}:change_phone_pending"
 
 
 def _otp_key(identifier: str) -> str:
@@ -127,3 +129,35 @@ def registration_token_get(token: str) -> dict | None:
 
 def registration_token_delete(token: str) -> None:
     cache.delete(f"{REGISTRATION_TOKEN_PREFIX}:{token}")
+
+
+def _change_pending_ttl_seconds() -> int:
+    return 10 * 60  # 10 minutes
+
+
+def change_email_pending_set(user_id: int, new_email: str) -> None:
+    key = f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}"
+    cache.set(key, new_email.lower().strip(), timeout=_change_pending_ttl_seconds())
+
+
+def change_email_pending_get(user_id: int) -> str | None:
+    key = f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}"
+    return cache.get(key)
+
+
+def change_email_pending_delete(user_id: int) -> None:
+    cache.delete(f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}")
+
+
+def change_phone_pending_set(user_id: int, new_phone: str) -> None:
+    key = f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}"
+    cache.set(key, new_phone.strip(), timeout=_change_pending_ttl_seconds())
+
+
+def change_phone_pending_get(user_id: int) -> str | None:
+    key = f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}"
+    return cache.get(key)
+
+
+def change_phone_pending_delete(user_id: int) -> None:
+    cache.delete(f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}")

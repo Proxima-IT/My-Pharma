@@ -385,25 +385,37 @@ Update the current user’s profile. Only provided fields are updated (PATCH = p
 
 **Updatable fields:** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`. All are optional in the body.
 
-| Field             | Type   | Required | Description                                      |
-| ----------------- | ------ | -------- | ------------------------------------------------ |
-| `username`        | string | No       | Display name (must be unique)                     |
-| `profile_picture` | file   | No       | Image (use `multipart/form-data` if sending file) |
-| `address`         | string | No       | Address text                                      |
-| `gender`          | string | No       | `MALE`, `FEMALE`, or `OTHER`; omit or null to clear |
-| `date_of_birth`   | string | No       | ISO date (YYYY-MM-DD); null to clear              |
+**Add or change email / phone (dashboard OTP flow):** Send **only** `email` or **only** `phone` (not both at once).
+
+1. **Request OTP:** Send `email` or `phone` (no `otp`). Backend sends OTP to that email/phone and returns `pending_verification`, `message`, `identifier_masked`, and `user`. Do not send both email and phone in the same request.
+2. **Confirm and save:** Send the **same** `email` or `phone` **and** `otp`. Backend verifies OTP and updates the user’s email or phone (and sets verified). Response is the full user object.
+
+| Field             | Type   | Required | Description                                                                 |
+| ----------------- | ------ | -------- | --------------------------------------------------------------------------- |
+| `username`        | string | No       | Display name (must be unique)                                                |
+| `profile_picture` | file   | No       | Image (use `multipart/form-data` if sending file)                           |
+| `address`         | string | No       | Address text                                                                 |
+| `gender`          | string | No       | `MALE`, `FEMALE`, or `OTHER`; omit or null to clear                          |
+| `date_of_birth`   | string | No       | ISO date (YYYY-MM-DD); null to clear                                        |
+| `email`           | string | No       | To add/change email: send once to get OTP, then send again with `otp`        |
+| `phone`           | string | No       | To add/change phone: send once to get OTP, then send again with `otp`         |
+| `otp`             | string | No       | OTP code (send with same `email` or `phone` to confirm and save)             |
 
 **Request:** JSON (`application/json`) or `multipart/form-data` when including `profile_picture`.
 
-**Success (200):** Full user object (same as GET `/api/auth/me/`).
+**Success (200):** Full user object (same as GET `/api/auth/me/`). When OTP was requested (no `otp`), body also includes `pending_verification`, `message`, `identifier_masked`.
 
 **Errors:**
 
-| Status | Code | Condition                                |
-| ------ | ---- | ---------------------------------------- |
-| 400    | —    | Validation error (e.g. duplicate username) |
-| 401    | —    | Missing or invalid/expired/revoked token |
-| 404    | —    | User not found (e.g. soft-deleted)       |
+| Status | Code          | Condition                                                       |
+| ------ | ------------- | --------------------------------------------------------------- |
+| 400    | —             | Validation error (e.g. duplicate username); send only email or phone |
+| 400    | `invalid_otp` | Invalid or expired OTP                                          |
+| 400    | `email_taken` | Email already used by another user                              |
+| 400    | `phone_taken` | Phone already used by another user                              |
+| 401    | —             | Missing or invalid/expired/revoked token                         |
+| 404    | —             | User not found (e.g. soft-deleted)                              |
+| 429    | `otp_rate_limit` | Too many OTP requests                                        |
 
 ---
 

@@ -103,6 +103,51 @@ def verify_otp_only_email(email: str, otp: str) -> tuple[str, str, str]:
     return token, "email", normalized
 
 
+def confirm_change_email(user_id: int, new_email: str, otp: str) -> User:
+    """
+    Verify OTP for new_email and update user's email. Pending must have been set for this user_id.
+    Raises InvalidOTPError if OTP wrong; ValueError if pending mismatch or user not found.
+    """
+    normalized = new_email.lower().strip()
+    pending = utils.change_email_pending_get(user_id)
+    if not pending or pending != normalized:
+        raise InvalidOTPError()  # or a specific "pending expired" - use same for security
+    verify_otp_only_email(normalized, otp)  # raises InvalidOTPError, deletes OTP
+    user = User.objects.filter(pk=user_id).exclude(deleted_at__isnull=False).first()
+    if not user:
+        raise ValueError("User not found.")
+    old_email = user.email
+    user.email = normalized
+    user.email_verified = True
+    user.save(update_fields=["email", "email_verified", "updated_at"])
+    utils.change_email_pending_delete(user_id)
+    logger.info("User %s email updated (from %s to %s).", user_id, old_email, normalized)
+    return user
+
+
+def confirm_change_phone(user_id: int, new_phone: str, otp: str) -> User:
+    """
+    Verify OTP for new_phone and update user's phone. Pending must have been set for this user_id.
+    Raises InvalidOTPError if OTP wrong; ValueError if pending mismatch or user not found.
+    """
+    normalized = normalize_phone(new_phone)
+    if len(normalized) < 10:
+        raise InvalidOTPError()
+    pending = utils.change_phone_pending_get(user_id)
+    if not pending or pending != normalized:
+        raise InvalidOTPError()
+    verify_otp_only(normalized, otp)  # raises InvalidOTPError, deletes OTP
+    user = User.objects.filter(pk=user_id).exclude(deleted_at__isnull=False).first()
+    if not user:
+        raise ValueError("User not found.")
+    user.phone = normalized
+    user.phone_verified = True
+    user.save(update_fields=["phone", "phone_verified", "updated_at"])
+    utils.change_phone_pending_delete(user_id)
+    logger.info("User %s phone updated to %s.", user_id, normalized)
+    return user
+
+
 def complete_registration(
     registration_token: str,
     password: str,

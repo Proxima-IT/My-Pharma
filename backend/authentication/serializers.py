@@ -145,6 +145,48 @@ class RegisterCompleteRequestSerializer(serializers.Serializer):
         return v
 
 
+class ChangeEmailRequestSerializer(serializers.Serializer):
+    """Request OTP to new email for changing account email (authenticated user)."""
+    new_email = serializers.EmailField()
+
+    def validate_new_email(self, value):
+        v = value.lower().strip()
+        if User.objects.filter(email__iexact=v).exclude(deleted_at__isnull=False).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return v
+
+
+class ChangeEmailConfirmSerializer(serializers.Serializer):
+    """Confirm change email with OTP sent to the new email."""
+    new_email = serializers.EmailField()
+    otp = serializers.CharField(max_length=8, min_length=6)
+
+    def validate_new_email(self, value):
+        return value.lower().strip()
+
+
+class ChangePhoneRequestSerializer(serializers.Serializer):
+    """Request OTP to new phone for changing account phone (authenticated user)."""
+    new_phone = serializers.CharField(max_length=20, trim_whitespace=True)
+
+    def validate_new_phone(self, value):
+        normalized = normalize_phone(value)
+        if len(normalized) < 10:
+            raise serializers.ValidationError("Invalid phone number.")
+        if User.objects.filter(phone=normalized).exclude(deleted_at__isnull=False).exists():
+            raise serializers.ValidationError("A user with this phone number already exists.")
+        return normalized
+
+
+class ChangePhoneConfirmSerializer(serializers.Serializer):
+    """Confirm change phone with OTP sent to the new phone."""
+    new_phone = serializers.CharField(max_length=20, trim_whitespace=True)
+    otp = serializers.CharField(max_length=8, min_length=6)
+
+    def validate_new_phone(self, value):
+        return normalize_phone(value)
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
