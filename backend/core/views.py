@@ -104,7 +104,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 # ---- Product (catalog search & filter per PRODUCT_CATALOG.md). Inventory = quantity_in_stock ----
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category", "brand", "ingredient").all()
+    queryset = Product.objects.select_related("category", "brand", "ingredient").prefetch_related("images").all()
     permission_classes = [IsAuthenticated]
     filterset_class = ProductFilter
     lookup_field = "slug"

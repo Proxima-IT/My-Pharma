@@ -15,6 +15,7 @@ from .models import (
     Prescription,
     PrescriptionItem,
     Product,
+    ProductImage,
 )
 
 
@@ -24,7 +25,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "parent")
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
-    raw_id_fields = ("parent",)
+    list_select_related = ("parent",)
 
 
 @admin.register(Brand)
@@ -40,6 +41,12 @@ class IngredientAdmin(admin.ModelAdmin):
     list_display = ("name", "slug", "created_at")
     search_fields = ("name", "slug")
     prepopulated_fields = {"slug": ("name",)}
+
+
+class ProductImageInline(admin.TabularInline):
+    model = ProductImage
+    extra = 1
+    fields = ("image", "order")
 
 
 @admin.register(Product)
@@ -58,8 +65,9 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "requires_prescription", "category", "brand")
     search_fields = ("name", "slug", "description")
     prepopulated_fields = {"slug": ("name",)}
-    raw_id_fields = ("category", "brand", "ingredient")
+    list_select_related = ("category", "brand", "ingredient")
     list_editable = ("is_active", "quantity_in_stock")
+    inlines = [ProductImageInline]
 
 
 class OrderItemInline(admin.TabularInline):
