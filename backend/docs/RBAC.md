@@ -40,6 +40,7 @@ Full Purchase Access              Browse Only
 | CMS Management       |      ✓      |    Limited     |   ✗    |        ✗        |
 | Purchase Products    |      ✗      |       ✗        |   ✗    |        ✓        |
 | Upload Prescriptions |      ✗      |       ✗        |   ✗    |        ✓        |
+| View own prescriptions (list/retrieve) | ✗ | ✗ | ✗ | ✓ |
 
 ---
 
@@ -94,7 +95,7 @@ The backend exposes REST APIs for the admin panel (and for customers: place orde
 | `/api/auth/admin/users/`             | Manage All Users (SUPER_ADMIN only)                                        |
 | `/api/categories/`, `/api/products/` | Manage Products, Inventory (Pharmacy/Super)                                |
 | `/api/orders/`                       | View/Manage Orders (Pharmacy/Super all; User own); Place order (User only) |
-| `/api/prescriptions/`                | Verify Prescriptions (Pharmacy/Super); Upload (User only)                  |
+| `/api/prescriptions/`                | List/retrieve: User (own only), Pharmacy/Super (all); Upload (User only); Verify PATCH (Pharmacy/Super only) |
 | `/api/consultations/`                | Doctor Consultations (Doctor/Super respond; User request)                  |
 | `/api/pages/`                        | CMS (Super full; Pharmacy limited)                                         |
 

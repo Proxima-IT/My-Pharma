@@ -21,7 +21,21 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 ---
 
-## 2. Manage Products (SUPER_ADMIN, PHARMACY_ADMIN)
+## 2. Prescriptions (list/retrieve own; verify: Pharmacy/Super)
+
+| Method | Path                               | Description |
+|--------|------------------------------------|-------------|
+| GET    | `/api/prescriptions/`              | List prescriptions. **Pharmacy/Super:** all. **User:** own only. Filter: `status`. |
+| GET    | `/api/prescriptions/{id}/`         | Retrieve prescription (includes items when approved). Users see only own. |
+| POST   | `/api/prescriptions/`              | Upload prescription (REGISTERED_USER only). Body: **file** (required; JPG/PNG/PDF, max 10MB), optional: issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING. |
+| PATCH  | `/api/prescriptions/{id}/`          | Verify or reject (PHARMACY_ADMIN, SUPER_ADMIN only). Body: **status** = APPROVED or REJECTED, notes; when approving: doctor_name, doctor_reg_number, has_signature (true), optional patient_name_on_rx, **items** [{ product, quantity_prescribed }]. Sets verified_by, verified_at. |
+| PATCH  | `/api/prescriptions/{id}/verify/`  | Alias for PATCH prescription (verify/reject). |
+
+**Permission:** List/retrieve: any authenticated user (queryset filtered so users see only own). Upload: `IsRegisteredUserOnly`. Verify (PATCH): `IsPharmacyAdminOrSuper`. See [PRESCRIPTION_MANAGEMENT.md](PRESCRIPTION_MANAGEMENT.md).
+
+---
+
+## 3. Manage Products (SUPER_ADMIN, PHARMACY_ADMIN)
 
 | Method      | Path                              | Description                                                                                                                                 |
 | ----------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -67,20 +81,6 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | DELETE | `/api/ingredients/{slug}/` | Delete ingredient |
 
 **Permission:** List/retrieve: any (including guest). Create/update/delete: `IsPharmacyAdminOrSuper`.
-
----
-
-## 3. Verify Prescriptions (SUPER_ADMIN, PHARMACY_ADMIN)
-
-| Method | Path                              | Description                                                                                                                                 |
-| ------ | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/api/prescriptions/`             | List prescriptions (Pharmacy/Super: all; User: own). Filter: status                                                                          |
-| GET    | `/api/prescriptions/{id}/`       | Retrieve prescription (includes items when approved)                                                                                         |
-| POST   | `/api/prescriptions/`            | Upload prescription (REGISTERED_USER only). Body: **file** (required; JPG/PNG/PDF, max 10MB), optional: issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING. |
-| PATCH  | `/api/prescriptions/{id}/`       | Verify or reject. Body: **status** = APPROVED or REJECTED, notes; when approving: doctor_name, doctor_reg_number, has_signature (true), optional patient_name_on_rx, **items** [{ product, quantity_prescribed }]. Sets verified_by, verified_at. |
-| PATCH  | `/api/prescriptions/{id}/verify/`| Alias for PATCH prescription (verify/reject)                                                                                                 |
-
-**Permission:** Create: `IsRegisteredUserOnly`. List/retrieve/update: `IsPharmacyAdminOrSuper` (users see only own for list/retrieve). See [PRESCRIPTION_MANAGEMENT.md](PRESCRIPTION_MANAGEMENT.md) for status flow and validation rules.
 
 ---
 
