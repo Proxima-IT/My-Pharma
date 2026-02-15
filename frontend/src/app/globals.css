@@ -1,8 +1,14 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
-/* globals.css */
-@import "remixicon/fonts/remixicon.css";
+/* =========================
+  Design System – Colors
+   ========================= */
 
+:root {
+  background-color: #f3f4f6; /* light bg */
+  color: #000000; /* light text */
+}
 
 @theme {
   /* ===== Required prefix: --color- for color utilities ===== */
@@ -12,9 +18,11 @@
   --color-white-70: #ffffffb2;
   --color-black-70: #000000b2;
 
+  --color-imageBG: #f7f7f9;
+
   /* Gray scale – override/extend default gray if you want */
-  --color-gray-25:  #fcfcfd;
-  --color-gray-50:  #f9fafb;
+  --color-gray-25: #fcfcfd;
+  --color-gray-50: #f9fafb;
   --color-gray-100: #f2f4f7;
   --color-gray-200: #eaecf0;
   --color-gray-300: #d0d5dd;
@@ -26,8 +34,8 @@
   --color-gray-900: #101828;
 
   /* Primary Blue – this generates bg-primary-500, text-primary-900, etc. */
-  --color-primary-25:  #f4f5f9;
-  --color-primary-50:  #e9ebf4;
+  --color-primary-25: #f4f5f9;
+  --color-primary-50: #e9ebf4;
   --color-primary-100: #bbc2db;
   --color-primary-200: #9aa5ca;
   --color-primary-300: #6c7cb2;
@@ -39,8 +47,8 @@
   --color-primary-900: #0f193b;
 
   /* Info / Light Blue */
-  --color-info-25:  #f3f3ff;
-  --color-info-50:  #e6e6fe;
+  --color-info-25: #f3f3ff;
+  --color-info-50: #e6e6fe;
   --color-info-100: #b0b0fd;
   --color-info-200: #8a8afb;
   --color-info-300: #5454fa;
@@ -51,43 +59,41 @@
   --color-info-800: #000088;
   --color-info-900: #000068;
 
-  /* Success / Green */
-  --color-success-25:  #f3fbf6;
-  --color-success-50:  #e6f7ed;
-  --color-success-100: #b0e5c7;
-  --color-success-200: #8ad8ab;
-  --color-success-300: #54c785;
-  --color-success-400: #33bc6d;
-  --color-success-500: #00ab49; /* MAIN SUCCESS COLOR */
-  --color-success-600: #009c42;
-  --color-success-700: #007934;
-  --color-success-800: #007934;   /* note: duplicate of 700 – fix if intentional */
-  --color-success-900: #00481f;
+  /* ===== Green (Success / Price / Stock) ===== */
+  --success-25: #f3fbf6;
+  --success-50: #e6f7ed;
+  --success-100: #b0e5c7;
+  --success-200: #8ad8ab;
+  --success-300: #54c785;
+  --success-400: #33bc6d;
+  --success-500: #00ab49; /* MAIN SUCCESS COLOR */
+  --success-600: #009c42;
+  --success-700: #007934;
+  --success-800: #007934;
+  --success-900: #00481f;
 
-
-
-  /* ===== Font setup ===== */
-  /* Make Inter the default sans-serif font everywhere (recommended) */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-
-  /* Optional: if you want a separate explicit utility like font-inter */
-  --font-inter: var(--font-inter), sans-serif;
+  /* ===== Font ===== */
+  --font-primary:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
 }
 
-/* Your other normal CSS rules are fine here */
-/* Base styles – now uses the updated --font-sans automatically */
+/* =========================
+  Base UI Defaults
+   ========================= */
+
 body {
   background-color: var(--color-white);
-  color: var(--color-gray-900);
-  font-family: var(--font-sans);   /* ← this applies Inter globally */
+  color: var(--gray-900);
+
+  font-family: var(--font-primary);
 }
 
-/* Optional: extra utility layer if you prefer explicit font-inter class */
-@layer utilities {
-  .font-inter {
-    font-family: var(--font-inter), sans-serif;
-  }}
+/* =========================
+  Reusable Utility Classes
+  (Optional but helpful)
+   ========================= */
 
-
-
-
+.font-playfair {
+  font-family: var(--font-playfair), serif;
+}
