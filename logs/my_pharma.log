@@ -19,3 +19,28 @@
 2026-02-04 12:43:52,924 INFO authentication.tasks OTP for 5566: 632919 (dev mode)
 2026-02-04 12:43:52,930 INFO authentication.services OTP requested for phone (masked); resend count incremented.
 2026-02-10 21:00:56,960 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-10 21:34:08,882 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-10 21:51:03,689 WARNING authentication.tasks Password reset email failed: [WinError 10061] No connection could be made because the target machine actively refused it
+2026-02-10 21:51:07,772 WARNING authentication.tasks Password reset email failed: [WinError 10061] No connection could be made because the target machine actively refused it
+2026-02-10 21:51:11,835 WARNING authentication.tasks Password reset email failed: [WinError 10061] No connection could be made because the target machine actively refused it
+2026-02-10 21:51:15,900 WARNING authentication.tasks Password reset email failed: [WinError 10061] No connection could be made because the target machine actively refused it
+2026-02-14 23:25:15,394 WARNING authentication.services Account locked due to failed logins: user_id=1
+2026-02-14 23:28:45,234 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-14 23:43:23,482 INFO authentication.tasks OTP for 5773: 128571 (dev mode)
+2026-02-14 23:43:23,488 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-14 23:53:58,296 INFO authentication.tasks OTP for 5773: 429980 (dev mode)
+2026-02-14 23:53:58,301 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 13:36:04,100 INFO authentication.tasks OTP for 5773: 684690 (dev mode)
+2026-02-15 13:36:04,139 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 13:48:59,244 INFO authentication.tasks OTP for 5773: 262772 (dev mode)
+2026-02-15 13:48:59,250 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 14:03:00,158 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-15 14:06:02,369 INFO authentication.tasks OTP for 5773: 126321 (dev mode)
+2026-02-15 14:06:02,397 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 14:58:26,282 INFO authentication.tasks OTP for 5773: 042087 (dev mode)
+2026-02-15 14:58:26,301 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 15:05:48,490 INFO authentication.tasks OTP for 5774: 955339 (dev mode)
+2026-02-15 15:05:48,496 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 15:06:34,441 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-15 15:58:40,346 INFO authentication.tasks OTP for 5775: 000551 (dev mode)
+2026-02-15 15:58:40,356 INFO authentication.services OTP requested for phone (masked); resend count incremented.
