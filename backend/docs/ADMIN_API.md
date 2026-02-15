@@ -12,12 +12,12 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | Method      | Path                          | Description                                                                  |
 | ----------- | ----------------------------- | ---------------------------------------------------------------------------- |
 | GET         | `/api/auth/admin/users/`      | List users (filter: role, status, is_active; search: username, email, phone) |
-| POST        | `/api/auth/admin/users/`      | Create user (email or phone, password, username, role, etc.)                 |
-| GET         | `/api/auth/admin/users/{id}/` | Retrieve user                                                                |
-| PUT / PATCH | `/api/auth/admin/users/{id}/` | Update user (optional password)                                              |
+| POST        | `/api/auth/admin/users/`      | Create user (email or phone, password, username, role, profile_picture, address, gender, date_of_birth, etc.) |
+| GET         | `/api/auth/admin/users/{id}/` | Retrieve user (includes address, gender, date_of_birth)                     |
+| PUT / PATCH | `/api/auth/admin/users/{id}/` | Update user (optional password; profile fields: address, gender, date_of_birth) |
 | DELETE      | `/api/auth/admin/users/{id}/` | Soft-delete user                                                             |
 
-**Permission:** `IsSuperAdmin` (SUPER_ADMIN only).
+**Permission:** `IsSuperAdmin` (SUPER_ADMIN only). User model includes **gender** (`MALE` / `FEMALE` / `OTHER`), **address**, and **date_of_birth**.
 
 ---
 

@@ -244,7 +244,10 @@ if (res.status === 401) {
   return;
 }
 const user = await res.json();
+// user includes: id, username, email, phone, profile_picture, address, gender, gender_display, date_of_birth, role, status, etc.
 ```
+
+**Update profile:** Use `PUT` or `PATCH /api/auth/me/` with optional body fields: `username`, `profile_picture`, `address`, `gender` (`MALE`|`FEMALE`|`OTHER`), `date_of_birth` (YYYY-MM-DD). Use `multipart/form-data` when sending `profile_picture`.
 
 ### Refresh token (get new access + refresh)
 

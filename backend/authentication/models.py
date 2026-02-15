@@ -38,14 +38,21 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
-    Custom User: username (display), email (optional), phone (optional), profile_picture, address, role, status, soft delete.
+    Custom User: username (display), email (optional), phone (optional), profile_picture, address, gender, date_of_birth, role, status, soft delete.
     Indexed on email, phone for lookups and rate-limiting keys.
     """
+    class Gender(models.TextChoices):
+        MALE = "MALE", "Male"
+        FEMALE = "FEMALE", "Female"
+        OTHER = "OTHER", "Other"
+
     username = models.CharField(max_length=150, unique=True, null=True, blank=True, db_index=True)
     email = models.EmailField(max_length=255, unique=True, db_index=True)
     phone = models.CharField(max_length=20, blank=True, db_index=True)
     profile_picture = models.ImageField(upload_to="profile_pics/%Y/%m/", blank=True, null=True)
     address = models.TextField(blank=True, default="")
+    gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, null=True)
+    date_of_birth = models.DateField(null=True, blank=True)
     role = models.CharField(
         max_length=32,
         choices=UserRole.choices,
