@@ -44,17 +44,21 @@ APPROVED
 
 ## API Summary
 
-### Upload (user)
+### User (own prescriptions)
 
-- **POST** `/api/prescriptions/`  
+- **POST** `/api/prescriptions/` – **Upload** (REGISTERED_USER only).  
   Body: `file` (required; JPG/PNG/PDF, max 10MB), optional: `issue_date`, `patient_name_on_rx`, `doctor_name`, `doctor_reg_number`.  
   Creates prescription in **PENDING** status.
+- **GET** `/api/prescriptions/` – **List** own prescriptions (filter: `status`).
+- **GET** `/api/prescriptions/{id}/` – **Retrieve** own prescription (includes `items` when approved).
 
-### Verify (pharmacy / super)
+Each user sees only their own uploaded prescriptions for list and retrieve.
 
-- **GET** `/api/prescriptions/` – List (filter: `status`).
-- **GET** `/api/prescriptions/{id}/` – Retrieve (includes `items` when approved).
-- **PATCH** `/api/prescriptions/{id}/` or **PATCH** `/api/prescriptions/{id}/verify/`  
+### Verify (PHARMACY_ADMIN, SUPER_ADMIN only)
+
+- **GET** `/api/prescriptions/` – List **all** prescriptions (filter: `status`).
+- **GET** `/api/prescriptions/{id}/` – Retrieve any prescription (includes `items` when approved).
+- **PATCH** `/api/prescriptions/{id}/` or **PATCH** `/api/prescriptions/{id}/verify/` – **Verify or reject**.  
   Body: `status` = `APPROVED` or `REJECTED`, `notes`, and when approving: `doctor_name`, `doctor_reg_number`, `has_signature` (true), optional `patient_name_on_rx`, and **items**: `[{ "product": <id>, "quantity_prescribed": <int> }]`.  
   When **APPROVED**, prescription items (medicines and quantities) are stored for order validation.
 

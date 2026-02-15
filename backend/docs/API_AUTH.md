@@ -389,7 +389,7 @@ Missing or invalid access token.
 
 ## 9. Current User (Me)
 
-**Endpoint:** `GET /api/auth/me/`
+### GET `/api/auth/me/`
 
 **Description:** Return the current authenticated user profile. Requires valid access token.
 
@@ -400,8 +400,14 @@ Missing or invalid access token.
 ```json
 {
   "id": 1,
+  "username": "johndoe",
   "email": "user@example.com",
   "phone": "",
+  "profile_picture": "http://localhost:8001/media/profile_pics/2025/02/photo.jpg",
+  "address": "123 Main St, Dhaka",
+  "gender": "MALE",
+  "gender_display": "Male",
+  "date_of_birth": "1990-05-15",
   "role": "REGISTERED_USER",
   "role_display": "Registered User",
   "status": "ACTIVE",
@@ -411,6 +417,39 @@ Missing or invalid access token.
   "created_at": "2025-02-02T10:00:00Z"
 }
 ```
+
+- `gender`: one of `MALE`, `FEMALE`, `OTHER`, or null.
+- `gender_display`: human-readable label, or null if gender not set.
+- `date_of_birth`: ISO date (YYYY-MM-DD) or null.
+
+**Error – 401**  
+Missing or invalid/expired/revoked token.
+
+**Error – 404**  
+User not found (e.g. soft-deleted).
+
+### PUT / PATCH `/api/auth/me/` (update profile)
+
+**Description:** Update the current user’s profile. Only provided fields are updated (PATCH = partial; PUT also updates only the sent fields).
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Updatable fields (all optional):** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`.
+
+| Field             | Type   | Description                                      |
+| ----------------- | ------ | ------------------------------------------------ |
+| `username`        | string | Display name (must be unique)                     |
+| `profile_picture` | file   | Image (use `multipart/form-data` if sending file) |
+| `address`         | string | Address text                                      |
+| `gender`          | string | `MALE`, `FEMALE`, or `OTHER`; null to clear      |
+| `date_of_birth`   | string | ISO date (YYYY-MM-DD); null to clear             |
+
+**Request:** `application/json` for JSON body, or `multipart/form-data` when including `profile_picture`.
+
+**Response – 200 OK:** Full user object (same shape as GET `/api/auth/me/`).
+
+**Error – 400**  
+Validation error (e.g. duplicate username).
 
 **Error – 401**  
 Missing or invalid/expired/revoked token.

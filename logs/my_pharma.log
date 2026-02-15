@@ -44,3 +44,13 @@
 2026-02-15 15:06:34,441 INFO authentication.services OTP requested for email (masked); resend count incremented.
 2026-02-15 15:58:40,346 INFO authentication.tasks OTP for 5775: 000551 (dev mode)
 2026-02-15 15:58:40,356 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 17:49:22,703 INFO authentication.tasks OTP for 5773: 877618 (dev mode)
+2026-02-15 17:49:22,710 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 18:23:04,580 INFO authentication.tasks OTP for 5773: 243921 (dev mode)
+2026-02-15 18:23:04,589 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 18:28:55,658 INFO authentication.tasks OTP for 5773: 746634 (dev mode)
+2026-02-15 18:28:55,663 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 18:41:38,689 INFO authentication.tasks OTP for 5775: 196666 (dev mode)
+2026-02-15 18:41:38,696 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-15 20:21:30,858 INFO authentication.tasks OTP for 6369: 023392 (dev mode)
+2026-02-15 20:21:30,980 INFO authentication.services OTP requested for phone (masked); resend count incremented.

@@ -56,7 +56,10 @@ Returned as `user` in token responses and in `GET /api/auth/me/`:
 | `email`           | string  | Email (empty if phone-only)                                  |
 | `phone`           | string  | Phone (e.g. `01712345678`)                                   |
 | `profile_picture` | string  | URL to profile image (null if not set)                       |
-| `address`         | string  | Address (from registration)                                  |
+| `address`         | string  | Address                                                       |
+| `gender`          | string  | `MALE`, `FEMALE`, `OTHER`, or null                            |
+| `gender_display`  | string  | Display label for gender (null if not set)                   |
+| `date_of_birth`   | string  | ISO date (YYYY-MM-DD), or null                                |
 | `role`            | string  | `SUPER_ADMIN`, `PHARMACY_ADMIN`, `DOCTOR`, `REGISTERED_USER` |
 | `role_display`    | string  | Display label for role                                       |
 | `status`          | string  | `ACTIVE`, `INACTIVE`, `LOCKED`, `PENDING_VERIFICATION`       |
@@ -100,6 +103,8 @@ Endpoints that return tokens return:
 | POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                                                     |
 | POST   | `/api/auth/password-reset/`    | No   | —                | Request password reset email                                                  |
 | GET    | `/api/auth/me/`                | Yes  | —                | Current user profile                                                          |
+| PUT    | `/api/auth/me/`                | Yes  | —                | Update profile (username, profile_picture, address, gender, date_of_birth)     |
+| PATCH  | `/api/auth/me/`                | Yes  | —                | Partial update profile (same fields as PUT)                                   |
 
 ---
 
@@ -355,18 +360,48 @@ Request a password reset for the given email. If the user exists, a reset email 
 
 ### 3.10 GET `/api/auth/me/`
 
-Return the current authenticated user profile.
+Return the current authenticated user profile (includes `username`, `profile_picture`, `address`, `gender`, `gender_display`, `date_of_birth`, role, status, etc.).
 
 **Auth:** Required (`Authorization: Bearer <access_token>`).
 
 **Request body:** None.
 
-**Success (200):** User object (same shape as in token responses).
+**Success (200):** User object (same shape as in token responses; see §1.4).
 
 **Errors:**
 
 | Status | Code | Condition                                |
 | ------ | ---- | ---------------------------------------- |
+| 401    | —    | Missing or invalid/expired/revoked token |
+| 404    | —    | User not found (e.g. soft-deleted)       |
+
+---
+
+### 3.11 PUT / PATCH `/api/auth/me/` (update profile)
+
+Update the current user’s profile. Only provided fields are updated (PATCH = partial; PUT also updates only sent fields).
+
+**Auth:** Required (`Authorization: Bearer <access_token>`).
+
+**Updatable fields:** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`. All are optional in the body.
+
+| Field             | Type   | Required | Description                                      |
+| ----------------- | ------ | -------- | ------------------------------------------------ |
+| `username`        | string | No       | Display name (must be unique)                     |
+| `profile_picture` | file   | No       | Image (use `multipart/form-data` if sending file) |
+| `address`         | string | No       | Address text                                      |
+| `gender`          | string | No       | `MALE`, `FEMALE`, or `OTHER`; omit or null to clear |
+| `date_of_birth`   | string | No       | ISO date (YYYY-MM-DD); null to clear              |
+
+**Request:** JSON (`application/json`) or `multipart/form-data` when including `profile_picture`.
+
+**Success (200):** Full user object (same as GET `/api/auth/me/`).
+
+**Errors:**
+
+| Status | Code | Condition                                |
+| ------ | ---- | ---------------------------------------- |
+| 400    | —    | Validation error (e.g. duplicate username) |
 | 401    | —    | Missing or invalid/expired/revoked token |
 | 404    | —    | User not found (e.g. soft-deleted)       |
 

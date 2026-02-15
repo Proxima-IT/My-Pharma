@@ -1,6 +1,7 @@
 """
 Core API views with RBAC.
 - Products, Prescriptions (verify), Inventory, Orders (all): IsPharmacyAdminOrSuper
+- Prescriptions (list/retrieve): IsRegisteredUser; users see only own, Pharmacy/Super see all
 - Orders (own): IsRegisteredUser + IsOwnerOrReadOnly
 - Consultations (manage): IsDoctorOrSuper; (request): IsRegisteredUser
 - CMS: IsSuperAdmin (full) or IsPharmacyAdminOrSuper (limited)
@@ -213,7 +214,10 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated(), IsRegisteredUserOnly()]
-        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+        if self.action in ("partial_update", "verify"):
+            return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+        # list, retrieve: any authenticated user (get_queryset restricts to own for non-Pharmacy/Super)
+        return [IsAuthenticated(), IsRegisteredUser()]
 
     def create(self, request, *args, **kwargs):
         serializer = PrescriptionUploadSerializer(data=request.data)

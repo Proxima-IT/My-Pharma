@@ -23,6 +23,7 @@ from .serializers import (
     LoginRequestSerializer,
     PasswordResetRequestSerializer,
     UserMeSerializer,
+    UserProfileUpdateSerializer,
     UserManagementSerializer,
 )
 from .services import (
@@ -325,13 +326,33 @@ class PasswordResetView(APIView):
 
 
 class MeView(APIView):
-    """GET /api/auth/me/ – Current user profile (requires auth)."""
+    """GET /api/auth/me/ – Current user profile. PUT/PATCH – Update profile (username, profile_picture, address, gender, date_of_birth)."""
     permission_classes = [IsAuthenticated, IsRegisteredUser]
 
     def get(self, request):
         user = User.objects.filter(pk=request.user.pk).first()
         if not user or user.deleted_at:
             return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        """Full or partial update of profile; only provided fields are updated."""
+        return self._update_profile(request, partial=False)
+
+    def patch(self, request):
+        """Partial update of profile; only provided fields are updated."""
+        return self._update_profile(request, partial=True)
+
+    def _update_profile(self, request, partial=True):
+        user = User.objects.filter(pk=request.user.pk).first()
+        if not user or user.deleted_at:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+        data = request.data.copy()
+        if request.FILES:
+            data.update(request.FILES)
+        serializer = UserProfileUpdateSerializer(user, data=data, partial=partial, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(UserMeSerializer(user, context={"request": request}).data, status=status.HTTP_200_OK)
 
 
