@@ -12,11 +12,15 @@ export default function CompleteRegistrationForm() {
   // State for verified data
   const [verifiedValue, setVerifiedValue] = useState('');
   const [verifiedType, setVerifiedType] = useState('');
+
+  // States for secondary identifier verification
+  const [otherStep, setOtherStep] = useState(0); // 0: idle, 1: otp-sent, 2: verified
+  const [otherOtp, setOtherOtp] = useState('');
+  const [isVerifyingOther, setIsVerifyingOther] = useState(false);
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    first_name: '',
-    last_name: '',
     address: '',
     email: '',
     phone: '',
@@ -42,8 +46,83 @@ export default function CompleteRegistrationForm() {
     }
   }, [router]);
 
+  // Handle requesting OTP for the secondary identifier
+  const handleRequestOtherOtp = async () => {
+    const value = verifiedType === 'phone' ? formData.email : formData.phone;
+    if (!value) {
+      setError(
+        `Please enter a valid ${verifiedType === 'phone' ? 'email' : 'phone number'} first.`,
+      );
+      return;
+    }
+
+    setIsVerifyingOther(true);
+    setError('');
+
+    try {
+      const payload =
+        verifiedType === 'phone' ? { email: value } : { phone: value };
+      const response = await fetch(
+        'http://localhost:8000/api/auth/request-otp/',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) throw new Error('Failed to send verification code.');
+      setOtherStep(1);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsVerifyingOther(false);
+    }
+  };
+
+  // Handle verifying OTP for the secondary identifier
+  const handleVerifyOtherOtp = async () => {
+    const value = verifiedType === 'phone' ? formData.email : formData.phone;
+    setIsVerifyingOther(true);
+    setError('');
+
+    try {
+      const payload =
+        verifiedType === 'phone'
+          ? { email: value, otp: otherOtp }
+          : { phone: value, otp: otherOtp };
+
+      const response = await fetch(
+        'http://localhost:8000/api/auth/verify-otp/',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) throw new Error('Invalid verification code.');
+      setOtherStep(2);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsVerifyingOther(false);
+    }
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
+
+    // If user started typing in the other field but didn't verify, block submission
+    const otherValue =
+      verifiedType === 'phone' ? formData.email : formData.phone;
+    if (otherValue && otherStep !== 2) {
+      setError(
+        `Please verify your ${verifiedType === 'phone' ? 'email' : 'phone number'} before continuing.`,
+      );
+      return;
+    }
+
     setIsLoading(true);
     setError('');
     const token = sessionStorage.getItem('registration_token');
@@ -56,8 +135,6 @@ export default function CompleteRegistrationForm() {
       data.append('email', formData.email);
     if (verifiedType === 'email' && formData.phone)
       data.append('phone', formData.phone);
-    if (formData.first_name) data.append('first_name', formData.first_name);
-    if (formData.last_name) data.append('last_name', formData.last_name);
     if (formData.address) data.append('address', formData.address);
     if (formData.profile_picture)
       data.append('profile_picture', formData.profile_picture);
@@ -98,6 +175,24 @@ export default function CompleteRegistrationForm() {
     );
   }
 
+  const isOtherValid =
+    verifiedType === 'phone'
+      ? formData.email.includes('@') && formData.email.length > 5
+      : formData.phone.length >= 10;
+
+  const handleFileChange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!allowedTypes.includes(file.type)) {
+      setError('Strictly only PNG, JPG, and JPEG files are allowed.');
+      e.target.value = '';
+      return;
+    }
+    setFormData({ ...formData, profile_picture: file });
+  };
+
   return (
     <form
       onSubmit={handleSubmit}
@@ -110,81 +205,6 @@ export default function CompleteRegistrationForm() {
       )}
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Verified Identity (Read-only) */}
-        <UiInput
-          label={verifiedType === 'email' ? 'Verified Email' : 'Verified Phone'}
-          value={verifiedValue}
-          readOnly
-          disabled
-        />
-
-        {/* Dynamic Optional Field */}
-        {verifiedType === 'phone' ? (
-          <UiInput
-            label="Email Address (Optional)"
-            placeholder="Add an email for recovery"
-            type="email"
-            value={formData.email}
-            onChange={e => setFormData({ ...formData, email: e.target.value })}
-            leftIcon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                />
-              </svg>
-            }
-          />
-        ) : (
-          <UiInput
-            label="Phone Number (Optional)"
-            placeholder="e.g. 017XXXXXXXX"
-            value={formData.phone}
-            onChange={e => setFormData({ ...formData, phone: e.target.value })}
-            leftIcon={
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                />
-              </svg>
-            }
-          />
-        )}
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <UiInput
-            label="First Name"
-            placeholder="John"
-            value={formData.first_name}
-            onChange={e =>
-              setFormData({ ...formData, first_name: e.target.value })
-            }
-          />
-          <UiInput
-            label="Last Name"
-            placeholder="Doe"
-            value={formData.last_name}
-            onChange={e =>
-              setFormData({ ...formData, last_name: e.target.value })
-            }
-          />
-        </div>
-
         <UiInput
           label="Username"
           placeholder="johndoe123"
@@ -232,6 +252,145 @@ export default function CompleteRegistrationForm() {
           }
         />
 
+        {/* Verified Identity (Read-only) */}
+        <UiInput
+          label={verifiedType === 'email' ? 'Verified Email' : 'Verified Phone'}
+          value={verifiedValue}
+          readOnly
+          disabled
+        />
+
+        {/* Dynamic Optional Field with Verification Step */}
+        <div className="space-y-4">
+          {verifiedType === 'phone' ? (
+            <UiInput
+              label="Email Address (Optional)"
+              placeholder="Add an email for recovery"
+              type="email"
+              disabled={otherStep === 2}
+              value={formData.email}
+              onChange={e =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              leftIcon={
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                  />
+                </svg>
+              }
+              icon={
+                otherStep === 0 && isOtherValid ? (
+                  <button
+                    type="button"
+                    onClick={handleRequestOtherOtp}
+                    className="bg-primary-50 text-primary-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary-100 transition-all"
+                  >
+                    {isVerifyingOther ? '...' : 'Send Code'}
+                  </button>
+                ) : otherStep === 2 ? (
+                  <div className="flex items-center gap-1 text-success-500">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                ) : null
+              }
+            />
+          ) : (
+            <UiInput
+              label="Phone Number (Optional)"
+              placeholder="e.g. 017XXXXXXXX"
+              disabled={otherStep === 2}
+              value={formData.phone}
+              onChange={e =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
+              leftIcon={
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
+                  />
+                </svg>
+              }
+              icon={
+                otherStep === 0 && isOtherValid ? (
+                  <button
+                    type="button"
+                    onClick={handleRequestOtherOtp}
+                    className="bg-primary-50 text-primary-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary-100 transition-all"
+                  >
+                    {isVerifyingOther ? '...' : 'Send Code'}
+                  </button>
+                ) : otherStep === 2 ? (
+                  <div className="flex items-center gap-1 text-success-500">
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="3"
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                ) : null
+              }
+            />
+          )}
+
+          {otherStep === 1 && (
+            <div className="animate-in slide-in-from-top-2">
+              <UiInput
+                label="Verification Code"
+                placeholder="Enter 6-digit OTP"
+                value={otherOtp}
+                onChange={e => setOtherOtp(e.target.value)}
+                maxLength={6}
+                icon={
+                  <button
+                    type="button"
+                    onClick={handleVerifyOtherOtp}
+                    className="bg-primary-50 text-primary-600 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary-100 transition-all"
+                  >
+                    {isVerifyingOther ? '...' : 'Verify'}
+                  </button>
+                }
+              />
+            </div>
+          )}
+        </div>
+
         <UiInput
           label="Address"
           placeholder="Your full address"
@@ -246,10 +405,8 @@ export default function CompleteRegistrationForm() {
           <div className="relative group">
             <input
               type="file"
-              accept="image/*"
-              onChange={e =>
-                setFormData({ ...formData, profile_picture: e.target.files[0] })
-              }
+              accept=".png,.jpg,.jpeg"
+              onChange={handleFileChange}
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
             <div className="w-full py-5 px-4 bg-gray-50 border border-dashed border-gray-300 rounded-2xl flex items-center gap-4 group-hover:border-primary-500 transition-colors">
@@ -275,7 +432,7 @@ export default function CompleteRegistrationForm() {
                     : 'Choose a photo'}
                 </span>
                 <span className="text-xs text-gray-400">
-                  PNG, JPG up to 5MB
+                  PNG, JPG, JPEG up to 5MB
                 </span>
               </div>
             </div>

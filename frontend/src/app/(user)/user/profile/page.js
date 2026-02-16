@@ -9,7 +9,6 @@ import {
   FiCalendar,
   FiCheckCircle,
   FiShield,
-  FiPlus,
   FiChevronDown,
   FiArrowLeft,
   FiX,
@@ -23,6 +22,7 @@ export default function UserProfilePage() {
   const {
     formData,
     setFormData,
+    initialData,
     isLoading,
     isUpdating,
     error,
@@ -31,8 +31,7 @@ export default function UserProfilePage() {
     verifyingType,
     setVerifyingType,
     verificationStep,
-    tempIdentifier,
-    setTempIdentifier,
+    setVerificationStep,
     otp,
     setOtp,
     handleUpdate,
@@ -69,15 +68,13 @@ export default function UserProfilePage() {
         <FiArrowLeft /> Back to Menu
       </Link>
 
-      {/* Success Popup Modal - Clean directly upon content, no blur/blue layer */}
+      {/* Success Popup Modal */}
       {showSuccess && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-          {/* Transparent backdrop to block clicks but show content clearly */}
           <div
             className="absolute inset-0 bg-black/10"
             onClick={() => setShowSuccess(false)}
           />
-
           <div className="relative bg-white rounded-[40px] p-10 flex flex-col items-center text-center max-w-sm w-full shadow-[0_20px_70px_-10px_rgba(0,0,0,0.15)] border border-gray-100 animate-in zoom-in-95 duration-300">
             <div className="w-24 h-24 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6">
               <FiCheckCircle size={48} />
@@ -115,7 +112,7 @@ export default function UserProfilePage() {
               <input
                 type="file"
                 className="hidden"
-                accept="image/*"
+                accept="image/png, image/jpeg, image/jpg"
                 onChange={e => {
                   const file = e.target.files?.[0];
                   if (file)
@@ -197,40 +194,52 @@ export default function UserProfilePage() {
               <UiInput
                 label="Email Address"
                 value={formData.email}
-                readOnly
-                disabled={!!formData.email}
-                placeholder="No email added"
+                readOnly={!!initialData.email}
+                disabled={!!initialData.email}
+                placeholder="Add email address"
+                onChange={e =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
                 leftIcon={<FiMail />}
+                icon={
+                  !initialData.email &&
+                  formData.email.includes('@') && (
+                    <button
+                      type="button"
+                      onClick={() => requestVerification('email')}
+                      className="bg-primary-50 text-primary-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary-100 transition-all"
+                    >
+                      Verify
+                    </button>
+                  )
+                }
               />
-              {!formData.email && !verifyingType && (
-                <button
-                  type="button"
-                  onClick={() => setVerifyingType('email')}
-                  className="flex items-center gap-2 text-xs font-bold text-primary-500 hover:text-primary-700 transition-colors"
-                >
-                  <FiPlus /> ADD & VERIFY EMAIL
-                </button>
-              )}
             </div>
 
             <div className="flex flex-col gap-3">
               <UiInput
                 label="Mobile Number"
                 value={formData.phone}
-                readOnly
-                disabled={!!formData.phone}
-                placeholder="No mobile added"
+                readOnly={!!initialData.phone}
+                disabled={!!initialData.phone}
+                placeholder="Add mobile number"
+                onChange={e =>
+                  setFormData({ ...formData, phone: e.target.value })
+                }
                 leftIcon={<FiPhone />}
+                icon={
+                  !initialData.phone &&
+                  formData.phone.length >= 10 && (
+                    <button
+                      type="button"
+                      onClick={() => requestVerification('phone')}
+                      className="bg-primary-50 text-primary-600 px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-primary-100 transition-all"
+                    >
+                      Verify
+                    </button>
+                  )
+                }
               />
-              {!formData.phone && !verifyingType && (
-                <button
-                  type="button"
-                  onClick={() => setVerifyingType('phone')}
-                  className="flex items-center gap-2 text-xs font-bold text-primary-500 hover:text-primary-700 transition-colors"
-                >
-                  <FiPlus /> ADD & VERIFY MOBILE
-                </button>
-              )}
             </div>
           </div>
 
@@ -243,7 +252,10 @@ export default function UserProfilePage() {
                 </h3>
                 <button
                   type="button"
-                  onClick={() => setVerifyingType(null)}
+                  onClick={() => {
+                    setVerifyingType(null);
+                    setVerificationStep(1);
+                  }}
                   className="text-[10px] font-bold text-gray-400 hover:text-gray-600 uppercase tracking-widest"
                 >
                   CANCEL
@@ -251,36 +263,21 @@ export default function UserProfilePage() {
               </div>
               <div className="flex flex-col md:flex-row gap-4 items-end">
                 <div className="flex-1 w-full">
-                  {verificationStep === 1 ? (
-                    <UiInput
-                      label={`Enter ${verifyingType}`}
-                      placeholder={
-                        verifyingType === 'email'
-                          ? 'name@example.com'
-                          : '017XXXXXXXX'
-                      }
-                      value={tempIdentifier}
-                      onChange={e => setTempIdentifier(e.target.value)}
-                    />
-                  ) : (
-                    <UiInput
-                      label="Enter 6-Digit OTP"
-                      placeholder="000000"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value)}
-                      maxLength={6}
-                    />
-                  )}
+                  <UiInput
+                    label="Enter 6-Digit OTP"
+                    placeholder="000000"
+                    value={otp}
+                    onChange={e => setOtp(e.target.value)}
+                    maxLength={6}
+                  />
                 </div>
                 <div className="w-full md:w-auto">
                   <UiButton
                     type="button"
-                    onClick={
-                      verificationStep === 1 ? requestVerification : verifyCode
-                    }
+                    onClick={verifyCode}
                     isLoading={isUpdating}
                   >
-                    {verificationStep === 1 ? 'SEND CODE' : 'VERIFY CODE'}
+                    VERIFY CODE
                   </UiButton>
                 </div>
               </div>
