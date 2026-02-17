@@ -25,10 +25,13 @@ export const updateProfileApi = async (token, formData) => {
   return data;
 };
 
-export const requestVerificationOtpApi = async payload => {
-  const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export const requestVerificationOtpApi = async (token, payload) => {
+  const response = await fetch(AUTH_ENDPOINTS.ME, {
+    method: 'PATCH',
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json' 
+    },
     body: JSON.stringify(payload),
   });
   const data = await response.json();
@@ -36,10 +39,13 @@ export const requestVerificationOtpApi = async payload => {
   return data;
 };
 
-export const verifyIdentityOtpApi = async payload => {
-  const response = await fetch(AUTH_ENDPOINTS.VERIFY_OTP, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+export const verifyIdentityOtpApi = async (token, payload) => {
+  const response = await fetch(AUTH_ENDPOINTS.ME, {
+    method: 'PATCH',
+    headers: { 
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json' 
+    },
     body: JSON.stringify(payload),
   });
   const data = await response.json();
