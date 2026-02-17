@@ -2,6 +2,7 @@
 
 import { getProducts } from "@/data/productInfo";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { BsCart3 } from "react-icons/bs";
 import { GoStarFill } from "react-icons/go";
@@ -26,12 +27,14 @@ const PopularProduct = () => {
     <div className="bg-white  p-3">
       <div className="flex justify-between items-center">
         <h1 className="font-bold text-lg lg:text-2xl">Popular Products</h1>
-        <button className="border border-info-500/10 rounded-[90px] px-3 lg:px-6 py-2 lg:py-3 text-primary-500 flex gap-3 items-center text-sm font-semibold cursor-pointer">
-          See More Product{" "}
-          <span>
-            <MdArrowForwardIos />
-          </span>
-        </button>
+        <Link href="/products">
+          <button className="border border-info-500/10 rounded-[90px] px-3 lg:px-6 py-2 lg:py-3 text-primary-500 flex gap-3 items-center text-sm font-semibold cursor-pointer">
+            See More Product{" "}
+            <span>
+              <MdArrowForwardIos />
+            </span>
+          </button>
+        </Link>
       </div>
 
       {/* product card grid */}

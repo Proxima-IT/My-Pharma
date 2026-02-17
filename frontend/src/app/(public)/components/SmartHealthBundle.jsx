@@ -144,8 +144,8 @@ const SmartHealthBundle = () => {
           <Image
             src="/assets/images/bundle3.png"
             alt=""
-            width={300}
-            height={300}
+            width={500}
+            height={500}
             className="max-w-[75%] max-h-[45%] object-contain mx-auto"
             priority
           />
