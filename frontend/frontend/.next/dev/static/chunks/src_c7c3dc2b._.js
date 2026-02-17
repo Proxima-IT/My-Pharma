@@ -739,11 +739,11 @@ var _s = __turbopack_context__.k.signature();
 const Header = ()=>{
     _s();
     const $ = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$compiler$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["c"])(27);
-    if ($[0] !== "88f8aab7e8a51855276bff4068a2b25b8aee3183fb010d0bca3dc134e2826c15") {
+    if ($[0] !== "ac25927fc5389161220cbcb1ed50731122e10297a708c7d9f862dab124934a15") {
         for(let $i = 0; $i < 27; $i += 1){
             $[$i] = Symbol.for("react.memo_cache_sentinel");
         }
-        $[0] = "88f8aab7e8a51855276bff4068a2b25b8aee3183fb010d0bca3dc134e2826c15";
+        $[0] = "ac25927fc5389161220cbcb1ed50731122e10297a708c7d9f862dab124934a15";
     }
     const [open, setOpen] = (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$index$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["useState"])(false);
     let t0;
@@ -1247,6 +1247,7 @@ const Header = ()=>{
     let t21;
     if ($[25] !== t17) {
         t21 = /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("header", {
+            className: "sticky top-0 z-20 bg-white",
             children: [
                 t3,
                 /*#__PURE__*/ (0, __TURBOPACK__imported__module__$5b$project$5d2f$node_modules$2f$next$2f$dist$2f$compiled$2f$react$2f$jsx$2d$dev$2d$runtime$2e$js__$5b$app$2d$client$5d$__$28$ecmascript$29$__["jsxDEV"])("div", {
@@ -1263,13 +1264,13 @@ const Header = ()=>{
                         }, void 0, true, {
                             fileName: "[project]/src/app/(public)/components/Header.jsx",
                             lineNumber: 172,
-                            columnNumber: 162
+                            columnNumber: 201
                         }, ("TURBOPACK compile-time value", void 0))
                     ]
                 }, void 0, true, {
                     fileName: "[project]/src/app/(public)/components/Header.jsx",
                     lineNumber: 172,
-                    columnNumber: 23
+                    columnNumber: 62
                 }, ("TURBOPACK compile-time value", void 0))
             ]
         }, void 0, true, {

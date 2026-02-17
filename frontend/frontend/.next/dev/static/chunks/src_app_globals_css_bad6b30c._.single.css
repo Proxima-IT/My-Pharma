@@ -86,6 +86,7 @@
     --color-amber-50: #fffbeb;
     --color-amber-100: #fef3c6;
     --color-amber-400: #fcbb00;
+    --color-amber-500: #f99c00;
     --color-amber-700: #b75000;
     --color-green-50: #f0fdf4;
     --color-green-100: #dcfce7;
@@ -198,6 +199,7 @@
       --color-amber-50: lab(98.6252% -.635982 8.42309);
       --color-amber-100: lab(95.916% -1.2165 23.111);
       --color-amber-400: lab(80.1641% 16.6016 99.2089);
+      --color-amber-500: lab(72.7183% 31.8672 97.9407);
       --color-amber-700: lab(47.2709% 42.9082 69.2966);
       --color-green-50: lab(98.1563% -5.60117 2.75913);
       --color-green-100: lab(96.186% -13.8464 6.52362);
@@ -500,6 +502,10 @@
     top: calc(var(--spacing) * -1);
   }
 
+  .-top-20 {
+    top: calc(var(--spacing) * -20);
+  }
+
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
@@ -518,6 +524,10 @@
 
   .top-14 {
     top: calc(var(--spacing) * 14);
+  }
+
+  .top-20 {
+    top: calc(var(--spacing) * 20);
   }
 
   .-right-1 {
@@ -586,6 +596,14 @@
 
   .z-10 {
     z-index: 10;
+  }
+
+  .z-20 {
+    z-index: 20;
+  }
+
+  .z-30 {
+    z-index: 30;
   }
 
   .z-40 {
@@ -907,6 +925,10 @@
 
   .min-h-\[120px\] {
     min-height: 120px;
+  }
+
+  .min-h-screen {
+    min-height: 100vh;
   }
 
   .w-0\.5 {
@@ -1318,6 +1340,10 @@
     overflow-x: auto;
   }
 
+  .overflow-y-auto {
+    overflow-y: auto;
+  }
+
   .overflow-y-scroll {
     overflow-y: scroll;
   }
@@ -1563,6 +1589,10 @@
 
   .bg-amber-50 {
     background-color: var(--color-amber-50);
+  }
+
+  .bg-amber-500 {
+    background-color: var(--color-amber-500);
   }
 
   .bg-black {
