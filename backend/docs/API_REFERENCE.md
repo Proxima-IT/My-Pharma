@@ -56,7 +56,10 @@ Returned as `user` in token responses and in `GET /api/auth/me/`:
 | `email`           | string  | Email (empty if phone-only)                                  |
 | `phone`           | string  | Phone (e.g. `01712345678`)                                   |
 | `profile_picture` | string  | URL to profile image (null if not set)                       |
-| `address`         | string  | Address (from registration)                                  |
+| `address`         | string  | Address                                                       |
+| `gender`          | string  | `MALE`, `FEMALE`, `OTHER`, or null                            |
+| `gender_display`  | string  | Display label for gender (null if not set)                   |
+| `date_of_birth`   | string  | ISO date (YYYY-MM-DD), or null                                |
 | `role`            | string  | `SUPER_ADMIN`, `PHARMACY_ADMIN`, `DOCTOR`, `REGISTERED_USER` |
 | `role_display`    | string  | Display label for role                                       |
 | `status`          | string  | `ACTIVE`, `INACTIVE`, `LOCKED`, `PENDING_VERIFICATION`       |
@@ -100,6 +103,8 @@ Endpoints that return tokens return:
 | POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                                                     |
 | POST   | `/api/auth/password-reset/`    | No   | —                | Request password reset email                                                  |
 | GET    | `/api/auth/me/`                | Yes  | —                | Current user profile                                                          |
+| PUT    | `/api/auth/me/`                | Yes  | —                | Update profile (username, profile_picture, address, gender, date_of_birth)     |
+| PATCH  | `/api/auth/me/`                | Yes  | —                | Partial update profile (same fields as PUT)                                   |
 
 ---
 
@@ -355,13 +360,13 @@ Request a password reset for the given email. If the user exists, a reset email 
 
 ### 3.10 GET `/api/auth/me/`
 
-Return the current authenticated user profile.
+Return the current authenticated user profile (includes `username`, `profile_picture`, `address`, `gender`, `gender_display`, `date_of_birth`, role, status, etc.).
 
 **Auth:** Required (`Authorization: Bearer <access_token>`).
 
 **Request body:** None.
 
-**Success (200):** User object (same shape as in token responses).
+**Success (200):** User object (same shape as in token responses; see §1.4).
 
 **Errors:**
 
@@ -369,6 +374,48 @@ Return the current authenticated user profile.
 | ------ | ---- | ---------------------------------------- |
 | 401    | —    | Missing or invalid/expired/revoked token |
 | 404    | —    | User not found (e.g. soft-deleted)       |
+
+---
+
+### 3.11 PUT / PATCH `/api/auth/me/` (update profile)
+
+Update the current user’s profile. Only provided fields are updated (PATCH = partial; PUT also updates only sent fields).
+
+**Auth:** Required (`Authorization: Bearer <access_token>`).
+
+**Updatable fields:** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`. All are optional in the body.
+
+**Add or change email / phone (dashboard OTP flow):** Send **only** `email` or **only** `phone` (not both at once).
+
+1. **Request OTP:** Send `email` or `phone` (no `otp`). Backend sends OTP to that email/phone and returns `pending_verification`, `message`, `identifier_masked`, and `user`. Do not send both email and phone in the same request.
+2. **Confirm and save:** Send the **same** `email` or `phone` **and** `otp`. Backend verifies OTP and updates the user’s email or phone (and sets verified). Response is the full user object.
+
+| Field             | Type   | Required | Description                                                                 |
+| ----------------- | ------ | -------- | --------------------------------------------------------------------------- |
+| `username`        | string | No       | Display name (must be unique)                                                |
+| `profile_picture` | file   | No       | Image (use `multipart/form-data` if sending file)                           |
+| `address`         | string | No       | Address text                                                                 |
+| `gender`          | string | No       | `MALE`, `FEMALE`, or `OTHER`; omit or null to clear                          |
+| `date_of_birth`   | string | No       | ISO date (YYYY-MM-DD); null to clear                                        |
+| `email`           | string | No       | To add/change email: send once to get OTP, then send again with `otp`        |
+| `phone`           | string | No       | To add/change phone: send once to get OTP, then send again with `otp`         |
+| `otp`             | string | No       | OTP code (send with same `email` or `phone` to confirm and save)             |
+
+**Request:** JSON (`application/json`) or `multipart/form-data` when including `profile_picture`.
+
+**Success (200):** Full user object (same as GET `/api/auth/me/`). When OTP was requested (no `otp`), body also includes `pending_verification`, `message`, `identifier_masked`.
+
+**Errors:**
+
+| Status | Code          | Condition                                                       |
+| ------ | ------------- | --------------------------------------------------------------- |
+| 400    | —             | Validation error (e.g. duplicate username); send only email or phone |
+| 400    | `invalid_otp` | Invalid or expired OTP                                          |
+| 400    | `email_taken` | Email already used by another user                              |
+| 400    | `phone_taken` | Phone already used by another user                              |
+| 401    | —             | Missing or invalid/expired/revoked token                         |
+| 404    | —             | User not found (e.g. soft-deleted)                              |
+| 429    | `otp_rate_limit` | Too many OTP requests                                        |
 
 ---
 

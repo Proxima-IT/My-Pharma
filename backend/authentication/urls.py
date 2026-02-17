@@ -17,6 +17,10 @@ urlpatterns = [
     path("token/refresh/", views.TokenRefreshViewCustom.as_view(), name="token_refresh"),
     path("logout/", views.LogoutView.as_view(), name="auth_logout"),
     path("password-reset/", views.PasswordResetView.as_view(), name="auth_password_reset"),
+    path("change-email/request/", views.ChangeEmailRequestView.as_view(), name="auth_change_email_request"),
+    path("change-email/confirm/", views.ChangeEmailConfirmView.as_view(), name="auth_change_email_confirm"),
+    path("change-phone/request/", views.ChangePhoneRequestView.as_view(), name="auth_change_phone_request"),
+    path("change-phone/confirm/", views.ChangePhoneConfirmView.as_view(), name="auth_change_phone_confirm"),
     path("me/", views.MeView.as_view(), name="auth_me"),
     path("", include(router.urls)),
 ]

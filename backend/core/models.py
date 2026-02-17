@@ -106,7 +106,7 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+       
     class Meta:
         db_table = "core_product"
         ordering = ["-created_at"]
@@ -127,6 +127,26 @@ class Product(models.Model):
     @property
     def is_low_stock(self):
         return self.quantity_in_stock <= self.low_stock_threshold
+
+
+class ProductImage(models.Model):
+    """Multiple images per product (gallery). Product.image remains the primary/feature image."""
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="images",
+        db_index=True,
+    )
+    image = models.ImageField(upload_to="products/%Y/%m/")
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_product_image"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"{self.product.name} – image #{self.order}"
 
 
 class Order(models.Model):
@@ -295,7 +315,7 @@ class Page(models.Model):
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+        
     class Meta:
         db_table = "core_page"
         ordering = ["slug"]

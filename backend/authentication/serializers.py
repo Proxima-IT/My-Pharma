@@ -145,6 +145,48 @@ class RegisterCompleteRequestSerializer(serializers.Serializer):
         return v
 
 
+class ChangeEmailRequestSerializer(serializers.Serializer):
+    """Request OTP to new email for changing account email (authenticated user)."""
+    new_email = serializers.EmailField()
+
+    def validate_new_email(self, value):
+        v = value.lower().strip()
+        if User.objects.filter(email__iexact=v).exclude(deleted_at__isnull=False).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return v
+
+
+class ChangeEmailConfirmSerializer(serializers.Serializer):
+    """Confirm change email with OTP sent to the new email."""
+    new_email = serializers.EmailField()
+    otp = serializers.CharField(max_length=8, min_length=6)
+
+    def validate_new_email(self, value):
+        return value.lower().strip()
+
+
+class ChangePhoneRequestSerializer(serializers.Serializer):
+    """Request OTP to new phone for changing account phone (authenticated user)."""
+    new_phone = serializers.CharField(max_length=20, trim_whitespace=True)
+
+    def validate_new_phone(self, value):
+        normalized = normalize_phone(value)
+        if len(normalized) < 10:
+            raise serializers.ValidationError("Invalid phone number.")
+        if User.objects.filter(phone=normalized).exclude(deleted_at__isnull=False).exists():
+            raise serializers.ValidationError("A user with this phone number already exists.")
+        return normalized
+
+
+class ChangePhoneConfirmSerializer(serializers.Serializer):
+    """Confirm change phone with OTP sent to the new phone."""
+    new_phone = serializers.CharField(max_length=20, trim_whitespace=True)
+    otp = serializers.CharField(max_length=8, min_length=6)
+
+    def validate_new_phone(self, value):
+        return normalize_phone(value)
+
+
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
@@ -165,6 +207,7 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 class UserMeSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source="get_role_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    gender_display = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
 
@@ -177,6 +220,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             "phone",
             "profile_picture",
             "address",
+            "gender",
+            "gender_display",
+            "date_of_birth",
             "role",
             "role_display",
             "status",
@@ -185,7 +231,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "phone_verified",
             "created_at",
         )
-        read_only_fields = ("id", "username", "phone", "role", "status", "email_verified", "phone_verified", "created_at")
+        read_only_fields = ("id", "phone", "role", "status", "email_verified", "phone_verified", "created_at")
 
     def get_profile_picture(self, obj):
         if obj.profile_picture:
@@ -195,11 +241,36 @@ class UserMeSerializer(serializers.ModelSerializer):
             return obj.profile_picture.url
         return None
 
+    def get_gender_display(self, obj):
+        if obj.gender:
+            return obj.get_gender_display()
+        return None
+
     def get_email(self, obj):
         e = getattr(obj, "email", "") or ""
         if e.startswith("p_") and e.endswith("@ph.local"):
             return ""
         return e
+
+
+class UserProfileUpdateSerializer(serializers.ModelSerializer):
+    """Update current user profile: username, profile_picture, address, gender, date_of_birth. PATCH = partial, PUT = full (all optional)."""
+    gender = serializers.ChoiceField(choices=User.Gender.choices, required=False, allow_blank=True, allow_null=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True)
+
+    class Meta:
+        model = User
+        fields = ("username", "profile_picture", "address", "gender", "date_of_birth")
+
+    def validate_username(self, value):
+        v = (value or "").strip()
+        if not v:
+            return self.instance.username if self.instance else ""
+        if self.instance and User.objects.filter(username__iexact=v).exclude(pk=self.instance.pk).exclude(deleted_at__isnull=False).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        if not self.instance and User.objects.filter(username__iexact=v).exclude(deleted_at__isnull=False).exists():
+            raise serializers.ValidationError("A user with this username already exists.")
+        return v
 
 
 class UserManagementSerializer(serializers.ModelSerializer):
@@ -213,7 +284,8 @@ class UserManagementSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "phone", "password", "role", "role_display",
             "status", "status_display", "email_verified", "phone_verified",
-            "profile_picture", "address", "is_active", "is_staff", "is_superuser",
+            "profile_picture", "address", "gender", "date_of_birth",
+            "is_active", "is_staff", "is_superuser",
             "created_at", "updated_at",
         )
         read_only_fields = ("id", "created_at", "updated_at")

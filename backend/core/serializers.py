@@ -57,20 +57,37 @@ class IngredientSerializer(serializers.ModelSerializer):
 
 
 # ---- Product ----
+def _product_image_urls(product, request=None):
+    """Return list of absolute image URLs for product.images (ordered)."""
+    urls = []
+    for img in product.images.all():
+        if img.image:
+            url = img.image.url
+            if request:
+                url = request.build_absolute_uri(url)
+            urls.append(url)
+    return urls
+
+
 class ProductListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
     is_low_stock = serializers.BooleanField(read_only=True)
+    images = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = (
             "id", "name", "slug", "category", "category_name", "brand", "brand_name",
             "ingredient", "ingredient_name", "requires_prescription", "price", "image",
+            "images",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
             "created_at", "updated_at",
         )
+
+    def get_images(self, obj):
+        return _product_image_urls(obj, self.context.get("request"))
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -78,15 +95,20 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
     is_low_stock = serializers.BooleanField(read_only=True)
+    images = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = (
             "id", "name", "slug", "category", "category_name", "brand", "brand_name",
             "ingredient", "ingredient_name", "requires_prescription", "description", "price", "image",
+            "images",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
             "created_at", "updated_at",
         )
+
+    def get_images(self, obj):
+        return _product_image_urls(obj, self.context.get("request"))
 
 
 class ProductWriteSerializer(serializers.ModelSerializer):
