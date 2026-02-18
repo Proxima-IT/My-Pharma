@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { IoSearchOutline } from "react-icons/io5";
 
 const slides = [
   {
@@ -78,7 +79,8 @@ export default function HeroCarousel() {
                 {slide.description}
               </p>
 
-              <button className="mt-5 sm:mt-6 cursor-pointer rounded-full bg-white px-6 py-3 text-blue-600 text-sm sm:text-base font-semibold hover:bg-blue-50 transition">
+              <button className="mt-5 sm:mt-6 cursor-pointer flex items-center gap-3 rounded-full bg-white px-6 py-3 text-black text-sm sm:text-base font-semibold hover:bg-blue-50 transition">
+                <IoSearchOutline className="font-extrabold text-black text-lg" />
                 {slide.button}
               </button>
             </div>

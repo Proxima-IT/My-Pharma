@@ -2,6 +2,7 @@
 
 import { getProducts } from "@/data/productInfo";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { BsCart3 } from "react-icons/bs";
 import { GoStarFill } from "react-icons/go";
@@ -24,14 +25,16 @@ const DealsSection = () => {
   return (
     <div className="bg-white  py-17.5 px-4">
       <div className="flex justify-between items-center">
-        <h1 className="font-bold text-2xl">Unilever: Deals you can't miss</h1>
+        <h1 className="font-bold text-sm lg:text-2xl">Unilever: Deals you can't miss</h1>
 
-        <button className="border border-info-500/10 rounded-[90px] px-6 py-3 text-primary-500 flex gap-3 items-center text-sm font-semibold cursor-pointer">
-          See More Product{" "}
-          <span>
-            <MdArrowForwardIos />
-          </span>
-        </button>
+        <Link href="/products">
+          <button className="border border-info-500/10 rounded-[90px] px-2 lg:px-6 py-1.5 lg:py-3 text-primary-500 flex gap-1 lg:gap-3 items-center text-xs lg:text-sm font-semibold cursor-pointer">
+            See More Product{" "}
+            <span>
+              <MdArrowForwardIos />
+            </span>
+          </button>
+        </Link>
       </div>
 
       {/* product card grid */}
@@ -40,9 +43,9 @@ const DealsSection = () => {
 
         {/* Image wrapper */}
         {products.map((product) => (
-          <div key={product.id} className="relative flex gap-3.5">
+          <div key={product.id} className="relative flex flex-col md:flex-row gap-3.5">
             {/* Image wrapper */}
-            <div className="relative bg-imageBG rounded-xl w-2/3 aspect-square flex items-center justify-center overflow-hidden p-5">
+            <div className="relative bg-imageBG rounded-xl w-1/2 aspect-square flex items-center justify-center overflow-hidden p-5">
               {/* Discount badge */}
               <span className="absolute top-3 right-3 bg-green-600 text-white text-xs px-3 py-1 rounded-full z-10">
                 -27% off
@@ -59,8 +62,8 @@ const DealsSection = () => {
               />
             </div>
 
+            {/* product information  */}
             <div>
-              {/* product information  */}
               <h1 className="font-bold text-sm mt-4">{product.name}</h1>
               <div className="flex gap-2 items-center mt-2">
                 <GoStarFill className="text-[#FFC831] font-bold" />

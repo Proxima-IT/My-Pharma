@@ -16,7 +16,7 @@ const UploadPrescriptionBanner = () => {
       /> */}
 
       <div
-        className="w-full h-auto bg-center bg-no-repeat bg-cover rounded-xl min-w-full grid grid-cols-1 lg:grid-cols-2 items-center gap-6 py-9"
+        className="w-full h-auto bg-center bg-no-repeat bg-cover rounded-xl min-w-full grid grid-cols-1 lg:grid-cols-2 items-center gap-6 py-8"
         style={{
           backgroundImage: "url('/assets/images/uploadbanner.png')",
         }}
@@ -31,7 +31,7 @@ const UploadPrescriptionBanner = () => {
           />
         </div>
         {/* Content */}
-        <div className="text-white space-y-2 flex flex-col items-center lg:items-start text-center lg:text-left ">
+        <div className="text-white space-y-1 flex flex-col items-center lg:items-start text-center lg:text-left ">
           <span className=" font-semibold text-sm text-[#10B981]">
             Upload Your Prescription
           </span>
@@ -39,7 +39,7 @@ const UploadPrescriptionBanner = () => {
           <h1 className="text-lg sm:text-xl lg:text-2xl font-bold leading-tight">
             We’ll take care of the rest
           </h1>
-          <p className="mt-3 sm:mt-4 text-white/70 max-w-lg text-sm ">
+          <p className="mt-3 sm:mt-3 text-white/70 max-w-lg text-sm ">
             No need to search or worry we ensure accuracy, privacy, and genuine
             medicines every time.
           </p>

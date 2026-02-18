@@ -12,20 +12,27 @@ import { BsCart3 } from "react-icons/bs";
 import { RiMenu4Line } from "react-icons/ri";
 import Link from "next/link";
 import Logo from "./Logo";
+import MobileDrawer from "./MobileDrawer";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
   return (
     <header>
       {/* top nav */}
-      <div className="flex flex-col md:flex-row justify-between items-center bg-white bg-linear-to-r from-success-500/10 to-blue-500/10 text-black py-3 px-6 md:px-9">
-        <h1 className="text-sm md:text-base text-gray-800">
+      <div
+        className="flex flex-col md:flex-row justify-between items-center  text-black py-3 px-6 md:px-9"
+        style={{
+          background:
+            "linear-gradient(-180deg, rgba(233,235,244,1) 0%, rgba(230,247,237,1) 100%)",
+        }}
+      >
+        <h1 className="text-sm md:text-base text-gray-800 lg:block hidden">
           <span className="font-bold">Call Us: </span>01755697233, 09677333000
         </h1>
-        <p className="font-semibold text-sm md:text-base text-center text-black my-2 md:my-0">
+        <p className="font-semibold text-xs md:text-base text-center text-black my-1 md:my-0">
           Medicines and healthcare products delivered to your doorstep
         </p>
-        <div className="flex items-center gap-5">
+        <div className="lg:flex hidden items-center gap-5 text-xl">
           <FaFacebook />
           <div className="h-6 w-0.5 bg-black/10" />
           <FaLinkedin />
@@ -36,10 +43,13 @@ const Header = () => {
 
       {/* ──────────────────────────────────────────────── */}
       {/* MAIN NAV – only changed: lg:gap-6 → lg:gap-10 */}
-      <div className="py-4 px-6 md:px-8 flex flex-col lg:flex-row items-center gap-10 justify-center  w-full">
+      <div className="py-0 md:py-4 px-6 md:px-8 flex flex-col lg:flex-row items-center gap-2 md:gap-4 lg:gap-10 justify-center  w-full">
         {/* LEFT – logo + slogan – shrink to content */}
-        <div className="flex  items-center">
-          <div className="shrink-0 w-full lg:w-auto  lg:text-left">
+        <div className="flex w-full lg:w-auto gap-3 justify-between items-center">
+          <div className="block lg:hidden ">
+            <MobileDrawer></MobileDrawer>
+          </div>
+          <div className="shrink-0 lg:w-auto  lg:text-left">
             <div className="inline-block">
               {/* <Image
                 src="/assets/images/main-logo.png"
@@ -54,28 +64,29 @@ const Header = () => {
                 href="/"
                 className=" block hover:opacity-80 transition-opacity duration-300"
               >
-                <Logo className="h-14 w-auto" />
+                <Logo className="h-16  w-3/4 lg:w-5/6 " />
               </Link>
             </div>
             {/* <h2 className="text-info-800 text-sm md:text-base ">
               Simplifying life beyond medicine.
             </h2> */}
           </div>
-
-          <div className="block lg:hidden ">
-            <RiMenu4Line className="font-bold text-xl" />
-          </div>
+          <Link href="/login" className="block lg:hidden">
+            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+              <FiUser size={20} />
+            </div>
+          </Link>
         </div>
 
         {/* MIDDLE – grows and fills remaining space */}
         <div className="flex items-center gap-3 w-full min-w-0 flex-1 order-last lg:order-none">
           {/* Upload button – fixed width-ish */}
-          <div className="shrink-0">
+          <div className="shrink-0 hidden md:block">
             <label
               htmlFor="prescription-upload"
               className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-3.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-black shadow-sm cursor-pointer hover:shadow-md hover:bg-gray-50 transition"
             >
-              <LuUpload className="text-lg text-info-800" />
+              <LuUpload className=" text-sm lg:text-lg text-info-800" />
               Upload Prescription
               <input
                 id="prescription-upload"
@@ -141,9 +152,19 @@ const Header = () => {
                 5
               </span>
             </div>
-            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
-              <FiUser size={20} />
-            </div>
+
+            <Link href="/login" className="hidden lg:block">
+              <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+                <FiUser size={20} />
+              </div>
+            </Link>
+
+            {/* <Link
+              href="/login"
+              className="bg-primary-500 px-3 py-2 rounded-lg text-white"
+            >
+              Login{" "}
+            </Link> */}
           </div>
         </div>
       </div>

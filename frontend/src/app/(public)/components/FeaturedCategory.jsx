@@ -2,6 +2,7 @@
 
 import { getFeaturedProducts } from "@/data/featureproduct";
 import Image from "next/image";
+import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { MdArrowForwardIos } from "react-icons/md";
 
@@ -21,13 +22,15 @@ const FeaturedCategory = () => {
   return (
     <div className="bg-white  p-3">
       <div className="flex justify-between items-center">
-        <h1 className="font-bold text-lg lg:text-2xl">Featured Categories</h1>
-        <button className="border border-info-500/10 rounded-[90px] px-3 lg:px-6 py-3 text-primary-500 flex gap-3 items-center text-sm font-semibold cursor-pointer">
+        <h1 className="font-bold text-sm lg:text-2xl">Featured Categories</h1>
+        <Link href="/products">
+        <button className="border border-info-500/10 rounded-[90px] px-2 lg:px-6 py-1.5 lg:py-3 text-primary-500 flex gap-1 lg:gap-3 items-center text-xs lg:text-sm font-semibold cursor-pointer">
           See More categories
           <span>
             <MdArrowForwardIos />
           </span>
         </button>
+        </Link>
       </div>
 
       {/* product card grid */}
