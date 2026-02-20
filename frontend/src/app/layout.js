@@ -25,18 +25,16 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="antialiased  ">
-
         {/* website header  */}
         <Header></Header>
-
-        {/* main content  */}
-        <div className="lg:flex lg:gap-8 w-full px-2.5 lg:px-7 py-6">
-          <div className="w-3/12">
+        {/* main content */}
+        {/* <div className="lg:flex lg:gap-8 w-full px-2.5 lg:px-7 py-6 ">
+          <div className="w-3/12 sticky top-0 h-screen overflow-y-auto">
             <Sidebar></Sidebar>
           </div>
-          <div className="flex-1 ">{children}</div>
-        </div>
-
+          <div className="flex-1  "></div>
+        </div> */}
+        {children}
         {/* footer section  */}
         <Footer></Footer>
       </body>

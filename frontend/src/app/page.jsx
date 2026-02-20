@@ -4,18 +4,16 @@ import Link from "next/link";
 
 import { useEffect, useState } from "react";
 
-import Image from "next/image";
-import HeroCarousel from "./(public)/components/HeroCarousel";
 import { getCategories } from "@/data/categories";
-import Sponsors from "./(public)/components/Sponsors";
 
-import PopularProduct from "./(public)/components/PopularProduct";
-import UploadPrescriptionBanner from "./(public)/components/UploadPrescriptionBanner";
-import BookTestBanner from "./(public)/components/BookTestBanner";
-import FeaturedCategory from "./(public)/components/FeaturedCategory";
-
-import SmartHealthBundle from "./(public)/components/SmartHealthBundle";
-import DealsSection from "./(public)/components/DealsSection";
+import DealsSection from "./(public)/(pages)/home/components/DealsSection";
+import Sponsors from "./(public)/(pages)/home/components/Sponsors";
+import PopularProduct from "./(public)/(pages)/home/components/PopularProduct";
+import UploadPrescriptionBanner from "./(public)/(pages)/home/components/UploadPrescriptionBanner";
+import BookTestBanner from "./(public)/(pages)/home/components/BookTestBanner";
+import FeaturedCategory from "./(public)/(pages)/home/components/FeaturedCategory";
+import SmartHealthBundle from "./(public)/(pages)/home/components/SmartHealthBundle";
+import HeroCarousel from "./(public)/(pages)/home/components/HeroCarousel";
 import Sidebar from "./(public)/components/Sidebar";
 
 export default function Home() {
@@ -38,13 +36,13 @@ export default function Home() {
   // className="flex gap-8 w-full px-2.5 lg:px-7 py-6"
 
   return (
-    <main className="">
-      {/* <div className="w-full!">
-        <Sidebar ></Sidebar>
-      </div> */}
+    <main className="lg:flex lg:gap-8 w-full px-2.5 lg:px-7 py-6">
+      <div className="w-3/12 sticky top-0 h-screen overflow-y-auto">
+        <Sidebar></Sidebar>
+      </div>
 
       {/* Main content */}
-      <section>
+      <section className="flex-1">
         <section>
           <HeroCarousel />
           <Sponsors></Sponsors>

@@ -17,7 +17,7 @@ import MobileDrawer from "./MobileDrawer";
 const Header = () => {
   const [open, setOpen] = useState(false);
   return (
-    <header>
+    <header className="sticky top-0 z-20 bg-white">
       {/* top nav */}
       <div
         className="flex flex-col md:flex-row justify-between items-center  text-black py-3 px-6 md:px-9"

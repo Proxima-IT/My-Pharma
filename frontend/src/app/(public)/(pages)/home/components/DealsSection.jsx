@@ -26,7 +26,6 @@ const DealsSection = () => {
     <div className="bg-white  py-17.5 px-4">
       <div className="flex justify-between items-center">
         <h1 className="font-bold text-sm lg:text-2xl">Unilever: Deals you can't miss</h1>
-
         <Link href="/products">
           <button className="border border-info-500/10 rounded-[90px] px-2 lg:px-6 py-1.5 lg:py-3 text-primary-500 flex gap-1 lg:gap-3 items-center text-xs lg:text-sm font-semibold cursor-pointer">
             See More Product{" "}
@@ -61,7 +60,6 @@ const DealsSection = () => {
                 priority
               />
             </div>
-
             {/* product information  */}
             <div>
               <h1 className="font-bold text-sm mt-4">{product.name}</h1>
