@@ -1,3 +1,5 @@
 # Log files (often locked by running processes on Windows)
 logs/
 *.log
+.next
+/node_modules
