@@ -1,8 +1,6 @@
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import Header from "./(public)/components/Header";
-import Footer from "./(public)/components/Footer";
-import Sidebar from "./(public)/components/Sidebar";
+import LayoutWrapper from "./LayoutWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -24,21 +22,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="antialiased  ">
-
-        {/* website header  */}
-        <Header></Header>
-
-        {/* main content  */}
-        <div className="lg:flex lg:gap-8 w-full px-2.5 lg:px-7 py-6">
-          <div className="w-3/12">
-            <Sidebar></Sidebar>
-          </div>
-          <div className="flex-1 ">{children}</div>
-        </div>
-
-        {/* footer section  */}
-        <Footer></Footer>
+      <body className="antialiased">
+        <LayoutWrapper>
+          {children}
+        </LayoutWrapper>
       </body>
     </html>
   );
