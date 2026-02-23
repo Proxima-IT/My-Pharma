@@ -1,15 +1,8 @@
-"""OpenAPI schema URLs for My Pharma API (Swagger UI & ReDoc)."""
+"""OpenAPI schema URLs for My Pharma API."""
 from django.urls import path
-from django.views.generic import RedirectView
-from drf_spectacular.views import (
-    SpectacularAPIView,
-    SpectacularRedocView,
-    SpectacularSwaggerView,
-)
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 urlpatterns = [
-    path("", RedirectView.as_view(url="/api/schema/swagger/", permanent=False)),
-    path("openapi/", SpectacularAPIView.as_view(), name="schema"),
+    path("", SpectacularAPIView.as_view(), name="schema"),
     path("swagger/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]

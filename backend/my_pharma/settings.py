@@ -193,16 +193,6 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": r"/api/",
-    # JWT Bearer so Swagger UI shows "Authorize" and sends token on protected endpoints
-    "COMPONENT_SECURITY_SCHEMES": {
-        "BearerAuth": {
-            "type": "http",
-            "scheme": "bearer",
-            "bearerFormat": "JWT",
-            "description": "JWT access token from POST /api/auth/login/",
-        },
-    },
-    "SECURITY": [{"BearerAuth": []}],
 }
 
 LOGGING = {
