@@ -42,7 +42,7 @@ export default function Home() {
       </div>
 
       {/* Main content */}
-      <section className="flex-1">
+      <section className="flex-1 min-w-0">
         <section>
           <HeroCarousel />
           <Sponsors></Sponsors>

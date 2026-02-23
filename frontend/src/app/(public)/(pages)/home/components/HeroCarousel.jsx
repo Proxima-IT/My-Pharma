@@ -43,7 +43,7 @@ export default function HeroCarousel() {
     setCurrent(current === slides.length - 1 ? 0 : current + 1);
 
   return (
-    <div className="relative overflow-hidden  rounded-3xl bg-linear-to-r from-sky-400 to-blue-600">
+    <div className="relative overflow-hidden  rounded-3xl bg-gradient-to-r from-sky-400 to-blue-600">
       {/* Slides */}
       <div
         className="flex transition-transform duration-500"

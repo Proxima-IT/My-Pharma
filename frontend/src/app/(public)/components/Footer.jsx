@@ -49,7 +49,7 @@ const Footer = () => {
                 placeholder="Email"
                 className="w-full rounded-[55px] border-2 border-white/10 bg-white/10 px-4 py-3 h-full"
               />
-              <button className="absolute top-1/2 right-5">
+              <button className="absolute top-[45%] right-5">
                 <RiArrowRightLine className="text-2xl" />
               </button>
             </div>

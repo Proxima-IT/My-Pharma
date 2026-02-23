@@ -23,11 +23,11 @@ const PopularProduct = () => {
   }
 
   return (
-    <div className="bg-white  p-3">
+    <div className="  p-3">
       <div className="flex justify-between items-center">
         <h1 className="font-bold text-lg lg:text-2xl">Popular Products</h1>
         <Link href="/products">
-          <button className="border border-info-500/10 rounded-[90px] px-3 lg:px-6 py-2 lg:py-3 text-primary-500 flex gap-3 items-center text-sm font-semibold cursor-pointer">
+          <button className="border border-info-500/10 bg-white rounded-[90px] px-3 lg:px-6 py-2 lg:py-3 text-primary-500 flex gap-3 items-center text-sm font-semibold cursor-pointer">
             See More Product{" "}
             <span>
               <MdArrowForwardIos />

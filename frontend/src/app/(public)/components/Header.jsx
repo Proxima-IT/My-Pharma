@@ -82,19 +82,21 @@ const Header = () => {
         <div className="flex items-center gap-3 w-full min-w-0 flex-1 order-last lg:order-none">
           {/* Upload button – fixed width-ish */}
           <div className="shrink-0 hidden md:block">
-            <label
-              htmlFor="prescription-upload"
-              className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-3.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-black shadow-sm cursor-pointer hover:shadow-md hover:bg-gray-50 transition"
-            >
-              <LuUpload className=" text-sm lg:text-lg text-info-800" />
-              Upload Prescription
-              <input
-                id="prescription-upload"
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                className="hidden"
-              />
-            </label>
+            <Link href="/upload-prescription">
+              <label
+                htmlFor="prescription-upload"
+                className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-3.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-black shadow-sm cursor-pointer hover:shadow-md hover:bg-gray-50 transition"
+              >
+                <LuUpload className=" text-sm lg:text-lg text-info-800" />
+                Upload Prescription
+                <input
+                  id="prescription-upload"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                />
+              </label>
+            </Link>
           </div>
 
           {/* Search – takes all available space */}
@@ -146,12 +148,14 @@ const Header = () => {
             <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
               <FiBell size={20} />
             </div>
-            <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
-              <BsCart3 size={20} />
-              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                5
-              </span>
-            </div>
+            <Link href="/cart">
+              <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+                <BsCart3 size={20} />
+                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                  5
+                </span>
+              </div>
+            </Link>
 
             <Link href="/login" className="hidden lg:block">
               <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
