@@ -66,7 +66,7 @@ or
 { "email": "user@example.com", "otp": "123456" }
 ```
 
-**Success (200):** You get **registration_token**, **verified_identifier_type** ("phone" or "email"), **verified_identifier_value**. Show the **user completion form**: display the verified value as **uneditable**; collect **username**, **password**, and optionally the **other** identifier (email if verified was phone, phone if verified was email), **profile_picture**, **address**, first_name, last_name.
+**Success (200):** You get **registration_token**, **verified_identifier_type** ("phone" or "email"), **verified_identifier_value**. Show the **user completion form**: display the verified value as **uneditable**; collect **username**, **password**, and optionally the **other** identifier (email if verified was phone, phone if verified was email) and **profile_picture**. Addresses are added after login via `/api/auth/addresses/`.
 
 ```json
 {
@@ -81,7 +81,7 @@ or
 
 **Step 3 – Complete registration (user creation form)**
 
-User fills **username**, **password**, and optionally the other identifier (email or phone), **profile_picture** (file), **address**, first_name, last_name. Use **multipart/form-data** when sending a profile picture.
+User fills **username**, **password**, and optionally the other identifier (email or phone) and **profile_picture** (file). Use **multipart/form-data** when sending a profile picture. Addresses are managed after login via **GET/POST /api/auth/addresses/**.
 
 ```http
 POST /api/auth/register/complete/
@@ -91,23 +91,20 @@ Content-Type: application/json
   "registration_token": "550e8400-e29b-41d4-a716-446655440000",
   "password": "SecurePass1!",
   "username": "johndoe",
-  "email": "user@example.com",
-  "address": "123 Main St, Dhaka",
-  "first_name": "John",
-  "last_name": "Doe"
+  "email": "user@example.com"
 }
 ```
 
 (If verified was email, send **phone** instead of email. Omit profile_picture for JSON; use multipart/form-data to upload an image.)
 
-**Success (200):** You get access + refresh tokens and user profile (including username, profile_picture, address). Store tokens and treat user as logged in.
+**Success (200):** You get access + refresh tokens and user profile (including username, profile_picture, addresses). Store tokens and treat user as logged in.
 
 - **registration_token** is valid for 10 minutes. If it expires, repeat steps 1 and 2.
-- **username** and **password** are required; the other identifier, profile_picture, address, first_name, last_name are optional.
+- **username** and **password** are required; the other identifier and profile_picture are optional.
 
 ### Option B: Register with phone only (legacy)
 
-Use `POST /api/auth/register/phone/` with `{"phone": "01712345678"}`, then verify-otp and register/complete (same as Option A steps 2–3, but completion form was previously password + optional email, first_name, last_name; now also requires **username** and supports profile_picture, address). Prefer Option A (request-otp) for unified email/phone flow.
+Use `POST /api/auth/register/phone/` with `{"phone": "01712345678"}`, then verify-otp and register/complete (same as Option A steps 2–3; completion form requires **username**, password, and optionally the other identifier and profile_picture). Prefer Option A (request-otp) for unified email/phone flow.
 
 ### Option C: Register with email + password (one step, no OTP)
 
@@ -169,7 +166,7 @@ if (!res2.ok) {
   throw new Error(err.detail || "Invalid or expired OTP");
 }
 const { registration_token, phone } = await res2.json();
-// Show the completion form: password, email, first_name, last_name
+// Show the completion form: username, password, and optional email (or phone)
 
 // 3) Complete registration with password and optional profile
 const res3 = await api("/api/auth/register/complete/", {
@@ -177,9 +174,8 @@ const res3 = await api("/api/auth/register/complete/", {
   body: {
     registration_token,
     password: "SecurePass1!",
+    username: "johndoe",
     email: "user@example.com",
-    first_name: "John",
-    last_name: "Doe",
   },
 });
 if (!res3.ok) {
@@ -244,10 +240,10 @@ if (res.status === 401) {
   return;
 }
 const user = await res.json();
-// user includes: id, username, email, phone, profile_picture, address, gender, gender_display, date_of_birth, role, status, etc.
+// user includes: id, username, email, phone, profile_picture, addresses, gender, gender_display, date_of_birth, role, status, etc.
 ```
 
-**Update profile:** Use `PUT` or `PATCH /api/auth/me/` with optional body fields: `username`, `profile_picture`, `address`, `gender` (`MALE`|`FEMALE`|`OTHER`), `date_of_birth` (YYYY-MM-DD). Use `multipart/form-data` when sending `profile_picture`. To **add or change email/phone**, send only `email` or only `phone` → backend returns OTP sent and `pending_verification`; then send the same `email` or `phone` plus `otp` to confirm and save.
+**Update profile:** Use `PUT` or `PATCH /api/auth/me/` with optional body fields: `username`, `profile_picture`, `gender` (`MALE`|`FEMALE`|`OTHER`), `date_of_birth` (YYYY-MM-DD). Use `multipart/form-data` when sending `profile_picture`. **Addresses:** Use `GET /api/auth/addresses/` to list, `POST /api/auth/addresses/` to add (body: label, street_address, city, country, is_default, etc.), `PATCH/DELETE /api/auth/addresses/{id}/` to update or remove. To **add or change email/phone**, send only `email` or only `phone` → backend returns OTP sent and `pending_verification`; then send the same `email` or `phone` plus `otp` to confirm and save.
 
 ### Refresh token (get new access + refresh)
 
@@ -301,9 +297,8 @@ const { registration_token } = verifyData;
 const { data } = await client.post("/api/auth/register/complete/", {
   registration_token,
   password: "SecurePass1!",
+  username: "johndoe",
   email: "user@example.com",
-  first_name: "John",
-  last_name: "Doe",
 });
 const { access, refresh, user } = data;
 
@@ -331,7 +326,7 @@ curl -X POST http://localhost:8000/api/auth/verify-otp/ \
 # Register phone – step 3: complete with password and optional fields (paste registration_token from step 2)
 curl -X POST http://localhost:8000/api/auth/register/complete/ \
   -H "Content-Type: application/json" \
-  -d '{"registration_token":"PASTE_TOKEN_HERE","password":"SecurePass1!","email":"user@example.com","first_name":"John","last_name":"Doe"}'
+  -d '{"registration_token":"PASTE_TOKEN_HERE","password":"SecurePass1!","username":"johndoe","email":"user@example.com"}'
 
 # Register email
 curl -X POST http://localhost:8000/api/auth/register/email/ \
@@ -387,7 +382,7 @@ Then the browser will allow your frontend to call the API.
 
 | Goal                    | What to do                                                                                                                                                                                             |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Register (phone)**    | 1) POST `/api/auth/register/phone/` → 2) POST `/api/auth/verify-otp/` → 3) POST `/api/auth/register/complete/` with `registration_token`, `password`, and optional `email`, `first_name`, `last_name`. |
+| **Register (phone)**    | 1) POST `/api/auth/register/phone/` → 2) POST `/api/auth/verify-otp/` → 3) POST `/api/auth/register/complete/` with `registration_token`, `password`, `username`, and optional `email`, `phone`, `profile_picture`. Add addresses after login via `/api/auth/addresses/`. |
 | **Register (email)**    | POST `/api/auth/register/email/` with `{"email":"...","password":"..."}`.                                                                                                                              |
 | **Avoid 415**           | Always send `Content-Type: application/json` and a JSON body.                                                                                                                                          |
 | **Avoid 500 (Redis)**   | Run Redis or set `USE_REDIS=false` for local dev.                                                                                                                                                      |
