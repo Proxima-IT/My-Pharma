@@ -1,84 +1,73 @@
-import React from "react";
+'use client';
+
+import React from 'react';
+import { FiHome, FiChevronDown } from 'react-icons/fi';
 
 const ShippingAddressCard = () => {
   return (
-    <div>
-      <div className="bg-white rounded-[20px] border border-[#EEEFF2] p-6 shadow-sm w-full ">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-2xl font-semibold text-[#0D0E10]">
-            Shipping Address
-          </h2>
-          <button className="flex items-center gap-1.5 bg-[#0000F705] border-[1.5px] border-[#0000F70D] rounded-full px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
-            Change
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
+    <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 flex flex-col w-full transition-all">
+      {/* 1. Header Row: Heading and Change Button inside the container */}
+      <div className="flex items-center justify-between mb-8">
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+          Shipping Address
+        </h2>
+        <button className="flex items-center gap-1.5 bg-(--color-primary-50)/50 border border-(--color-primary-100) rounded-full px-4 py-2 text-[13px] font-bold text-(--color-primary-500) hover:bg-(--color-primary-50) transition-all cursor-pointer">
+          Change
+          <FiChevronDown size={16} />
+        </button>
+      </div>
+
+      {/* 2. Floating Identity Section (Dashboard Style) */}
+      <div className="w-full bg-white border border-gray-100 rounded-[24px] sm:rounded-full px-4 sm:px-5 py-3 flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 shadow-[0_4px_10px_rgba(0,0,0,0.03)] gap-4 sm:gap-0">
+        {/* Left: Identity */}
+        <div className="flex items-center gap-3 overflow-hidden w-full sm:w-auto">
+          <div className="w-10 h-10 sm:w-11 sm:h-11 bg-(--color-primary-50) rounded-full flex items-center justify-center text-(--color-primary-500) shrink-0">
+            <FiHome size={22} />
+          </div>
+          <div className="flex flex-col overflow-hidden">
+            <h3 className="text-[15px] sm:text-[17px] font-bold text-gray-900 leading-tight truncate">
+              Abu Fahim
+            </h3>
+            <p className="text-[12px] sm:text-[13px] text-gray-500 truncate">
+              design.fahim@proton.me
+            </p>
+          </div>
         </div>
 
-        {/* User Info */}
-        <div className="flex items-center justify-between bg-gray-50 border-[1.5px] border-gray-100 rounded-full px-4 py-3 mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-blue-100  flex items-center justify-center">
-              <svg
-                className="w-5 h-5 text-blue-800"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
-              </svg>
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-xl">Abu Fahim</p>
-              <p className="text-base font-normal text-gray-500">
-                design.fahim@proton.me
-              </p>
-            </div>
-          </div>
-          <span className="border border-success-600 bg-success-25 text-success-600 text-xs font-medium rounded-full px-4 py-2">
+        {/* Right: Default Badge */}
+        <div className="flex items-center justify-end shrink-0 w-full sm:w-auto border-t border-gray-50 sm:border-none pt-3 sm:pt-0">
+          <span className="bg-(--success-50) text-(--success-500) text-[9px] sm:text-[10px] font-bold px-3 py-1 rounded-full border border-(--success-100) uppercase">
             Default
           </span>
         </div>
+      </div>
 
-        {/* Address Details */}
-        <div className="space-y-3">
-          {[
-            { label: "PHONE NUMBER", value: "+880 1347598372" },
-            { label: "GENDER", value: "Male" },
-            { label: "DEISTIC", value: "Kushtia" },
-            { label: "THANA", value: "Bheramara" },
-            { label: "FULL ADDRESS", value: "kasaripara, Merpur, Kushtia" },
-          ].map(({ label, value }) => (
-            <div
-              key={label}
-              className="flex items-center justify-between w-full"
-            >
-              <span className="text-base font-semibold text-[#00000099] tracking-wide uppercase  shrink-0 w-2/5">
-                {label}
-              </span>
-              <span className="text-[#00000099] mx-2 text-center w-1/12">
-                -
-              </span>
-              <span className="text-lg font-medium text-primary-900 text-right w-1/2">
-                {value}
-              </span>
-            </div>
-          ))}
-        </div>
+      {/* 3. Address Details Section */}
+      <div className="w-full space-y-4 px-2 sm:px-4">
+        <DetailRow label="PHONE NUMBER" value="+880 1347598372" />
+        <DetailRow label="GENDER" value="Male" />
+        <DetailRow label="DEISTIC" value="Kushtia" />
+        <DetailRow label="THANA" value="Bheramara" />
+        <DetailRow label="FULL ADDRESS" value="kasaripara, Merpur, Kushtia" />
       </div>
     </div>
   );
 };
+
+function DetailRow({ label, value }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-start justify-between text-[14px] sm:text-[15px] w-full gap-1 sm:gap-0">
+      <div className="flex items-center shrink-0">
+        <span className="text-[11px] sm:text-[13px] text-gray-500 font-medium tracking-[0.5px] uppercase">
+          {label}
+        </span>
+        <span className="hidden sm:inline text-gray-400 mx-4">-</span>
+      </div>
+      <span className="text-gray-900 font-medium leading-relaxed text-left sm:text-right break-words">
+        {value}
+      </span>
+    </div>
+  );
+}
 
 export default ShippingAddressCard;

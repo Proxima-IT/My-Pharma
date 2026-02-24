@@ -8,21 +8,24 @@ export const usePrescriptions = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const loadPrescriptions = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('Session expired. Please login again.');
+  const loadPrescriptions = useCallback(
+    async (showLoading = true) => {
+      if (showLoading) setIsLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('access_token');
+        if (!token) throw new Error('Session expired. Please login again.');
 
-      const data = await fetchPrescriptionsApi(token, filter);
-      setPrescriptions(data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filter]);
+        const data = await fetchPrescriptionsApi(token, filter);
+        setPrescriptions(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [filter],
+  );
 
   useEffect(() => {
     loadPrescriptions();

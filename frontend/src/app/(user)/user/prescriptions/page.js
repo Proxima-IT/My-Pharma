@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { FiArrowLeft, FiArrowRight } from 'react-icons/fi';
 import { usePrescriptions } from '../../hooks/usePrescriptions';
+import { uploadPrescriptionApi } from '../../api/prescriptionApi';
 import PrescriptionCard from './components/PrescriptionCard';
 import UploadCard from './components/UploadCard';
 import UiButton from '@/app/(public)/components/UiButton';
@@ -13,22 +14,27 @@ export default function MyPrescriptionsPage() {
   const [selectedId, setSelectedId] = useState(null);
 
   const handleDirectUpload = async file => {
+    if (!file) return;
+
     setIsUploading(true);
-    const token = localStorage.getItem('access_token');
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await fetch('http://localhost:8000/api/prescriptions/', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
+      const token = localStorage.getItem('access_token');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('title', `Prescription_${new Date().getTime()}`);
 
-      if (!response.ok) throw new Error('Upload failed');
-      await refresh();
+      // Use the real API function
+      await uploadPrescriptionApi(token, formData);
+
+      // Refresh the list immediately without a page reload
+      // Passing false to refresh to avoid the full-page spinner if desired
+      await refresh(false);
+
+      // Optional: Clear selection if a new one is uploaded
+      setSelectedId(null);
     } catch (err) {
-      alert('Failed to upload prescription. Please try again.');
+      console.error('Upload error:', err);
+      alert(err.message || 'Failed to upload prescription. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -59,19 +65,18 @@ export default function MyPrescriptionsPage() {
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 flex-grow">
-          {/* 1. List of existing Prescriptions first */}
-          {!isLoading &&
-            prescriptions.map(item => (
-              <PrescriptionCard
-                key={item.id}
-                item={item}
-                isSelected={selectedId === item.id}
-                onSelect={() => handleToggleSelect(item.id)}
-              />
-            ))}
+          {/* 1. List of existing Prescriptions */}
+          {prescriptions.map(item => (
+            <PrescriptionCard
+              key={item.id}
+              item={item}
+              isSelected={selectedId === item.id}
+              onSelect={() => handleToggleSelect(item.id)}
+            />
+          ))}
 
-          {/* 2. Loading Placeholder */}
-          {isLoading && (
+          {/* 2. Loading Placeholder (Only for initial load) */}
+          {isLoading && prescriptions.length === 0 && (
             <div className="col-span-1 flex items-center justify-center aspect-[4/3] bg-gray-50 rounded-2xl border-[5px] border-white">
               <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
             </div>
@@ -81,7 +86,7 @@ export default function MyPrescriptionsPage() {
           <UploadCard onUpload={handleDirectUpload} isLoading={isUploading} />
         </div>
 
-        {/* 4. Bottom Action Section - Aligned to the Left */}
+        {/* 4. Bottom Action Section */}
         <div className="mt-12 pt-8 border-t border-gray-50 flex justify-start">
           <div className="w-full max-w-[240px]">
             <UiButton
@@ -96,7 +101,7 @@ export default function MyPrescriptionsPage() {
           </div>
         </div>
 
-        {error && !isLoading && (
+        {error && !isLoading && prescriptions.length === 0 && (
           <div className="mt-10 p-4 bg-red-50 border border-red-100 rounded-2xl text-center">
             <p className="text-sm font-bold text-red-600">{error}</p>
           </div>

@@ -1,194 +1,201 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-
-import React, { useEffect, useState } from "react";
-
-import { LuShieldCheck } from "react-icons/lu";
-import { FiTruck } from "react-icons/fi";
-
-import { IoSearchOutline } from "react-icons/io5";
-import { MdKeyboardCommandKey } from "react-icons/md";
-import Image from "next/image";
-import { getCategories } from "@/data/categories";
+import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import {
+  FiHome,
+  FiHeart,
+  FiActivity,
+  FiSmile,
+  FiZap,
+  FiSearch,
+  FiCommand,
+} from 'react-icons/fi';
+import {
+  GiPill,
+  GiHerbsBundle,
+  GiHealthCapsule,
+  GiDogBowl,
+} from 'react-icons/gi';
+import {
+  MdOutlineScience,
+  MdOutlineFaceRetouchingNatural,
+  MdOutlineHomeWork,
+} from 'react-icons/md';
+import { getCategories } from '@/data/categories';
 
 const Sidebar = () => {
-  const [categories, setCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState("");
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category');
 
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState("All Product Category");
+  const [categories, setCategories] = useState([]);
+  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     const loadCategories = async () => {
       const data = await getCategories();
-      console.log(data);
       setCategories(data);
+
+      // Auto-expand the parent if a sub-category is active in the URL
+      if (currentCategory) {
+        const parent = data.find(
+          cat =>
+            cat.slug === currentCategory ||
+            cat.subCategories?.some(sub => sub.slug === currentCategory),
+        );
+        if (parent) setExpandedId(parent.id);
+      }
     };
     loadCategories();
-  }, []);
+  }, [currentCategory]);
 
-  console.log(categories);
+  const getIcon = name => {
+    switch (name) {
+      case 'Home':
+        return <FiHome size={20} />;
+      case 'Medicine':
+        return <GiPill size={20} />;
+      case 'Healthcare':
+        return <FiHeart size={20} />;
+      case 'Lab Test':
+        return <MdOutlineScience size={20} />;
+      case 'Beauty':
+        return <MdOutlineFaceRetouchingNatural size={20} />;
+      case 'Sexual Wellness':
+        return <FiZap size={20} />;
+      case 'Baby Care':
+        return <FiSmile size={20} />;
+      case 'Herbal':
+        return <GiHerbsBundle size={20} />;
+      case 'Home Care':
+        return <MdOutlineHomeWork size={20} />;
+      case 'Supplement':
+        return <GiHealthCapsule size={20} />;
+      case 'Pet Care':
+        return <GiDogBowl size={20} />;
+      case 'Nutrition':
+        return <FiActivity size={20} />;
+      default:
+        return <FiHome size={20} />;
+    }
+  };
 
   return (
-    <div className="">
-      {/* Sidebar */}
-      <aside className="hidden lg:flex flex-col  items-center gap-3    text-black">
-        {/* top dropdown container  */}
-        {/* <div className="w-full bg-white text-black rounded-2xl shadow p-4 relative"> */}
-        {/* Button */}
-        {/* <div
-            onClick={() => setOpen(!open)}
-            className=" flex items-center justify-between rounded-full bg-white text-gray-800  transition cursor-pointer"
-          >
-            <h3 className="font-bold text-lg">{selected}</h3>
-            <div>
-              <svg
-                className={`w-5 h-5 transition-transform ${
-                  open ? "rotate-180" : ""
+    <div className="w-full bg-white border border-(--color-gray-100) rounded-[32px] p-6 animate-in fade-in duration-700">
+      <h2 className="text-[22px] font-bold text-(--color-gray-900) mb-6 tracking-tight">
+        All Product Category
+      </h2>
+
+      {/* Search Bar */}
+      <div className="relative mb-6">
+        <FiSearch
+          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+          size={18}
+        />
+        <input
+          type="text"
+          placeholder="Search"
+          className="w-full h-12 pl-11 pr-20 bg-white border border-(--color-gray-100) rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
+        />
+        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+          <div className="w-7 h-7 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+            <FiCommand size={14} />
+          </div>
+          <div className="w-7 h-7 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 text-[10px] font-bold">
+            K
+          </div>
+        </div>
+      </div>
+
+      {/* Category List */}
+      <nav className="space-y-1">
+        {categories.map(cat => {
+          const isExpanded = expandedId === cat.id;
+          const isActive = currentCategory === cat.slug;
+
+          return (
+            <div key={cat.id} className="flex flex-col">
+              <Link
+                href={`/products?category=${cat.slug}`}
+                onClick={() => setExpandedId(isExpanded ? null : cat.id)}
+                className={`flex items-center justify-between px-4 py-3 rounded-full transition-all group ${
+                  isActive || isExpanded
+                    ? 'bg-(--color-primary-500) text-white'
+                    : 'text-gray-500 hover:bg-gray-50'
                 }`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-          </div> */}
-
-        {/* Dropdown */}
-        {/* {open && (
-            <ul className="absolute  transition-all ease-in-out duration-500 z-10 mt-3 w-full top-14 left-0 rounded-xl bg-white shadow-lg overflow-hidden p-3 text-gray-600 text-base space-y-3">
-              {categories.map((category) => (
-                <li
-                  key={category.id}
-                  onClick={() => {
-                    setSelected(category.name);
-                    setActiveCategory(category);
-                    setOpen(false);
-                  }}
-                  className={`border-b-2 border-gray-100 text-gray-600 flex  justify-between rounded-[35px] w-full px-3 py-2 text-lg cursor-pointer transition-all ease-in-out duration-500  ${activeCategory.id === category.id ? "bg-primary-500 text-white" : "bg-white hover:bg-primary-50"}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Image
-                      src={category.icon}
-                      alt="icon"
-                      width={100}
-                      height={100}
-                      className="w-5 h-5"
-                    />
-                    {category.name}
-                  </div>
+                <div className="flex items-center gap-4">
                   <span
-                    className={`${activeCategory.id === category.id ? "bg-white/10 rounded-full px-2 py-1" : "bg-none"}`}
+                    className={
+                      isActive || isExpanded
+                        ? 'text-white'
+                        : 'text-gray-400 group-hover:text-(--color-primary-500)'
+                    }
                   >
-                    {category.count}
+                    {getIcon(cat.name)}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )} */}
-        {/* </div> */}
-
-        {/* Search + categories */}
-        <div className="w-full bg-white text-black rounded-2xl shadow p-4 mt-3 ">
-          <h3 className="font-bold text-lg mb-3">All Product Category</h3>
-          <div className="relative w-full max-w-xl mx-auto mb-5">
-            {/* Search Icon */}
-            <IoSearchOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" />
-
-            {/* Search Input */}
-            <input
-              type="text"
-              placeholder="Search"
-              className=" w-full h-12 sm:h-14 pl-12 pr-28 rounded-full border border-gray-200 text-sm sm:text-base text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-100"
-            />
-
-            {/* Cmd Button */}
-            <button className="absolute right-16 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition">
-              <MdKeyboardCommandKey className="text-lg sm:text-xl text-gray-500" />
-            </button>
-
-            {/* K Button */}
-            <button className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center hover:bg-gray-200 transition">
-              <span className="text-sm sm:text-base font-medium">K</span>
-            </button>
-          </div>
-
-          <div className="space-y-3.5">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                onClick={() => {
-                  setActiveCategory(category);
-                }}
-                className={`border-b-2 border-gray-100 text-gray-600 flex  justify-between rounded-[35px] w-full px-3 py-2 text-lg cursor-pointer  transition-all ease-in-out duration-500  ${activeCategory.id === category.id ? "bg-primary-500 text-white" : "bg-white hover:bg-primary-50"}`}
-              >
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={category.icon}
-                    alt="icon"
-                    width={100}
-                    height={100}
-                    className="w-5 h-5"
-                  />
-                  {category.name}
+                  <span className="text-[15px] font-bold tracking-tight">
+                    {cat.name}
+                  </span>
                 </div>
-                <span
-                  className={`${activeCategory.id === category.id ? "bg-white/10 rounded-full px-2 py-1" : "bg-none"}`}
+                <div
+                  className={`flex items-center justify-center min-w-[28px] h-7 rounded-full text-xs font-bold ${
+                    isActive || isExpanded
+                      ? 'bg-white/20 text-white'
+                      : 'text-gray-400'
+                  }`}
                 >
-                  {category.count}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+                  {cat.count}
+                </div>
+              </Link>
 
-        {/* app image  */}
-        <div className="relative  w-full mx-auto aspect-[3/4] sm:aspect-[4/5] ">
-          <Image
-            src="/assets/images/app.webp"
-            alt="App Banner"
-            fill
-            className="object-cover rounded-[14px] "
-            priority
-          />
-        </div>
+              {/* Sub-categories */}
+              {isExpanded && cat.subCategories && (
+                <div className="ml-6 mt-1 relative border-l border-gray-100">
+                  {cat.subCategories.map((sub, idx) => {
+                    const isSubActive = currentCategory === sub.slug;
+                    return (
+                      <div
+                        key={idx}
+                        className="relative flex items-center py-2 pl-6 group/sub"
+                      >
+                        <div className="absolute left-0 top-0 w-5 h-1/2 border-b border-gray-100 rounded-bl-xl" />
 
-        {/* adevretisement  */}
-        <div className="w-full mt-5 max-w-xl space-y-4">
-          {/* Card 1 */}
-          <div className="flex items-center gap-4 rounded-lg bg-white px-5 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
-              <LuShieldCheck className="h-6 w-6 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-base font-semibold text-gray-900">
-                Genuine Medicine
-              </p>
-              <p className="text-sm text-[#6B7280]">100% authentic products</p>
-            </div>
-          </div>
+                        <Link
+                          href={`/products?category=${sub.slug}`}
+                          className={`flex items-center gap-3 w-full p-2 rounded-2xl transition-all ${
+                            isSubActive ? 'bg-gray-100' : 'hover:bg-gray-50/50'
+                          }`}
+                        >
+                          <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
+                            <div
+                              className={`w-full h-full flex items-center justify-center text-[10px] font-bold ${
+                                isSubActive
+                                  ? 'bg-(--color-primary-500) text-white'
+                                  : 'bg-gray-50 text-gray-400'
+                              }`}
+                            >
+                              {sub.name.charAt(0)}
+                            </div>
+                          </div>
+                          <span
+                            className={`text-[14px] font-medium ${isSubActive ? 'text-gray-900 font-bold' : 'text-gray-600'}`}
+                          >
+                            {sub.name}
+                          </span>
+                        </Link>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
-          {/* Card 2 */}
-          <div className="flex items-center gap-4 rounded-lg bg-white px-5 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
-              <FiTruck className="h-6 w-6 text-emerald-500" />
+              {!isExpanded && <div className="h-px bg-gray-50 mx-4 my-0.5" />}
             </div>
-            <div>
-              <p className="text-base font-semibold text-gray-900">
-                Fast Delivery
-              </p>
-              <p className="text-sm text-[#6B7280]">Within Dhaka City</p>
-            </div>
-          </div>
-        </div>
-      </aside>
+          );
+        })}
+      </nav>
     </div>
   );
 };

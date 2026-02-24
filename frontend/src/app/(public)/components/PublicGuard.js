@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { getAccessToken, getStoredUser } from '../../(user)/lib/auth';
 
 export default function PublicGuard({ children }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
@@ -13,8 +14,18 @@ export default function PublicGuard({ children }) {
       const token = getAccessToken();
       const user = getStoredUser();
 
-      // If user is already logged in, redirect them away from Auth pages
-      if (token && user) {
+      // Define paths that logged-in users should be redirected AWAY from
+      const authPaths = [
+        '/login',
+        '/register',
+        '/forgot-password',
+        '/reset-password',
+      ];
+
+      const isAuthPage = authPaths.some(path => pathname.startsWith(path));
+
+      // ONLY redirect if the user is logged in AND trying to access an Auth page
+      if (token && user && isAuthPage) {
         const routes = {
           SUPER_ADMIN: '/admin',
           PHARMACY_ADMIN: '/pharmacy',
@@ -22,21 +33,20 @@ export default function PublicGuard({ children }) {
           REGISTERED_USER: '/user',
         };
 
-        router.replace(routes[user.role] || '/');
+        router.replace(routes[user.role] || '/user');
       } else {
-        // No session found, allow them to see the Login/Register pages
+        // Allow access to the page
         setIsChecking(false);
       }
     };
 
     checkSession();
-  }, [router]);
+  }, [router, pathname]);
 
-  // Show nothing (or a very subtle loader) while checking to prevent form flickering
   if (isChecking) {
     return (
       <div className="h-screen w-full flex items-center justify-center bg-white">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

@@ -1,18 +1,16 @@
-"use client";
+'use client';
 
-import { useRef, useState } from "react";
-import { MdArrowForwardIos } from "react-icons/md";
-import BundleCard from "./BundleCard";
-import { useBundleData } from "@/app/(public)/hooks/useBundleData";
+import { useRef, useState, useEffect } from 'react';
+import { MdArrowForwardIos } from 'react-icons/md';
+import BundleCard from './BundleCard';
+import { useBundleData } from '@/app/(public)/hooks/useBundleData';
 
 export default function BundleSlider({ cardsToShow = 3 }) {
   const { bundles } = useBundleData();
-
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  // ====== CHECK SCROLL POSITION ======
   const checkScrollButtons = () => {
     const container = scrollContainerRef.current;
     if (container) {
@@ -24,109 +22,84 @@ export default function BundleSlider({ cardsToShow = 3 }) {
     }
   };
 
-  // ====== SCROLL LEFT ======
-  const scrollLeft = () => {
+  const scroll = direction => {
     const container = scrollContainerRef.current;
     if (container) {
-      const scrollAmount = container.offsetWidth * 0.8; // 80% of container width
+      const scrollAmount = container.clientWidth; // Scroll one full view at a time
       container.scrollBy({
-        left: -scrollAmount,
-        behavior: "smooth",
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
       });
       setTimeout(checkScrollButtons, 300);
     }
   };
 
-  // ====== SCROLL RIGHT ======
-  const scrollRight = () => {
-    const container = scrollContainerRef.current;
-    if (container) {
-      const scrollAmount = container.offsetWidth * 0.8; // 80% of container width
-      container.scrollBy({
-        left: scrollAmount,
-        behavior: "smooth",
-      });
-      setTimeout(checkScrollButtons, 300);
-    }
+  useEffect(() => {
+    checkScrollButtons();
+    window.addEventListener('resize', checkScrollButtons);
+    return () => window.removeEventListener('resize', checkScrollButtons);
+  }, []);
+
+  // Dynamic width calculation based on cardsToShow prop
+  const getWidthClass = () => {
+    if (cardsToShow === 1) return 'w-full';
+    // On mobile: 1 card, On tablet: 2 cards, On desktop: cardsToShow
+    return `w-full sm:w-[calc((100%-20px)/2)] lg:w-[calc((100%-${(cardsToShow - 1) * 20}px)/${cardsToShow})]`;
   };
 
   return (
-    <div className="relative">
-      {/* ====== NAVIGATION BUTTONS ====== */}
-      <div className="flex justify-between items-center">
-        <h1 className="font-bold text-2xl">
+    <div className="relative w-full">
+      {/* Header & Navigation */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <h1 className="font-bold text-xl sm:text-2xl text-gray-900 tracking-tight">
           Smart health bundles at better value
         </h1>
         <div className="flex items-center gap-3">
           <button
-            onClick={scrollLeft}
+            onClick={() => scroll('left')}
             disabled={!canScrollLeft}
-            className={`border rounded-full p-2 sm:p-3 rotate-180 flex items-center transition-all ${
+            className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
               canScrollLeft
-                ? "bg-white text-black border-info-500/20 hover:bg-gray-50 cursor-pointer"
-                : "bg-gray-100 text-black border-[#00000033] cursor-not-allowed opacity-70"
+                ? 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50 cursor-pointer'
+                : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
             }`}
-            aria-label="Previous"
           >
-            <MdArrowForwardIos size={16} />
+            <MdArrowForwardIos className="rotate-180" size={16} />
           </button>
 
           <button
-            onClick={scrollRight}
+            onClick={() => scroll('right')}
             disabled={!canScrollRight}
-            className={`border rounded-full p-2 sm:p-3 flex items-center transition-all ${
+            className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
               canScrollRight
-                ? "bg-black text-white border-info-500/10 hover:bg-gray-800 cursor-pointer"
-                : "bg-gray-400 text-gray-200 border-gray-300 cursor-not-allowed opacity-50"
+                ? 'bg-black text-white border-black hover:bg-gray-800 cursor-pointer'
+                : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
             }`}
-            aria-label="Next"
           >
             <MdArrowForwardIos size={16} />
           </button>
         </div>
       </div>
 
-      {/* ====== SCROLLABLE CONTAINER ====== */}
+      {/* Scrollable Container */}
       <div
         ref={scrollContainerRef}
         onScroll={checkScrollButtons}
-        className="flex gap-3 sm:gap-5 mt-7 overflow-x-auto overflow-y-hidden scrollbar-hide scroll-smooth touch-pan-x"
+        className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory touch-pan-x pb-4"
         style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          WebkitOverflowScrolling: "touch",
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none',
         }}
       >
-        {/* ====== RENDER CARDS ====== */}
-        {bundles.map((bundle) => (
+        {bundles.map(bundle => (
           <div
             key={bundle.id}
-            className="bundle-card-wrapper flex-shrink-0"
-            style={{
-              width: `calc((100% - ${(cardsToShow - 1) * 20}px) / ${cardsToShow})`,
-              minWidth: "100px",
-              maxWidth: "300px",
-            }}
+            className={`${getWidthClass()} flex-shrink-0 snap-center`}
           >
             <BundleCard bundle={bundle} />
           </div>
         ))}
       </div>
-
-      {/* ====== MOBILE SCROLL INDICATOR ====== */}
-      <div className="sm:hidden flex justify-center gap-2 mt-4">
-        {Array.from({ length: Math.ceil(bundles.length / cardsToShow) }).map(
-          (_, idx) => (
-            <div key={idx} className="w-2 h-2 rounded-full bg-gray-300" />
-          ),
-        )}
-      </div>
-
-      {/* <style jsx>{`
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style> */}
     </div>
   );
 }

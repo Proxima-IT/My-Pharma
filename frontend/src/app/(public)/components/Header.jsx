@@ -1,29 +1,104 @@
-"use client";
+'use client';
 
-import React, { useState } from "react";
-import { FaFacebook, FaLinkedin } from "react-icons/fa";
-import { BsInstagram } from "react-icons/bs";
-import Image from "next/image";
-import { LuUpload } from "react-icons/lu";
-import { IoSearchOutline } from "react-icons/io5";
-import { FiBell, FiUser } from "react-icons/fi";
-import { HiOutlineLocationMarker } from "react-icons/hi";
-import { BsCart3 } from "react-icons/bs";
-import { RiMenu4Line } from "react-icons/ri";
-import Link from "next/link";
-import Logo from "./Logo";
-import MobileDrawer from "./MobileDrawer";
+import React, { useState, useRef, useEffect } from 'react';
+import { FaFacebook, FaLinkedin } from 'react-icons/fa';
+import { BsInstagram } from 'react-icons/bs';
+import { LuUpload } from 'react-icons/lu';
+import { IoSearchOutline } from 'react-icons/io5';
+import { FiBell, FiUser } from 'react-icons/fi';
+import { HiOutlineLocationMarker } from 'react-icons/hi';
+import { BsCart3 } from 'react-icons/bs';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import Logo from './Logo';
+import MobileDrawer from './MobileDrawer';
+import AddressSelectorPopup from './AddressSelectorPopup';
+import { uploadPrescriptionApi } from '../../(user)/api/prescriptionApi';
 
 const Header = () => {
-  const [open, setOpen] = useState(false);
+  const router = useRouter();
+  const fileInputRef = useRef(null);
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
+
+  const handlePrescriptionClick = e => {
+    e.preventDefault();
+    if (!isLoggedIn) {
+      router.push('/login');
+    } else {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleLocationClick = () => {
+    if (!isLoggedIn) {
+      router.push('/login');
+    } else {
+      setIsLocationOpen(true);
+    }
+  };
+
+  const handleFileUpload = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validation
+    const allowedTypes = [
+      'image/png',
+      'image/jpeg',
+      'image/jpg',
+      'application/pdf',
+    ];
+    const maxSize = 5 * 1024 * 1024;
+
+    if (!allowedTypes.includes(file.type)) {
+      alert('Please select a PNG, JPG, or PDF file.');
+      return;
+    }
+    if (file.size > maxSize) {
+      alert('File size must be less than 5MB.');
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      const token = localStorage.getItem('access_token');
+
+      const formData = new FormData();
+      formData.append('file', file);
+      // If your backend requires a title or other fields, add them here:
+      formData.append('title', `Uploaded_${new Date().getTime()}`);
+
+      await uploadPrescriptionApi(token, formData);
+
+      alert('Prescription uploaded successfully!');
+      router.push('/user/prescriptions');
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert(err.message || 'Failed to upload prescription. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Clear input so the same file can be selected again if needed
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <header className="sticky top-0 z-20 bg-white">
       {/* top nav */}
       <div
-        className="flex flex-col md:flex-row justify-between items-center  text-black py-3 px-6 md:px-9"
+        className="flex flex-col md:flex-row justify-between items-center text-black py-3 px-6 md:px-9"
         style={{
           background:
-            "linear-gradient(-180deg, rgba(233,235,244,1) 0%, rgba(230,247,237,1) 100%)",
+            'linear-gradient(-180deg, rgba(233,235,244,1) 0%, rgba(230,247,237,1) 100%)',
         }}
       >
         <h1 className="text-sm md:text-base text-gray-800 lg:block hidden">
@@ -33,145 +108,138 @@ const Header = () => {
           Medicines and healthcare products delivered to your doorstep
         </p>
         <div className="lg:flex hidden items-center gap-5 text-xl">
-          <a href="https://www.facebook.com/"><FaFacebook /></a>
+          <a href="https://www.facebook.com/">
+            <FaFacebook />
+          </a>
           <div className="h-6 w-0.5 bg-black/10" />
-          <a href="https://www.linkedin.com/"><FaLinkedin /></a>
+          <a href="https://www.linkedin.com/">
+            <FaLinkedin />
+          </a>
           <div className="h-6 w-0.5 bg-black/10" />
-          <a href="https://www.instagram.com/?hl=en"><BsInstagram /></a>
+          <a href="https://www.instagram.com/?hl=en">
+            <BsInstagram />
+          </a>
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────── */}
-      {/* MAIN NAV – only changed: lg:gap-6 → lg:gap-10 */}
-      <div className="py-0 md:py-4 px-6 md:px-8 flex flex-col lg:flex-row items-center gap-2 md:gap-4 lg:gap-10 justify-center  w-full">
-        {/* LEFT – logo + slogan – shrink to content */}
+      {/* MAIN NAV */}
+      <div className="py-0 md:py-4 px-6 md:px-8 flex flex-col lg:flex-row items-center gap-2 md:gap-4 lg:gap-10 justify-center w-full">
+        {/* LEFT – logo */}
         <div className="flex w-full lg:w-auto gap-3 justify-between items-center">
           <div className="block lg:hidden ">
-            <MobileDrawer></MobileDrawer>
+            <MobileDrawer />
           </div>
-          <div className="shrink-0 lg:w-auto  lg:text-left">
-            <div className="inline-block">
-              {/* <Image
-                src="/assets/images/main-logo.png"
-                alt="Logo"
-                width={700}
-                height={475}
-                className="w-32 md:w-44 lg:w-56 h-auto mx-auto lg:mx-0"
-                priority
-              /> */}
-
-              <Link
-                href="/"
-                className=" block hover:opacity-80 transition-opacity duration-300"
-              >
-                <Logo className="h-16  w-3/4 lg:w-5/6 " />
-              </Link>
-            </div>
-            {/* <h2 className="text-info-800 text-sm md:text-base ">
-              Simplifying life beyond medicine.
-            </h2> */}
+          <div className="shrink-0 lg:w-auto lg:text-left">
+            <Link
+              href="/"
+              className="block hover:opacity-80 transition-opacity duration-300"
+            >
+              <Logo className="h-16 w-3/4 lg:w-5/6 " />
+            </Link>
           </div>
-          <Link href="/login" className="block lg:hidden">
-            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+          <Link
+            href={isLoggedIn ? '/user/profile' : '/login'}
+            className="block lg:hidden"
+          >
+            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
               <FiUser size={20} />
             </div>
           </Link>
         </div>
 
-        {/* MIDDLE – grows and fills remaining space */}
+        {/* MIDDLE – Search & Upload */}
         <div className="flex items-center gap-3 w-full min-w-0 flex-1 order-last lg:order-none">
-          {/* Upload button – fixed width-ish */}
           <div className="shrink-0 hidden md:block">
-            <Link href="/upload-prescription">
-              <label
-                htmlFor="prescription-upload"
-                className="inline-flex items-center gap-2 whitespace-nowrap px-4 py-3.5 bg-white border border-gray-200 rounded-full text-sm font-medium text-black shadow-sm cursor-pointer hover:shadow-md hover:bg-gray-50 transition"
-              >
-                <LuUpload className=" text-sm lg:text-lg text-info-800" />
-                Upload Prescription
-                <input
-                  id="prescription-upload"
-                  type="file"
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="hidden"
-                />
-              </label>
-            </Link>
+            <button
+              onClick={handlePrescriptionClick}
+              disabled={isUploading}
+              className="inline-flex items-center gap-2 whitespace-nowrap px-6 py-3.5 bg-white border border-(--color-gray-200) rounded-full text-sm font-bold text-black cursor-pointer hover:bg-(--color-gray-50) transition-all disabled:opacity-50"
+            >
+              <LuUpload
+                className={`text-lg text-(--color-primary-500) ${isUploading ? 'animate-bounce' : ''}`}
+              />
+              {isUploading ? 'Uploading...' : 'Upload Prescription'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              className="hidden"
+              onChange={handleFileUpload}
+            />
           </div>
 
-          {/* Search – takes all available space */}
           <div className="relative flex-1 w-full">
             <input
               type="text"
               placeholder='Search for "healthcare products"'
-              className="w-full h-10 md:h-12 pl-5 pr-14 rounded-full border border-gray-200 text-gray-700 placeholder-gray-400 shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              className="w-full h-10 md:h-12 pl-5 pr-14 rounded-full border border-(--color-gray-200) text-gray-700 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-primary-500)/30"
             />
-
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-[#243C8F] flex items-center justify-center hover:scale-105 transition">
+            <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-(--color-primary-500) flex items-center justify-center hover:scale-105 transition">
               <IoSearchOutline className="text-xl text-white" />
             </button>
           </div>
         </div>
 
-        {/* RIGHT – icons + location – shrink to content */}
+        {/* RIGHT – icons + location */}
         <div className="flex items-center justify-center lg:justify-end gap-4 md:gap-6 w-full lg:w-auto shrink-0">
           {/* Location */}
-          <div className="flex items-center gap-2 cursor-pointer">
-            <HiOutlineLocationMarker className="text-2xl text-gray-700" />
-            <div className="text-right">
-              <p className="text-xs text-gray-500">Delivery to</p>
-              <p className="text-sm font-semibold text-gray-800">
-                Kushtia, Khulna
+          <div
+            className="flex items-center gap-2 cursor-pointer group"
+            onClick={handleLocationClick}
+          >
+            <HiOutlineLocationMarker className="text-2xl text-gray-700 group-hover:text-(--color-primary-500) transition-colors" />
+            <div className="text-right hidden sm:block">
+              <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
+                Delivery to
               </p>
+              <p className="text-sm font-bold text-gray-800">Kushtia, Khulna</p>
             </div>
-            <div onClick={() => setOpen(!open)}>
-              <svg
-                className={`w-6 h-6 font-bold transition-transform ${
-                  open ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
+            <svg
+              className={`w-5 h-5 text-gray-400 transition-transform ${isLocationOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={3}
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M19 9l-7 7-7-7"
+              />
+            </svg>
           </div>
 
           {/* Icons */}
           <div className="flex items-center gap-3 md:gap-4">
-            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+            <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
               <FiBell size={20} />
             </div>
             <Link href="/cart">
-              <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+              <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
                 <BsCart3 size={20} />
-                <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
                   5
                 </span>
               </div>
             </Link>
 
-            <Link href="/login" className="hidden lg:block">
-              <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 shadow-sm flex items-center justify-center cursor-pointer hover:bg-gray-50">
+            <Link
+              href={isLoggedIn ? '/user/profile' : '/login'}
+              className="hidden lg:block"
+            >
+              <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
                 <FiUser size={20} />
               </div>
             </Link>
-
-            {/* <Link
-              href="/login"
-              className="bg-primary-500 px-3 py-2 rounded-lg text-white"
-            >
-              Login{" "}
-            </Link> */}
           </div>
         </div>
       </div>
+
+      <AddressSelectorPopup
+        isOpen={isLocationOpen}
+        onClose={() => setIsLocationOpen(false)}
+      />
     </header>
   );
 };

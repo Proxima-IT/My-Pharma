@@ -5,7 +5,7 @@ import { TbCurrencyTaka } from "react-icons/tb";
 const OrderSummaryCard = () => {
   return (
     <div>
-      <div className="bg-white rounded-[20px] border border-[#EEEFF2] p-6 shadow-sm w-full ">
+      <div className="bg-white rounded-[20px] border border-[#EEEFF2] p-6 w-full ">
         {/* Title */}
         <h2 className="text-3xl font-medium text-[#0D0E10] mb-5">
           Order Summary

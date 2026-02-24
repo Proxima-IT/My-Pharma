@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import Link from 'next/link';
 import {
   FiCamera,
   FiUser,
@@ -10,6 +11,7 @@ import {
   FiChevronDown,
   FiSave,
   FiCheck,
+  FiArrowLeft,
 } from 'react-icons/fi';
 import { IoMaleFemaleOutline } from 'react-icons/io5';
 import { useProfile } from '../../hooks/useProfile';
@@ -37,18 +39,26 @@ export default function UserProfilePage() {
   if (isLoading) {
     return (
       <div className="w-full flex justify-center items-center py-40">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-10 h-10 border-4 border-(--primary-500) border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <div className="w-full animate-in fade-in duration-700 pb-20">
+      {/* Mobile Back Button */}
+      <Link
+        href="/user"
+        className="inline-flex lg:hidden items-center gap-2 text-sm font-semibold text-(--primary-500) hover:text-(--primary-700) transition-colors mb-6"
+      >
+        <FiArrowLeft /> Back to Menu
+      </Link>
+
       <div className="bg-white rounded-[32px] p-8 md:p-12 border border-gray-100/50 w-full shadow-none">
-        {/* 1. Header Section: Avatar + Info */}
-        <div className="flex flex-row items-center gap-8 mb-10">
-          <div className="relative">
-            <div className="w-32 h-32 rounded-full bg-gray-50 border-[6px] border-white ring-1 ring-gray-100 overflow-hidden">
+        {/* 1. Header Section: Avatar + Info (Responsive Stack) */}
+        <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 mb-10 text-center sm:text-left">
+          <div className="relative shrink-0">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gray-50 border-[6px] border-white ring-1 ring-gray-100 overflow-hidden">
               {formData.avatar_preview ? (
                 <img
                   src={formData.avatar_preview}
@@ -80,11 +90,11 @@ export default function UserProfilePage() {
             </label>
           </div>
 
-          <div className="flex flex-col">
-            <h2 className="text-2xl font-bold text-black tracking-tight">
+          <div className="flex flex-col min-w-0 w-full">
+            <h2 className="text-2xl font-bold text-black tracking-tight truncate">
               {formData.fullName || formData.username}
             </h2>
-            <p className="text-gray-400 font-medium mt-1">
+            <p className="text-gray-400 font-medium mt-1 truncate">
               {formData.email || formData.phone}
             </p>
           </div>
@@ -122,7 +132,7 @@ export default function UserProfilePage() {
                     <button
                       type="button"
                       onClick={verifyCode}
-                      className="text-[10px] font-bold text-primary-500 uppercase tracking-widest"
+                      className="text-[10px] font-bold text-(--primary-500) uppercase tracking-widest"
                     >
                       Verify
                     </button>
@@ -145,7 +155,7 @@ export default function UserProfilePage() {
                       <button
                         type="button"
                         onClick={() => requestVerification('email')}
-                        className="text-[10px] font-bold text-primary-500 uppercase tracking-widest"
+                        className="text-[10px] font-bold text-(--primary-500) uppercase tracking-widest"
                       >
                         Verify
                       </button>
@@ -173,7 +183,7 @@ export default function UserProfilePage() {
                     <button
                       type="button"
                       onClick={verifyCode}
-                      className="text-[10px] font-bold text-primary-500 uppercase tracking-widest"
+                      className="text-[10px] font-bold text-(--primary-500) uppercase tracking-widest"
                     >
                       Verify
                     </button>
@@ -196,7 +206,7 @@ export default function UserProfilePage() {
                       <button
                         type="button"
                         onClick={() => requestVerification('phone')}
-                        className="text-[10px] font-bold text-primary-500 uppercase tracking-widest"
+                        className="text-[10px] font-bold text-(--primary-500) uppercase tracking-widest"
                       >
                         Verify
                       </button>
@@ -217,11 +227,11 @@ export default function UserProfilePage() {
                 Gender
               </label>
               <div className="relative group">
-                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary-500 transition-colors z-10 pointer-events-none">
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-(--primary-500) transition-colors z-10 pointer-events-none">
                   <IoMaleFemaleOutline />
                 </div>
                 <select
-                  className="w-full py-3.5 pl-12 pr-10 bg-white border border-gray-200 rounded-full text-sm text-gray-900 outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-4 focus:ring-primary-50/50 focus:border-primary-500"
+                  className="w-full py-3.5 pl-12 pr-10 bg-white border border-gray-200 rounded-full text-sm text-gray-900 outline-none appearance-none cursor-pointer transition-all duration-300 focus:ring-4 focus:ring-(--primary-50)/50 focus:border-(--primary-500)"
                   value={formData.gender}
                   onChange={e =>
                     setFormData({ ...formData, gender: e.target.value })
@@ -232,7 +242,7 @@ export default function UserProfilePage() {
                   <option value="FEMALE">Female</option>
                   <option value="OTHER">Other</option>
                 </select>
-                <div className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-colors group-focus-within:text-primary-500">
+                <div className="absolute right-5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none transition-colors group-focus-within:text-(--primary-500)">
                   <FiChevronDown />
                 </div>
               </div>

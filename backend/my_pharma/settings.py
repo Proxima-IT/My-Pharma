@@ -19,7 +19,8 @@ JWT_SIGNING_KEY = hashlib.sha256(SECRET_KEY.encode()).hexdigest()
 
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+# FIXED: Combined environment variables with local defaults and production fallbacks
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,46.202.194.251,app.mypharma.com").split(",")
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -104,7 +105,8 @@ MEDIA_URL = "media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-ALLOWED_HOSTS = ["46.202.194.251", "app.mypharma.com"]
+# REMOVED: The duplicate hardcoded ALLOWED_HOSTS that was overwriting Line 24
+
 CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL", "false").lower() == "true"
 CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
 CORS_ALLOW_CREDENTIALS = True
