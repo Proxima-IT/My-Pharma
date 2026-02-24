@@ -5,10 +5,77 @@ import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useLogin } from '../hooks/useLogin';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function LoginForm() {
   const { formData, setFormData, isLoading, error, handleLogin } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
+<<<<<<< HEAD
+  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({ identifier: '', password: '' });
+
+  const getFriendlyErrorMessage = (status, data) => {
+    switch (status) {
+      case 401:
+        return "Oops! Those details don't match our records. Please double-check your email/phone and password.";
+      case 423:
+        return 'For your security, your account is temporarily locked due to too many failed attempts. Please try again in 30 minutes.';
+      case 429:
+        return "You're moving a bit too fast! Please wait a moment before trying to sign in again.";
+      case 400:
+        return 'It looks like some information is missing or incorrect. Please check the form and try again.';
+      case 500:
+        return "We're having some trouble on our end right now. Please try again in a few minutes.";
+      default:
+        return (
+          data?.detail ||
+          "We couldn't sign you in. Please check your connection and try again."
+        );
+    }
+  };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    const isEmail = formData.identifier.includes('@');
+    const payload = {
+      [isEmail ? 'email' : 'phone']: formData.identifier,
+      password: formData.password,
+    };
+
+    try {
+      const response = await fetch(AUTH_ENDPOINTS.LOGIN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        const message = getFriendlyErrorMessage(response.status, data);
+        throw new Error(message);
+      }
+
+      localStorage.setItem('access_token', data.access);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      const routes = {
+        SUPER_ADMIN: '/admin',
+        PHARMACY_ADMIN: '/pharmacy',
+        DOCTOR: '/doctor',
+        REGISTERED_USER: '/user',
+      };
+
+      router.push(routes[data.user.role] || '/');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+=======
+>>>>>>> 94d8241dcb9f04f8a8fc060fb3bb889a6bb74268
 
   return (
     <div className="w-full flex flex-col items-center">

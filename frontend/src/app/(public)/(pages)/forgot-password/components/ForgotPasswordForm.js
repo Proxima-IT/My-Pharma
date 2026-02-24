@@ -5,6 +5,7 @@ import { FiMail, FiLock, FiCheckCircle } from 'react-icons/fi';
 import { useForgotPassword } from '../hooks/useForgotPassword';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function ForgotPasswordForm() {
   const {
@@ -18,7 +19,35 @@ export default function ForgotPasswordForm() {
     triggerMethodError,
   } = useForgotPassword();
 
+<<<<<<< HEAD
+  const handleSubmit = async e => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await fetch(AUTH_ENDPOINTS.PASSWORD_RESET, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      // The backend returns 200 even if email doesn't exist for security
+      if (!response.ok) {
+        throw new Error(
+          "We couldn't process your request. Please try again later.",
+        );
+      }
+      setIsSubmitted(true);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (isSubmitted) {
+=======
   if (isSuccess) {
+>>>>>>> 94d8241dcb9f04f8a8fc060fb3bb889a6bb74268
     return (
       <div className="w-full flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
         <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6">

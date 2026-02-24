@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function RegisterFlow() {
   const router = useRouter();
@@ -39,14 +40,11 @@ export default function RegisterFlow() {
       ? { email: formData.identifier }
       : { phone: formData.identifier };
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/request-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
       if (!response.ok)
         throw new Error(getFriendlyErrorMessage(response.status, data));
@@ -68,14 +66,11 @@ export default function RegisterFlow() {
       otp: formData.otp,
     };
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/verify-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.VERIFY_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
       if (!response.ok)
         throw new Error(getFriendlyErrorMessage(response.status, data));
