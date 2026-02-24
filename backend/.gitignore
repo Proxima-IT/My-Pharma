@@ -1,0 +1,23 @@
+# Django / Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment / secrets
+.env
+.env.local
+.env.*
+*.env
+
+# Logs
+logs/
+*.log
+
+# Media/uploads (user-generated)
+media/
+
+# Other common junk
+*.swp
+.DS_Store
+Thumbs.db
