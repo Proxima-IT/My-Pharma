@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { 
-  fetchProfileApi, 
-  updateProfileApi 
+import {
+  fetchProfileApi,
+  updateProfileApi,
+  requestVerificationOtpApi,
+  verifyIdentityOtpApi,
 } from '../api/profileApi';
 
 export const useProfile = () => {
@@ -11,12 +13,11 @@ export const useProfile = () => {
   const [error, setError] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Verification States
-  const [verifyingType, setVerifyingType] = useState(null); // 'email' or 'phone'
-  const [verificationStep, setVerificationStep] = useState(1); // 1: Input, 2: OTP
+  const [verifyingType, setVerifyingType] = useState(null);
   const [otp, setOtp] = useState('');
 
   const [formData, setFormData] = useState({
+    fullName: '',
     username: '',
     email: '',
     phone: '',
@@ -35,6 +36,7 @@ export const useProfile = () => {
       if (!token) return;
       const data = await fetchProfileApi(token);
       const mappedData = {
+        fullName: data.username || '',
         username: data.username || '',
         email: data.email || '',
         phone: data.phone || '',
@@ -51,21 +53,25 @@ export const useProfile = () => {
     }
   }, []);
 
-  useEffect(() => { loadProfile(); }, [loadProfile]);
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
-  const handleUpdate = async (e) => {
+  const handleUpdate = async e => {
     if (e) e.preventDefault();
     setIsUpdating(true);
     setError(null);
+    setShowSuccess(false);
 
     const token = localStorage.getItem('access_token');
     const data = new FormData();
-    
-    // Use keys exactly as defined in API Docs
-    data.append('username', formData.username);
+    const [firstName, ...lastNameParts] = formData.fullName.trim().split(/\s+/);
+
+    data.append('first_name', firstName || '');
+    data.append('last_name', lastNameParts.join(' ') || '');
+    data.append('username', formData.fullName); // Treating Full Name field as Username
     data.append('gender', formData.gender);
     data.append('date_of_birth', formData.date_of_birth);
-    data.append('address', formData.address || '');
 
     if (formData.profile_picture instanceof File) {
       data.append('profile_picture', formData.profile_picture);
@@ -74,6 +80,7 @@ export const useProfile = () => {
     try {
       await updateProfileApi(token, data);
       setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 5000);
       await loadProfile();
     } catch (err) {
       setError(err.message);
@@ -82,19 +89,13 @@ export const useProfile = () => {
     }
   };
 
-  const requestVerification = async (type) => {
+  const requestVerification = async type => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      const value = formData[type];
-      // As per docs: Send only email or only phone to /me/ to trigger OTP
-      const data = new FormData();
-      data.append(type, value);
-      
-      await updateProfileApi(token, data);
+      await requestVerificationOtpApi(token, { [type]: formData[type] });
       setVerifyingType(type);
-      setVerificationStep(2);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -107,18 +108,13 @@ export const useProfile = () => {
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      const data = new FormData();
-      data.append(verifyingType, formData[verifyingType]);
-      data.append('otp', otp);
-      
-      // As per docs: Send value + otp to /me/ to confirm and save
-      await updateProfileApi(token, data);
-
+      const payload = { [verifyingType]: formData[verifyingType], otp };
+      await verifyIdentityOtpApi(token, payload);
       setVerifyingType(null);
-      setVerificationStep(1);
       setOtp('');
       await loadProfile();
       setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 5000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -127,11 +123,19 @@ export const useProfile = () => {
   };
 
   return {
-    formData, setFormData, initialData,
-    isLoading, isUpdating, error, showSuccess, setShowSuccess,
-    verifyingType, setVerifyingType,
-    verificationStep, setVerificationStep,
-    otp, setOtp,
-    handleUpdate, requestVerification, verifyCode
+    formData,
+    setFormData,
+    initialData,
+    isLoading,
+    isUpdating,
+    error,
+    showSuccess,
+    verifyingType,
+    setVerifyingType,
+    otp,
+    setOtp,
+    handleUpdate,
+    requestVerification,
+    verifyCode,
   };
 };

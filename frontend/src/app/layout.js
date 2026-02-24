@@ -1,8 +1,6 @@
 import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
-import Header from "./(public)/components/Header";
-import Footer from "./(public)/components/Footer";
-import Sidebar from "./(public)/components/Sidebar";
+import LayoutWrapper from "./LayoutWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
