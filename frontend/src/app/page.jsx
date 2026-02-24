@@ -46,11 +46,13 @@ export default function Home() {
         <section>
           <HeroCarousel />
           <Sponsors></Sponsors>
-          <PopularProduct></PopularProduct>
+          <FeaturedCategory></FeaturedCategory>
           <UploadPrescriptionBanner></UploadPrescriptionBanner>
           <PopularProduct></PopularProduct>
+          
+          <PopularProduct></PopularProduct>
           <BookTestBanner></BookTestBanner>
-          <FeaturedCategory></FeaturedCategory>
+          
           <SmartHealthBundle></SmartHealthBundle>
           <DealsSection></DealsSection>
         </section>

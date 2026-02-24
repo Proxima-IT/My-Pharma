@@ -110,7 +110,7 @@ const Footer = () => {
               </h3>
               <div className="text-[14px] flex flex-col gap-3 mt-6">
                 <Link href="/prescription-medicines">
-                  <p>Prescription Medicines</p>s
+                  <p>Prescription Medicines</p>
                 </Link>
                 <Link href="/Over-the-Counter Medicines">
                   <p>Over-the-Counter Medicines</p>
