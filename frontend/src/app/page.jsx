@@ -19,7 +19,7 @@ export default function Home() {
       <UploadPrescriptionBanner />
       <PopularProduct />
       <BookTestBanner />
-      <SmartHealthBundle />
+      <SmartHealthBundle cardsToShow={3} />
       <DealsSection />
     </div>
   );

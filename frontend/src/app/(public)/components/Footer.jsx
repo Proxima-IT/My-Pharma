@@ -1,204 +1,236 @@
-"use client";
+'use client';
 
-import Image from "next/image";
-import Link from "next/link";
-import React, { use } from "react";
-import { RiArrowRightLine } from "react-icons/ri";
-import { FaFacebook } from "react-icons/fa6";
-import { FaInstagram } from "react-icons/fa";
-import { FaXTwitter } from "react-icons/fa6";
-import { MdOutlineWhatsapp } from "react-icons/md";
-import { SlPhone } from "react-icons/sl";
-import { CiMail } from "react-icons/ci";
-import { CiLocationOn } from "react-icons/ci";
+import Image from 'next/image';
+import Link from 'next/link';
+import React from 'react';
+import { RiArrowRightLine } from 'react-icons/ri';
+import {
+  FaFacebook,
+  FaInstagram,
+  FaXTwitter,
+  FaWhatsapp,
+} from 'react-icons/fa6';
+import { SlPhone } from 'react-icons/sl';
+import { CiMail, CiLocationOn } from 'react-icons/ci';
 
 const Footer = () => {
   return (
-    <div className="bg-primary-900 px-3 lg:px-7 py-12 text-white/70">
-      {/* footer container  */}
-      <footer className=" flex flex-col lg:flex-row gap-7">
-        {/* left content  */}
-        <div className="bg-white/8 rounded-2xl w-full lg:w-4/12">
-          <div className=" py-8 px-6 space-y-5">
+    <div className="bg-(--color-primary-900) px-4 md:px-7 py-12 text-white/70">
+      {/* footer container */}
+      <footer className="flex flex-col lg:flex-row gap-7">
+        {/* left content - Brand & Subscription */}
+        <div className="bg-white/5 rounded-[32px] w-full lg:w-4/12 p-8 space-y-6">
+          <div className="space-y-5">
             <Image
               src="/assets/images/footer-logo.png"
-              alt="Logo"
-              width={700}
-              height={475}
-              sizes="100vw"
-              style={{
-                width: "50%",
-                height: "auto",
-              }}
+              alt="My Pharma Logo"
+              width={200}
+              height={60}
+              className="w-40 h-auto"
+              priority
             />
 
-            <p>
+            <p className="text-sm leading-relaxed">
               Your trusted online pharmacy for genuine medicines and healthcare
               essentials.
             </p>
 
-            <div className="relative space-y-3 mt-10">
-              <h4 className="text-lg">Subscribe to our emails</h4>
-              <input
-                type="email"
-                name=""
-                id=""
-                placeholder="Email"
-                className="w-full rounded-[55px] border-2 border-white/10 bg-white/10 px-4 py-3 h-full"
-              />
-              <button className="absolute top-[45%] right-5">
-                <RiArrowRightLine className="text-2xl" />
-              </button>
+            <div className="space-y-4 pt-4">
+              <h4 className="text-white font-bold text-sm uppercase tracking-widest">
+                Subscribe to our emails
+              </h4>
+              <div className="relative w-full">
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  className="w-full rounded-full border border-white/10 bg-white/5 px-6 py-4 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/30 transition-all"
+                />
+                <button className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white text-(--color-primary-900) rounded-full flex items-center justify-center hover:scale-105 transition-transform cursor-pointer">
+                  <RiArrowRightLine size={20} />
+                </button>
+              </div>
             </div>
-            <div className="flex gap-3 z-10">
-              <div className="w-[40] h-[40] rounded-full bg-white/10 flex justify-center items-center hover:scale-125 duration-500 transition-all">
-                <a href="https://www.facebook.com/">
-                  <FaFacebook className="text-xl" />
+
+            <div className="flex gap-3 pt-2">
+              {[
+                { icon: <FaFacebook />, href: 'https://facebook.com' },
+                { icon: <FaInstagram />, href: 'https://instagram.com' },
+                { icon: <FaXTwitter />, href: 'https://x.com' },
+                { icon: <FaWhatsapp />, href: 'https://wa.me/8801755697233' },
+              ].map((social, idx) => (
+                <a
+                  key={idx}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-full bg-white/10 flex justify-center items-center text-white hover:bg-white hover:text-(--color-primary-900) transition-all duration-300"
+                >
+                  {social.icon}
                 </a>
-              </div>
-              <div className="w-[40] h-[40] rounded-full bg-white/10 flex justify-center items-center hover:scale-125 duration-500 transition-all">
-                <a href="https://www.instagram.com/?hl=en">
-                  <FaInstagram />
-                </a>
-              </div>
-              <div className="w-[40] h-[40] rounded-full bg-white/10 flex justify-center items-center hover:scale-125 duration-500 transition-all">
-                <a href="https://x.com/">
-                  <FaXTwitter />
-                </a>
-              </div>
-              <div className="w-[40] h-[40] rounded-full bg-white/10 flex justify-center items-center hover:scale-125 duration-500 transition-all">
-                <Link href="https://wa.me/8801755697233">
-                  <MdOutlineWhatsapp />
-                </Link>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* right content  */}
-        <div className="bg-white/8 rounded-2xl p-4 lg:p-8 w-full  lg:w-8/12 ">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+        {/* right content - Links & Info */}
+        <div className="bg-white/5 rounded-[32px] p-6 lg:p-10 w-full lg:w-8/12 flex flex-col justify-between">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-5">
             {/* column 1 */}
             <div>
-              <h3 className="text-white text-base font-extrabold ">
+              <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
                 Quick Links
               </h3>
-              <div className="text-[14px] flex flex-col gap-3 mt-6">
-                
-                  <Link href="/">
-                    <p>Home</p>
-                  </Link>
-                
-                <Link href="/order-medicine">
-                  <p>Order Medicines</p>
+              <div className="text-sm flex flex-col gap-3">
+                <Link href="/" className="hover:text-white transition-colors">
+                  Home
                 </Link>
-                <Link href="/upload-prescription">
-                  <p>Upload Prescription</p>
+                <Link
+                  href="/order-medicine"
+                  className="hover:text-white transition-colors"
+                >
+                  Order Medicines
                 </Link>
-                <Link href="/health-products">
-                  <p>Health Products</p>
+                <Link
+                  href="/upload-prescription"
+                  className="hover:text-white transition-colors"
+                >
+                  Upload Prescription
                 </Link>
-                <Link href="/consultation">
-                  <p>Doctor Consultation</p>
+                <Link
+                  href="/health-products"
+                  className="hover:text-white transition-colors"
+                >
+                  Health Products
+                </Link>
+                <Link
+                  href="/consultation"
+                  className="hover:text-white transition-colors"
+                >
+                  Doctor Consultation
                 </Link>
               </div>
             </div>
+
             {/* column 2 */}
             <div>
-              <h3 className="text-white text-base font-extrabold mb-2">
+              <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
                 Services
               </h3>
-              <div className="text-[14px] flex flex-col gap-3 mt-6">
-                <Link href="/prescription-medicines">
-                  <p>Prescription Medicines</p>
+              <div className="text-sm flex flex-col gap-3">
+                <Link
+                  href="/prescription-medicines"
+                  className="hover:text-white transition-colors"
+                >
+                  Prescription Medicines
                 </Link>
-                <Link href="/Over-the-Counter Medicines">
-                  <p>Over-the-Counter Medicines</p>
+                <Link
+                  href="/otc"
+                  className="hover:text-white transition-colors"
+                >
+                  OTC Medicines
                 </Link>
-                <Link href="/chronic-care">
-                  {" "}
-                  <p>Chronic Care (Diabetes, BP)</p>
+                <Link
+                  href="/chronic-care"
+                  className="hover:text-white transition-colors"
+                >
+                  Chronic Care
                 </Link>
-                <Link href="/lab-test">
-                  <p>Lab Tests at Home</p>
+                <Link
+                  href="/lab-test"
+                  className="hover:text-white transition-colors"
+                >
+                  Lab Tests at Home
                 </Link>
-                <Link href="/medicine-refill">
-                  <p>Medicine Refill</p>
+                <Link
+                  href="/medicine-refill"
+                  className="hover:text-white transition-colors"
+                >
+                  Medicine Refill
                 </Link>
               </div>
             </div>
+
             {/* column 3 */}
             <div>
-              <h3 className="text-white text-base font-extrabold mb-2">
-                Trust & Compliance
+              <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
+                Compliance
               </h3>
-              <div className="text-[14px] flex flex-col gap-3 mt-6">
-                <Link href="/pharmacy-license">
-                  <p>Pharmacy License</p>
+              <div className="text-sm flex flex-col gap-3">
+                <Link
+                  href="/pharmacy-license"
+                  className="hover:text-white transition-colors"
+                >
+                  Pharmacy License
                 </Link>
-                <Link href="/regulatory-compliance">
-                  <p>Regulatory Compliance</p>
+                <Link
+                  href="/regulatory"
+                  className="hover:text-white transition-colors"
+                >
+                  Regulatory Compliance
                 </Link>
-                <Link href="/quality-assurance">
-                  <p>Quality Assurance</p>
+                <Link
+                  href="/quality"
+                  className="hover:text-white transition-colors"
+                >
+                  Quality Assurance
                 </Link>
-                <Link href="/privacy-policy">
-                  <p>Privacy Policy</p>
+                <Link
+                  href="/privacy"
+                  className="hover:text-white transition-colors"
+                >
+                  Privacy Policy
                 </Link>
-                <Link href="/terms">
-                  <p>Terms & Conditions</p>
+                <Link
+                  href="/terms"
+                  className="hover:text-white transition-colors"
+                >
+                  Terms & Conditions
                 </Link>
               </div>
             </div>
+
             {/* column 4 */}
             <div>
-              <h3 className="text-white text-base font-extrabold mb-4">
-                Go through
+              <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
+                Contact
               </h3>
-
-              <div className="flex flex-col items-start gap-6">
-                {/* Item 1 */}
+              <div className="space-y-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex justify-center items-center hover:scale-110 transition">
-                    <Link href="/">
-                      <SlPhone className="text-white text-sm" />
-                    </Link>
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white shrink-0">
+                    <SlPhone size={14} />
                   </div>
-
-                  <div className="space-y-1">
-                    <h3 className="text-white text-sm font-bold">Hot Line</h3>
-                    <p className="text-xs text-white/80">+8809612316708</p>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                      Hotline
+                    </p>
+                    <p className="text-xs text-white font-bold">
+                      +8809612316708
+                    </p>
                   </div>
                 </div>
-
-                {/* Item 2 */}
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex justify-center items-center hover:scale-110 transition">
-                    <Link href="/">
-                      <CiMail className="text-white text-sm" />
-                    </Link>
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white shrink-0">
+                    <CiMail size={16} />
                   </div>
-
-                  <div className="space-y-1">
-                    <h3 className="text-white text-sm font-bold">Support</h3>
-                    <p className="text-xs text-white/80 ">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                      Support
+                    </p>
+                    <p className="text-xs text-white font-bold">
                       support@mypharma.com
                     </p>
                   </div>
                 </div>
-
-                {/* Item 3 */}
                 <div className="flex items-start gap-4">
-                  <div className="w-8 h-8 shrink-0 rounded-full bg-white/10 flex justify-center items-center hover:scale-110 transition">
-                    <Link href="/">
-                      <CiLocationOn className="text-white text-sm" />
-                    </Link>
+                  <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-white shrink-0">
+                    <CiLocationOn size={16} />
                   </div>
-
-                  <div className="space-y-1 ">
-                    <h3 className="text-white text-sm font-bold">Address</h3>
-                    <p className="text-xs text-white/80 leading-relaxed">
-                      B/19-2, Road-54, Mirpur, Dhaka-1208
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/40">
+                      Address
+                    </p>
+                    <p className="text-xs text-white font-bold leading-relaxed">
+                      Mirpur, Dhaka-1208
                     </p>
                   </div>
                 </div>
@@ -206,84 +238,55 @@ const Footer = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 mt-8 md:mt-12 lg:mt-20">
-            <p className="text-sm lg:text-base">We accept:</p>
-            <Image
-              src="/assets/images/payment.png"
-              alt="Logo"
-              width={1000}
-              height={1000}
-              sizes="100vw"
-              style={{
-                width: "70%",
-                height: "auto",
-              }}
-            />
-            <div className="h-16 w-0.5 bg-white/10" />
-            <div className="flex flex-col items-center">
-              <p className="text-sm lg:text-base text-center">Verified By:</p>
-              <Image
-                src="/assets/images/sslcommerz.png"
-                alt="Logo"
-                width={1000}
-                height={1000}
-                sizes="100vw"
-                style={{
-                  width: "100%",
-                  height: "auto",
-                }}
-              />
+          {/* Payment & Verification Section - ENLARGED FOR DESKTOP */}
+          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8 lg:gap-12 mt-12 pt-8 border-t border-white/10">
+            <div className="space-y-4 w-full lg:flex-1">
+              <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+                We accept:
+              </p>
+              <div className="relative w-full max-w-[280px] lg:max-w-[500px] xl:max-w-[650px] h-10 lg:h-16">
+                <Image
+                  src="/assets/images/payment.png"
+                  alt="Payment Methods"
+                  fill
+                  className="object-contain object-left"
+                />
+              </div>
             </div>
-            {/* <Image
-              src="/assets/images/masterclass.png"
-              alt="Logo"
-              width={700}
-              height={475}
-              sizes="100vw"
-              style={{
-                width: "10%",
-                height: "auto",
-              }}
-            /> */}
-            {/* <Image
-              src="/assets/images/american.png"
-              alt="Logo"
-              width={700}
-              height={475}
-              sizes="100vw"
-              style={{
-                width: "10%",
-                height: "auto",
-              }}
-            />
-            <Image
-              src="/assets/images/pay4.png"
-              alt="Logo"
-              width={700}
-              height={475}
-              sizes="100vw"
-              style={{
-                width: "10%",
-                height: "auto",
-              }}
-            /> */}
-            {/* <Image
-              src="/assets/images/discover.png"
-              alt="Logo"
-              width={700}
-              height={475}
-              sizes="100vw"
-              style={{
-                width: "10%",
-                height: "auto",
-              }}
-            /> */}
+
+            <div className="hidden lg:block h-16 w-px bg-white/10" />
+
+            <div className="space-y-4 w-full lg:w-auto">
+              <p className="text-xs font-bold uppercase tracking-widest text-white/40">
+                Verified By:
+              </p>
+              <div className="relative w-full max-w-[140px] lg:max-w-[200px] h-10 lg:h-16">
+                <Image
+                  src="/assets/images/sslcommerz.png"
+                  alt="SSL Commerz Verified"
+                  fill
+                  className="object-contain object-left"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </footer>
-      <p className="flex justify-center mt-6 text-sm">
-        © 2026 My Pharma. All rights reserved.
-      </p>
+
+      <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium">
+        <p>© 2026 My Pharma Limited. All rights reserved.</p>
+        <div className="flex gap-6">
+          <Link href="/terms" className="hover:text-white transition-colors">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-white transition-colors">
+            Privacy
+          </Link>
+          <Link href="/cookies" className="hover:text-white transition-colors">
+            Cookies
+          </Link>
+        </div>
+      </div>
     </div>
   );
 };

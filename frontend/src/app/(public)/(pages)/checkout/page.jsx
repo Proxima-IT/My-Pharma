@@ -1,48 +1,52 @@
-import Link from "next/link";
-import React from "react";
+'use client';
 
-import { MdKeyboardArrowLeft } from "react-icons/md";
-
-import CartCard from "../cart/components/CartCard";
-import ShippingAddressCard from "../cart/components/ShippingAddressCard";
-import OrderSummaryCard from "../cart/components/OrderSummaryCard";
-import PaymentMethodCard from "../cart/components/PaymentMethodCard";
+import React from 'react';
+import Link from 'next/link';
+import { MdKeyboardArrowLeft } from 'react-icons/md';
+import CartCard from '../cart/components/CartCard';
+import ShippingAddressCard from '../cart/components/ShippingAddressCard';
+import OrderSummaryCard from '../cart/components/OrderSummaryCard';
+import PaymentMethodCard from '../cart/components/PaymentMethodCard';
 
 const Checkout = () => {
   return (
-    <div>
-      <div className="px-7 pt-7 pb-28">
-        {/* page heading  */}
-        <div className="flex items-center gap-5">
-          <Link href="/products">
-            <button className="border border-info-500/10 bg-white rounded-[90px] px-3 lg:px-6 py-2 lg:py-1.5 text-center text-primary-500 flex gap-2 items-center text-sm font-semibold cursor-pointer">
-              <span>
-                <MdKeyboardArrowLeft />
-              </span>
-              Back
-            </button>
-          </Link>
-          <h1 className="text-3xl font-semibold">Check Out</h1>
+    <div className="w-full px-4 md:px-7 pt-7 pb-28 animate-in fade-in duration-700">
+      {/* 1. Page Header */}
+      <div className="flex items-center gap-5 mb-8">
+        <Link href="/cart">
+          <button className="border border-gray-100 bg-white rounded-full px-6 py-2 text-center text-(--color-primary-500) flex gap-2 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
+            <MdKeyboardArrowLeft size={20} />
+            Back
+          </button>
+        </Link>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          Check Out
+        </h1>
+      </div>
+
+      {/* 2. Main Checkout Grid */}
+      <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
+        {/* Left Column: Shipping & Payment (Stacked on mobile, 42% width on desktop) */}
+        <div className="w-full lg:w-[42%] flex flex-col gap-8">
+          <ShippingAddressCard />
+          <PaymentMethodCard />
         </div>
 
-        {/* cart cards and shipping information container  */}
-        <div className="mt-6 w-full flex gap-7 items-start">
-          <div className="w-[45%] flex flex-col gap-7 ">
-            <ShippingAddressCard></ShippingAddressCard>
-            <PaymentMethodCard></PaymentMethodCard>
-            
-          </div>
-          <div className="w-[55%] gap-7 flex flex-col ">
-            <div className="bg-white rounded-[20px] p-6  ">
-              <h1 className="text-3xl font-semibold mb-6">Cart Product</h1>
-              <div className="grid grid-cols-1 gap-4">
-                <CartCard></CartCard>
-                <CartCard></CartCard>
-              </div>
+        {/* Right Column: Cart Review & Summary (Stacked on mobile, 58% width on desktop) */}
+        <div className="w-full lg:w-[58%] flex flex-col gap-8">
+          {/* Cart Products Review Container */}
+          <div className="bg-white rounded-[32px] border border-gray-100 p-6 sm:p-8 transition-all">
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">
+              Cart Product
+            </h2>
+            <div className="flex flex-col gap-4">
+              <CartCard />
+              <CartCard />
             </div>
-
-            <OrderSummaryCard></OrderSummaryCard>
           </div>
+
+          {/* Order Summary / Pricing Details */}
+          <OrderSummaryCard />
         </div>
       </div>
     </div>

@@ -8,7 +8,7 @@ import Sidebar from './(public)/components/Sidebar';
 export default function LayoutWrapper({ children }) {
   const pathname = usePathname();
 
-  // 1. Pages with NO Header/Footer/Sidebar (Auth)
+  // 1. Pages with NO Header/Footer/Sidebar (Auth Suite)
   const authPaths = [
     '/login',
     '/register',
@@ -17,12 +17,20 @@ export default function LayoutWrapper({ children }) {
   ];
   const isAuthPage = authPaths.some(path => pathname.startsWith(path));
 
-  // 2. Pages with Header/Footer but NO Global Sidebar (Dashboard & Products)
+  // 2. Pages with Header/Footer but NO Global Sidebar
   const isDashboardPage = pathname.startsWith('/user');
-  const isProductsPage = pathname.startsWith('/products');
+  const isProductsListPage = pathname.startsWith('/products'); // Plural: /products (The filter page)
+  const isCartPage = pathname.startsWith('/cart');
+  const isCheckoutPage = pathname.startsWith('/checkout');
 
-  // 3. Logic: Show Sidebar only on Home and other public pages, NOT on Products or Dashboard
-  const showSidebar = !isAuthPage && !isDashboardPage && !isProductsPage;
+  // 3. Logic: Show Sidebar on Home and Product Details (/product/[slug])
+  // Exclude only Dashboard, Products List, and Cart
+  const showSidebar =
+    !isAuthPage &&
+    !isDashboardPage &&
+    !isProductsListPage &&
+    !isCartPage &&
+    !isCheckoutPage;
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -40,7 +48,8 @@ export default function LayoutWrapper({ children }) {
         >
           {/* 
             THE GLOBAL SIDEBAR:
-            - Now hidden on /products page as well.
+            - Now visible on Product Details page.
+            - sticky top-36 to fix the "Splitting" bug.
           */}
           {showSidebar && (
             <aside className="hidden lg:block w-[320px] shrink-0">
@@ -62,7 +71,7 @@ export default function LayoutWrapper({ children }) {
             </aside>
           )}
 
-          {/* THE CONTENT: Takes full width if sidebar is hidden */}
+          {/* THE CONTENT */}
           <div className="flex-1 min-w-0">{children}</div>
         </div>
       </main>

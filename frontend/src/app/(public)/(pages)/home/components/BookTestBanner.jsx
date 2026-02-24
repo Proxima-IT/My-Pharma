@@ -26,7 +26,7 @@ const BookTestBanner = () => {
               alt="upload banner"
               width={340}
               height={380}
-              className="rounded-lg w-4/5 max-w-[340px] lg:w-[340px] lg:absolute lg:bottom-0 lg:top-10 lg:right-0 lg:lg:right-10 lg:-translate-y-1/4"
+              className="rounded-lg w-4/5 max-w-[340px] lg:w-[340px] lg:absolute lg:bottom-0 lg:top-0 lg:right-0 lg:lg:right-10 lg:-translate-y-1/4"
             />
           </div>
           {/* Content */}
