@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { FiX, FiUploadCloud, FiFile, FiCheckCircle } from 'react-icons/fi';
 import UiButton from '@/app/(public)/components/UiButton';
 import UiInput from '@/app/(public)/components/UiInput';
+import { USER_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function PrescriptionUploadModal({
   isOpen,
@@ -57,7 +58,7 @@ export default function PrescriptionUploadModal({
     if (patientName) formData.append('patient_name_on_rx', patientName);
 
     try {
-      const response = await fetch('http://localhost:8000/api/prescriptions/', {
+      const response = await fetch(USER_ENDPOINTS.PRESCRIPTIONS, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,

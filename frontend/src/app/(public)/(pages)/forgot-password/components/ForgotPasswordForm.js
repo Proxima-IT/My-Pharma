@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function ForgotPasswordForm() {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,14 +16,11 @@ export default function ForgotPasswordForm() {
     setIsLoading(true);
     setError('');
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/password-reset/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email }),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.PASSWORD_RESET, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
       // The backend returns 200 even if email doesn't exist for security
       if (!response.ok) {
         throw new Error(

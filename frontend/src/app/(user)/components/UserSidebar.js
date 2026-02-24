@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 import {
   FiPackage,
   FiFileText,
@@ -32,7 +33,7 @@ const UserSidebar = () => {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/auth/me/', {
+        const response = await fetch(AUTH_ENDPOINTS.ME, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -58,7 +59,7 @@ const UserSidebar = () => {
     try {
       const token = localStorage.getItem('access_token');
       // Optional: Notify backend of logout
-      await fetch('http://localhost:8000/api/auth/logout/', {
+      await fetch(AUTH_ENDPOINTS.LOGOUT, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

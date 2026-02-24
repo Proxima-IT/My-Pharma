@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function LoginForm() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function LoginForm() {
     };
 
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login/', {
+      const response = await fetch(AUTH_ENDPOINTS.LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

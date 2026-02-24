@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function CompleteRegistrationForm() {
   const router = useRouter();
@@ -62,14 +63,11 @@ export default function CompleteRegistrationForm() {
     try {
       const payload =
         verifiedType === 'phone' ? { email: value } : { phone: value };
-      const response = await fetch(
-        'http://localhost:8000/api/auth/request-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) throw new Error('Failed to send verification code.');
       setOtherStep(1);
@@ -92,14 +90,11 @@ export default function CompleteRegistrationForm() {
           ? { email: value, otp: otherOtp }
           : { phone: value, otp: otherOtp };
 
-      const response = await fetch(
-        'http://localhost:8000/api/auth/verify-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.VERIFY_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) throw new Error('Invalid verification code.');
       setOtherStep(2);
@@ -140,13 +135,10 @@ export default function CompleteRegistrationForm() {
       data.append('profile_picture', formData.profile_picture);
 
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/register/complete/',
-        {
-          method: 'POST',
-          body: data,
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REGISTER_COMPLETE, {
+        method: 'POST',
+        body: data,
+      });
       const result = await response.json();
       if (!response.ok) {
         throw new Error(

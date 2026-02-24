@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function RequestOtpForm() {
   const router = useRouter();
@@ -29,14 +30,11 @@ export default function RequestOtpForm() {
     const isEmail = identifier.includes('@');
     const payload = isEmail ? { email: identifier } : { phone: identifier };
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/request-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(getFriendlyErrorMessage(response.status, data));
