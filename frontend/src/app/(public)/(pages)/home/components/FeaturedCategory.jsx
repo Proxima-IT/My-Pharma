@@ -20,7 +20,7 @@ const FeaturedCategory = () => {
 
   console.log(featuredProducts);
   return (
-    <div className="bg-white  p-3">
+    <div className="  p-3">
       <div className="flex justify-between items-center">
         <h1 className="font-bold text-sm lg:text-2xl">Featured Categories</h1>
         <Link href="/products">

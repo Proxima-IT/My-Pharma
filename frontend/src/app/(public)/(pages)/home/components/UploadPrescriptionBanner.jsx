@@ -5,7 +5,7 @@ import { LuCloudUpload } from "react-icons/lu";
 
 const UploadPrescriptionBanner = () => {
   return (
-    <div className="bg-white py-17.5">
+    <div className=" py-[70px]">
       {/* <Image
         src="/assets/images/uploadbanner.png"
         alt="upload banner"
