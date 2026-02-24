@@ -5,7 +5,8 @@ Validation and error responses aligned with API docs.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .constants import UserRole, UserStatus
+from .constants import UserRole, UserStatus, BD_DISTRICTS
+from .models import UserAddress
 from .services import normalize_phone, validate_password_strength
 
 User = get_user_model()
@@ -108,14 +109,13 @@ class LoginRequestSerializer(serializers.Serializer):
 
 
 class RegisterCompleteRequestSerializer(serializers.Serializer):
-    """Payload to complete registration: username, password, email or phone (the one not verified), profile_picture, address."""
+    """Payload to complete registration: username, password, email or phone (the one not verified), profile_picture. Add addresses after login via /api/auth/addresses/."""
     registration_token = serializers.CharField()
     password = serializers.CharField(min_length=8, write_only=True)
     username = serializers.CharField(max_length=150, trim_whitespace=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, trim_whitespace=True)
     profile_picture = serializers.ImageField(required=False, allow_null=True)
-    address = serializers.CharField(required=False, allow_blank=True, max_length=500)
 
     def validate_password(self, value):
         ok, msg = validate_password_strength(value)
@@ -204,12 +204,80 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 
 # ---- Response ----
 
+class UserAddressSerializer(serializers.ModelSerializer):
+    """Read/write serializer for user address. Fields: full_name, phone, delivery_area (BD district), address, address_type (home/office/hometown), is_default."""
+
+    address_type_display = serializers.CharField(source="get_address_type_display", read_only=True)
+
+    class Meta:
+        model = UserAddress
+        fields = (
+            "id",
+            "full_name",
+            "phone",
+            "delivery_area",
+            "address",
+            "address_type",
+            "address_type_display",
+            "is_default",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "created_at", "updated_at", "address_type_display")
+
+    def validate_full_name(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("Full name is required.")
+        return v
+
+    def validate_phone(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("Phone number is required.")
+        normalized = normalize_phone(v)
+        if len(normalized) < 10:
+            raise serializers.ValidationError("Invalid phone number.")
+        return normalized
+
+    def validate_delivery_area(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("Delivery area (district) is required.")
+        if v not in BD_DISTRICTS:
+            raise serializers.ValidationError(
+                "Delivery area must be one of the 64 Bangladesh districts."
+            )
+        return v
+
+    def validate_address(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("Address is required.")
+        return v
+
+    def validate_address_type(self, value):
+        v = (value or "").strip().upper() or UserAddress.AddressType.HOME
+        if v not in dict(UserAddress.AddressType.choices):
+            raise serializers.ValidationError(
+                "Must be one of: HOME, OFFICE, HOMETOWN."
+            )
+        return v
+
+    def save(self, **kwargs):
+        instance = super().save(**kwargs)
+        if instance.is_default:
+            UserAddress.objects.filter(user=instance.user).exclude(pk=instance.pk).update(is_default=False)
+        return instance
+
+
 class UserMeSerializer(serializers.ModelSerializer):
     role_display = serializers.CharField(source="get_role_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
     gender_display = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     profile_picture = serializers.SerializerMethodField()
+    addresses = UserAddressSerializer(many=True, read_only=True)
 
     class Meta:
         model = User
@@ -219,7 +287,7 @@ class UserMeSerializer(serializers.ModelSerializer):
             "email",
             "phone",
             "profile_picture",
-            "address",
+            "addresses",
             "gender",
             "gender_display",
             "date_of_birth",
@@ -254,13 +322,13 @@ class UserMeSerializer(serializers.ModelSerializer):
 
 
 class UserProfileUpdateSerializer(serializers.ModelSerializer):
-    """Update current user profile: username, profile_picture, address, gender, date_of_birth. PATCH = partial, PUT = full (all optional)."""
+    """Update current user profile: username, profile_picture, gender, date_of_birth. Addresses via /api/auth/addresses/."""
     gender = serializers.ChoiceField(choices=User.Gender.choices, required=False, allow_blank=True, allow_null=True)
     date_of_birth = serializers.DateField(required=False, allow_null=True)
 
     class Meta:
         model = User
-        fields = ("username", "profile_picture", "address", "gender", "date_of_birth")
+        fields = ("username", "profile_picture", "gender", "date_of_birth")
 
     def validate_username(self, value):
         v = (value or "").strip()
@@ -284,7 +352,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
         fields = (
             "id", "username", "email", "phone", "password", "role", "role_display",
             "status", "status_display", "email_verified", "phone_verified",
-            "profile_picture", "address", "gender", "date_of_birth",
+            "profile_picture", "gender", "date_of_birth",
             "is_active", "is_staff", "is_superuser",
             "created_at", "updated_at",
         )
