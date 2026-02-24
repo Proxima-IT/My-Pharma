@@ -10,6 +10,18 @@ export default function BundleSlider({ cardsToShow = 3 }) {
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
+  const [windowWidth, setWindowWidth] = useState(0);
+
+  // Track window width for responsive inline styles
+  useEffect(() => {
+    setWindowWidth(window.innerWidth);
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+      checkScrollButtons();
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const checkScrollButtons = () => {
     const container = scrollContainerRef.current;
@@ -25,7 +37,7 @@ export default function BundleSlider({ cardsToShow = 3 }) {
   const scroll = direction => {
     const container = scrollContainerRef.current;
     if (container) {
-      const scrollAmount = container.clientWidth; // Scroll one full view at a time
+      const scrollAmount = container.clientWidth;
       container.scrollBy({
         left: direction === 'left' ? -scrollAmount : scrollAmount,
         behavior: 'smooth',
@@ -34,17 +46,14 @@ export default function BundleSlider({ cardsToShow = 3 }) {
     }
   };
 
-  useEffect(() => {
-    checkScrollButtons();
-    window.addEventListener('resize', checkScrollButtons);
-    return () => window.removeEventListener('resize', checkScrollButtons);
-  }, []);
+  // Calculate width based on screen size
+  const getCardWidth = () => {
+    if (windowWidth < 640) return '100%'; // Mobile: 1 card
+    if (windowWidth < 1024) return 'calc((100% - 20px) / 2)'; // Tablet: 2 cards
 
-  // Dynamic width calculation based on cardsToShow prop
-  const getWidthClass = () => {
-    if (cardsToShow === 1) return 'w-full';
-    // On mobile: 1 card, On tablet: 2 cards, On desktop: cardsToShow
-    return `w-full sm:w-[calc((100%-20px)/2)] lg:w-[calc((100%-${(cardsToShow - 1) * 20}px)/${cardsToShow})]`;
+    // Desktop: Dynamic based on prop
+    const gap = 20;
+    return `calc((100% - ${(cardsToShow - 1) * gap}px) / ${cardsToShow})`;
   };
 
   return (
@@ -85,7 +94,7 @@ export default function BundleSlider({ cardsToShow = 3 }) {
       <div
         ref={scrollContainerRef}
         onScroll={checkScrollButtons}
-        className="flex gap-4 sm:gap-5 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory touch-pan-x pb-4"
+        className="flex gap-5 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory touch-pan-x pb-4"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -94,7 +103,8 @@ export default function BundleSlider({ cardsToShow = 3 }) {
         {bundles.map(bundle => (
           <div
             key={bundle.id}
-            className={`${getWidthClass()} flex-shrink-0 snap-center`}
+            className="flex-shrink-0 snap-center"
+            style={{ width: getCardWidth() }}
           >
             <BundleCard bundle={bundle} />
           </div>

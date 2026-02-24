@@ -19,6 +19,7 @@ export default function Home() {
       <UploadPrescriptionBanner />
       <PopularProduct />
       <BookTestBanner />
+      {/* Set to show 3 cards in a row on desktop */}
       <SmartHealthBundle cardsToShow={3} />
       <DealsSection />
     </div>
