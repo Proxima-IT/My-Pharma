@@ -33,11 +33,11 @@ const Header = () => {
           Medicines and healthcare products delivered to your doorstep
         </p>
         <div className="lg:flex hidden items-center gap-5 text-xl">
-          <FaFacebook />
+          <a href="https://www.facebook.com/"><FaFacebook /></a>
           <div className="h-6 w-0.5 bg-black/10" />
-          <FaLinkedin />
+          <a href="https://www.linkedin.com/"><FaLinkedin /></a>
           <div className="h-6 w-0.5 bg-black/10" />
-          <BsInstagram />
+          <a href="https://www.instagram.com/?hl=en"><BsInstagram /></a>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import React from "react";
 import { BsCart3 } from "react-icons/bs";
 import { GoStarFill } from "react-icons/go";
@@ -7,6 +8,7 @@ import { TbCurrencyTaka } from "react-icons/tb";
 const PopularProductCard = ({ product }) => {
   return (
     <div>
+      <Link href={`/product/${product?.slug}`}>
       <div key={product?.id} className="relative bg-white rounded-2xl p-2">
         {/* Image wrapper */}
         <div className="relative bg-imageBG rounded-xl w-full aspect-square flex items-center justify-center overflow-hidden p-5">
@@ -56,6 +58,7 @@ const PopularProductCard = ({ product }) => {
           </div>
         </div>
       </div>
+      </Link>
     </div>
   );
 };

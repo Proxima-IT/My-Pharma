@@ -4,7 +4,7 @@ This document describes the **REST Authentication API** for the My Pharma MVP. U
 
 **→ For a single reference of all current endpoints (schemas, errors, rate limits):** [API_REFERENCE.md](API_REFERENCE.md).
 
-**→ Unified registration (recommended):** User submits **email or phone** → [request-otp] → OTP sent to SMS or email → [verify-otp] → [register/complete] with username, password, other identifier (optional), profile_picture, address. See [API_REFERENCE.md](API_REFERENCE.md) §3.1–3.3 and [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md).
+**→ Unified registration (recommended):** User submits **email or phone** → [request-otp] → OTP sent to SMS or email → [verify-otp] → [register/complete] with username, password, other identifier (optional), profile_picture. Addresses are managed after login via `/api/auth/addresses/`. See [API_REFERENCE.md](API_REFERENCE.md) §3.1–3.3 and [FRONTEND_INTEGRATION.md](FRONTEND_INTEGRATION.md).
 
 **→ Legacy:** [register/phone] → [verify-otp] → [register/complete]. See [REGISTRATION_AND_SYSTEM.md](REGISTRATION_AND_SYSTEM.md).
 
@@ -31,7 +31,7 @@ This document describes the **REST Authentication API** for the My Pharma MVP. U
 
 **Errors:** 400 (both/neither or invalid); 429 `otp_rate_limit` (max 3 per hour per identifier). OTP expires in 5 minutes.
 
-Then use **Verify OTP** (§2) with the same identifier + `otp`, and **Complete Registration** (§3) with `registration_token`, `username`, `password`, and optionally the **other** identifier (email if verified by phone, phone if verified by email), `profile_picture`, `address`, `first_name`, `last_name`. The verified identifier is returned as `verified_identifier_type` and `verified_identifier_value` – show it in the form as **uneditable**.
+Then use **Verify OTP** (§2) with the same identifier + `otp`, and **Complete Registration** (§3) with `registration_token`, `username`, `password`, and optionally the **other** identifier (email if verified by phone, phone if verified by email) and `profile_picture`. Addresses: add after login via **GET/POST /api/auth/addresses/** (§3.12 in API_REFERENCE). The verified identifier is returned as `verified_identifier_type` and `verified_identifier_value` – show it in the form as **uneditable**.
 
 ---
 

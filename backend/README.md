@@ -53,13 +53,13 @@ python manage.py runserver
 ```
 
 - API base: `http://localhost:8000/api/auth/`
-- OpenAPI schema: `http://localhost:8000/api/schema/`
-- Swagger UI: `http://localhost:8000/api/schema/swagger/`
+- Swagger UI: `http://localhost:8000/api/schema/` (redirects) or `http://localhost:8000/api/schema/swagger/`
+- Raw OpenAPI schema: `http://localhost:8000/api/schema/openapi/`
 
 ## Auth API
 
 - **[docs/API_REFERENCE.md](docs/API_REFERENCE.md)** – **Single reference for all current API endpoints:** request/response schemas, validation, errors, rate limits, status codes (for app and web).
-- **Phone registration (3 steps):** `register/phone` → `verify-otp` → `register/complete`. See **[docs/REGISTRATION_AND_SYSTEM.md](docs/REGISTRATION_AND_SYSTEM.md)** for flow.
+- **Phone registration (3 steps):** `register/phone` → `verify-otp` → `register/complete` (username, password, optional email/phone, profile_picture). **Addresses:** multiple per user via `GET/POST/PATCH/DELETE /api/auth/addresses/`. See **[docs/REGISTRATION_AND_SYSTEM.md](docs/REGISTRATION_AND_SYSTEM.md)** for flow.
 - **[docs/API_AUTH.md](docs/API_AUTH.md)** – Detailed auth API docs.
 - **[docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md)** – Frontend code examples (fetch, axios, cURL).
 

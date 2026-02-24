@@ -122,11 +122,11 @@ export default function BundleSlider({ cardsToShow = 3 }) {
         )}
       </div>
 
-      <style jsx>{`
+      {/* <style jsx>{`
         .scrollbar-hide::-webkit-scrollbar {
           display: none;
         }
-      `}</style>
+      `}</style> */}
     </div>
   );
 }

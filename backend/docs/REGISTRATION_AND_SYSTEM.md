@@ -6,13 +6,13 @@ This document describes the **unified registration flow** (email or phone → OT
 
 ## Unified registration flow (recommended)
 
-User submits **email or phone** → backend sends OTP to that channel (SMS for phone, email for email) → user enters OTP → backend returns **registration_token** and verified identifier → frontend shows **user creation form** (verified value **uneditable**; collect username, password, other identifier optional, profile_picture, address) → backend creates account and returns JWT + user.
+User submits **email or phone** → backend sends OTP to that channel (SMS for phone, email for email) → user enters OTP → backend returns **registration_token** and verified identifier → frontend shows **user creation form** (verified value **uneditable**; collect username, password, other identifier optional, profile_picture) → backend creates account and returns JWT + user. Addresses are managed after login via `/api/auth/addresses/`.
 
 | Step  | Endpoint                            | What happens                                                                                                                                                                                                                                                                    |
 | ----- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **1** | `POST /api/auth/request-otp/`       | User enters **email or phone**. Backend sends 6-digit OTP (SMS for phone, email for email).                                                                                                                                                                                     |
 | **2** | `POST /api/auth/verify-otp/`        | User enters OTP. Backend verifies and returns **registration_token**, **verified_identifier_type** ("phone" or "email"), **verified_identifier_value**. No user created yet.                                                                                                    |
-| **3** | `POST /api/auth/register/complete/` | Form: **username**, **password** (required); verified value shown **uneditable**; optionally the **other** identifier (email if verified phone, phone if verified email), **profile_picture**, **address**, first_name, last_name. Backend creates user and returns JWT + user. |
+| **3** | `POST /api/auth/register/complete/` | Form: **username**, **password** (required); verified value shown **uneditable**; optionally the **other** identifier (email if verified phone, phone if verified email) and **profile_picture**. Backend creates user and returns JWT + user. Addresses: add after login via `/api/auth/addresses/`. |
 
 ### Request/response summary (unified)
 
@@ -33,7 +33,7 @@ User submits **email or phone** → backend sends OTP to that channel (SMS for p
 **Step 3 – Complete registration**
 
 - **Request:** `POST /api/auth/register/complete/` (JSON or multipart/form-data for profile_picture)  
-  Body: `{"registration_token": "<from step 2>", "password": "SecurePass1!", "username": "johndoe", "email": "user@example.com", "address": "123 Main St", "first_name": "John", "last_name": "Doe"}`
+  Body: `{"registration_token": "<from step 2>", "password": "SecurePass1!", "username": "johndoe", "email": "user@example.com"}` (optional: phone, profile_picture). Add addresses after login via `POST /api/auth/addresses/`.
 - **Response (200):**  
   `{"access": "<jwt>", "refresh": "<jwt>", "user": { ... }}`  
   → Store tokens and user; user is logged in.
@@ -48,7 +48,10 @@ If **registration_token** is expired or invalid, response is **400** with `code:
 | ------ | ------------------------------ | ----------------------------------------------------------------------------- |
 | POST   | `/api/auth/request-otp/`       | Request OTP by **email or phone** (unified)                                   |
 | POST   | `/api/auth/verify-otp/`        | Verify OTP (email or phone), get registration_token                           |
-| POST   | `/api/auth/register/complete/` | Complete registration: username, password, other id, profile_picture, address |
+| POST   | `/api/auth/register/complete/` | Complete registration: username, password, other id, profile_picture |
+| GET    | `/api/auth/addresses/`         | List current user's addresses (auth required)                      |
+| POST   | `/api/auth/addresses/`         | Create address (auth required)                                     |
+| GET/PATCH/DELETE | `/api/auth/addresses/{id}/` | Retrieve, update, or delete address (own only)                     |
 | POST   | `/api/auth/register/phone/`    | Request OTP for phone only (legacy)                                           |
 | POST   | `/api/auth/register/email/`    | Register with email + password (one step)                                     |
 | POST   | `/api/auth/login/`             | Login with email or phone + password                                          |
