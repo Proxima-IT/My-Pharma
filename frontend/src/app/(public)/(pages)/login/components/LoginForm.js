@@ -1,15 +1,16 @@
 'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { FiUser, FiMail, FiLock, FiEye, FiEyeOff } from 'react-icons/fi';
+import { useLogin } from '../hooks/useLogin';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
 import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function LoginForm() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { formData, setFormData, isLoading, error, handleLogin } = useLogin();
   const [showPassword, setShowPassword] = useState(false);
+<<<<<<< HEAD
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({ identifier: '', password: '' });
 
@@ -73,129 +74,98 @@ export default function LoginForm() {
       setIsLoading(false);
     }
   };
+=======
+>>>>>>> 94d8241dcb9f04f8a8fc060fb3bb889a6bb74268
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="shrink-0 w-5 h-5 text-info-500">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2.5"
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+    <div className="w-full flex flex-col items-center">
+      {/* Header Section */}
+      <div className="flex flex-col items-center mb-12">
+        <div className="relative flex items-center justify-center w-32 h-32">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-green-50 to-transparent opacity-80" />
+          <div className="absolute inset-4 rounded-full border border-green-100 bg-white/20" />
+          <div className="relative w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-b from-gray-50 to-white shadow-sm border border-white">
+            <FiUser size={28} className="text-green-600" />
           </div>
-          <p className="text-sm font-bold leading-tight text-info-700">
-            {error}
-          </p>
         </div>
-      )}
 
-      <UiInput
-        label="Email or Phone"
-        placeholder="Enter your email or phone"
-        value={formData.identifier}
-        onChange={e => setFormData({ ...formData, identifier: e.target.value })}
-        required
-        leftIcon={
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-            />
-          </svg>
-        }
-      />
-
-      <UiInput
-        label="Password"
-        type={showPassword ? 'text' : 'password'}
-        placeholder="••••••••"
-        value={formData.password}
-        onChange={e => setFormData({ ...formData, password: e.target.value })}
-        required
-        leftIcon={
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-            />
-          </svg>
-        }
-        icon={
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="p-1 text-gray-400 hover:text-primary-500 transition-colors"
-          >
-            {showPassword ? (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                />
-              </svg>
-            )}
-          </button>
-        }
-      />
-
-      <div className="flex justify-end">
-        <Link
-          href="/forgot-password"
-          className="text-[11px] font-black uppercase tracking-widest text-primary-500 hover:text-primary-700 transition-colors"
-        >
-          Forgot Password?
-        </Link>
+        <div className="text-center mt-6">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Welcome Back</h1>
+          <p className="text-gray-500 mt-2 font-medium">Glad to see you again. Log in to your account</p>
+        </div>
       </div>
 
-      <UiButton type="submit" isLoading={isLoading}>
-        SIGN IN TO ACCOUNT
-      </UiButton>
-    </form>
+      {/* Form Section */}
+      <form onSubmit={handleLogin} className="w-full space-y-6">
+        <UiInput
+          label="Email Address"
+          type="email"
+          placeholder="Enter your email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+          leftIcon={<FiMail />}
+          error={error?.toLowerCase().includes('email') ? error : null}
+        />
+
+        <UiInput
+          label="Password"
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Enter your password"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          required
+          leftIcon={<FiLock />}
+          error={error?.toLowerCase().includes('password') ? error : null}
+          icon={
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="text-gray-400 hover:text-primary-500 transition-colors"
+            >
+              {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+            </button>
+          }
+        />
+
+        {/* Options Row */}
+        <div className="flex items-center justify-between px-2">
+          <label className="flex items-center gap-2 cursor-pointer group">
+            <input
+              type="checkbox"
+              className="w-4 h-4 rounded border-gray-300 text-primary-500 focus:ring-primary-500 transition-all"
+              checked={formData.keepLogin}
+              onChange={(e) => setFormData({ ...formData, keepLogin: e.target.checked })}
+            />
+            <span className="text-xs font-bold text-gray-500 group-hover:text-gray-700 transition-colors uppercase tracking-wider">
+              Keep me login
+            </span>
+          </label>
+          <Link 
+            href="/forgot-password" 
+            className="text-xs font-bold text-primary-500 hover:text-primary-700 uppercase tracking-wider transition-colors"
+          >
+            Forgot Password?
+          </Link>
+        </div>
+
+        {/* General Error (if not specific to fields) */}
+        {error && !error.toLowerCase().includes('email') && !error.toLowerCase().includes('password') && (
+          <p className="text-center text-xs font-bold text-red-500 animate-in fade-in">{error}</p>
+        )}
+
+        <div className="pt-4">
+          <UiButton type="submit" isLoading={isLoading}>LOGIN</UiButton>
+        </div>
+      </form>
+
+      {/* Footer Section */}
+      <p className="mt-10 text-sm text-gray-500 font-medium">
+        Don&apos;t have an account?{' '}
+        <Link href="/register" className="text-primary-500 font-bold hover:underline underline-offset-4">
+          Register
+        </Link>
+      </p>
+    </div>
   );
 }

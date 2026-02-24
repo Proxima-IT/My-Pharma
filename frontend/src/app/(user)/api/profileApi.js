@@ -27,10 +27,10 @@ export const updateProfileApi = async (token, formData) => {
 
 export const requestVerificationOtpApi = async (token, payload) => {
   const response = await fetch(AUTH_ENDPOINTS.ME, {
-    method: 'PATCH',
-    headers: { 
+    method: 'PUT',
+    headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json' 
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   });
@@ -41,10 +41,10 @@ export const requestVerificationOtpApi = async (token, payload) => {
 
 export const verifyIdentityOtpApi = async (token, payload) => {
   const response = await fetch(AUTH_ENDPOINTS.ME, {
-    method: 'PATCH',
-    headers: { 
+    method: 'PUT',
+    headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json' 
+      'Content-Type': 'application/json',
     },
     body: JSON.stringify(payload),
   });

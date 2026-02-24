@@ -1,16 +1,25 @@
 'use client';
-import { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
+import { FiMail, FiLock, FiCheckCircle } from 'react-icons/fi';
+import { useForgotPassword } from '../hooks/useForgotPassword';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
 import { AUTH_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
 
 export default function ForgotPasswordForm() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState('');
-  const [email, setEmail] = useState('');
+  const {
+    email,
+    setEmail,
+    isLoading,
+    isSuccess,
+    error,
+    methodError,
+    handleRequestReset,
+    triggerMethodError,
+  } = useForgotPassword();
 
+<<<<<<< HEAD
   const handleSubmit = async e => {
     e.preventDefault();
     setIsLoading(true);
@@ -36,34 +45,22 @@ export default function ForgotPasswordForm() {
   };
 
   if (isSubmitted) {
+=======
+  if (isSuccess) {
+>>>>>>> 94d8241dcb9f04f8a8fc060fb3bb889a6bb74268
     return (
-      <div className="text-center space-y-6 animate-in fade-in zoom-in duration-500">
-        <div className="flex justify-center">
-          <div className="w-16 h-16 bg-success-50 text-success-500 rounded-full flex items-center justify-center">
-            <svg
-              className="w-8 h-8"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-              />
-            </svg>
-          </div>
+      <div className="w-full flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mb-6">
+          <FiCheckCircle size={40} />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-bold text-gray-900">Check your email</h2>
-          <p className="text-sm text-gray-500 leading-relaxed">
-            If an account exists for{' '}
-            <span className="font-semibold text-gray-900">{email}</span>, you
-            will receive instructions to reset your password shortly.
-          </p>
-        </div>
-        <div className="pt-4">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Check your email
+        </h2>
+        <p className="text-gray-500 font-medium leading-relaxed">
+          We have sent password reset instructions to <br />
+          <span className="font-bold text-gray-900">{email}</span>
+        </p>
+        <div className="mt-8 w-full">
           <Link href="/login">
             <UiButton variant="outline">Back to Login</UiButton>
           </Link>
@@ -73,51 +70,67 @@ export default function ForgotPasswordForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="p-4 rounded-xl bg-info-25 border border-info-100 text-info-700 font-bold text-xs animate-in fade-in slide-in-from-top-2">
-          {error}
+    <div className="w-full flex flex-col items-center">
+      {/* Header Section with Multi-layered Icon */}
+      <div className="flex flex-col items-center mb-10">
+        <div className="relative flex items-center justify-center w-32 h-32">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-b from-green-50 to-transparent opacity-80" />
+          <div className="absolute inset-4 rounded-full border border-green-100 bg-white/20" />
+          <div className="relative w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-b from-gray-50 to-white shadow-sm border border-white">
+            <FiLock size={28} className="text-green-600" />
+          </div>
         </div>
-      )}
 
-      <UiInput
-        label="Email Address"
-        placeholder="Enter your registered email"
-        type="email"
-        value={email}
-        onChange={e => setEmail(e.target.value)}
-        required
-        leftIcon={
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="text-center mt-6 w-full">
+          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+            Forgot Password
+          </h1>
+          <p className="text-gray-500 mt-3 font-medium leading-relaxed w-full">
+            Enter your email address and we’ll send you password reset
+            instructions.
+          </p>
+        </div>
+      </div>
+
+      {/* Form Section */}
+      <form onSubmit={handleRequestReset} className="w-full space-y-6">
+        <UiInput
+          label="Email Address"
+          type="email"
+          placeholder="johndoe@example.com"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          required
+          leftIcon={<FiMail />}
+          error={error}
+        />
+
+        <div className="pt-2">
+          <UiButton type="submit" isLoading={isLoading}>
+            FORGOT PASSWORD
+          </UiButton>
+        </div>
+      </form>
+
+      {/* Footer Section */}
+      <div className="mt-10 text-center space-y-1">
+        <p className="text-sm text-gray-500 font-medium">
+          Don’t have access anymore?
+        </p>
+        <div className="flex flex-col items-center gap-1">
+          <button
+            onClick={triggerMethodError}
+            className="text-primary-500 font-bold hover:text-primary-700 transition-colors text-sm"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
-        }
-      />
-
-      <div className="pt-2">
-        <UiButton type="submit" isLoading={isLoading}>
-          SEND RESET LINK
-        </UiButton>
+            Try another method
+          </button>
+          {methodError && (
+            <span className="text-[11px] font-bold text-red-500 animate-in fade-in slide-in-from-top-1">
+              {methodError}
+            </span>
+          )}
+        </div>
       </div>
-
-      <div className="text-center">
-        <Link
-          href="/login"
-          className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-primary-500 transition-colors"
-        >
-          Back to Login
-        </Link>
-      </div>
-    </form>
+    </div>
   );
 }

@@ -29,15 +29,15 @@ const Sidebar = () => {
   }, []);
 
   console.log(categories);
-  
+
   return (
     <div className="">
       {/* Sidebar */}
       <aside className="hidden lg:flex flex-col  items-center gap-3    text-black">
         {/* top dropdown container  */}
-        <div className="w-full bg-white text-black rounded-2xl shadow p-4 relative">
-          {/* Button */}
-          <div
+        {/* <div className="w-full bg-white text-black rounded-2xl shadow p-4 relative"> */}
+        {/* Button */}
+        {/* <div
             onClick={() => setOpen(!open)}
             className=" flex items-center justify-between rounded-full bg-white text-gray-800  transition cursor-pointer"
           >
@@ -59,10 +59,10 @@ const Sidebar = () => {
                 />
               </svg>
             </div>
-          </div>
+          </div> */}
 
-          {/* Dropdown */}
-          {open && (
+        {/* Dropdown */}
+        {/* {open && (
             <ul className="absolute  transition-all ease-in-out duration-500 z-10 mt-3 w-full top-14 left-0 rounded-xl bg-white shadow-lg overflow-hidden p-3 text-gray-600 text-base space-y-3">
               {categories.map((category) => (
                 <li
@@ -92,11 +92,12 @@ const Sidebar = () => {
                 </li>
               ))}
             </ul>
-          )}
-        </div>
+          )} */}
+        {/* </div> */}
 
         {/* Search + categories */}
         <div className="w-full bg-white text-black rounded-2xl shadow p-4 mt-3 ">
+          <h3 className="font-bold text-lg mb-3">All Product Category</h3>
           <div className="relative w-full max-w-xl mx-auto mb-5">
             {/* Search Icon */}
             <IoSearchOutline className="absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" />
@@ -158,8 +159,8 @@ const Sidebar = () => {
             priority
           />
         </div>
-        
-        {/* adevretisement  */} 
+
+        {/* adevretisement  */}
         <div className="w-full mt-5 max-w-xl space-y-4">
           {/* Card 1 */}
           <div className="flex items-center gap-4 rounded-lg bg-white px-5 py-4 shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
