@@ -4,40 +4,64 @@ import React, { useState } from 'react';
 import { FiMapPin, FiCheck, FiX, FiPlus } from 'react-icons/fi';
 import { useRouter } from 'next/navigation';
 
-const AddressSelectorPopup = ({ isOpen, onClose }) => {
+const AddressSelectorPopup = ({ isOpen, onClose, onSelect }) => {
   const router = useRouter();
 
-  // Mock data for UI
+  // Mock data with distinct information for each address
   const [addresses, setAddresses] = useState([
     {
       id: 1,
       label: 'Home',
-      address: 'Kushtia, Khulna, Bangladesh',
+      name: 'Abu Fahim',
+      email: 'design.fahim@proton.me',
+      phone: '+880 1347598372',
+      gender: 'Male',
+      deistic: 'Kushtia',
+      thana: 'Bheramara',
+      fullAddress: 'kasaripara, Merpur, Kushtia',
       isDefault: true,
     },
     {
       id: 2,
       label: 'Office',
-      address: 'Dhanmondi, Dhaka, Bangladesh',
+      name: 'Abu Fahim',
+      email: 'work.fahim@company.com',
+      phone: '+880 1711223344',
+      gender: 'Male',
+      deistic: 'Dhaka',
+      thana: 'Dhanmondi',
+      fullAddress: 'House 12, Road 5, Dhanmondi, Dhaka',
       isDefault: false,
     },
     {
       id: 3,
       label: 'Other',
-      address: 'Gulshan 2, Dhaka, Bangladesh',
+      name: 'Abu Fahim',
+      email: 'design.fahim@proton.me',
+      phone: '+880 1999888777',
+      gender: 'Male',
+      deistic: 'Dhaka',
+      thana: 'Gulshan',
+      fullAddress: 'Flat 4B, Lakeview, Gulshan 2, Dhaka',
       isDefault: false,
     },
   ]);
 
   if (!isOpen) return null;
 
-  const handleSelectDefault = id => {
+  const handleSelect = addr => {
+    // 1. Update local UI state to show which one is active in the list
     setAddresses(prev =>
-      prev.map(addr => ({
-        ...addr,
-        isDefault: addr.id === id,
+      prev.map(a => ({
+        ...a,
+        isDefault: a.id === addr.id,
       })),
     );
+
+    // 2. Pass the selected object back to the ShippingAddressCard
+    if (onSelect) {
+      onSelect({ ...addr, isDefault: true });
+    }
   };
 
   const handleAddNew = () => {
@@ -47,15 +71,12 @@ const AddressSelectorPopup = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 animate-in fade-in duration-300">
-      {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black/20 backdrop-blur-sm"
         onClick={onClose}
       />
 
-      {/* Modal Container */}
       <div className="relative w-full max-w-md bg-white border border-(--color-gray-100) rounded-[32px] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-(--color-gray-50)">
           <h2 className="text-xl font-bold text-(--color-gray-900) tracking-tight">
             Address
@@ -68,43 +89,46 @@ const AddressSelectorPopup = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Address List */}
         <div className="p-6 space-y-3 max-h-[400px] overflow-y-auto no-scrollbar">
           {addresses.map(addr => (
             <div
               key={addr.id}
-              onClick={() => handleSelectDefault(addr.id)}
+              onClick={() => handleSelect(addr)}
               className={`p-5 rounded-[24px] border transition-all cursor-pointer flex items-start gap-4 ${
                 addr.isDefault
-                  ? 'border-(--color-primary-500) bg-(--color-primary-25)'
-                  : 'border-(--color-gray-100) hover:bg-(--color-gray-50)'
+                  ? 'bg-(--color-primary-500) border-(--color-primary-500)'
+                  : 'border-(--color-gray-100) bg-white hover:bg-(--color-gray-50)'
               }`}
             >
               <div
-                className={`mt-1 shrink-0 ${addr.isDefault ? 'text-(--color-primary-500)' : 'text-(--color-gray-400)'}`}
+                className={`mt-1 shrink-0 ${addr.isDefault ? 'text-white' : 'text-(--color-gray-400)'}`}
               >
                 <FiMapPin size={20} />
               </div>
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-[15px] font-bold text-(--color-gray-900) truncate">
+                  <p
+                    className={`text-[15px] font-bold truncate ${addr.isDefault ? 'text-white' : 'text-(--color-gray-900)'}`}
+                  >
                     {addr.label}
                   </p>
                   {addr.isDefault && (
-                    <div className="w-5 h-5 rounded-full bg-(--color-primary-500) flex items-center justify-center text-white shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center text-(--color-primary-500) shrink-0">
                       <FiCheck size={12} strokeWidth={4} />
                     </div>
                   )}
                 </div>
-                <p className="text-sm text-(--color-gray-500) leading-relaxed mt-1">
-                  {addr.address}
+                <p
+                  className={`text-sm leading-relaxed mt-1 ${addr.isDefault ? 'text-white/80' : 'text-(--color-gray-500)'}`}
+                >
+                  {addr.fullAddress}
                 </p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Footer Action */}
         <div className="p-6 pt-2">
           <button
             onClick={handleAddNew}
