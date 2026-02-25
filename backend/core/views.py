@@ -26,7 +26,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page
+from .models import Brand, Category, Ingredient, Product, Order, OrderItem, Cart, CartItem, Prescription, PrescriptionItem, Consultation, Page
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -38,6 +38,9 @@ from .serializers import (
     OrderSerializer,
     OrderWriteSerializer,
     OrderStatusSerializer,
+    CartSerializer,
+    CartItemSerializer,
+    AddToCartSerializer,
     PrescriptionSerializer,
     PrescriptionUploadSerializer,
     PrescriptionVerifySerializer,
@@ -47,6 +50,14 @@ from .serializers import (
     PageSerializer,
 )
 from .filters import ProductFilter
+from .services import (
+    get_or_create_cart,
+    get_cart_subtotal,
+    get_cart_summary,
+    validate_and_apply_coupon,
+    get_delivery_fee_for_subtotal,
+    create_order_from_cart,
+)
 
 
 # ---- Category (hierarchy: parent / children). Pharmacy Admin / Super ----
@@ -141,6 +152,114 @@ class ProductViewSet(viewsets.ModelViewSet):
         except (TypeError, ValueError):
             return Response({"quantity_in_stock": ["Must be a non-negative integer."]}, status=status.HTTP_400_BAD_REQUEST)
         return Response(ProductDetailSerializer(product).data)
+
+
+# ---- Cart: authenticated user only; list = my cart, add/update/remove items, place order ----
+class CartViewSet(viewsets.GenericViewSet):
+    """Cart API: GET cart (with summary), POST add, PATCH/DELETE item, POST place_order."""
+    permission_classes = [IsAuthenticated, IsRegisteredUserOnly]
+    serializer_class = CartSerializer
+
+    def list(self, request, *args, **kwargs):
+        """GET /api/cart/ – my cart with items and summary. Query: coupon_code, delivery_zone (optional)."""
+        cart = get_or_create_cart(request.user)
+        coupon_code = request.query_params.get("coupon_code", "").strip() or None
+        delivery_zone = request.query_params.get("delivery_zone", "").strip() or None
+        summary = get_cart_summary(cart, delivery_zone=delivery_zone, coupon_code=coupon_code)
+        serializer = CartSerializer(cart, context={"request": request})
+        data = serializer.data
+        data["summary"] = summary
+        return Response(data)
+
+    @action(detail=False, methods=["post"], url_path="add")
+    def add(self, request):
+        """POST /api/cart/add/ – add or update product in cart. Body: { product: id, quantity: n }."""
+        ser = AddToCartSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        product = ser.validated_data["product"]
+        quantity = ser.validated_data["quantity"]
+        cart = get_or_create_cart(request.user)
+        item, created = CartItem.objects.get_or_create(
+            cart=cart, product=product,
+            defaults={"quantity": quantity, "price_at_order": product.price},
+        )
+        if not created:
+            item.quantity = quantity
+            item.price_at_order = product.price
+            item.save(update_fields=["quantity", "price_at_order"])
+        cart.save(update_fields=["updated_at"])
+        serializer = CartItemSerializer(item, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def create(self, request, *args, **kwargs):
+        """Alias: POST /api/cart/ with body { product, quantity } also adds to cart."""
+        return self.add(request)
+
+    @action(detail=False, methods=["patch"], url_path="items/(?P<item_id>[^/.]+)")
+    def update_item(self, request, item_id=None):
+        """PATCH /api/cart/items/<id>/ – update quantity. Body: { quantity: n }."""
+        cart = get_or_create_cart(request.user)
+        try:
+            item = cart.items.get(pk=item_id)
+        except CartItem.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        qty = request.data.get("quantity")
+        if qty is None:
+            return Response({"quantity": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            qty = int(qty)
+        except (TypeError, ValueError):
+            return Response({"quantity": ["Must be a positive integer."]}, status=status.HTTP_400_BAD_REQUEST)
+        if qty < 1:
+            item.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        if qty > item.product.quantity_in_stock:
+            return Response(
+                {"quantity": [f"Insufficient stock. Available: {item.product.quantity_in_stock}."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        item.quantity = qty
+        item.save(update_fields=["quantity"])
+        serializer = CartItemSerializer(item, context={"request": request})
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["delete"], url_path="items/(?P<item_id>[^/.]+)")
+    def remove_item(self, request, item_id=None):
+        """DELETE /api/cart/items/<id>/ – remove item from cart."""
+        cart = get_or_create_cart(request.user)
+        try:
+            item = cart.items.get(pk=item_id)
+        except CartItem.DoesNotExist:
+            return Response({"detail": "Not found."}, status=status.HTTP_404_NOT_FOUND)
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["post"], url_path="place_order")
+    def place_order(self, request):
+        """POST /api/cart/place_order/ – create order from cart. Body: { shipping_address_id: id, coupon_code?: str, notes?: str }."""
+        shipping_address_id = request.data.get("shipping_address_id")
+        if shipping_address_id is None:
+            return Response(
+                {"shipping_address_id": ["This field is required."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            shipping_address_id = int(shipping_address_id)
+        except (TypeError, ValueError):
+            return Response(
+                {"shipping_address_id": ["Must be a valid address ID."]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        coupon_code = (request.data.get("coupon_code") or "").strip() or None
+        notes = (request.data.get("notes") or "").strip() or None
+        cart = get_or_create_cart(request.user)
+        order, err = create_order_from_cart(
+            request.user, cart, shipping_address_id,
+            coupon_code=coupon_code, notes=notes,
+        )
+        if err:
+            return Response({"detail": err}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(OrderSerializer(order, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
 
 # ---- Order: Pharmacy/Super see all; User sees own. Purchase = create (RegisteredUserOnly) ----

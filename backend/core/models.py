@@ -203,6 +203,77 @@ class OrderItem(models.Model):
         return f"{self.product.name} x {self.quantity}"
 
 
+class Cart(models.Model):
+    """One cart per user; holds items until checkout."""
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="cart",
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_cart"
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"Cart ({self.user_id})"
+
+
+class CartItem(models.Model):
+    """Cart line item: product + quantity; price_at_order locks price at add-to-cart."""
+    cart = models.ForeignKey(
+        Cart,
+        on_delete=models.CASCADE,
+        related_name="items",
+        db_index=True,
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="cart_items",
+        db_index=True,
+    )
+    quantity = models.PositiveIntegerField(default=1)
+    price_at_order = models.DecimalField(max_digits=12, decimal_places=2)
+
+    class Meta:
+        db_table = "core_cart_item"
+        unique_together = [["cart", "product"]]
+        ordering = ["id"]
+
+    def __str__(self):
+        return f"{self.product.name} x {self.quantity}"
+
+
+class Coupon(models.Model):
+    """Discount coupon: code, type (percent/fixed), value, optional min order and validity."""
+    class DiscountType(models.TextChoices):
+        PERCENT = "PERCENT", "Percent"
+        FIXED = "FIXED", "Fixed amount"
+
+    code = models.CharField(max_length=50, unique=True, db_index=True)
+    discount_type = models.CharField(max_length=10, choices=DiscountType.choices)
+    discount_value = models.DecimalField(max_digits=10, decimal_places=2)
+    min_order_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    valid_from = models.DateTimeField(null=True, blank=True)
+    valid_until = models.DateTimeField(null=True, blank=True)
+    max_uses = models.PositiveIntegerField(null=True, blank=True, help_text="Null = unlimited")
+    times_used = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_coupon"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.code
+
+
 class Prescription(models.Model):
     """
     Prescription flow: UPLOADED -> PENDING (in queue) -> APPROVED or REJECTED.

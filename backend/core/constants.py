@@ -8,6 +8,8 @@ from decimal import Decimal
 MIN_ORDER_BDT = Decimal("100.00")
 FREE_DELIVERY_ABOVE_BDT = Decimal("500.00")
 PRICE_LOCK_HOURS = 24
+# Default delivery fee when not using zone (e.g. cart summary before address selected)
+DEFAULT_DELIVERY_FEE_BDT = Decimal("150.00")
 
 # ---- Delivery (BDT) ----
 DELIVERY_ZONE_CITY = "CITY"

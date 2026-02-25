@@ -11,6 +11,8 @@ from .models import (
     Product,
     Order,
     OrderItem,
+    Cart,
+    CartItem,
     Prescription,
     PrescriptionItem,
     Consultation,
@@ -232,6 +234,71 @@ class OrderStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ("status",)
+
+
+# ---- Cart ----
+def _product_image_url(product, request=None):
+    """Single product primary image URL (absolute if request provided)."""
+    if product.image:
+        url = product.image.url
+        if request:
+            url = request.build_absolute_uri(url)
+        return url
+    for img in product.images.all()[:1]:
+        if img.image:
+            url = img.image.url
+            if request:
+                url = request.build_absolute_uri(url)
+            return url
+    return None
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    """Cart line with product details for display."""
+    product_id = serializers.IntegerField(source="product.id", read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_slug = serializers.CharField(source="product.slug", read_only=True)
+    product_description = serializers.CharField(source="product.description", read_only=True)
+    image_url = serializers.SerializerMethodField()
+    current_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
+    quantity_in_stock = serializers.IntegerField(source="product.quantity_in_stock", read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = (
+            "id", "product", "product_id", "product_name", "product_slug", "product_description",
+            "image_url", "quantity", "price_at_order", "current_price", "quantity_in_stock",
+        )
+        read_only_fields = ("id", "price_at_order", "product_name", "product_slug", "product_description", "image_url", "current_price", "quantity_in_stock")
+
+    def get_image_url(self, obj):
+        return _product_image_url(obj.product, self.context.get("request"))
+
+
+class AddToCartSerializer(serializers.Serializer):
+    """Add or update product in cart: product (id), quantity."""
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True))
+    quantity = serializers.IntegerField(min_value=1)
+
+    def validate(self, attrs):
+        product = attrs["product"]
+        qty = attrs["quantity"]
+        if qty > product.quantity_in_stock:
+            raise serializers.ValidationError(
+                {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"}
+            )
+        return attrs
+
+
+class CartSerializer(serializers.ModelSerializer):
+    """Cart with items and optional summary."""
+    items = CartItemSerializer(many=True, read_only=True)
+    summary = serializers.DictField(read_only=True, required=False)
+
+    class Meta:
+        model = Cart
+        fields = ("id", "items", "summary", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
 
 
 # ---- Prescription ----
