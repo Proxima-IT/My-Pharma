@@ -9,4 +9,5 @@ export const AUTH_ENDPOINTS = {
 export const USER_ENDPOINTS = {
   ORDERS: `${API_BASE_URL}/orders/`,
   PRESCRIPTIONS: `${API_BASE_URL}/prescriptions/`,
+  ADDRESSES: `${API_BASE_URL}/auth/addresses/`,
 };
