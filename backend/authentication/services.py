@@ -155,13 +155,12 @@ def complete_registration(
     email: str | None = None,
     phone: str | None = None,
     profile_picture=None,
-    address: str | None = None,
 ) -> User:
     """
     Create user after OTP verification using the registration token.
     Token holds verified_identifier (type: phone|email, value). The other identifier is optional.
     Required: username, password. Optional: email (if verified was phone), phone (if verified was email),
-    profile_picture, address, first_name, last_name.
+    profile_picture. Addresses can be added after login via UserAddress API.
     Raises InvalidRegistrationTokenError, ValidationError.
     """
     payload = utils.registration_token_get(registration_token)
@@ -206,8 +205,7 @@ def complete_registration(
         user.email_verified = bool(email_fixed)
         if profile_picture:
             user.profile_picture = profile_picture
-        user.address = (address or "").strip()
-        user.save(update_fields=["phone_verified", "email_verified", "profile_picture", "address", "updated_at"])
+        user.save(update_fields=["phone_verified", "email_verified", "profile_picture", "updated_at"])
     else:
         email_fixed = ident_value
         phone_fixed = normalize_phone(phone) if phone else ""
@@ -231,8 +229,7 @@ def complete_registration(
         user.phone_verified = bool(phone_fixed)
         if profile_picture:
             user.profile_picture = profile_picture
-        user.address = (address or "").strip()
-        user.save(update_fields=["email_verified", "phone_verified", "profile_picture", "address", "updated_at"])
+        user.save(update_fields=["email_verified", "phone_verified", "profile_picture", "updated_at"])
     user.status = UserStatus.ACTIVE
     user.save(update_fields=["status", "updated_at"])
     return user

@@ -11,7 +11,7 @@ from django.contrib.auth.forms import UserCreationForm as BaseUserCreationForm
 from django.contrib.auth.forms import UsernameField as AuthUsernameField
 
 from .constants import UserRole
-from .models import User, AuditLog
+from .models import User, UserAddress, AuditLog
 
 
 class SafeUsernameField(AuthUsernameField):
@@ -55,7 +55,7 @@ class CustomUserChangeForm(BaseUserChangeForm):
             for k in raw:
                 v = raw.get(k)
                 data[k] = "" if v is None else v
-            for key in ("username", "address", "gender"):
+            for key in ("username", "gender"):
                 if data.get(key) is None:
                     data[key] = ""
             args = (data,) + args[1:]
@@ -70,17 +70,13 @@ class CustomUserChangeForm(BaseUserChangeForm):
                 help_text=old.help_text,
             )
         # Unbound form: coerce initial None to '' for nullable string fields
-        for key in ("username", "address", "gender"):
+        for key in ("username", "gender"):
             if key in self.fields and self.initial.get(key) is None:
                 self.initial[key] = ""
 
     def clean_username(self):
         value = self.cleaned_data.get("username")
         return (value or "").strip() or None
-
-    def clean_address(self):
-        value = self.cleaned_data.get("address")
-        return value if value is not None else ""
 
 
 @admin.register(User)
@@ -95,7 +91,7 @@ class UserAdmin(BaseUserAdmin):
     readonly_fields = ("created_at", "updated_at", "last_failed_login_at", "locked_until")
     fieldsets = (
         (None, {"fields": ("username", "email", "phone", "password")}),
-        ("Profile", {"fields": ("profile_picture", "address", "gender", "date_of_birth")}),
+        ("Profile", {"fields": ("profile_picture", "gender", "date_of_birth")}),
         ("Role & Status", {"fields": ("role", "status", "email_verified", "phone_verified")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser")}),
         ("Security", {"fields": ("failed_login_count", "last_failed_login_at", "locked_until", "deleted_at")}),
@@ -119,6 +115,41 @@ class UserAdmin(BaseUserAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return _is_super_admin(request)
+
+
+class UserAddressInline(admin.TabularInline):
+    model = UserAddress
+    extra = 0
+    fields = ("full_name", "phone", "delivery_area", "address", "address_type", "is_default")
+
+
+@admin.register(UserAddress)
+class UserAddressAdmin(admin.ModelAdmin):
+    """User addresses – SUPER_ADMIN only. Also editable via User inline."""
+    list_display = ("id", "user", "full_name", "phone", "delivery_area", "address_type", "is_default", "created_at")
+    list_filter = ("address_type", "delivery_area", "is_default")
+    search_fields = ("user__email", "user__phone", "full_name", "address", "delivery_area")
+    raw_id_fields = ("user",)
+    ordering = ("-created_at",)
+
+    def has_module_permission(self, request):
+        return _is_super_admin(request)
+
+    def has_view_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
+    def has_add_permission(self, request):
+        return _is_super_admin(request)
+
+    def has_change_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
+    def has_delete_permission(self, request, obj=None):
+        return _is_super_admin(request)
+
+
+# Add addresses inline to User admin
+UserAdmin.inlines = [UserAddressInline]
 
 
 @admin.register(AuditLog)

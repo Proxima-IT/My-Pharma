@@ -35,6 +35,15 @@ export const useProfile = () => {
       const token = localStorage.getItem('access_token');
       if (!token) return;
       const data = await fetchProfileApi(token);
+
+      // WORKAROUND: Handle relative image paths from backend
+      const backendBaseUrl = 'http://localhost:8000';
+      let profilePicUrl = data.profile_picture || null;
+
+      if (profilePicUrl && !profilePicUrl.startsWith('http')) {
+        profilePicUrl = `${backendBaseUrl}${profilePicUrl}`;
+      }
+
       const mappedData = {
         fullName: data.username || '',
         username: data.username || '',
@@ -42,7 +51,7 @@ export const useProfile = () => {
         phone: data.phone || '',
         gender: data.gender || '',
         date_of_birth: data.date_of_birth || '',
-        avatar_preview: data.profile_picture || null,
+        avatar_preview: profilePicUrl,
       };
       setFormData(mappedData);
       setInitialData(mappedData);
@@ -69,7 +78,7 @@ export const useProfile = () => {
 
     data.append('first_name', firstName || '');
     data.append('last_name', lastNameParts.join(' ') || '');
-    data.append('username', formData.fullName); // Treating Full Name field as Username
+    data.append('username', formData.fullName);
     data.append('gender', formData.gender);
     data.append('date_of_birth', formData.date_of_birth);
 

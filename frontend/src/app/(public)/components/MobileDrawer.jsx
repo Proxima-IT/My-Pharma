@@ -28,13 +28,16 @@ import {
 import { FaFacebook, FaLinkedin, FaInstagram } from 'react-icons/fa6';
 import { LuUpload } from 'react-icons/lu';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Logo from './Logo';
 import { getCategories } from '@/data/categories';
 import { uploadPrescriptionApi } from '../../(user)/api/prescriptionApi';
 
 const MobileDrawer = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const currentCategory = searchParams.get('category');
+
   const fileInputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -52,9 +55,19 @@ const MobileDrawer = () => {
     const loadCategories = async () => {
       const data = await getCategories();
       setCategories(data);
+
+      // Auto-expand parent if a sub-category is active in URL
+      if (currentCategory) {
+        const parent = data.find(
+          cat =>
+            cat.slug === currentCategory ||
+            cat.subCategories?.some(sub => sub.slug === currentCategory),
+        );
+        if (parent) setExpandedId(parent.id);
+      }
     };
     loadCategories();
-  }, []);
+  }, [currentCategory]);
 
   const getIcon = name => {
     switch (name) {
@@ -118,7 +131,10 @@ const MobileDrawer = () => {
 
   return (
     <div>
-      <button onClick={() => setOpen(true)} className="p-2 -ml-2">
+      <button
+        onClick={() => setOpen(true)}
+        className="p-2 -ml-2 cursor-pointer"
+      >
         <AiOutlineMenu className="text-2xl text-gray-900" />
       </button>
 
@@ -144,7 +160,7 @@ const MobileDrawer = () => {
             </Link>
             <button
               onClick={() => setOpen(false)}
-              className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500"
+              className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 cursor-pointer"
             >
               <IoCloseSharp size={24} />
             </button>
@@ -154,18 +170,30 @@ const MobileDrawer = () => {
             {/* Socials & Contact */}
             <div className="space-y-4">
               <div className="flex items-center gap-4 text-gray-400">
-                <FaFacebook
-                  size={20}
-                  className="hover:text-primary-500 transition-colors"
-                />
-                <FaLinkedin
-                  size={20}
-                  className="hover:text-primary-500 transition-colors"
-                />
-                <FaInstagram
-                  size={20}
-                  className="hover:text-primary-500 transition-colors"
-                />
+                <a
+                  href="https://facebook.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-(--color-primary-500) transition-colors"
+                >
+                  <FaFacebook size={20} />
+                </a>
+                <a
+                  href="https://linkedin.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-(--color-primary-500) transition-colors"
+                >
+                  <FaLinkedin size={20} />
+                </a>
+                <a
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="hover:text-(--color-primary-500) transition-colors"
+                >
+                  <FaInstagram size={20} />
+                </a>
                 <div className="h-4 w-px bg-gray-100 mx-2" />
                 <span className="text-xs font-bold text-gray-900">
                   01755697233
@@ -177,7 +205,7 @@ const MobileDrawer = () => {
             <button
               onClick={handlePrescriptionClick}
               disabled={isUploading}
-              className="w-full h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center gap-3 text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all"
+              className="w-full h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center gap-3 text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50"
             >
               <LuUpload
                 className={`text-lg text-(--color-primary-500) ${isUploading ? 'animate-bounce' : ''}`}
@@ -216,14 +244,18 @@ const MobileDrawer = () => {
               <nav className="space-y-1">
                 {categories.map(cat => {
                   const isExpanded = expandedId === cat.id;
+                  const isActive = currentCategory === cat.slug;
+
                   return (
                     <div key={cat.id} className="flex flex-col">
-                      <button
-                        onClick={() =>
-                          setExpandedId(isExpanded ? null : cat.id)
-                        }
+                      <Link
+                        href={`/products?category=${cat.slug}`}
+                        onClick={() => {
+                          setExpandedId(isExpanded ? null : cat.id);
+                          if (!cat.subCategories) setOpen(false);
+                        }}
                         className={`flex items-center justify-between px-4 py-3 rounded-full transition-all ${
-                          isExpanded
+                          isActive || isExpanded
                             ? 'bg-(--color-primary-500) text-white'
                             : 'text-gray-500'
                         }`}
@@ -231,7 +263,9 @@ const MobileDrawer = () => {
                         <div className="flex items-center gap-4">
                           <span
                             className={
-                              isExpanded ? 'text-white' : 'text-gray-400'
+                              isActive || isExpanded
+                                ? 'text-white'
+                                : 'text-gray-400'
                             }
                           >
                             {getIcon(cat.name)}
@@ -242,33 +276,46 @@ const MobileDrawer = () => {
                         </div>
                         <div
                           className={`flex items-center justify-center min-w-[24px] h-6 rounded-full text-[10px] font-bold ${
-                            isExpanded
+                            isActive || isExpanded
                               ? 'bg-white/20 text-white'
                               : 'bg-gray-100 text-gray-400'
                           }`}
                         >
                           {cat.count}
                         </div>
-                      </button>
+                      </Link>
 
                       {isExpanded && cat.subCategories && (
                         <div className="ml-6 mt-1 relative border-l border-gray-100">
-                          {cat.subCategories.map((sub, idx) => (
-                            <div
-                              key={idx}
-                              className="relative flex items-center py-2 pl-6"
-                            >
-                              <div className="absolute left-0 top-0 w-5 h-1/2 border-b border-gray-100 rounded-bl-xl" />
-                              <div className="flex items-center gap-3 w-full p-2 rounded-2xl bg-gray-50/50">
-                                <div className="w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-[9px] font-bold text-primary-500">
-                                  {sub.name.charAt(0)}
-                                </div>
-                                <span className="text-sm font-medium text-gray-600">
-                                  {sub.name}
-                                </span>
+                          {cat.subCategories.map((sub, idx) => {
+                            const isSubActive = currentCategory === sub.slug;
+                            return (
+                              <div
+                                key={idx}
+                                className="relative flex items-center py-2 pl-6"
+                              >
+                                <div className="absolute left-0 top-0 w-5 h-1/2 border-b border-gray-100 rounded-bl-xl" />
+                                <Link
+                                  href={`/products?category=${sub.slug}`}
+                                  onClick={() => setOpen(false)}
+                                  className={`flex items-center gap-3 w-full p-2 rounded-2xl transition-all ${
+                                    isSubActive
+                                      ? 'bg-gray-100'
+                                      : 'bg-gray-50/50'
+                                  }`}
+                                >
+                                  <div className="w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-[9px] font-bold text-primary-500">
+                                    {sub.name.charAt(0)}
+                                  </div>
+                                  <span
+                                    className={`text-sm font-medium ${isSubActive ? 'text-gray-900 font-bold' : 'text-gray-600'}`}
+                                  >
+                                    {sub.name}
+                                  </span>
+                                </Link>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

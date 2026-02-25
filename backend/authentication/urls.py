@@ -6,6 +6,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r"admin/users", views.UserManagementViewSet, basename="admin-user")
+router.register(r"addresses", views.UserAddressViewSet, basename="address")
 
 urlpatterns = [
     path("request-otp/", views.RequestOTPView.as_view(), name="auth_request_otp"),

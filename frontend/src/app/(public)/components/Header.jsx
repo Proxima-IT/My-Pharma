@@ -22,12 +22,23 @@ const Header = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  // State for dynamic search
+  const [searchQuery, setSearchQuery] = useState('');
+
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) {
       setIsLoggedIn(true);
     }
   }, []);
+
+  const handleSearch = e => {
+    if (e) e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to products page with search query
+      router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   const handlePrescriptionClick = e => {
     e.preventDefault();
@@ -74,7 +85,6 @@ const Header = () => {
 
       const formData = new FormData();
       formData.append('file', file);
-      // If your backend requires a title or other fields, add them here:
       formData.append('title', `Uploaded_${new Date().getTime()}`);
 
       await uploadPrescriptionApi(token, formData);
@@ -86,7 +96,6 @@ const Header = () => {
       alert(err.message || 'Failed to upload prescription. Please try again.');
     } finally {
       setIsUploading(false);
-      // Clear input so the same file can be selected again if needed
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
@@ -169,16 +178,22 @@ const Header = () => {
             />
           </div>
 
-          <div className="relative flex-1 w-full">
+          {/* Dynamic Search Bar */}
+          <form onSubmit={handleSearch} className="relative flex-1 w-full">
             <input
               type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
               placeholder='Search for "healthcare products"'
               className="w-full h-10 md:h-12 pl-5 pr-14 rounded-full border border-(--color-gray-200) text-gray-700 placeholder-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-(--color-primary-500)/30"
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-(--color-primary-500) flex items-center justify-center hover:scale-105 transition">
+            <button
+              type="submit"
+              className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-(--color-primary-500) flex items-center justify-center hover:scale-105 transition cursor-pointer"
+            >
               <IoSearchOutline className="text-xl text-white" />
             </button>
-          </div>
+          </form>
         </div>
 
         {/* RIGHT – icons + location */}

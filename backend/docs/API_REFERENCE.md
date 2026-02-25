@@ -9,6 +9,8 @@ Single reference for **all current auth API endpoints**: request/response schema
 
 **→ Admin panel REST API (users, products, orders, prescriptions, consultations, CMS):** [ADMIN_API.md](ADMIN_API.md).
 
+**→ Multiple user addresses (CRUD, titles: Home, Office, Other):** [API_ADDRESSES.md](API_ADDRESSES.md).
+
 ---
 
 ## 1. General
@@ -56,7 +58,7 @@ Returned as `user` in token responses and in `GET /api/auth/me/`:
 | `email`           | string  | Email (empty if phone-only)                                  |
 | `phone`           | string  | Phone (e.g. `01712345678`)                                   |
 | `profile_picture` | string  | URL to profile image (null if not set)                       |
-| `address`         | string  | Address                                                       |
+| `addresses`       | array   | List of user addresses (see [API_ADDRESSES.md](API_ADDRESSES.md)) |
 | `gender`          | string  | `MALE`, `FEMALE`, `OTHER`, or null                            |
 | `gender_display`  | string  | Display label for gender (null if not set)                   |
 | `date_of_birth`   | string  | ISO date (YYYY-MM-DD), or null                                |
@@ -95,16 +97,23 @@ Endpoints that return tokens return:
 | ------ | ------------------------------ | ---- | ---------------- | ----------------------------------------------------------------------------- |
 | POST   | `/api/auth/request-otp/`       | No   | 3/hour per id    | Request OTP by **email or phone** (unified)                                   |
 | POST   | `/api/auth/verify-otp/`        | No   | 10/min per IP    | Verify OTP (email or phone), get registration token                           |
-| POST   | `/api/auth/register/complete/` | No   | —                | Complete registration: username, password, other id, profile_picture, address |
+| POST   | `/api/auth/register/complete/` | No   | —                | Complete registration: username, password, other id, profile_picture          |
 | POST   | `/api/auth/register/phone/`    | No   | 3/hour per phone | Request OTP phone only (legacy)                                               |
 | POST   | `/api/auth/register/email/`    | No   | —                | Register with email + password (one step)                                     |
 | POST   | `/api/auth/login/`             | No   | 5/min per IP     | Login (email or phone + password)                                             |
 | POST   | `/api/auth/token/refresh/`     | No   | —                | Get new access + refresh                                                      |
 | POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                                                     |
 | POST   | `/api/auth/password-reset/`    | No   | —                | Request password reset email                                                  |
-| GET    | `/api/auth/me/`                | Yes  | —                | Current user profile                                                          |
-| PUT    | `/api/auth/me/`                | Yes  | —                | Update profile (username, profile_picture, address, gender, date_of_birth)     |
+| GET    | `/api/auth/me/`                | Yes  | —                | Current user profile (includes addresses)                                      |
+| PUT    | `/api/auth/me/`                | Yes  | —                | Update profile (username, profile_picture, gender, date_of_birth)             |
 | PATCH  | `/api/auth/me/`                | Yes  | —                | Partial update profile (same fields as PUT)                                   |
+| GET    | `/api/auth/addresses/districts/` | Yes  | —                | List BD districts (delivery area dropdown)                                    |
+| GET    | `/api/auth/addresses/`         | Yes  | —                | List my addresses                                                             |
+| POST   | `/api/auth/addresses/`         | Yes  | —                | Create address (full_name, phone, delivery_area, address, address_type, is_default) |
+| GET    | `/api/auth/addresses/<id>/`    | Yes  | —                | Get one address                                                               |
+| PUT    | `/api/auth/addresses/<id>/`    | Yes  | —                | Full update address                                                           |
+| PATCH  | `/api/auth/addresses/<id>/`    | Yes  | —                | Partial update address                                                        |
+| DELETE | `/api/auth/addresses/<id>/`    | Yes  | —                | Delete address                                                                |
 
 ---
 
@@ -383,7 +392,7 @@ Update the current user’s profile. Only provided fields are updated (PATCH = p
 
 **Auth:** Required (`Authorization: Bearer <access_token>`).
 
-**Updatable fields:** `username`, `profile_picture`, `address`, `gender`, `date_of_birth`. All are optional in the body.
+**Updatable fields:** `username`, `profile_picture`, `gender`, `date_of_birth`. All are optional in the body. Manage addresses via [Multiple user addresses (API_ADDRESSES.md)](API_ADDRESSES.md).
 
 **Add or change email / phone (dashboard OTP flow):** Send **only** `email` or **only** `phone` (not both at once).
 
@@ -394,7 +403,6 @@ Update the current user’s profile. Only provided fields are updated (PATCH = p
 | ----------------- | ------ | -------- | --------------------------------------------------------------------------- |
 | `username`        | string | No       | Display name (must be unique)                                                |
 | `profile_picture` | file   | No       | Image (use `multipart/form-data` if sending file)                           |
-| `address`         | string | No       | Address text                                                                 |
 | `gender`          | string | No       | `MALE`, `FEMALE`, or `OTHER`; omit or null to clear                          |
 | `date_of_birth`   | string | No       | ISO date (YYYY-MM-DD); null to clear                                        |
 | `email`           | string | No       | To add/change email: send once to get OTP, then send again with `otp`        |
@@ -416,6 +424,26 @@ Update the current user’s profile. Only provided fields are updated (PATCH = p
 | 401    | —             | Missing or invalid/expired/revoked token                         |
 | 404    | —             | User not found (e.g. soft-deleted)                              |
 | 429    | `otp_rate_limit` | Too many OTP requests                                        |
+
+---
+
+### 3.12 Multiple user addresses (CRUD)
+
+Users can have multiple saved addresses with: **Full Name**, **Phone**, **Delivery area** (BD district), **Address** (user input), **Address type** (Home, Office, Hometown), **Set default**.
+
+| Method | Path                              | Description                    |
+| ------ | --------------------------------- | ------------------------------ |
+| GET    | `/api/auth/addresses/districts/`  | List BD districts (dropdown)   |
+| GET    | `/api/auth/addresses/`            | List my addresses              |
+| POST   | `/api/auth/addresses/`            | Create address                 |
+| GET    | `/api/auth/addresses/<id>/`      | Get one address                |
+| PUT    | `/api/auth/addresses/<id>/`      | Full update                    |
+| PATCH  | `/api/auth/addresses/<id>/`      | Partial update                 |
+| DELETE | `/api/auth/addresses/<id>/`      | Delete address                 |
+
+**Auth:** Required. Users only see and modify their own addresses.
+
+**Full documentation:** Request/response schemas, validation, districts list: **[API_ADDRESSES.md](API_ADDRESSES.md)**.
 
 ---
 

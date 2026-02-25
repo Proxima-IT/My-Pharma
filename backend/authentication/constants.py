@@ -31,3 +31,19 @@ class AuditAction(models.TextChoices):
     REGISTER_EMAIL = "REGISTER_EMAIL", "Register via Email"
     REGISTER_COMPLETE = "REGISTER_COMPLETE", "Registration Completed (phone flow)"
     ACCOUNT_LOCKED = "ACCOUNT_LOCKED", "Account Locked"
+
+
+# All 64 districts of Bangladesh (delivery area dropdown).
+BD_DISTRICTS = [
+    "Bagerhat", "Bandarban", "Barguna", "Barishal", "Bhola", "Bogura", "Brahmanbaria",
+    "Chandpur", "Chapainawabganj", "Chattogram", "Chuadanga", "Cumilla", "Cox's Bazar",
+    "Dhaka", "Dinajpur", "Faridpur", "Feni", "Gaibandha", "Gazipur", "Gopalganj",
+    "Habiganj", "Jaipurhat", "Jamalpur", "Jashore", "Jhalokathi", "Jhenaidah",
+    "Khagrachari", "Khulna", "Kishoreganj", "Kurigram", "Kushtia", "Lalmonirhat",
+    "Laxmipur", "Madaripur", "Magura", "Manikganj", "Meherpur", "Moulvibazar",
+    "Munshiganj", "Mymensingh", "Naogaon", "Narail", "Narayanganj", "Narsingdi",
+    "Natore", "Netrakona", "Nilphamari", "Noakhali", "Pabna", "Panchagarh",
+    "Patuakhali", "Pirojpur", "Rajbari", "Rajshahi", "Rangamati", "Rangpur",
+    "Satkhira", "Shariatpur", "Sherpur", "Sirajganj", "Sunamganj", "Sylhet",
+    "Tangail", "Thakurgaon",
+]

@@ -4,15 +4,16 @@ Throttling and permissions applied per endpoint.
 """
 import logging
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 
-from .constants import AuditAction
+from .constants import AuditAction, BD_DISTRICTS
 from .exceptions import AccountLockedError, InvalidOTPError, InvalidRegistrationTokenError, OTPRateLimitError
-from .models import User
+from .models import User, UserAddress
 from .permissions import IsRegisteredUser, IsSuperAdmin
 from .serializers import (
     RequestOTPSerializer,
@@ -29,6 +30,7 @@ from .serializers import (
     UserMeSerializer,
     UserProfileUpdateSerializer,
     UserManagementSerializer,
+    UserAddressSerializer,
 )
 from .services import (
     request_otp_for_phone,
@@ -189,7 +191,6 @@ class RegisterCompleteView(APIView):
                 email=data.get("email") or None,
                 phone=data.get("phone") or None,
                 profile_picture=data.get("profile_picture"),
-                address=data.get("address") or None,
             )
         except InvalidRegistrationTokenError as e:
             return Response(
@@ -610,3 +611,30 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance.soft_delete()
+
+
+class UserAddressViewSet(viewsets.ModelViewSet):
+    """
+    User addresses – authenticated user only.
+    GET    /api/auth/addresses/            – list my addresses
+    GET    /api/auth/addresses/districts/  – list BD districts for delivery area dropdown
+    POST   /api/auth/addresses/            – add address
+    GET    /api/auth/addresses/<id>/       – get one address
+    PUT    /api/auth/addresses/<id>/       – full update
+    PATCH  /api/auth/addresses/<id>/       – partial update
+    DELETE /api/auth/addresses/<id>/       – delete address
+    """
+    serializer_class = UserAddressSerializer
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    http_method_names = ["get", "post", "put", "patch", "delete", "head", "options"]
+
+    def get_queryset(self):
+        return UserAddress.objects.filter(user=self.request.user).order_by("-is_default", "-created_at")
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    @action(detail=False, methods=["get"], url_path="districts")
+    def districts(self, request):
+        """Return list of Bangladesh districts for delivery area dropdown."""
+        return Response(BD_DISTRICTS, status=status.HTTP_200_OK)
