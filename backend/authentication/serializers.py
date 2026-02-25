@@ -205,17 +205,22 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
 # ---- Response ----
 
 class UserAddressSerializer(serializers.ModelSerializer):
-    """Read/write serializer for user address. Fields: full_name, phone, delivery_area (BD district), address, address_type (home/office/hometown), is_default."""
+    """Read/write serializer for user address. Fields: full_name, email, phone, gender, district, thana, address (full address), address_type, is_default."""
 
     address_type_display = serializers.CharField(source="get_address_type_display", read_only=True)
+    gender_display = serializers.CharField(source="get_gender_display", read_only=True)
 
     class Meta:
         model = UserAddress
         fields = (
             "id",
             "full_name",
+            "email",
             "phone",
-            "delivery_area",
+            "gender",
+            "gender_display",
+            "district",
+            "thana",
             "address",
             "address_type",
             "address_type_display",
@@ -223,13 +228,19 @@ class UserAddressSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "created_at", "updated_at", "address_type_display")
+        read_only_fields = ("id", "created_at", "updated_at", "address_type_display", "gender_display")
 
     def validate_full_name(self, value):
         v = (value or "").strip()
         if not v:
             raise serializers.ValidationError("Full name is required.")
         return v
+
+    def validate_email(self, value):
+        v = (value or "").strip().lower()
+        if v and len(v) > 255:
+            raise serializers.ValidationError("Email is too long.")
+        return v or ""
 
     def validate_phone(self, value):
         v = (value or "").strip()
@@ -240,20 +251,31 @@ class UserAddressSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid phone number.")
         return normalized
 
-    def validate_delivery_area(self, value):
-        v = (value or "").strip()
-        if not v:
-            raise serializers.ValidationError("Delivery area (district) is required.")
-        if v not in BD_DISTRICTS:
+    def validate_gender(self, value):
+        v = (value or "").strip().upper() or None
+        if v is not None and v not in dict(User.Gender.choices):
             raise serializers.ValidationError(
-                "Delivery area must be one of the 64 Bangladesh districts."
+                "Must be one of: MALE, FEMALE, OTHER."
             )
         return v
+
+    def validate_district(self, value):
+        v = (value or "").strip()
+        if not v:
+            raise serializers.ValidationError("District is required.")
+        if v not in BD_DISTRICTS:
+            raise serializers.ValidationError(
+                "District must be one of the 64 Bangladesh districts."
+            )
+        return v
+
+    def validate_thana(self, value):
+        return (value or "").strip()[:100]
 
     def validate_address(self, value):
         v = (value or "").strip()
         if not v:
-            raise serializers.ValidationError("Address is required.")
+            raise serializers.ValidationError("Full address is required.")
         return v
 
     def validate_address_type(self, value):

@@ -9,9 +9,8 @@ from datetime import timedelta
 
 from dotenv import load_dotenv
 
-load_dotenv()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR / ".env")
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production")
 # JWT HMAC-SHA256 requires key >= 32 bytes (RFC 7518); avoid InsecureKeyLengthWarning
@@ -101,8 +100,16 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+# Serve media in dev: set SERVE_MEDIA=true, or we default to True when localhost is in ALLOWED_HOSTS
+_serve_media_env = os.environ.get("SERVE_MEDIA", "").lower()
+if _serve_media_env in ("true", "1", "yes"):
+    SERVE_MEDIA = True
+elif _serve_media_env in ("false", "0", "no"):
+    SERVE_MEDIA = False
+else:
+    SERVE_MEDIA = "localhost" in ALLOWED_HOSTS or "127.0.0.1" in ALLOWED_HOSTS
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # REMOVED: The duplicate hardcoded ALLOWED_HOSTS that was overwriting Line 24
