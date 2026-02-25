@@ -2,11 +2,12 @@
 Custom User model with RBAC, soft delete, and indexed fields for My Pharma.
 Optimized for MySQL and high-traffic API usage.
 """
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 
-from .constants import UserRole, UserStatus
+from .constants import UserRole, UserStatus, BD_DISTRICTS
 
 
 class UserManager(BaseUserManager):
@@ -38,8 +39,8 @@ class UserManager(BaseUserManager):
 
 class User(AbstractBaseUser, PermissionsMixin):
     """
-    Custom User: username (display), email (optional), phone (optional), profile_picture, address, gender, date_of_birth, role, status, soft delete.
-    Indexed on email, phone for lookups and rate-limiting keys.
+    Custom User: username (display), email (optional), phone (optional), profile_picture, gender, date_of_birth, role, status, soft delete.
+    Addresses are stored in UserAddress (multiple per user). Indexed on email, phone for lookups and rate-limiting keys.
     """
     class Gender(models.TextChoices):
         MALE = "MALE", "Male"
@@ -50,7 +51,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length=255, unique=True, db_index=True)
     phone = models.CharField(max_length=20, blank=True, db_index=True)
     profile_picture = models.ImageField(upload_to="profile_pics/%Y/%m/", blank=True, null=True)
-    address = models.TextField(blank=True, default="")
     gender = models.CharField(max_length=10, choices=Gender.choices, blank=True, null=True)
     date_of_birth = models.DateField(null=True, blank=True)
     role = models.CharField(
@@ -119,6 +119,59 @@ class User(AbstractBaseUser, PermissionsMixin):
             self.save(update_fields=["locked_until", "failed_login_count"])
             return False
         return True
+
+
+# Choices for delivery_area: list of (value, label) for BD districts.
+BD_DISTRICT_CHOICES = [(d, d) for d in BD_DISTRICTS]
+
+
+class UserAddress(models.Model):
+    """
+    User address (multiple per user). Linked via AUTH_USER_MODEL.
+    Fields: full_name, phone, delivery_area (BD district), address (user input), address_type (home/office/hometown), is_default.
+    """
+    class AddressType(models.TextChoices):
+        HOME = "HOME", "Home"
+        OFFICE = "OFFICE", "Office"
+        HOMETOWN = "HOMETOWN", "Hometown"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="addresses",
+        db_index=True,
+    )
+    full_name = models.CharField(max_length=150)
+    phone = models.CharField(max_length=20)
+    delivery_area = models.CharField(
+        max_length=50,
+        choices=BD_DISTRICT_CHOICES,
+        help_text="District (Bangladesh)",
+    )
+    address = models.TextField(help_text="User-entered address (area, house, road, etc.)")
+    address_type = models.CharField(
+        max_length=20,
+        choices=AddressType.choices,
+        default=AddressType.HOME,
+        db_index=True,
+        help_text="Home, Office, or Hometown",
+    )
+    is_default = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "auth_user_address"
+        ordering = ["-is_default", "created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_default"]),
+            models.Index(fields=["user", "address_type"]),
+        ]
+        verbose_name = "user address"
+        verbose_name_plural = "user addresses"
+
+    def __str__(self):
+        return f"{self.get_address_type_display()}: {self.full_name}, {self.delivery_area}"
 
 
 class AuditLog(models.Model):

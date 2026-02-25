@@ -75,7 +75,7 @@ DATABASES = {
         "ENGINE": "django.db.backends.mysql",
         "NAME": os.environ.get("MYSQL_DATABASE", "my_pharma"),
         "USER": os.environ.get("MYSQL_USER", "root"),
-        "PASSWORD": os.environ.get("MYSQL_PASSWORD", ""),
+        "PASSWORD": (os.environ.get("MYSQL_PASSWORD", "") or "").strip().strip("'\""),
         "HOST": os.environ.get("MYSQL_HOST", "127.0.0.1"),
         "PORT": os.environ.get("MYSQL_PORT", "3306"),
         "OPTIONS": {
