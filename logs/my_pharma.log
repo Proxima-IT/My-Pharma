@@ -1,1 +1,5 @@
 2026-02-24 00:36:24,922 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-25 22:32:05,846 INFO authentication.services OTP requested for email (masked); resend count incremented.
+2026-02-25 22:33:16,400 INFO authentication.tasks OTP for 1464: 090861 (dev mode)
+2026-02-25 22:33:16,401 INFO authentication.services OTP requested for phone (masked); resend count incremented.
+2026-02-25 22:33:31,431 INFO authentication.services User 2 phone updated to 881728181464.

@@ -120,15 +120,15 @@ class UserAdmin(BaseUserAdmin):
 class UserAddressInline(admin.TabularInline):
     model = UserAddress
     extra = 0
-    fields = ("full_name", "phone", "delivery_area", "address", "address_type", "is_default")
+    fields = ("full_name", "email", "phone", "gender", "district", "thana", "address", "address_type", "is_default")
 
 
 @admin.register(UserAddress)
 class UserAddressAdmin(admin.ModelAdmin):
     """User addresses – SUPER_ADMIN only. Also editable via User inline."""
-    list_display = ("id", "user", "full_name", "phone", "delivery_area", "address_type", "is_default", "created_at")
-    list_filter = ("address_type", "delivery_area", "is_default")
-    search_fields = ("user__email", "user__phone", "full_name", "address", "delivery_area")
+    list_display = ("id", "user", "full_name", "email", "phone", "gender", "district", "thana", "address_type", "is_default", "created_at")
+    list_filter = ("address_type", "district", "gender", "is_default")
+    search_fields = ("user__email", "user__phone", "full_name", "email", "address", "district", "thana")
     raw_id_fields = ("user",)
     ordering = ("-created_at",)
 

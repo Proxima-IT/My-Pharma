@@ -616,8 +616,9 @@ class UserManagementViewSet(viewsets.ModelViewSet):
 class UserAddressViewSet(viewsets.ModelViewSet):
     """
     User addresses – authenticated user only.
+    Fields: full_name, email, phone, gender, district, thana, address (full address), address_type, is_default.
     GET    /api/auth/addresses/            – list my addresses
-    GET    /api/auth/addresses/districts/  – list BD districts for delivery area dropdown
+    GET    /api/auth/addresses/districts/  – list BD districts for dropdown
     POST   /api/auth/addresses/            – add address
     GET    /api/auth/addresses/<id>/       – get one address
     PUT    /api/auth/addresses/<id>/       – full update

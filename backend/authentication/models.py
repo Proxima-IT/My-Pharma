@@ -121,14 +121,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         return True
 
 
-# Choices for delivery_area: list of (value, label) for BD districts.
+# Choices for district: list of (value, label) for BD districts.
 BD_DISTRICT_CHOICES = [(d, d) for d in BD_DISTRICTS]
 
 
 class UserAddress(models.Model):
     """
     User address (multiple per user). Linked via AUTH_USER_MODEL.
-    Fields: full_name, phone, delivery_area (BD district), address (user input), address_type (home/office/hometown), is_default.
+    Fields: full_name, email, phone, gender, district, thana, full address, address_type, is_default.
     """
     class AddressType(models.TextChoices):
         HOME = "HOME", "Home"
@@ -142,13 +142,21 @@ class UserAddress(models.Model):
         db_index=True,
     )
     full_name = models.CharField(max_length=150)
+    email = models.EmailField(max_length=255, blank=True)
     phone = models.CharField(max_length=20)
-    delivery_area = models.CharField(
+    gender = models.CharField(
+        max_length=10,
+        choices=User.Gender.choices,
+        blank=True,
+        null=True,
+    )
+    district = models.CharField(
         max_length=50,
         choices=BD_DISTRICT_CHOICES,
         help_text="District (Bangladesh)",
     )
-    address = models.TextField(help_text="User-entered address (area, house, road, etc.)")
+    thana = models.CharField(max_length=100, blank=True, help_text="Thana / Upazila")
+    address = models.TextField(help_text="Full address (area, house, road, etc.)")
     address_type = models.CharField(
         max_length=20,
         choices=AddressType.choices,
@@ -171,7 +179,7 @@ class UserAddress(models.Model):
         verbose_name_plural = "user addresses"
 
     def __str__(self):
-        return f"{self.get_address_type_display()}: {self.full_name}, {self.delivery_area}"
+        return f"{self.get_address_type_display()}: {self.full_name}, {self.district}"
 
 
 class AuditLog(models.Model):

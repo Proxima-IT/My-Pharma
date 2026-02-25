@@ -1,6 +1,6 @@
 # Multiple User Addresses – CRUD API
 
-Each user can have **multiple saved addresses** with: **Full Name**, **Phone**, **Delivery area** (Bangladesh district dropdown), **Address** (user input), **Address type** (Home, Office, Hometown), and **Set default address**.
+Each user can have **multiple saved addresses** with: **Full Name**, **Email**, **Phone**, **Gender**, **District** (Bangladesh district dropdown), **Thana**, **Full address**, **Address type** (Home, Office, Hometown), and **Set default address**.
 
 **Base URL:** `/api/auth/addresses/`  
 **Auth:** All endpoints require `Authorization: Bearer <access_token>` (authenticated user). Users can only list, create, update, and delete **their own** addresses.
@@ -16,7 +16,7 @@ Returned in list, detail, and in `GET /api/auth/me/` under `user.addresses`:
 | `id`                  | integer | Address ID                                                           |
 | `full_name`           | string  | Full name for delivery                                               |
 | `phone`               | string  | Phone number (normalized, e.g. BD format)                            |
-| `delivery_area`       | string  | District name (one of 64 Bangladesh districts)                      |
+| `district`           | string  | District name (one of 64 Bangladesh districts)                      |
 | `address`             | string  | User-entered address (area, house, road, etc.)                        |
 | `address_type`        | string  | `HOME`, `OFFICE`, or `HOMETOWN`                                      |
 | `address_type_display`| string  | Display label: "Home", "Office", or "Hometown"                        |
@@ -28,9 +28,9 @@ Returned in list, detail, and in `GET /api/auth/me/` under `user.addresses`:
 
 ---
 
-## 2. Delivery area (Bangladesh districts) – GET `/api/auth/addresses/districts/`
+## 2. District list (Bangladesh districts) – GET `/api/auth/addresses/districts/`
 
-Returns the list of **64 Bangladesh districts** for the delivery area dropdown. Same auth as other address endpoints.
+Returns the list of **64 Bangladesh districts** for the district dropdown. Same auth as other address endpoints.
 
 **Request:** No body. Headers: `Authorization: Bearer <access_token>`.
 
@@ -52,7 +52,7 @@ Returns the list of **64 Bangladesh districts** for the delivery area dropdown. 
 ]
 ```
 
-Use these exact strings as `delivery_area` when creating or updating an address.
+Use these exact strings as `district` when creating or updating an address.
 
 ---
 
@@ -60,7 +60,7 @@ Use these exact strings as `delivery_area` when creating or updating an address.
 
 | Method | Path                              | Description                          |
 | ------ | --------------------------------- | ------------------------------------ |
-| GET    | `/api/auth/addresses/districts/`  | List BD districts (delivery area dropdown) |
+| GET    | `/api/auth/addresses/districts/`  | List BD districts (dropdown) |
 | GET    | `/api/auth/addresses/`            | List current user’s addresses        |
 | POST   | `/api/auth/addresses/`            | Create a new address                 |
 | GET    | `/api/auth/addresses/<id>/`       | Get one address by ID                |
@@ -88,7 +88,7 @@ Returns all addresses for the current user, ordered by default first, then by cr
     "id": 1,
     "full_name": "John Doe",
     "phone": "8801712345678",
-    "delivery_area": "Dhaka",
+    "district": "Dhaka",
     "address": "House 5, Road 12, Dhanmondi",
     "address_type": "HOME",
     "address_type_display": "Home",
@@ -100,7 +100,7 @@ Returns all addresses for the current user, ordered by default first, then by cr
     "id": 2,
     "full_name": "John Doe",
     "phone": "8801812345678",
-    "delivery_area": "Chattogram",
+    "district": "Chattogram",
     "address": "Office Tower, Agrabad",
     "address_type": "OFFICE",
     "address_type_display": "Office",
@@ -123,7 +123,7 @@ Creates a new address for the current user. The `user` is set by the server from
 | ---------------- | ------- | -------- | ----------------------------------------------------------------- |
 | `full_name`      | string  | Yes      | Full name for delivery                                            |
 | `phone`          | string  | Yes      | Phone number (min 10 digits; BD format supported)                |
-| `delivery_area`  | string  | Yes      | One of the 64 BD district names (use `GET .../districts/`)       |
+| `district`  | string  | Yes      | One of the 64 BD district names (use `GET .../districts/`)       |
 | `address`        | string  | Yes      | User-entered address (area, house, road, etc.)                     |
 | `address_type`   | string  | No*      | `HOME`, `OFFICE`, or `HOMETOWN`. Default: `HOME`                   |
 | `is_default`     | boolean | No       | Default: `false`. If `true`, others become non-default.            |
@@ -136,7 +136,7 @@ Creates a new address for the current user. The `user` is set by the server from
 {
   "full_name": "John Doe",
   "phone": "01712345678",
-  "delivery_area": "Dhaka",
+  "district": "Dhaka",
   "address": "House 5, Road 12, Dhanmondi",
   "address_type": "HOME",
   "is_default": true
@@ -149,7 +149,7 @@ Creates a new address for the current user. The `user` is set by the server from
 {
   "full_name": "John Doe",
   "phone": "01812345678",
-  "delivery_area": "Chattogram",
+  "district": "Chattogram",
   "address": "Office Tower, Agrabad CDA",
   "address_type": "OFFICE",
   "is_default": false
@@ -162,7 +162,7 @@ Creates a new address for the current user. The `user` is set by the server from
 {
   "full_name": "John Doe",
   "phone": "01912345678",
-  "delivery_area": "Sylhet",
+  "district": "Sylhet",
   "address": "Village: XYZ, Upazila: ABC",
   "address_type": "HOMETOWN"
 }
@@ -177,8 +177,8 @@ Creates a new address for the current user. The `user` is set by the server from
   "full_name": ["Full name is required."],
   "phone": ["Phone number is required."],
   "phone": ["Invalid phone number."],
-  "delivery_area": ["Delivery area (district) is required."],
-  "delivery_area": ["Delivery area must be one of the 64 Bangladesh districts."],
+  "district": ["District is required."],
+  "district": ["District must be one of the 64 Bangladesh districts."],
   "address": ["Address is required."],
   "address_type": ["Must be one of: HOME, OFFICE, HOMETOWN."]
 }
@@ -257,10 +257,10 @@ Permanently deletes the address. Only the owner can delete.
 | -------------- | ------ | ----------------------------- | ------------- |
 | Districts list | GET    | `/api/auth/addresses/districts/` | —             |
 | List           | GET    | `/api/auth/addresses/`        | —             |
-| Create         | POST   | `/api/auth/addresses/`        | full_name, phone, delivery_area, address, address_type, is_default |
+| Create         | POST   | `/api/auth/addresses/`        | full_name, phone, district, address, address_type, is_default |
 | Get one        | GET    | `/api/auth/addresses/<id>/`   | —             |
 | Full update    | PUT    | `/api/auth/addresses/<id>/`   | Full address  |
 | Partial update | PATCH  | `/api/auth/addresses/<id>/`   | Partial fields |
 | Delete         | DELETE | `/api/auth/addresses/<id>/`   | —             |
 
-**Fields:** 1) Full Name, 2) Phone number, 3) Delivery area (BD district – use districts endpoint for dropdown), 4) Address (user input), 5) Address type (Home, Office, Hometown), 6) Set default address (`is_default`).
+**Fields:** 1) Full Name, 2) Phone number, 3) District (BD district – use districts endpoint for dropdown), 4) Address (user input), 5) Address type (Home, Office, Hometown), 6) Set default address (`is_default`).

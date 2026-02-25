@@ -109,7 +109,7 @@ Endpoints that return tokens return:
 | PATCH  | `/api/auth/me/`                | Yes  | —                | Partial update profile (same fields as PUT)                                   |
 | GET    | `/api/auth/addresses/districts/` | Yes  | —                | List BD districts (delivery area dropdown)                                    |
 | GET    | `/api/auth/addresses/`         | Yes  | —                | List my addresses                                                             |
-| POST   | `/api/auth/addresses/`         | Yes  | —                | Create address (full_name, phone, delivery_area, address, address_type, is_default) |
+| POST   | `/api/auth/addresses/`         | Yes  | —                | Create address (full_name, email, phone, gender, district, thana, address, address_type, is_default) |
 | GET    | `/api/auth/addresses/<id>/`    | Yes  | —                | Get one address                                                               |
 | PUT    | `/api/auth/addresses/<id>/`    | Yes  | —                | Full update address                                                           |
 | PATCH  | `/api/auth/addresses/<id>/`    | Yes  | —                | Partial update address                                                        |
