@@ -100,10 +100,50 @@ class Product(models.Model):
     slug = models.SlugField(max_length=200, unique=True, db_index=True)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2)
+    original_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="MRP / list price for showing crossed-out price and discount percentage.",
+    )
     image = models.ImageField(upload_to="products/%Y/%m/", blank=True, null=True)
     quantity_in_stock = models.PositiveIntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(default=5)
     is_active = models.BooleanField(default=True)
+    # Medicine-specific: packaging and dosage
+    unit_label = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="e.g. '10 Tablets (1 Strip)', '20 Tablets (2 Strip)'.",
+    )
+    dosage = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Strength e.g. '50mg', '500mg', '5ml' for display and dosage selection.",
+    )
+    # Social proof
+    rating_avg = models.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        default=0,
+        help_text="Average rating 0–5 for display (e.g. 5.0).",
+    )
+    review_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of reviews (e.g. for '1.2k+ Reviews').",
+    )
+    # Structured content for details page
+    key_benefits = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of benefit strings for Description tab bullet points.",
+    )
+    specifications = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Key-value pairs for Specification tab (e.g. {'Dosage Form': 'Oral Tablet'}).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
        
@@ -127,6 +167,14 @@ class Product(models.Model):
     @property
     def is_low_stock(self):
         return self.quantity_in_stock <= self.low_stock_threshold
+
+    @property
+    def discount_percentage(self):
+        """Percentage off when original_price > price; None if no discount."""
+        if self.original_price and self.original_price > 0 and self.price < self.original_price:
+            from decimal import Decimal
+            return int((Decimal("1") - self.price / self.original_price) * 100)
+        return None
 
 
 class ProductImage(models.Model):

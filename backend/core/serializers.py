@@ -78,14 +78,18 @@ class ProductListSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
     is_low_stock = serializers.BooleanField(read_only=True)
+    discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = (
             "id", "name", "slug", "category", "category_name", "brand", "brand_name",
-            "ingredient", "ingredient_name", "requires_prescription", "price", "image",
+            "ingredient", "ingredient_name", "requires_prescription",
+            "price", "original_price", "discount_percentage", "image",
             "images",
+            "unit_label", "dosage",
+            "rating_avg", "review_count",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
             "created_at", "updated_at",
         )
@@ -99,14 +103,19 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
     is_low_stock = serializers.BooleanField(read_only=True)
+    discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = (
             "id", "name", "slug", "category", "category_name", "brand", "brand_name",
-            "ingredient", "ingredient_name", "requires_prescription", "description", "price", "image",
+            "ingredient", "ingredient_name", "requires_prescription",
+            "description", "price", "original_price", "discount_percentage", "image",
             "images",
+            "unit_label", "dosage",
+            "rating_avg", "review_count",
+            "key_benefits", "specifications",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
             "created_at", "updated_at",
         )
@@ -120,7 +129,10 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         model = Product
         fields = (
             "name", "slug", "category", "brand", "ingredient", "requires_prescription",
-            "description", "price", "image",
+            "description", "price", "original_price", "image",
+            "unit_label", "dosage",
+            "rating_avg", "review_count",
+            "key_benefits", "specifications",
             "quantity_in_stock", "low_stock_threshold", "is_active",
         )
         extra_kwargs = {"slug": {"required": False}}
@@ -260,6 +272,9 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
     product_slug = serializers.CharField(source="product.slug", read_only=True)
     product_description = serializers.CharField(source="product.description", read_only=True)
+    product_original_price = serializers.DecimalField(source="product.original_price", max_digits=12, decimal_places=2, read_only=True, allow_null=True)
+    product_unit_label = serializers.CharField(source="product.unit_label", read_only=True)
+    product_dosage = serializers.CharField(source="product.dosage", read_only=True)
     image_url = serializers.SerializerMethodField()
     current_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
     quantity_in_stock = serializers.IntegerField(source="product.quantity_in_stock", read_only=True)
@@ -273,6 +288,9 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_name",
             "product_slug",
             "product_description",
+            "product_original_price",
+            "product_unit_label",
+            "product_dosage",
             "image_url",
             "quantity",
             "price_at_order",
@@ -285,6 +303,9 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_name",
             "product_slug",
             "product_description",
+            "product_original_price",
+            "product_unit_label",
+            "product_dosage",
             "image_url",
             "current_price",
             "quantity_in_stock",
