@@ -90,7 +90,7 @@ class BrandViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [IsAuthenticated(), AllowAnyIncludingGuest()]
+            return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
 
@@ -105,14 +105,13 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [IsAuthenticated(), AllowAnyIncludingGuest()]
+            return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
 
 # ---- Product (catalog search & filter per PRODUCT_CATALOG.md). Inventory = quantity_in_stock ----
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category", "brand", "ingredient").prefetch_related("images").all()
-    permission_classes = [IsAuthenticated]
     filterset_class = ProductFilter
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
@@ -126,7 +125,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [IsAuthenticated(), AllowAnyIncludingGuest()]
+            return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
     def get_queryset(self):
