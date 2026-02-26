@@ -9,6 +9,12 @@ MIN_ORDER_BDT = Decimal("100.00")
 FREE_DELIVERY_ABOVE_BDT = Decimal("500.00")
 PRICE_LOCK_HOURS = 24
 
+# Default delivery fee when zone unknown (e.g. cart summary without address)
+DEFAULT_DELIVERY_FEE_BDT = Decimal("150.00")
+# Districts that count as CITY (BDT 50) / SUBURBS (BDT 100); rest = OTHER (BDT 150)
+DELIVERY_ZONE_CITY_DISTRICTS = ("Dhaka", "Chattogram", "Chittagong")
+DELIVERY_ZONE_SUBURBS_DISTRICTS = ()
+
 # ---- Delivery (BDT) ----
 DELIVERY_ZONE_CITY = "CITY"
 DELIVERY_ZONE_SUBURBS = "SUBURBS"

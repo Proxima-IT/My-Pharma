@@ -9,8 +9,12 @@ from .models import (
     Category,
     Ingredient,
     Product,
+    ProductImage,
     Order,
     OrderItem,
+    Cart,
+    CartItem,
+    Coupon,
     Prescription,
     PrescriptionItem,
     Consultation,
@@ -232,6 +236,121 @@ class OrderStatusSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ("status",)
+
+
+# ---- Cart ----
+def _product_image_url(product, request=None):
+    """Single image URL for product (primary image or first gallery image)."""
+    if product.image:
+        url = product.image.url
+        if request:
+            url = request.build_absolute_uri(url)
+        return url
+    for img in product.images.all()[:1]:
+        if img.image:
+            url = img.image.url
+            if request:
+                url = request.build_absolute_uri(url)
+            return url
+    return None
+
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source="product.id", read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_slug = serializers.CharField(source="product.slug", read_only=True)
+    product_description = serializers.CharField(source="product.description", read_only=True)
+    image_url = serializers.SerializerMethodField()
+    current_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
+    quantity_in_stock = serializers.IntegerField(source="product.quantity_in_stock", read_only=True)
+
+    class Meta:
+        model = CartItem
+        fields = (
+            "id",
+            "product",
+            "product_id",
+            "product_name",
+            "product_slug",
+            "product_description",
+            "image_url",
+            "quantity",
+            "price_at_order",
+            "current_price",
+            "quantity_in_stock",
+        )
+        read_only_fields = (
+            "id",
+            "price_at_order",
+            "product_name",
+            "product_slug",
+            "product_description",
+            "image_url",
+            "current_price",
+            "quantity_in_stock",
+        )
+
+    def get_image_url(self, obj):
+        return _product_image_url(obj.product, self.context.get("request"))
+
+
+class AddToCartSerializer(serializers.Serializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True))
+    quantity = serializers.IntegerField(min_value=1)
+
+    def validate(self, attrs):
+        product = attrs["product"]
+        qty = attrs["quantity"]
+        if qty > product.quantity_in_stock:
+            raise serializers.ValidationError(
+                {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"}
+            )
+        return attrs
+
+
+class UpdateCartItemSerializer(serializers.Serializer):
+    quantity = serializers.IntegerField(min_value=0)
+
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    summary = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Cart
+        fields = ("id", "items", "summary", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def get_summary(self, obj):
+        from .services import get_cart_summary, validate_coupon, get_delivery_zone_for_district
+        request = self.context.get("request")
+        delivery_zone = None
+        coupon = None
+        if request:
+            address_id = request.query_params.get("address_id") or request.data.get("address_id")
+            if address_id:
+                try:
+                    from authentication.models import UserAddress
+                    addr = UserAddress.objects.filter(user=request.user, pk=address_id).first()
+                    if addr:
+                        delivery_zone = get_delivery_zone_for_district(addr.district)
+                except Exception:
+                    pass
+            code = request.query_params.get("coupon_code") or request.data.get("coupon_code")
+            if code:
+                items = obj.items.select_related("product").all()
+                subtotal = sum((i.price_at_order * i.quantity for i in items), Decimal("0"))
+                try:
+                    coupon, _ = validate_coupon(code, subtotal)
+                except ValueError:
+                    pass
+        return get_cart_summary(obj, delivery_zone=delivery_zone, coupon=coupon)
+
+
+class PlaceOrderFromCartSerializer(serializers.Serializer):
+    shipping_address_id = serializers.IntegerField(required=True, help_text="UserAddress id for shipping")
+    coupon_code = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
 
 
 # ---- Prescription ----

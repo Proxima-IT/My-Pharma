@@ -21,5 +21,5 @@ if _serve_media:
     if media_prefix and not media_prefix.endswith("/"):
         media_prefix += "/"
     urlpatterns += [
-        re_path(r"^/?%s(?P<path>.*)$" % re.escape(media_prefix), serve, {"document_root": media_root}),
+        re_path(r"^%s(?P<path>.*)$" % re.escape(media_prefix), serve, {"document_root": media_root}),
     ]

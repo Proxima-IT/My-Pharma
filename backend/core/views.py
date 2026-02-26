@@ -1,12 +1,7 @@
 """
 Core API views with RBAC.
-- Products, Prescriptions (verify), Inventory, Orders (all): IsPharmacyAdminOrSuper
-- Prescriptions (list/retrieve): IsRegisteredUser; users see only own, Pharmacy/Super see all
-- Orders (own): IsRegisteredUser + IsOwnerOrReadOnly
-- Consultations (manage): IsDoctorOrSuper; (request): IsRegisteredUser
-- CMS: IsSuperAdmin (full) or IsPharmacyAdminOrSuper (limited)
-- Purchase (place order), Upload Prescription: IsRegisteredUserOnly
 """
+from decimal import Decimal
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -26,7 +21,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page
+from .models import Brand, Category, Ingredient, Product, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -38,6 +33,11 @@ from .serializers import (
     OrderSerializer,
     OrderWriteSerializer,
     OrderStatusSerializer,
+    CartSerializer,
+    CartItemSerializer,
+    AddToCartSerializer,
+    UpdateCartItemSerializer,
+    PlaceOrderFromCartSerializer,
     PrescriptionSerializer,
     PrescriptionUploadSerializer,
     PrescriptionVerifySerializer,
@@ -45,6 +45,13 @@ from .serializers import (
     ConsultationRequestSerializer,
     ConsultationResponseSerializer,
     PageSerializer,
+)
+from .services import (
+    get_or_create_cart,
+    get_cart_summary,
+    validate_coupon,
+    get_delivery_zone_for_district,
+    validate_min_order,
 )
 from .filters import ProductFilter
 
@@ -187,6 +194,145 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
+
+
+# ---- Cart: one cart per user; add, update/remove items, summary, place order ----
+class CartViewSet(viewsets.GenericViewSet):
+    """GET /api/cart/ – my cart with items and summary. POST add, POST place-order."""
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    serializer_class = CartSerializer
+
+    def list(self, request, *args, **kwargs):
+        cart = get_or_create_cart(request.user)
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+
+    @action(detail=False, methods=["post"], url_path="add")
+    def add(self, request):
+        """POST /api/cart/add/ – body: { product: id, quantity: int }."""
+        serializer = AddToCartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.validated_data["product"]
+        quantity = serializer.validated_data["quantity"]
+        cart = get_or_create_cart(request.user)
+        from .models import CartItem
+        item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            defaults={"quantity": quantity, "price_at_order": product.price},
+        )
+        if not created:
+            item.quantity += quantity
+            if item.quantity > product.quantity_in_stock:
+                return Response(
+                    {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            item.save(update_fields=["quantity"])
+        cart.save(update_fields=["updated_at"])
+        cart.refresh_from_db()
+        return Response(CartSerializer(cart, context={"request": request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="place-order")
+    def place_order(self, request):
+        """POST /api/cart/place-order/ – body: { shipping_address_id: int, coupon_code?: str, notes?: str }."""
+        cart = get_or_create_cart(request.user)
+        serializer = PlaceOrderFromCartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        address_id = serializer.validated_data["shipping_address_id"]
+        coupon_code = (serializer.validated_data.get("coupon_code") or "").strip()
+        notes = (serializer.validated_data.get("notes") or "").strip()
+
+        from authentication.models import UserAddress
+        address = UserAddress.objects.filter(user=request.user, pk=address_id).first()
+        if not address:
+            return Response(
+                {"shipping_address_id": "Address not found or not yours."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        shipping_text = f"{address.full_name}, {address.email}, {address.phone}, {address.district}, {address.thana}, {address.address}"
+
+        delivery_zone = get_delivery_zone_for_district(address.district)
+        coupon = None
+        if coupon_code:
+            items = cart.items.select_related("product").all()
+            subtotal = sum((i.price_at_order * i.quantity for i in items), Decimal("0"))
+            try:
+                coupon, _ = validate_coupon(coupon_code, subtotal)
+            except ValueError as e:
+                return Response({"coupon_code": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        summary = get_cart_summary(cart, delivery_zone=delivery_zone, coupon=coupon)
+        if not validate_min_order(summary["subtotal"]):
+            return Response(
+                {"detail": f"Minimum order amount is ৳100. Subtotal: ৳{summary['subtotal']}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Check stock and prescription if needed
+        for item in cart.items.select_related("product").all():
+            if item.quantity > item.product.quantity_in_stock:
+                return Response(
+                    {"detail": f"Insufficient stock for {item.product.name}. Available: {item.product.quantity_in_stock}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        order = Order.objects.create(
+            user=request.user,
+            status=Order.Status.PENDING,
+            total=summary["total"],
+            shipping_address=shipping_text,
+            notes=notes,
+        )
+        for item in cart.items.select_related("product").all():
+            OrderItem.objects.create(
+                order=order,
+                product=item.product,
+                quantity=item.quantity,
+                price_at_order=item.price_at_order,
+            )
+            item.product.quantity_in_stock -= item.quantity
+            item.product.save(update_fields=["quantity_in_stock"])
+
+        if coupon:
+            coupon.times_used += 1
+            coupon.save(update_fields=["times_used"])
+
+        cart.items.all().delete()
+        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+
+class CartItemViewSet(viewsets.GenericViewSet):
+    """PATCH /api/cart/items/<id>/ – update quantity. DELETE – remove item."""
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    serializer_class = CartItemSerializer
+
+    def get_queryset(self):
+        cart = get_or_create_cart(self.request.user)
+        return CartItem.objects.filter(cart=cart).select_related("product")
+
+    def partial_update(self, request, pk=None):
+        item = self.get_object()
+        serializer = UpdateCartItemSerializer(data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        qty = serializer.validated_data.get("quantity")
+        if qty is not None:
+            if qty == 0:
+                item.delete()
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            if qty > item.product.quantity_in_stock:
+                return Response(
+                    {"quantity": f"Insufficient stock. Available: {item.product.quantity_in_stock}"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            item.quantity = qty
+            item.save(update_fields=["quantity"])
+        return Response(CartItemSerializer(item, context={"request": request}).data)
+
+    def destroy(self, request, pk=None):
+        item = self.get_object()
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 # ---- Prescription: Pharmacy/Super list & verify; User upload (flow: PENDING -> APPROVED/REJECTED; APPROVED -> USED when linked to order) ----
