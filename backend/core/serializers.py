@@ -333,6 +333,16 @@ class UpdateCartItemSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=0)
 
 
+class CartSummarySerializer(serializers.Serializer):
+    """Nested object for cart summary: subtotal, delivery_fee, discount_amount, total_payable."""
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
+    delivery_fee = serializers.DecimalField(max_digits=12, decimal_places=2)
+    discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    total_payable = serializers.DecimalField(max_digits=12, decimal_places=2)
+    discount_display = serializers.CharField(allow_null=True, required=False)
+    coupon_code = serializers.CharField(allow_null=True, required=False)
+
+
 class CartSerializer(serializers.ModelSerializer):
     items = CartItemSerializer(many=True, read_only=True)
     summary = serializers.SerializerMethodField()
@@ -365,7 +375,8 @@ class CartSerializer(serializers.ModelSerializer):
                     coupon, _ = validate_coupon(code, subtotal)
                 except ValueError:
                     pass
-        return get_cart_summary(obj, delivery_zone=delivery_zone, coupon=coupon)
+        data = get_cart_summary(obj, delivery_zone=delivery_zone, coupon=coupon)
+        return data
 
 
 class PlaceOrderFromCartSerializer(serializers.Serializer):

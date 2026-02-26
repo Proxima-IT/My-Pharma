@@ -103,32 +103,32 @@ def validate_coupon(code: str, subtotal: Decimal):
 
 def get_cart_summary(cart, delivery_zone: str = None, coupon=None):
     """
-    Return dict: subtotal, delivery_fee, discount, discount_display, total, coupon_code.
+    Return dict: subtotal, delivery_fee, discount_amount, total_payable, discount_display, coupon_code.
     """
     items = cart.items.select_related("product").all()
     subtotal = sum((item.price_at_order * item.quantity for item in items), Decimal("0"))
     delivery_fee = get_delivery_fee(subtotal, delivery_zone)
     before_discount = subtotal + delivery_fee
-    discount = Decimal("0")
+    discount_amount = Decimal("0")
     discount_display = None
     coupon_code = None
     if coupon:
         if isinstance(coupon, Coupon):
             if coupon.discount_type == Coupon.DiscountType.PERCENT:
-                discount = (before_discount * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
+                discount_amount = (before_discount * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
                 discount_display = f"-{coupon.discount_value}%"
             else:
-                discount = min(coupon.discount_value, before_discount)
+                discount_amount = min(coupon.discount_value, before_discount)
                 discount_display = f"-৳{coupon.discount_value}"
             coupon_code = coupon.code
         else:
             coupon_code = str(coupon)
-    total = max(Decimal("0"), before_discount - discount)
+    total_payable = max(Decimal("0"), before_discount - discount_amount)
     return {
         "subtotal": subtotal,
         "delivery_fee": delivery_fee,
-        "discount": discount,
+        "discount_amount": discount_amount,
+        "total_payable": total_payable,
         "discount_display": discount_display,
-        "total": total,
         "coupon_code": coupon_code,
     }

@@ -268,8 +268,6 @@ class CartViewSet(viewsets.GenericViewSet):
                 {"detail": f"Minimum order amount is ৳100. Subtotal: ৳{summary['subtotal']}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-
-        # Check stock and prescription if needed
         for item in cart.items.select_related("product").all():
             if item.quantity > item.product.quantity_in_stock:
                 return Response(
@@ -280,7 +278,7 @@ class CartViewSet(viewsets.GenericViewSet):
         order = Order.objects.create(
             user=request.user,
             status=Order.Status.PENDING,
-            total=summary["total"],
+            total=summary["total_payable"],
             shipping_address=shipping_text,
             notes=notes,
         )
