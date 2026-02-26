@@ -138,6 +138,40 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         extra_kwargs = {"slug": {"required": False}}
 
 
+class ProductImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductImage
+        fields = ("id", "image", "image_url", "order", "created_at")
+        read_only_fields = ("id", "created_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+
+class ProductImageCreateSerializer(serializers.Serializer):
+    image = serializers.ImageField(required=True)
+    order = serializers.IntegerField(default=0, min_value=0)
+
+
+class InventoryProductSerializer(serializers.ModelSerializer):
+    """Product fields for pharmacy inventory list: stock and threshold."""
+    is_low_stock = serializers.BooleanField(read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True, allow_null=True)
+    brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
+
+    class Meta:
+        model = Product
+        fields = (
+            "id", "name", "slug", "category", "category_name", "brand", "brand_name",
+            "quantity_in_stock", "low_stock_threshold", "is_low_stock",
+            "is_active", "updated_at",
+        )
+
+
 # ---- Order ----
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)

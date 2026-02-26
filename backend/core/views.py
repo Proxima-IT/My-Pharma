@@ -21,7 +21,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon
+from .models import Brand, Category, Ingredient, Product, ProductImage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -30,6 +30,9 @@ from .serializers import (
     ProductListSerializer,
     ProductDetailSerializer,
     ProductWriteSerializer,
+    ProductImageSerializer,
+    ProductImageCreateSerializer,
+    InventoryProductSerializer,
     OrderSerializer,
     OrderWriteSerializer,
     OrderStatusSerializer,
@@ -56,15 +59,19 @@ from .services import (
 from .filters import ProductFilter
 
 
-# ---- Category (hierarchy: parent / children). Pharmacy Admin / Super ----
+# ---- Category (hierarchy: parent / children). List/tree: anyone; CRUD: Pharmacy Admin / Super ----
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.select_related("parent").prefetch_related("children").all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
     filterset_fields = ["is_active", "parent"]
     search_fields = ["name", "slug"]
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve", "tree"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
     def get_serializer_class(self):
         if self.action == "tree":
@@ -134,19 +141,100 @@ class ProductViewSet(viewsets.ModelViewSet):
             return qs
         return qs.filter(is_active=True)
 
-    @action(detail=True, methods=["patch"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper])
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+        return Response(ProductDetailSerializer(product, context={"request": request}).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        product = serializer.save()
+        return Response(ProductDetailSerializer(product, context={"request": request}).data)
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs["partial"] = True
+        return self.update(request, *args, **kwargs)
+
+    @action(detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="images")
+    def images(self, request, slug=None):
+        """GET: list gallery images. POST: add gallery image (multipart: image, optional order)."""
+        product = self.get_object()
+        if request.method == "GET":
+            qs = product.images.all().order_by("order", "id")
+            return Response(ProductImageSerializer(qs, many=True, context={"request": request}).data)
+        serializer = ProductImageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        img = ProductImage.objects.create(
+            product=product,
+            image=serializer.validated_data["image"],
+            order=serializer.validated_data.get("order", 0),
+        )
+        return Response(ProductImageSerializer(img, context={"request": request}).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["delete"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="images/(?P<image_pk>[^/.]+)")
+    def delete_image(self, request, slug=None, image_pk=None):
+        """Delete a gallery image by id."""
+        product = self.get_object()
+        img = ProductImage.objects.filter(product=product, pk=image_pk).first()
+        if not img:
+            return Response({"detail": "Image not found."}, status=status.HTTP_404_NOT_FOUND)
+        img.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="inventory-list")
+    def inventory_list(self, request):
+        """GET: paginated list of products with inventory fields for pharmacy admin."""
+        qs = Product.objects.select_related("category", "brand").all().order_by("-updated_at")
+        qs = self.filter_queryset(qs)
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = InventoryProductSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        serializer = InventoryProductSerializer(qs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["patch"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="inventory")
     def inventory(self, request, slug=None):
-        """Update quantity_in_stock (Manage Inventory)."""
+        """PATCH: update quantity_in_stock and/or low_stock_threshold."""
         product = self.get_object()
         qty = request.data.get("quantity_in_stock")
-        if qty is None:
-            return Response({"quantity_in_stock": ["This field is required."]}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            product.quantity_in_stock = int(qty)
-            product.save(update_fields=["quantity_in_stock", "updated_at"])
-        except (TypeError, ValueError):
-            return Response({"quantity_in_stock": ["Must be a non-negative integer."]}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(ProductDetailSerializer(product).data)
+        threshold = request.data.get("low_stock_threshold")
+        if qty is None and threshold is None:
+            return Response(
+                {"detail": "Provide at least one of quantity_in_stock or low_stock_threshold."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        updates = {}
+        if qty is not None:
+            try:
+                qty = int(qty)
+                if qty < 0:
+                    raise ValueError("Must be non-negative.")
+                updates["quantity_in_stock"] = qty
+            except (TypeError, ValueError):
+                return Response(
+                    {"quantity_in_stock": "Must be a non-negative integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        if threshold is not None:
+            try:
+                threshold = int(threshold)
+                if threshold < 0:
+                    raise ValueError("Must be non-negative.")
+                updates["low_stock_threshold"] = threshold
+            except (TypeError, ValueError):
+                return Response(
+                    {"low_stock_threshold": "Must be a non-negative integer."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        if updates:
+            Product.objects.filter(pk=product.pk).update(**updates, updated_at=timezone.now())
+            product.refresh_from_db()
+        return Response(ProductDetailSerializer(product, context={"request": request}).data)
 
 
 # ---- Order: Pharmacy/Super see all; User sees own. Purchase = create (RegisteredUserOnly) ----
