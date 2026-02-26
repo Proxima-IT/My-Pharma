@@ -11,3 +11,10 @@ export const USER_ENDPOINTS = {
   PRESCRIPTIONS: `${API_BASE_URL}/prescriptions/`,
   ADDRESSES: `${API_BASE_URL}/auth/addresses/`,
 };
+
+export const CART_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/cart/`,
+  ADD: `${API_BASE_URL}/cart/add/`,
+  ITEMS: `${API_BASE_URL}/cart/items/`,
+  PLACE_ORDER: `${API_BASE_URL}/cart/place-order/`,
+};

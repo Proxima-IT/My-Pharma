@@ -1,53 +1,59 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { IoPricetagOutline } from 'react-icons/io5';
 import { FiChevronRight, FiCheck } from 'react-icons/fi';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 
-const OrderSummaryCard = () => {
-  // 1. Local State for Coupon
+const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
+  const router = useRouter();
   const [couponCode, setCouponCode] = useState('');
   const [isApplied, setIsApplied] = useState(false);
   const [couponError, setCouponError] = useState('');
 
-  // 2. Mock Cart Data (This represents what would be in your global Cart State)
-  const cartItems = [
-    { id: 1, name: 'A-fenac 50', price: 1250, quantity: 2 },
-    { id: 2, name: 'Monalast 10', price: 430, quantity: 1 },
-  ];
-
-  const deliveryFee = 150;
-
-  // 3. Dynamic Calculations based on cartItems
-  const { subtotal, discountAmount, total } = useMemo(() => {
-    // Calculate Subtotal: Sum of (Price * Quantity)
-    const calcSubtotal = cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
+  // 1. Dynamic Calculation Fallback
+  // If the API summary is not yet providing a full breakdown, we calculate it from the items
+  const calculatedValues = useMemo(() => {
+    const subtotal = items.reduce(
+      (acc, item) => acc + parseFloat(item.current_price) * item.quantity,
       0,
     );
 
-    // Calculate Discount (e.g., 15% if coupon "SAVE15" is applied)
-    const calcDiscount = isApplied ? calcSubtotal * 0.15 : 0;
+    // Mock logic for UI-only fields
+    const deliveryFee = 150;
+    const discountAmount = isApplied ? subtotal * 0.15 : 0;
+    const total = subtotal + deliveryFee - discountAmount;
 
-    // Final Total
-    const calcTotal = calcSubtotal + deliveryFee - calcDiscount;
+    return { subtotal, deliveryFee, discountAmount, total };
+  }, [items, isApplied]);
 
-    return {
-      subtotal: calcSubtotal,
-      discountAmount: calcDiscount,
-      total: calcTotal,
-    };
-  }, [isApplied]); // In real app, add cartItems to dependency array
+  // 2. Mapping API Summary
+  // We prioritize API data if it's an object, otherwise use our calculations
+  const displayData = {
+    subtotal: summary?.subtotal || calculatedValues.subtotal,
+    deliveryFee: summary?.delivery_fee || calculatedValues.deliveryFee,
+    discount: summary?.discount_amount || calculatedValues.discountAmount,
+    total: summary?.total_payable || calculatedValues.total,
+  };
 
-  // 4. Handlers
   const handleApplyCoupon = () => {
+    // In a real app, this would trigger useCart's refresh with ?coupon_code=...
     if (couponCode.toUpperCase() === 'SAVE15') {
       setIsApplied(true);
       setCouponError('');
     } else {
       setCouponError('Invalid coupon code (Try SAVE15)');
       setIsApplied(false);
+    }
+  };
+
+  const handleAction = () => {
+    if (onPlaceOrder) {
+      onPlaceOrder();
+    } else {
+      // If on Cart page, navigate to Checkout
+      router.push('/checkout');
     }
   };
 
@@ -59,13 +65,19 @@ const OrderSummaryCard = () => {
 
       {/* Dynamic Line Items */}
       <div className="space-y-4 mb-6">
-        <SummaryRow label="Subtotal" value={formatCurrency(subtotal)} />
-        <SummaryRow label="Delivery Fee" value={formatCurrency(deliveryFee)} />
+        <SummaryRow
+          label="Subtotal"
+          value={formatCurrency(displayData.subtotal)}
+        />
+        <SummaryRow
+          label="Delivery Fee"
+          value={formatCurrency(displayData.deliveryFee)}
+        />
 
-        {isApplied && (
+        {(isApplied || displayData.discount > 0) && (
           <SummaryRow
-            label="Coupon Discount (15%)"
-            value={`-${formatCurrency(discountAmount)}`}
+            label="Discount"
+            value={`-${formatCurrency(displayData.discount)}`}
             isDiscount
           />
         )}
@@ -79,15 +91,17 @@ const OrderSummaryCard = () => {
           Total
         </span>
         <span className="text-3xl font-bold text-(--color-primary-500)">
-          {formatCurrency(total)}
+          {formatCurrency(displayData.total)}
         </span>
       </div>
 
-      {/* Interactive Coupon Section */}
+      {/* Coupon Section */}
       <div className="space-y-3 mb-8">
         <div className="flex items-center gap-2">
           <div
-            className={`flex items-center gap-3 flex-1 bg-gray-50 border rounded-full px-5 py-3 transition-all ${couponError ? 'border-red-200' : 'border-gray-100'}`}
+            className={`flex items-center gap-3 flex-1 bg-gray-50 border rounded-full px-5 py-3 transition-all ${
+              couponError ? 'border-red-200' : 'border-gray-100'
+            }`}
           >
             <IoPricetagOutline
               className={`-rotate-90 ${isApplied ? 'text-(--success-500)' : 'text-gray-400'}`}
@@ -120,23 +134,20 @@ const OrderSummaryCard = () => {
         {couponError && (
           <p className="text-xs font-bold text-red-500 ml-5">{couponError}</p>
         )}
-        {isApplied && (
-          <p className="text-xs font-bold text-(--success-500) ml-5 uppercase tracking-tighter">
-            Discount Applied!
-          </p>
-        )}
       </div>
 
-      {/* Place Order Button */}
-      <button className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer">
-        <span>Place Order</span>
+      {/* Action Button (Place Order or Checkout) */}
+      <button
+        onClick={handleAction}
+        className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer"
+      >
+        <span>{onPlaceOrder ? 'Confirm Order' : 'Place Order'}</span>
         <FiChevronRight size={20} strokeWidth={3} />
       </button>
     </div>
   );
 };
 
-// Helper Component
 const SummaryRow = ({ label, value, isDiscount = false }) => (
   <div className="flex items-center justify-between w-full">
     <span className="text-[14px] font-medium text-gray-500 uppercase tracking-wide">

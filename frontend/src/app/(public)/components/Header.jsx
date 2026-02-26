@@ -14,6 +14,8 @@ import Logo from './Logo';
 import MobileDrawer from './MobileDrawer';
 import AddressSelectorPopup from './AddressSelectorPopup';
 import { uploadPrescriptionApi } from '../../(user)/api/prescriptionApi';
+import { useAddress } from '../../(user)/hooks/useAddress';
+import { useCart } from '../hooks/useCart';
 
 const Header = () => {
   const router = useRouter();
@@ -21,6 +23,14 @@ const Header = () => {
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+
+  // 1. Real Data Hooks
+  const { addresses } = useAddress();
+  const { items } = useCart();
+
+  // 2. Logic for dynamic display
+  const activeAddress = addresses?.find(a => a.is_default) || addresses?.[0];
+  const cartCount = items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
 
   // State for dynamic search
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,7 +45,6 @@ const Header = () => {
   const handleSearch = e => {
     if (e) e.preventDefault();
     if (searchQuery.trim()) {
-      // Navigate to products page with search query
       router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
     }
   };
@@ -61,7 +70,6 @@ const Header = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validation
     const allowedTypes = [
       'image/png',
       'image/jpeg',
@@ -82,13 +90,11 @@ const Header = () => {
     try {
       setIsUploading(true);
       const token = localStorage.getItem('access_token');
-
       const formData = new FormData();
       formData.append('file', file);
       formData.append('title', `Uploaded_${new Date().getTime()}`);
 
       await uploadPrescriptionApi(token, formData);
-
       alert('Prescription uploaded successfully!');
       router.push('/user/prescriptions');
     } catch (err) {
@@ -133,7 +139,6 @@ const Header = () => {
 
       {/* MAIN NAV */}
       <div className="py-0 md:py-4 px-6 md:px-8 flex flex-col lg:flex-row items-center gap-2 md:gap-4 lg:gap-10 justify-center w-full">
-        {/* LEFT – logo */}
         <div className="flex w-full lg:w-auto gap-3 justify-between items-center">
           <div className="block lg:hidden ">
             <MobileDrawer />
@@ -156,7 +161,6 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* MIDDLE – Search & Upload */}
         <div className="flex items-center gap-3 w-full min-w-0 flex-1 order-last lg:order-none">
           <div className="shrink-0 hidden md:block">
             <button
@@ -178,7 +182,6 @@ const Header = () => {
             />
           </div>
 
-          {/* Dynamic Search Bar */}
           <form onSubmit={handleSearch} className="relative flex-1 w-full">
             <input
               type="text"
@@ -196,9 +199,8 @@ const Header = () => {
           </form>
         </div>
 
-        {/* RIGHT – icons + location */}
         <div className="flex items-center justify-center lg:justify-end gap-4 md:gap-6 w-full lg:w-auto shrink-0">
-          {/* Location */}
+          {/* Dynamic Location */}
           <div
             className="flex items-center gap-2 cursor-pointer group"
             onClick={handleLocationClick}
@@ -208,7 +210,11 @@ const Header = () => {
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
                 Delivery to
               </p>
-              <p className="text-sm font-bold text-gray-800">Kushtia, Khulna</p>
+              <p className="text-sm font-bold text-gray-800 truncate max-w-[120px]">
+                {activeAddress
+                  ? `${activeAddress.thana || activeAddress.district}`
+                  : 'Select Location'}
+              </p>
             </div>
             <svg
               className={`w-5 h-5 text-gray-400 transition-transform ${isLocationOpen ? 'rotate-180' : ''}`}
@@ -225,7 +231,6 @@ const Header = () => {
             </svg>
           </div>
 
-          {/* Icons */}
           <div className="flex items-center gap-3 md:gap-4">
             <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
               <FiBell size={20} />
@@ -233,9 +238,11 @@ const Header = () => {
             <Link href="/cart">
               <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
                 <BsCart3 size={20} />
-                <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                  5
-                </span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
               </div>
             </Link>
 
