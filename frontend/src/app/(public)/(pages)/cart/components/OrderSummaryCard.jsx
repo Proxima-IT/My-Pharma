@@ -1,50 +1,68 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { IoPricetagOutline } from 'react-icons/io5';
 import { FiChevronRight, FiCheck } from 'react-icons/fi';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 
-const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
+const OrderSummaryCard = ({ summary, items = [], onPlaceOrder, refresh }) => {
   const router = useRouter();
   const [couponCode, setCouponCode] = useState('');
-  const [isApplied, setIsApplied] = useState(false);
   const [couponError, setCouponError] = useState('');
 
-  // 1. Dynamic Calculation Fallback
-  // If the API summary is not yet providing a full breakdown, we calculate it from the items
+  // 1. Sync local input with backend applied coupon (if any)
+  useEffect(() => {
+    if (summary?.coupon_code) {
+      setCouponCode(summary.coupon_code);
+    }
+  }, [summary]);
+
+  const isApplied = !!summary?.coupon_code;
+
+  // 2. Dynamic Calculation Fallback (Used only if backend summary is missing)
   const calculatedValues = useMemo(() => {
     const subtotal = items.reduce(
       (acc, item) => acc + parseFloat(item.current_price) * item.quantity,
       0,
     );
-
-    // Mock logic for UI-only fields
     const deliveryFee = 150;
-    const discountAmount = isApplied ? subtotal * 0.15 : 0;
-    const total = subtotal + deliveryFee - discountAmount;
+    const discountAmount = 0;
+    const total = subtotal + deliveryFee;
 
     return { subtotal, deliveryFee, discountAmount, total };
-  }, [items, isApplied]);
+  }, [items]);
 
-  // 2. Mapping API Summary
-  // We prioritize API data if it's an object, otherwise use our calculations
+  // 3. Mapping API Summary Data
   const displayData = {
-    subtotal: summary?.subtotal || calculatedValues.subtotal,
-    deliveryFee: summary?.delivery_fee || calculatedValues.deliveryFee,
-    discount: summary?.discount_amount || calculatedValues.discountAmount,
-    total: summary?.total_payable || calculatedValues.total,
+    subtotal: summary?.subtotal
+      ? parseFloat(summary.subtotal)
+      : calculatedValues.subtotal,
+    deliveryFee: summary?.delivery_fee
+      ? parseFloat(summary.delivery_fee)
+      : calculatedValues.deliveryFee,
+    discount: summary?.discount_amount
+      ? parseFloat(summary.discount_amount)
+      : calculatedValues.discountAmount,
+    total: summary?.total_payable
+      ? parseFloat(summary.total_payable)
+      : calculatedValues.total,
+    discountLabel: summary?.discount_display || 'Discount',
   };
 
-  const handleApplyCoupon = () => {
-    // In a real app, this would trigger useCart's refresh with ?coupon_code=...
-    if (couponCode.toUpperCase() === 'SAVE15') {
-      setIsApplied(true);
-      setCouponError('');
-    } else {
-      setCouponError('Invalid coupon code (Try SAVE15)');
-      setIsApplied(false);
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) return;
+
+    setCouponError('');
+    try {
+      // Calls useCart's refresh which hits GET /api/cart/?coupon_code=...
+      await refresh(couponCode.trim());
+
+      // If after refresh there is no coupon_code in summary, it means it was invalid
+      // Note: This depends on backend behavior. If backend returns 400 for invalid coupon,
+      // the catch block will handle it.
+    } catch (err) {
+      setCouponError('Invalid or expired coupon code');
     }
   };
 
@@ -52,7 +70,6 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
     if (onPlaceOrder) {
       onPlaceOrder();
     } else {
-      // If on Cart page, navigate to Checkout
       router.push('/checkout');
     }
   };
@@ -76,7 +93,7 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
 
         {(isApplied || displayData.discount > 0) && (
           <SummaryRow
-            label="Discount"
+            label={displayData.discountLabel}
             value={`-${formatCurrency(displayData.discount)}`}
             isDiscount
           />
@@ -95,7 +112,7 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
         </span>
       </div>
 
-      {/* Coupon Section */}
+      {/* Interactive Coupon Section */}
       <div className="space-y-3 mb-8">
         <div className="flex items-center gap-2">
           <div
@@ -104,7 +121,7 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
             }`}
           >
             <IoPricetagOutline
-              className={`-rotate-90 ${isApplied ? 'text-(--success-500)' : 'text-gray-400'}`}
+              className={`-rotate-90 ${isApplied ? 'text-(--color-success-500)' : 'text-gray-400'}`}
               size={20}
             />
             <input
@@ -124,7 +141,7 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
             disabled={!couponCode || isApplied}
             className={`h-[52px] px-8 rounded-full text-sm font-bold uppercase tracking-widest transition-all cursor-pointer ${
               isApplied
-                ? 'bg-(--success-50) text-(--success-500) border border-(--success-100)'
+                ? 'bg-(--color-success-50) text-(--color-success-500) border border-(--color-success-100)'
                 : 'bg-(--color-primary-25) text-(--color-primary-500) border border-(--color-primary-50) hover:bg-(--color-primary-500) hover:text-white'
             }`}
           >
@@ -134,9 +151,14 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder }) => {
         {couponError && (
           <p className="text-xs font-bold text-red-500 ml-5">{couponError}</p>
         )}
+        {isApplied && (
+          <p className="text-xs font-bold text-(--color-success-500) ml-5 uppercase tracking-tighter">
+            Coupon Applied!
+          </p>
+        )}
       </div>
 
-      {/* Action Button (Place Order or Checkout) */}
+      {/* Action Button */}
       <button
         onClick={handleAction}
         className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer"
@@ -156,7 +178,7 @@ const SummaryRow = ({ label, value, isDiscount = false }) => (
     <div className="flex items-center gap-3">
       <span className="text-gray-300 font-light">-</span>
       <span
-        className={`text-[18px] font-bold ${isDiscount ? 'text-(--success-500)' : 'text-gray-900'}`}
+        className={`text-[18px] font-bold ${isDiscount ? 'text-(--color-success-500)' : 'text-gray-900'}`}
       >
         {value}
       </span>

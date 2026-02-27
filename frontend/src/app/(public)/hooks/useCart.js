@@ -1,49 +1,34 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
-  fetchCartApi,
   addToCartApi,
   updateCartItemApi,
   removeFromCartApi,
   placeOrderApi,
 } from '../api/cartApi';
+import { useCartContext } from '../context/CartContext';
 
 export const useCart = () => {
-  const [cart, setCart] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // Access global state and the new silent refresh from context
+  const { cart, refreshCart, isLoading } = useCartContext();
+
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
 
-  // 1. Load Cart Data
-  const loadCart = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setCart(null);
-        return;
-      }
-      const data = await fetchCartApi(token);
-      // The API returns an array, we take the first active cart object
-      setCart(Array.isArray(data) ? data[0] : data);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // 2. Add Item to Cart
+  // 1. Add Item to Cart
   const addItem = async (productId, quantity = 1) => {
     setIsUpdating(true);
+    setError(null);
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Please login to add items to cart');
 
-      const updatedCart = await addToCartApi(token, productId, quantity);
-      setCart(updatedCart);
+      await addToCartApi(token, productId, quantity);
+
+      // FIXED: Instead of setting state with partial data,
+      // we trigger a silent refresh to get the full updated cart.
+      await refreshCart(null, false);
       return true;
     } catch (err) {
       setError(err.message);
@@ -53,14 +38,17 @@ export const useCart = () => {
     }
   };
 
-  // 3. Update Item Quantity
+  // 2. Update Item Quantity
   const updateQuantity = async (itemId, newQuantity) => {
     if (newQuantity < 1) return;
     setIsUpdating(true);
+    setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      const updatedCart = await updateCartItemApi(token, itemId, newQuantity);
-      setCart(updatedCart);
+      await updateCartItemApi(token, itemId, newQuantity);
+
+      // FIXED: Trigger silent refresh to sync the full cart and summary
+      await refreshCart(null, false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -68,14 +56,16 @@ export const useCart = () => {
     }
   };
 
-  // 4. Remove Item from Cart
+  // 3. Remove Item from Cart
   const removeItem = async itemId => {
     setIsUpdating(true);
+    setError(null);
     try {
       const token = localStorage.getItem('access_token');
       await removeFromCartApi(token, itemId);
-      // Refresh cart to get updated summary from backend
-      await loadCart();
+
+      // Re-fetch full cart to update summary and badge
+      await refreshCart(null, false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -83,13 +73,16 @@ export const useCart = () => {
     }
   };
 
-  // 5. Place Order
+  // 4. Place Order
   const placeOrder = async orderData => {
     setIsUpdating(true);
+    setError(null);
     try {
       const token = localStorage.getItem('access_token');
       const result = await placeOrderApi(token, orderData);
-      setCart(null); // Clear local cart state on success
+
+      // Re-fetch to clear/update cart state globally after order
+      await refreshCart(null, true);
       return result;
     } catch (err) {
       setError(err.message);
@@ -99,11 +92,6 @@ export const useCart = () => {
     }
   };
 
-  // Initial load
-  useEffect(() => {
-    loadCart();
-  }, [loadCart]);
-
   return {
     cart,
     items: cart?.items || [],
@@ -111,7 +99,7 @@ export const useCart = () => {
     isLoading,
     isUpdating,
     error,
-    refresh: loadCart,
+    refresh: refreshCart,
     addItem,
     updateQuantity,
     removeItem,

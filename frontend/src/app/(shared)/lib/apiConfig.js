@@ -18,3 +18,8 @@ export const CART_ENDPOINTS = {
   ITEMS: `${API_BASE_URL}/cart/items/`,
   PLACE_ORDER: `${API_BASE_URL}/cart/place-order/`,
 };
+
+export const PRODUCT_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/products/`,
+  // Details are accessed via slug: BASE + slug + '/'
+};

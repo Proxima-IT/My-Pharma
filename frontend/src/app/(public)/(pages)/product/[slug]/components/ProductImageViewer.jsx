@@ -17,8 +17,11 @@ export default function ProductImageViewer({ images = [] }) {
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700">
-      {/* 1. Main Image Display Container */}
-      <div className="w-full aspect-square bg-white border border-gray-100 rounded-[32px] flex items-center justify-center p-8 sm:p-12 overflow-hidden relative">
+      {/* 
+        1. Main Image Display Container 
+        - Changed from aspect-square to responsive fixed heights for a better look on wide columns
+      */}
+      <div className="w-full h-[350px] sm:h-[450px] lg:h-[520px] bg-white border border-gray-100 rounded-[32px] flex items-center justify-center p-8 sm:p-12 overflow-hidden relative transition-all">
         <div className="relative w-full h-full">
           <Image
             src={displayImages[activeIdx]}
@@ -30,29 +33,31 @@ export default function ProductImageViewer({ images = [] }) {
         </div>
       </div>
 
-      {/* 2. Thumbnails Gallery - flex-1 without max-width ensures it matches main container width exactly */}
-      <div className="flex w-full gap-4">
-        {displayImages.map((img, idx) => (
-          <button
-            key={idx}
-            onClick={() => setActiveIdx(idx)}
-            className={`relative flex-1 aspect-square bg-white rounded-[20px] flex items-center justify-center p-2 cursor-pointer transition-all border-2 overflow-hidden ${
-              activeIdx === idx
-                ? 'border-(--success-500)'
-                : 'border-gray-100 hover:border-gray-200'
-            }`}
-          >
-            <div className="relative w-full h-full">
-              <Image
-                src={img}
-                alt={`Product thumbnail ${idx + 1}`}
-                fill
-                className="object-contain mix-blend-multiply"
-              />
-            </div>
-          </button>
-        ))}
-      </div>
+      {/* 2. Thumbnails Gallery - Only shown if there are multiple images */}
+      {displayImages.length > 1 && (
+        <div className="flex w-full gap-4">
+          {displayImages.map((img, idx) => (
+            <button
+              key={idx}
+              onClick={() => setActiveIdx(idx)}
+              className={`relative flex-1 aspect-square bg-white rounded-[20px] flex items-center justify-center p-2 cursor-pointer transition-all border-2 overflow-hidden ${
+                activeIdx === idx
+                  ? 'border-(--success-500)'
+                  : 'border-gray-100 hover:border-gray-200'
+              }`}
+            >
+              <div className="relative w-full h-full">
+                <Image
+                  src={img}
+                  alt={`Product thumbnail ${idx + 1}`}
+                  fill
+                  className="object-contain mix-blend-multiply"
+                />
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

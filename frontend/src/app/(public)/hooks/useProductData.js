@@ -1,31 +1,68 @@
-"use client";
+'use client';
 
+import { useState, useEffect, useCallback } from 'react';
+import { fetchProductsApi } from '../api/productApi';
 
-import { getProducts } from "@/data/productInfo";
-import { useEffect, useState } from "react";
-
-export const useProductData = () => {
+export const useProductData = (initialFilters = {}) => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Pagination and Filter State
+  const [page, setPage] = useState(1);
+  const [filters, setFilters] = useState({
+    category: '',
+    search: '',
+    ordering: '',
+    ...initialFilters,
+  });
+
+  const loadProducts = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Prepare query parameters for the API
+      const params = {
+        page,
+        ...Object.fromEntries(
+          Object.entries(filters).filter(([_, value]) => value !== ''),
+        ),
+      };
+
+      const data = await fetchProductsApi(params);
+
+      // Handle Django Rest Framework Paginated Response
+      setProducts(data.results || []);
+      setTotalCount(data.count || 0);
+    } catch (err) {
+      setError(err.message);
+      setProducts([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [page, filters]);
+
+  // Trigger fetch when page or filters change
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const response = await getProducts();
-        setProducts(response);
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching products:", err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+    loadProducts();
+  }, [loadProducts]);
 
-    fetchProducts();
-  }, []);
+  // Helper to update filters and reset to page 1
+  const updateFilters = newFilters => {
+    setFilters(prev => ({ ...prev, ...newFilters }));
+    setPage(1);
+  };
 
-  return { products, loading, error };
+  return {
+    products,
+    totalCount,
+    isLoading,
+    error,
+    page,
+    setPage,
+    filters,
+    updateFilters,
+    refresh: loadProducts,
+  };
 };

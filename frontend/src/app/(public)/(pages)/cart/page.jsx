@@ -13,8 +13,16 @@ import OrderSummaryCard from './components/OrderSummaryCard';
 import { useCart } from '../../hooks/useCart';
 
 const Cart = () => {
-  const { items, summary, isLoading, error, updateQuantity, removeItem } =
-    useCart();
+  // Destructured 'refresh' to handle coupon application logic
+  const {
+    items,
+    summary,
+    isLoading,
+    error,
+    updateQuantity,
+    removeItem,
+    refresh,
+  } = useCart();
 
   if (isLoading) {
     return (
@@ -73,8 +81,12 @@ const Cart = () => {
           {/* Right Column: Address & Summary */}
           <div className="w-full lg:w-[42%] flex flex-col gap-8">
             <ShippingAddressCard />
-            {/* Passed items prop for dynamic calculations */}
-            <OrderSummaryCard summary={summary} items={items} />
+            {/* Passed 'refresh' prop to handle coupon logic */}
+            <OrderSummaryCard
+              summary={summary}
+              items={items}
+              refresh={refresh}
+            />
           </div>
         </div>
       ) : (

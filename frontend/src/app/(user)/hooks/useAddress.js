@@ -15,12 +15,22 @@ export const useAddress = () => {
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) return;
+      if (!token) {
+        setAddresses([]);
+        setIsLoading(false);
+        return;
+      }
 
-      const [addressList, districtList] = await Promise.all([
+      const [addressResponse, districtList] = await Promise.all([
         addressApi.getAddresses(token),
-        addressApi.getDistricts(token).catch(() => []), // Fallback if districts endpoint fails
+        addressApi.getDistricts(token),
       ]);
+
+      // FIXED: Handle paginated response structure
+      // If the backend returns { results: [...] }, use that. Otherwise use the raw array.
+      const addressList =
+        addressResponse.results ||
+        (Array.isArray(addressResponse) ? addressResponse : []);
 
       setAddresses(addressList);
       setDistricts(districtList);
@@ -35,24 +45,16 @@ export const useAddress = () => {
     loadData();
   }, [loadData]);
 
-  const addAddress = async formData => {
+  const handleAddAddress = async formData => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('Authentication required');
-
-      console.log('Sending Address Data:', formData); // Debugging line
-
-      const result = await addressApi.createAddress(token, formData);
-
-      if (result) {
-        setShowSuccess(true);
-        await loadData();
-        return true;
-      }
+      await addressApi.createAddress(token, formData);
+      setShowSuccess(true);
+      await loadData();
+      return true;
     } catch (err) {
-      console.error('Add Address Hook Error:', err);
       setError(err.message);
       return false;
     } finally {
@@ -60,7 +62,7 @@ export const useAddress = () => {
     }
   };
 
-  const removeAddress = async id => {
+  const handleRemoveAddress = async id => {
     try {
       const token = localStorage.getItem('access_token');
       await addressApi.deleteAddress(token, id);
@@ -70,11 +72,11 @@ export const useAddress = () => {
     }
   };
 
-  const setAsDefault = async id => {
+  const handleSetDefault = async (id, isDefaultValue = true) => {
     setIsUpdating(true);
     try {
       const token = localStorage.getItem('access_token');
-      await addressApi.updateAddress(token, id, { is_default: true });
+      await addressApi.updateAddress(token, id, { is_default: isDefaultValue });
       setShowSuccess(true);
       await loadData();
     } catch (err) {
@@ -92,9 +94,9 @@ export const useAddress = () => {
     error,
     showSuccess,
     setShowSuccess,
-    addAddress,
-    removeAddress,
-    setAsDefault,
+    handleAddAddress,
+    handleRemoveAddress,
+    handleSetDefault,
     refresh: loadData,
   };
 };

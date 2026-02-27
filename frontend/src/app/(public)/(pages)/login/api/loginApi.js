@@ -1,6 +1,6 @@
-import { API_BASE_URL } from '@/app/(user)/lib/apiConfig';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
-export const loginApi = async (credentials) => {
+export const loginApi = async credentials => {
   const response = await fetch(`${API_BASE_URL}/auth/login/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

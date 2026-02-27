@@ -1,6 +1,7 @@
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import LayoutWrapper from './LayoutWrapper';
+import { CartProvider } from './(public)/context/CartContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,11 +25,12 @@ export default function RootLayout({ children }) {
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="antialiased" suppressHydrationWarning={true}>
         {/* 
-          ROOT CAUSE FIXED: 
-          We now use LayoutWrapper. This component contains the logic 
-          to show the Sidebar, Header, and Footer based on the URL.
+          CartProvider: Enables real-time cart updates across the app.
+          LayoutWrapper: Manages the conditional rendering of Header, Footer, and Sidebar.
         */}
-        <LayoutWrapper>{children}</LayoutWrapper>
+        <CartProvider>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </CartProvider>
       </body>
     </html>
   );

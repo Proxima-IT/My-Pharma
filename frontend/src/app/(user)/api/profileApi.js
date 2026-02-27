@@ -1,4 +1,4 @@
-import { AUTH_ENDPOINTS } from '../lib/apiConfig';
+import { AUTH_ENDPOINTS } from '../../(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for Profile and Identity management

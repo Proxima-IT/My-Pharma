@@ -1,6 +1,6 @@
-import { API_BASE_URL } from '@/app/(user)/lib/apiConfig';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
-export const requestPasswordResetApi = async (email) => {
+export const requestPasswordResetApi = async email => {
   const response = await fetch(`${API_BASE_URL}/auth/password-reset/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

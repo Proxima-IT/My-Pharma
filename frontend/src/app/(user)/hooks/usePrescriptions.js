@@ -17,9 +17,14 @@ export const usePrescriptions = () => {
         if (!token) throw new Error('Session expired. Please login again.');
 
         const data = await fetchPrescriptionsApi(token, filter);
-        setPrescriptions(data);
+
+        // FIXED: Handle paginated response structure
+        // If backend returns { results: [...] }, use that. Otherwise use raw array.
+        const list = data.results || (Array.isArray(data) ? data : []);
+        setPrescriptions(list);
       } catch (err) {
         setError(err.message);
+        setPrescriptions([]);
       } finally {
         setIsLoading(false);
       }

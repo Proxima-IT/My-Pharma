@@ -22,36 +22,9 @@ export default function MyOrdersPage() {
   const [selectedOrders, setSelectedOrders] = useState([]);
   const filters = ['All', 'Confirmed', 'Delivered', 'Cancelled'];
 
-  // Mock data for UI testing when database is empty
-  const mockOrders = [
-    {
-      id: '3950',
-      user_username: 'Abu Fahim',
-      shipping_address: 'Radisson Blu, Dhaka Water Garden, Airport Road',
-      phone: '01989343611',
-      created_at: '2026-01-03T10:30:00Z',
-      payment_method: 'BKASH',
-      status: 'PENDING',
-      total: 2930.0,
-    },
-    {
-      id: '10232',
-      user_username: 'Bayzid Aman',
-      shipping_address: 'Flat 4B, Lakeview Apartments, Gulshan 2, Dhaka',
-      phone: '01712345678',
-      created_at: '2026-02-14T14:20:00Z',
-      payment_method: 'CASH_ON_DELIVERY',
-      status: 'CONFIRMED',
-      total: 550.5,
-    },
-  ];
-
-  // Fallback to mock data if API returns empty
-  const displayOrders = orders.length > 0 ? orders : mockOrders;
-
   const handleSelectAll = e => {
     if (e.target.checked) {
-      setSelectedOrders(displayOrders.map(o => o.id));
+      setSelectedOrders(orders.map(o => o.id));
     } else {
       setSelectedOrders([]);
     }
@@ -67,7 +40,7 @@ export default function MyOrdersPage() {
   const getStatusStyles = status => {
     switch (status?.toUpperCase()) {
       case 'DELIVERED':
-        return 'text-green-600 bg-green-50 border-green-100';
+        return 'text-(--success-600) bg-(--success-50) border-(--success-100)';
       case 'CONFIRMED':
         return 'text-blue-600 bg-blue-50 border-blue-100';
       case 'CANCELLED':
@@ -92,13 +65,13 @@ export default function MyOrdersPage() {
       {/* Main Container */}
       <div className="bg-white rounded-[32px] p-6 md:p-8 border border-gray-100/50 min-h-[600px] flex flex-col">
         {/* 1. Categories / Tabs Wrapper */}
-        <div className="bg-[#FCFCFD] p-2 rounded-full mb-8 w-fit max-w-full border border-[#F1F0F0] overflow-hidden">
+        <div className="bg-gray-25 p-2 rounded-full mb-8 w-fit max-w-full border border-gray-100 overflow-hidden">
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar px-1">
             {filters.map(f => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`px-6 py-2 rounded-full text-xs font-medium transition-all border whitespace-nowrap cursor-pointer ${
+                className={`px-6 py-2 rounded-full text-xs font-bold transition-all border whitespace-nowrap cursor-pointer ${
                   filter === f
                     ? 'bg-black text-white border-black'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
@@ -113,16 +86,16 @@ export default function MyOrdersPage() {
         {/* 2. Table Section */}
         <div className="flex-grow overflow-x-auto no-scrollbar">
           <table className="w-full border-separate border-spacing-0 rounded-2xl border border-gray-100 overflow-hidden">
-            <thead className="bg-[#F6F8FA]">
-              <tr className="text-[#666D80] text-xs uppercase tracking-wider">
+            <thead className="bg-gray-50">
+              <tr className="text-gray-500 text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 text-left w-10">
                   <input
                     type="checkbox"
                     className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
                     onChange={handleSelectAll}
                     checked={
-                      selectedOrders.length === displayOrders.length &&
-                      displayOrders.length > 0
+                      selectedOrders.length === orders.length &&
+                      orders.length > 0
                     }
                   />
                 </th>
@@ -150,8 +123,17 @@ export default function MyOrdersPage() {
                     <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin mx-auto" />
                   </td>
                 </tr>
-              ) : displayOrders.length > 0 ? (
-                displayOrders.map(order => (
+              ) : error ? (
+                <tr>
+                  <td
+                    colSpan="8"
+                    className="py-20 text-center text-red-500 font-bold"
+                  >
+                    {error}
+                  </td>
+                </tr>
+              ) : orders.length > 0 ? (
+                orders.map(order => (
                   <tr
                     key={order.id}
                     onClick={() => router.push(`/user/orders/${order.id}`)}
@@ -226,6 +208,7 @@ export default function MyOrdersPage() {
           </p>
 
           <div className="flex items-center gap-3">
+            {/* Prev Arrow */}
             <button
               onClick={e => {
                 e.stopPropagation();
@@ -237,12 +220,26 @@ export default function MyOrdersPage() {
               <FiChevronLeft size={18} />
             </button>
 
+            {/* Page Numbers Container - Dynamic */}
             <div className="flex items-center border border-gray-200 rounded-full overflow-hidden bg-white">
-              <button className="px-5 py-2.5 text-xs font-bold bg-black text-white">
-                1
-              </button>
+              {Array.from({ length: totalPages || 1 }, (_, i) => i + 1).map(
+                num => (
+                  <button
+                    key={num}
+                    onClick={() => setPage(num)}
+                    className={`px-5 py-2.5 text-xs font-bold transition-all cursor-pointer ${
+                      page === num
+                        ? 'bg-black text-white'
+                        : 'text-gray-500 border-l border-gray-100 hover:bg-gray-50 first:border-l-0'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ),
+              )}
             </div>
 
+            {/* Next Arrow */}
             <button
               onClick={e => {
                 e.stopPropagation();

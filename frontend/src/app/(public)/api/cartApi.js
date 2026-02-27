@@ -1,12 +1,15 @@
-import { CART_ENDPOINTS } from '@/app/(user)/lib/apiConfig';
+import { CART_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for Cart management
  */
 
 // GET /api/cart/
-export const fetchCartApi = async token => {
-  const response = await fetch(CART_ENDPOINTS.BASE, {
+export const fetchCartApi = async (token, params = {}) => {
+  const queryString = new URLSearchParams(params).toString();
+  const url = `${CART_ENDPOINTS.BASE}${queryString ? `?${queryString}` : ''}`;
+
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -92,7 +95,10 @@ export const placeOrderApi = async (token, orderData) => {
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Failed to place order');
+    // FIXED: Return the full error object as a string if 'detail' is missing
+    // This helps us see field-level validation errors like {"shipping_address_id": ["..."]}
+    const errorMsg = data.detail || JSON.stringify(data);
+    throw new Error(errorMsg);
   }
   return data;
 };

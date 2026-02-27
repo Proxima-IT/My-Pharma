@@ -1,4 +1,4 @@
-import { USER_ENDPOINTS } from '../lib/apiConfig';
+import { USER_ENDPOINTS } from '../../(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for Order management

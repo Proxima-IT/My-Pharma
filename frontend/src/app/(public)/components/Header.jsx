@@ -139,6 +139,7 @@ const Header = () => {
 
       {/* MAIN NAV */}
       <div className="py-0 md:py-4 px-6 md:px-8 flex flex-col lg:flex-row items-center gap-2 md:gap-4 lg:gap-10 justify-center w-full">
+        {/* LEFT – logo */}
         <div className="flex w-full lg:w-auto gap-3 justify-between items-center">
           <div className="block lg:hidden ">
             <MobileDrawer />
@@ -161,6 +162,7 @@ const Header = () => {
           </Link>
         </div>
 
+        {/* MIDDLE – Search & Upload */}
         <div className="flex items-center gap-3 w-full min-w-0 flex-1 order-last lg:order-none">
           <div className="shrink-0 hidden md:block">
             <button
@@ -182,6 +184,7 @@ const Header = () => {
             />
           </div>
 
+          {/* Dynamic Search Bar */}
           <form onSubmit={handleSearch} className="relative flex-1 w-full">
             <input
               type="text"
@@ -199,14 +202,15 @@ const Header = () => {
           </form>
         </div>
 
+        {/* RIGHT – icons + location */}
         <div className="flex items-center justify-center lg:justify-end gap-4 md:gap-6 w-full lg:w-auto shrink-0">
-          {/* Dynamic Location */}
+          {/* Location - Updated Alignment to Left */}
           <div
             className="flex items-center gap-2 cursor-pointer group"
             onClick={handleLocationClick}
           >
             <HiOutlineLocationMarker className="text-2xl text-gray-700 group-hover:text-(--color-primary-500) transition-colors" />
-            <div className="text-right hidden sm:block">
+            <div className="text-left hidden sm:block">
               <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">
                 Delivery to
               </p>
@@ -231,6 +235,7 @@ const Header = () => {
             </svg>
           </div>
 
+          {/* Icons */}
           <div className="flex items-center gap-3 md:gap-4">
             <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
               <FiBell size={20} />
@@ -238,8 +243,9 @@ const Header = () => {
             <Link href="/cart">
               <div className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-(--color-gray-100) flex items-center justify-center cursor-pointer hover:bg-(--color-gray-50)">
                 <BsCart3 size={20} />
+                {/* Dynamic Cart Badge */}
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center z-10">
                     {cartCount}
                   </span>
                 )}

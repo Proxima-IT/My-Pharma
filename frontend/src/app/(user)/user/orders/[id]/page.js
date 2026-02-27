@@ -1,43 +1,24 @@
 'use client';
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useMemo } from 'react';
 import Link from 'next/link';
 import { FiChevronLeft, FiChevronRight, FiArrowLeft } from 'react-icons/fi';
 import { useOrders } from '../../../hooks/useOrders';
+import { useProductData } from '@/app/(public)/hooks/useProductData';
 import { formatDate, formatCurrency } from '../../../lib/formatters';
 import OrderInfoCard from './components/OrderInfoCard';
 import OrderedProductCard from './components/OrderedProductCard';
 
 export default function OrderDetailsPage({ params }) {
   const resolvedParams = use(params);
-  const { orderDetails, isLoading, error, loadOrderDetails } = useOrders();
-  const [currentPage, setCurrentPage] = useState(1);
+  const {
+    orderDetails,
+    isLoading: orderLoading,
+    error,
+    loadOrderDetails,
+  } = useOrders();
 
-  // Mock Order Fallback for testing UI when API is empty
-  const mockOrderFallback = {
-    id: resolvedParams.id || '3950',
-    created_at: '2026-01-03T10:30:00Z',
-    user_username: 'Abu Fahim',
-    total: 2930.0,
-    status: 'PENDING',
-    shipping_address:
-      'Radisson Blu, Dhaka Water Garden, Airport Road, Dhaka Cantonment, Dhaka 1206 BANGLADESH',
-    items: [
-      {
-        id: 1,
-        product: 1,
-        product_name: 'A-fenac 50',
-        quantity: 2,
-        price_at_order: 1250,
-      },
-      {
-        id: 2,
-        product: 2,
-        product_name: 'Monalast 10',
-        quantity: 1,
-        price_at_order: 430,
-      },
-    ],
-  };
+  // Fetch real product table data to get slugs/images via lookup
+  const { products, isLoading: productsLoading } = useProductData();
 
   useEffect(() => {
     if (resolvedParams.id) {
@@ -45,7 +26,23 @@ export default function OrderDetailsPage({ params }) {
     }
   }, [resolvedParams.id, loadOrderDetails]);
 
-  if (isLoading) {
+  // Helper to parse the combined address string from backend
+  const addressInfo = useMemo(() => {
+    if (!orderDetails?.shipping_address)
+      return { phone: 'N/A', cleanAddress: 'N/A' };
+    const parts = orderDetails.shipping_address.split(',').map(p => p.trim());
+
+    // If the string is in the format: Name, Email, Phone, District, Thana, Address...
+    if (parts.length >= 4) {
+      return {
+        phone: parts[2],
+        cleanAddress: parts.slice(3).join(', '),
+      };
+    }
+    return { phone: 'N/A', cleanAddress: orderDetails.shipping_address };
+  }, [orderDetails]);
+
+  if (orderLoading || productsLoading) {
     return (
       <div className="w-full flex justify-center items-center py-40">
         <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
@@ -53,7 +50,23 @@ export default function OrderDetailsPage({ params }) {
     );
   }
 
-  const data = orderDetails || mockOrderFallback;
+  if (error || !orderDetails) {
+    return (
+      <div className="w-full py-40 text-center">
+        <p className="text-red-500 font-bold mb-4">
+          {error || 'Order not found'}
+        </p>
+        <Link
+          href="/user/orders"
+          className="text-(--color-primary-500) font-bold underline"
+        >
+          Back to Orders
+        </Link>
+      </div>
+    );
+  }
+
+  const data = orderDetails;
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
@@ -85,16 +98,16 @@ export default function OrderDetailsPage({ params }) {
           <OrderInfoCard label="Date" value={formatDate(data.created_at)} />
           <OrderInfoCard
             label="Receiver Name"
-            value={data.user_username || 'N/A'}
+            value={data.receiver_name || data.user_username || 'N/A'}
           />
-          <OrderInfoCard label="Phone Number" value="01989343611" />
+          <OrderInfoCard label="Phone Number" value={addressInfo.phone} />
           <OrderInfoCard
             label="Amount Payable"
             value={formatCurrency(data.total)}
           />
           <OrderInfoCard label="Payment Type">
             <span className="ml-2 px-3 py-1 bg-gray-50 border border-gray-100 rounded-full text-[11px] font-bold text-gray-500 uppercase">
-              BKASH
+              {data.payment_method || 'COD'}
             </span>
           </OrderInfoCard>
           <OrderInfoCard label="Status">
@@ -102,7 +115,7 @@ export default function OrderDetailsPage({ params }) {
               className={`ml-2 px-3 py-1 rounded-full text-[11px] font-bold uppercase border ${
                 data.status === 'PENDING'
                   ? 'bg-amber-50 border-amber-100 text-amber-600'
-                  : 'bg-green-50 border-green-100 text-green-600'
+                  : 'bg-(--success-50) border-(--success-100) text-(--success-600)'
               }`}
             >
               {data.status}
@@ -113,10 +126,10 @@ export default function OrderDetailsPage({ params }) {
         {/* 3. Address Section */}
         <div className="bg-white border border-gray-100 rounded-[24px] p-6">
           <span className="text-[13px] font-medium text-gray-400 block mb-2 uppercase tracking-wider">
-            Address
+            Shipping Address
           </span>
           <p className="text-[16px] font-bold text-gray-900 leading-relaxed">
-            {data.shipping_address}
+            {addressInfo.cleanAddress}
           </p>
         </div>
 
@@ -125,9 +138,17 @@ export default function OrderDetailsPage({ params }) {
           <h2 className="text-[22px] font-bold text-gray-900">Cart Product</h2>
 
           <div className="space-y-4">
-            {data.items?.map(item => (
-              <OrderedProductCard key={item.id} item={item} />
-            ))}
+            {data.items?.map(item => {
+              // LOOKUP: Find the real product metadata from the products table
+              const productInfo = products.find(p => p.id === item.product);
+              return (
+                <OrderedProductCard
+                  key={item.id}
+                  item={item}
+                  productInfo={productInfo}
+                />
+              );
+            })}
           </div>
 
           {/* Dynamic Pagination UI */}

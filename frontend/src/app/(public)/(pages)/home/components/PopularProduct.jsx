@@ -7,11 +7,12 @@ import PopularProductCard from './PopularProductCard';
 import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 const PopularProduct = () => {
-  const { loading, products } = useProductData();
+  // Updated to use 'isLoading' as defined in our new useProductData hook
+  const { isLoading, products } = useProductData();
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="w-full h-screen flex items-center justify-center">
+      <div className="w-full py-20 flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -33,12 +34,18 @@ const PopularProduct = () => {
         </Link>
       </div>
 
-      {/* product card grid - Updated to 5 columns on larger screens */}
+      {/* product card grid - 5 columns on larger screens */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mt-7">
-        {products.map(product => (
+        {products?.map(product => (
           <PopularProductCard product={product} key={product.id} />
         ))}
       </div>
+
+      {products?.length === 0 && (
+        <div className="w-full py-20 text-center text-gray-400 font-medium">
+          No products found.
+        </div>
+      )}
     </div>
   );
 };

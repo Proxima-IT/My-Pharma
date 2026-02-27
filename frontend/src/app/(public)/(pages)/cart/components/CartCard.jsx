@@ -7,24 +7,23 @@ import { RiDeleteBinLine } from 'react-icons/ri';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 
 const CartCard = ({ item, onUpdate, onRemove }) => {
-  // 1. Logic for Interactivity
+  // 1. Extract and Clean Data from API
+  // We use current_price for the "Real/Live" price and product_original_price for MRP
+  const unitPrice = Math.abs(parseFloat(item.current_price || 0));
+  const originalPrice = Math.abs(parseFloat(item.product_original_price || 0));
+
+  // 2. Handlers for Quantity
   const handleIncrease = () => onUpdate(item.id, item.quantity + 1);
   const handleDecrease = () => {
     if (item.quantity > 1) onUpdate(item.id, item.quantity - 1);
   };
-
-  // 2. UI-only Placeholders for missing API fields
-  // Mocking original price as 20% higher for visual consistency
-  const mockOriginalPrice = parseFloat(item.current_price) * 1.2;
-  const genericName = item.product_description || 'Generic Information N/A';
-  const unitLabel = '10 Tablets (1 Strip)'; // Placeholder until backend adds unit_label
 
   return (
     <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex flex-col sm:flex-row items-start gap-6 transition-all relative group animate-in fade-in slide-in-from-left-4 duration-500">
       {/* 1. Image Wrapper */}
       <div className="w-full sm:w-[140px] h-[140px] bg-(--color-imageBG) rounded-[18px] flex items-center justify-center p-4 shrink-0 border border-gray-50">
         <Image
-          src={item.image_url || '/assets/images/cart1.png'}
+          src={item.image_url || '/assets/images/placeholder.png'}
           alt={item.product_name}
           width={120}
           height={120}
@@ -41,20 +40,34 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
             {item.product_name}
           </h3>
 
-          {/* Price Section - Real API Data */}
+          {/* Price Section - Showing Unit Price multiplied by Quantity */}
           <div className="flex items-center gap-3">
-            <span className="text-[18px] font-bold text-gray-900">
-              {formatCurrency(parseFloat(item.current_price) * item.quantity)}
+            <span className="text-[18px] font-bold text-(--color-primary-500)">
+              {formatCurrency(unitPrice * item.quantity)}
             </span>
-            <span className="text-[13px] text-gray-400 line-through font-medium">
-              {formatCurrency(mockOriginalPrice * item.quantity)}
-            </span>
+            {originalPrice > unitPrice && (
+              <span className="text-[13px] text-gray-400 line-through font-medium">
+                {formatCurrency(originalPrice * item.quantity)}
+              </span>
+            )}
           </div>
 
+          {/* Product Metadata */}
           <p className="text-[14px] text-gray-500 font-medium pt-1 line-clamp-1">
-            {genericName}
+            {item.product_description || 'No description available'}
           </p>
-          <p className="text-[14px] text-gray-700 font-bold">{unitLabel}</p>
+
+          <div className="flex items-center gap-2 text-[14px] text-gray-700 font-bold">
+            <span>{item.product_unit_label || 'Unit N/A'}</span>
+            {item.product_dosage && (
+              <>
+                <span className="text-gray-300 font-light">|</span>
+                <span className="text-gray-500 font-medium">
+                  {item.product_dosage}
+                </span>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Bottom Section: Quantity Selector */}
@@ -82,10 +95,15 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
               <FiPlus size={16} />
             </button>
           </div>
+
+          {/* Unit Price Hint (Optional, helps user understand the math) */}
+          <span className="text-[11px] text-gray-400 font-medium ml-2">
+            ({formatCurrency(unitPrice)} / unit)
+          </span>
         </div>
       </div>
 
-      {/* 3. Delete Button - Positioned at Top-Right */}
+      {/* 3. Delete Button */}
       <button
         onClick={() => onRemove(item.id)}
         className="absolute top-4 right-4 w-11 h-11 rounded-full border border-red-100 bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all cursor-pointer"
