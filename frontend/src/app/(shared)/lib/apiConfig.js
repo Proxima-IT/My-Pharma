@@ -1,7 +1,26 @@
-export const API_BASE_URL = 'http://localhost:8000/api';
+/**
+ * Dynamic API Configuration
+ * Automatically switches between production server and local development
+ */
+
+// Check if we are in a browser environment and what the hostname is
+const isBrowser = typeof window !== 'undefined';
+const isLocalhost =
+  isBrowser &&
+  (window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1');
+
+// Use environment variable if available, otherwise fallback based on environment
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (isLocalhost
+    ? 'http://localhost:8000/api'
+    : 'http://46.202.194.251:8000/api'); // Replace with your actual Backend Production IP/Domain
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
+  LOGIN: `${API_BASE_URL}/auth/login/`,
+  REGISTER: `${API_BASE_URL}/auth/register/`,
   REQUEST_OTP: `${API_BASE_URL}/auth/request-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/auth/verify-otp/`,
 };
