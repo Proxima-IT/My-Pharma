@@ -17,17 +17,21 @@ export default function LayoutWrapper({ children }) {
   ];
   const isAuthPage = authPaths.some(path => pathname.startsWith(path));
 
-  // 2. Pages with Header/Footer but NO Global Sidebar
-  const isDashboardPage = pathname.startsWith('/user');
-  const isProductsListPage = pathname.startsWith('/products'); // Plural: /products (The filter page)
+  // 2. Pages with Header/Footer but NO Global Public Sidebar
+  const isUserDashboard = pathname.startsWith('/user');
+  const isPharmacyPanel = pathname.startsWith('/pharmacy');
+  const isAdminPanel = pathname.startsWith('/admin');
+  const isProductsListPage = pathname.startsWith('/products');
   const isCartPage = pathname.startsWith('/cart');
   const isCheckoutPage = pathname.startsWith('/checkout');
 
-  // 3. Logic: Show Sidebar on Home and Product Details (/product/[slug])
-  // Exclude only Dashboard, Products List, and Cart
+  // 3. Logic: Show Sidebar only on Home and Product Details
+  // Exclude all internal panels and specific functional pages
   const showSidebar =
     !isAuthPage &&
-    !isDashboardPage &&
+    !isUserDashboard &&
+    !isPharmacyPanel &&
+    !isAdminPanel &&
     !isProductsListPage &&
     !isCartPage &&
     !isCheckoutPage;
@@ -48,8 +52,7 @@ export default function LayoutWrapper({ children }) {
         >
           {/* 
             THE GLOBAL SIDEBAR:
-            - Now visible on Product Details page.
-            - sticky top-36 to fix the "Splitting" bug.
+            - Hidden on User, Pharmacy, Admin, Products, Cart, and Checkout pages.
           */}
           {showSidebar && (
             <aside className="hidden lg:block w-[320px] shrink-0">

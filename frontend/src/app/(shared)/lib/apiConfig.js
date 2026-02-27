@@ -21,5 +21,16 @@ export const CART_ENDPOINTS = {
 
 export const PRODUCT_ENDPOINTS = {
   BASE: `${API_BASE_URL}/products/`,
-  // Details are accessed via slug: BASE + slug + '/'
+};
+
+export const BRAND_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/brands/`,
+};
+
+export const CATEGORY_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/categories/`,
+};
+
+export const INGREDIENT_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/ingredients/`,
 };
