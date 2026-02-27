@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useMemo, useState, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { IoIosArrowDown } from 'react-icons/io';
 import { IoReloadOutline } from 'react-icons/io5';
@@ -13,14 +13,37 @@ import Sidebar from '../../components/Sidebar';
 
 const Products = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { loading, products } = useProductData();
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
-  // 1. Extract both Category and Search parameters
+  // States for filters
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [brands, setBrands] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+
+  // 1. Extract URL parameters
   const categoryFilter = searchParams.get('category');
   const searchQuery = searchParams.get('search');
 
-  // 2. Combined Filtering Logic
+  // 2. Fetch Brands from API
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const response = await fetch(
+          'http://localhost:8000/api/brands/?is_active=true',
+        );
+        const data = await response.json();
+        setBrands(data.results || data);
+      } catch (err) {
+        console.error('Failed to fetch brands:', err);
+      }
+    };
+    fetchBrands();
+  }, []);
+
+  // 3. Combined Filtering Logic
   const filteredProducts = useMemo(() => {
     let result = products;
 
@@ -30,22 +53,58 @@ const Products = () => {
         product =>
           product.category_name?.toLowerCase() ===
             categoryFilter.toLowerCase() ||
-          product.category?.toString() === categoryFilter,
+          product.category?.toString() === categoryFilter ||
+          product.category_slug === categoryFilter,
       );
     }
 
-    // Filter by Search Query (Case-insensitive name match)
+    // Filter by Search Query
     if (searchQuery) {
       const term = searchQuery.toLowerCase();
       result = result.filter(
         product =>
           product.name?.toLowerCase().includes(term) ||
-          product.category_name?.toLowerCase().includes(term),
+          product.ingredient_name?.toLowerCase().includes(term),
       );
     }
 
+    // Filter by Price Range
+    if (minPrice) {
+      result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
+    }
+    if (maxPrice) {
+      result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
+    }
+
+    // Filter by Selected Brands
+    if (selectedBrands.length > 0) {
+      result = result.filter(p => selectedBrands.includes(p.brand_name));
+    }
+
     return result;
-  }, [products, categoryFilter, searchQuery]);
+  }, [
+    products,
+    categoryFilter,
+    searchQuery,
+    minPrice,
+    maxPrice,
+    selectedBrands,
+  ]);
+
+  const toggleBrand = brandName => {
+    setSelectedBrands(prev =>
+      prev.includes(brandName)
+        ? prev.filter(b => b !== brandName)
+        : [...prev, brandName],
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedBrands([]);
+    setMinPrice('');
+    setMaxPrice('');
+    router.push('/products');
+  };
 
   if (loading) {
     return (
@@ -57,12 +116,22 @@ const Products = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
-      {/* 1. Unified Sidebar Column (Collapsible on Mobile) */}
+      {/* 1. Sidebar Column with Custom Thin Scrollbar */}
       <aside
-        className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-36 lg:self-start lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto no-scrollbar"
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className={`
+          w-full lg:w-[360px] shrink-0 lg:sticky lg:top-36 lg:self-start lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto 
+          pr-2 lg:pr-4
+          /* Firefox thin scrollbar */
+          [scrollbar-width:thin] [scrollbar-color:var(--color-gray-200)_transparent]
+          /* Chrome/Safari/Edge thin scrollbar */
+          [&::-webkit-scrollbar]:w-1.5
+          [&::-webkit-scrollbar-track]:bg-transparent
+          [&::-webkit-scrollbar-thumb]:bg-gray-200
+          [&::-webkit-scrollbar-thumb]:rounded-full
+          hover:[&::-webkit-scrollbar-thumb]:bg-gray-300
+        `}
       >
-        {/* Mobile Filter Toggle Button */}
+        {/* Mobile Filter Toggle */}
         <button
           onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
           className="lg:hidden w-full flex items-center justify-between bg-white border border-gray-100 rounded-full px-6 py-4 mb-4 cursor-pointer transition-all active:scale-95"
@@ -81,7 +150,6 @@ const Products = () => {
           />
         </button>
 
-        {/* Collapsible Content Wrapper */}
         <div
           className={`${isMobileFilterOpen ? 'flex' : 'hidden'} lg:flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300`}
         >
@@ -89,12 +157,12 @@ const Products = () => {
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">
               Product Filter
             </h2>
-            <Link
-              href="/products"
-              className="text-xs font-bold text-(--color-primary-500) hover:underline uppercase tracking-widest"
+            <button
+              onClick={clearAllFilters}
+              className="text-xs font-bold text-(--color-primary-500) hover:underline uppercase tracking-widest cursor-pointer"
             >
               Clear All
-            </Link>
+            </button>
           </div>
 
           {/* Price Filter Card */}
@@ -103,7 +171,13 @@ const Products = () => {
               <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
                 Price Range
               </h3>
-              <button className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer">
+              <button
+                onClick={() => {
+                  setMinPrice('');
+                  setMaxPrice('');
+                }}
+                className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer"
+              >
                 <IoReloadOutline size={18} />
               </button>
             </div>
@@ -114,6 +188,8 @@ const Products = () => {
                 <input
                   type="number"
                   placeholder="Min"
+                  value={minPrice}
+                  onChange={e => setMinPrice(e.target.value)}
                   className="w-full bg-transparent text-sm font-bold outline-none"
                 />
               </div>
@@ -123,6 +199,8 @@ const Products = () => {
                 <input
                   type="number"
                   placeholder="Max"
+                  value={maxPrice}
+                  onChange={e => setMaxPrice(e.target.value)}
                   className="w-full bg-transparent text-sm font-bold outline-none"
                 />
               </div>
@@ -135,50 +213,58 @@ const Products = () => {
               <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
                 Brands
               </h3>
-              <button className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer">
+              <button
+                onClick={() => setSelectedBrands([])}
+                className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer"
+              >
                 <IoReloadOutline size={18} />
               </button>
             </div>
 
-            <div className="space-y-1 max-h-[300px] overflow-y-auto no-scrollbar">
-              {[
-                'Renata Limited',
-                'OSL Pharma',
-                'Aristopharma',
-                'ACI Limited',
-                'Incepta',
-              ].map((brand, idx) => (
+            <div
+              className="space-y-1 max-h-[300px] overflow-y-auto 
+              [scrollbar-width:thin] [scrollbar-color:var(--color-gray-100)_transparent]
+              [&::-webkit-scrollbar]:w-1
+              [&::-webkit-scrollbar-thumb]:bg-gray-100
+              [&::-webkit-scrollbar-thumb]:rounded-full
+            "
+            >
+              {brands.map(brand => (
                 <label
-                  key={brand}
+                  key={brand.id}
                   className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-3 rounded-2xl transition-all group"
                 >
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      defaultChecked={idx === 1}
+                      checked={selectedBrands.includes(brand.name)}
+                      onChange={() => toggleBrand(brand.name)}
                       className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
                     />
-                    <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900 transition-colors">
-                      {brand}
+                    <span
+                      className={`text-sm font-medium transition-colors ${selectedBrands.includes(brand.name) ? 'text-gray-900 font-bold' : 'text-gray-600 group-hover:text-gray-900'}`}
+                    >
+                      {brand.name}
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold text-gray-300 group-hover:text-gray-400">
-                    114
-                  </span>
                 </label>
               ))}
+              {brands.length === 0 && (
+                <p className="text-xs text-gray-400 text-center py-4">
+                  No brands available
+                </p>
+              )}
             </div>
           </div>
 
-          {/* GLOBAL CATEGORY SIDEBAR */}
           <Sidebar />
         </div>
       </aside>
 
-      {/* 2. Main Products Grid Section */}
+      {/* 2. Main Products Grid */}
       <div className="flex-1 min-w-0">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 px-2">
-          <h1 className="font-bold text-2xl text-gray-900 tracking-tight capitalize">
+          <h1 className="font-bold text-2xl text-gray-900 tracking-tight">
             {searchQuery ? (
               <>Search results for &quot;{searchQuery}&quot;</>
             ) : (
@@ -200,7 +286,6 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Product Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map(product => (
             <PopularProductCard key={product.id} product={product} />
@@ -208,16 +293,16 @@ const Products = () => {
         </div>
 
         {filteredProducts.length === 0 && (
-          <div className="w-full py-20 text-center">
+          <div className="w-full py-20 text-center bg-white rounded-[40px] border border-gray-100">
             <p className="text-gray-400 font-medium text-lg">
               No products found matching your criteria.
             </p>
-            <Link
-              href="/products"
-              className="text-(--color-primary-500) font-bold mt-2 inline-block hover:underline"
+            <button
+              onClick={clearAllFilters}
+              className="text-(--color-primary-500) font-bold mt-2 inline-block hover:underline cursor-pointer"
             >
-              View all products
-            </Link>
+              Reset all filters
+            </button>
           </div>
         )}
       </div>

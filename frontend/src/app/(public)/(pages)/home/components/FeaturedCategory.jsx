@@ -95,14 +95,15 @@ const FeaturedCategory = () => {
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {featuredProducts.map(item => (
-          <div
+          <Link
+            href={`/products?category=${item.slug || item.name.toLowerCase().replace(/\s+/g, '-')}`}
             key={item.id}
             className="flex-shrink-0 flex flex-col items-center text-center snap-start group cursor-pointer
                        w-[calc((100%-24px)/2.5)] 
                        md:w-[calc((100%-80px)/4.5)] 
                        xl:w-[calc((100%-120px)/6.5)]"
           >
-            {/* Image Wrapper - Padding increases on xl to make image smaller */}
+            {/* Image Wrapper */}
             <div className="relative bg-(--color-imageBG) rounded-full w-full aspect-square flex items-center justify-center overflow-hidden p-4 sm:p-6 xl:p-10 border border-gray-50 transition-all group-hover:border-(--color-primary-100)">
               <div className="relative w-full h-full">
                 <Image
@@ -124,7 +125,7 @@ const FeaturedCategory = () => {
                 {item.quantity} Products
               </p>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
