@@ -14,11 +14,11 @@ import {
   FiLoader,
   FiPhone,
   FiMail,
+  FiCreditCard,
 } from 'react-icons/fi';
 import { usePharmacyOrders } from '../../../hooks/usePharmacyOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 import OrderInfoCard from './components/OrderInfoCard';
-import OrderedProductCard from './components/OrderedProductCard';
 
 export default function PharmacyOrderDetailsPage({ params }) {
   const resolvedParams = use(params);
@@ -127,46 +127,29 @@ export default function PharmacyOrderDetailsPage({ params }) {
         </h1>
       </div>
 
-      {/* 
-        Main Grid Container:
-        - grid-cols-1: Single column for Mobile, Tablet, and Laptop (lg).
-        - xl:grid-cols-3: Two column split only on large Desktop screens.
-      */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 items-start">
         {/* MAIN COLUMN: Order Info & Items */}
         <div className="xl:col-span-2 space-y-6 sm:space-y-8">
-          {/* 1. Order Summary Card */}
+          {/* 1. Order Summary Grid */}
+          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4">
+            <OrderInfoCard
+              label="Order Date"
+              value={formatDate(orderDetails.created_at)}
+            />
+            <OrderInfoCard
+              label="Total Amount"
+              value={formatCurrency(orderDetails.total)}
+            />
+            <OrderInfoCard label="Payment Method" value="Cash on Delivery" />
+            <OrderInfoCard
+              label="Payment Status"
+              badge="Unpaid"
+              badgeType="error"
+            />
+          </div>
+
+          {/* 2. Items List Card */}
           <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-6 sm:space-y-8">
-            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 gap-6">
-              <div className="space-y-1">
-                <p className="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                  Order Date
-                </p>
-                <p className="text-sm sm:text-base font-bold text-gray-900">
-                  {formatDate(orderDetails.created_at)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                  Total Amount
-                </p>
-                <p className="text-lg sm:text-xl font-black text-(--color-primary-500)">
-                  {formatCurrency(orderDetails.total)}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest">
-                  Phone Number
-                </p>
-                <p className="text-sm sm:text-base font-bold text-gray-900">
-                  {parsedData.phone}
-                </p>
-              </div>
-            </div>
-
-            <div className="h-px bg-gray-50 w-full" />
-
-            {/* Items List */}
             <div className="space-y-5 sm:space-y-6">
               <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
                 <FiPackage className="text-gray-400" />
@@ -200,7 +183,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* 2. Shipping Address Card */}
+          {/* 3. Shipping Address Card */}
           <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-4">
             <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
               <FiMapPin className="text-gray-400" />
@@ -212,7 +195,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
           </div>
         </div>
 
-        {/* SIDEBAR COLUMN: Status Management & Customer Info (Stacks below on Laptop) */}
+        {/* SIDEBAR COLUMN: Status Management & Customer Info */}
         <div className="xl:col-span-1 space-y-6 sm:space-y-8">
           {/* Status Update Card */}
           <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-6">

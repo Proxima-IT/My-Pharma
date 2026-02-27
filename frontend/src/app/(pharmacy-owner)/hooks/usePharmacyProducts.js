@@ -11,6 +11,8 @@ import {
   fetchBrandsApi,
   fetchCategoriesApi,
   fetchIngredientsApi,
+  addProductGalleryImageApi,
+  deleteProductGalleryImageApi,
 } from '../api/productApi';
 
 export const usePharmacyProducts = (initialParams = {}) => {
@@ -43,7 +45,6 @@ export const usePharmacyProducts = (initialParams = {}) => {
         fetchIngredientsApi(token),
       ]);
 
-      // Handle both direct arrays and DRF paginated { results: [] } formats
       setBrands(brandsData.results || brandsData);
       setCategories(catsData.results || catsData);
       setIngredients(ingsData.results || ingsData);
@@ -97,12 +98,40 @@ export const usePharmacyProducts = (initialParams = {}) => {
     }
   }, []);
 
+  /**
+   * Orchestrates multi-image upload for Choice B
+   */
+  const handleGalleryUploads = async (token, slug, galleryFiles) => {
+    const uploadPromises = galleryFiles.map(file =>
+      addProductGalleryImageApi(token, slug, file),
+    );
+    return Promise.all(uploadPromises);
+  };
+
   const createProduct = async formData => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      await createPharmacyProductApi(token, formData);
+
+      // Choice B Logic: Split 'images' into primary 'image' and gallery 'images'
+      const allImages = formData.getAll('images');
+      formData.delete('images');
+
+      if (allImages.length > 0) {
+        formData.append('image', allImages[0]); // First image is primary
+      }
+
+      const galleryFiles = allImages.slice(1); // Rest are gallery
+
+      // 1. Create the product
+      const product = await createPharmacyProductApi(token, formData);
+
+      // 2. Upload gallery images if any
+      if (galleryFiles.length > 0) {
+        await handleGalleryUploads(token, product.slug, galleryFiles);
+      }
+
       await loadProducts();
       return true;
     } catch (err) {
@@ -118,7 +147,38 @@ export const usePharmacyProducts = (initialParams = {}) => {
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      await updatePharmacyProductApi(token, slug, formData);
+
+      // Choice B Logic: Handle new gallery images
+      const allNewImages = formData.getAll('images');
+      formData.delete('images');
+
+      // If the user uploaded new images, the first one becomes the primary 'image'
+      // only if the backend doesn't already have one, or if we want to override.
+      // For simplicity, we treat the first 'new' image as the primary if provided.
+      if (allNewImages.length > 0) {
+        formData.append('image', allNewImages[0]);
+      }
+
+      const galleryFiles = allNewImages.slice(1);
+
+      // Handle deletions of existing gallery images
+      const deletedIdsStr = formData.get('deleted_image_ids');
+      if (deletedIdsStr) {
+        const deletedIds = JSON.parse(deletedIdsStr);
+        await Promise.all(
+          deletedIds.map(id => deleteProductGalleryImageApi(token, slug, id)),
+        );
+        formData.delete('deleted_image_ids');
+      }
+
+      // 1. Update basic product info
+      const product = await updatePharmacyProductApi(token, slug, formData);
+
+      // 2. Upload new gallery images
+      if (galleryFiles.length > 0) {
+        await handleGalleryUploads(token, product.slug, galleryFiles);
+      }
+
       await loadProducts();
       return true;
     } catch (err) {
@@ -141,6 +201,17 @@ export const usePharmacyProducts = (initialParams = {}) => {
       return false;
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const deleteGalleryImage = async (slug, imageId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      await deleteProductGalleryImageApi(token, slug, imageId);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
     }
   };
 
@@ -178,7 +249,7 @@ export const usePharmacyProducts = (initialParams = {}) => {
   return {
     products,
     productDetails,
-    loadProductDetails, // FIXED: Added missing function to return object
+    loadProductDetails,
     brands,
     categories,
     ingredients,
@@ -194,6 +265,7 @@ export const usePharmacyProducts = (initialParams = {}) => {
     createProduct,
     updateProduct,
     deleteProduct,
+    deleteGalleryImage,
     updateStock,
     refresh: loadProducts,
   };

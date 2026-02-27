@@ -11,6 +11,7 @@ import {
   FiDollarSign,
   FiLayers,
   FiCheck,
+  FiX,
 } from 'react-icons/fi';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
@@ -37,15 +38,31 @@ export default function AddProductPage() {
     is_active: true,
   });
 
-  const [imagePreview, setImagePreview] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  // State for multiple images
+  const [productImages, setProductImages] = useState([]); // Array of { file, preview, id }
 
   const handleImageChange = e => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const newImages = files.map(file => ({
+        file,
+        preview: URL.createObjectURL(file),
+        id: Math.random().toString(36).substring(2, 9),
+      }));
+      setProductImages(prev => [...prev, ...newImages]);
     }
+    // Reset input so same file can be selected again if removed
+    e.target.value = '';
+  };
+
+  const removeImage = id => {
+    setProductImages(prev => {
+      const filtered = prev.filter(img => img.id !== id);
+      // Revoke URL to prevent memory leaks
+      const removed = prev.find(img => img.id === id);
+      if (removed) URL.revokeObjectURL(removed.preview);
+      return filtered;
+    });
   };
 
   const handleSubmit = async e => {
@@ -60,9 +77,10 @@ export default function AddProductPage() {
       }
     });
 
-    if (selectedFile) {
-      data.append('image', selectedFile);
-    }
+    // Append multiple images
+    productImages.forEach(img => {
+      data.append('images', img.file); // Backend should expect a list of 'images'
+    });
 
     const success = await createProduct(data);
     if (success) {
@@ -114,7 +132,6 @@ export default function AddProductPage() {
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Category Dropdown - Real Data */}
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
                     Category
@@ -138,7 +155,6 @@ export default function AddProductPage() {
                   </div>
                 </div>
 
-                {/* Brand Dropdown - Real Data */}
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
                     Brand
@@ -163,7 +179,6 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              {/* Ingredient Dropdown - Real Data */}
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
                   Generic Name (Ingredient)
@@ -262,46 +277,65 @@ export default function AddProductPage() {
 
         {/* RIGHT COLUMN: Media & Settings */}
         <div className="space-y-8">
-          {/* 3. Product Image */}
+          {/* 3. Product Images Gallery */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
-              <FiImage /> Product Image
+              <FiImage /> Product Images
             </h3>
-            <div
-              onClick={() => fileInputRef.current.click()}
-              className="relative w-full aspect-square rounded-[24px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all overflow-hidden group"
-            >
-              {imagePreview ? (
-                <>
+
+            <div className="grid grid-cols-2 gap-4">
+              {productImages.map((img, index) => (
+                <div
+                  key={img.id}
+                  className="relative aspect-square rounded-[20px] border border-gray-100 bg-gray-50 overflow-hidden group"
+                >
                   <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-contain p-4"
+                    src={img.preview}
+                    alt={`Preview ${index}`}
+                    className="w-full h-full object-contain p-2"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <p className="text-white text-xs font-bold uppercase">
-                      Change Image
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-gray-400 shadow-sm">
-                    <FiPlus size={24} />
-                  </div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Upload Photo
-                  </p>
-                </>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => removeImage(img.id)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                  >
+                    <FiX size={14} />
+                  </button>
+                  {index === 0 && (
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-(--color-primary-500) text-white text-[8px] font-black uppercase rounded-full">
+                      Main
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* Upload Trigger */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="aspect-square rounded-[20px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 group-hover:text-(--color-primary-500) transition-colors">
+                  <FiPlus size={20} />
+                </div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Add Photo
+                </span>
+              </button>
             </div>
+
             <input
               ref={fileInputRef}
               type="file"
               className="hidden"
               accept="image/*"
+              multiple
               onChange={handleImageChange}
             />
+            <p className="text-[10px] text-gray-400 mt-4 font-medium text-center">
+              You can upload multiple images. The first image will be used as
+              the primary thumbnail.
+            </p>
           </div>
 
           {/* 4. Settings */}

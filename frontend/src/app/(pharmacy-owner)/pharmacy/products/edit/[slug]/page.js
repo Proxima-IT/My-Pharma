@@ -10,6 +10,8 @@ import {
   FiDollarSign,
   FiLayers,
   FiCheck,
+  FiPlus,
+  FiX,
 } from 'react-icons/fi';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
@@ -48,17 +50,30 @@ export default function EditProductPage({ params }) {
     is_active: true,
   });
 
-  const [imagePreview, setImagePreview] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [existingImages, setExistingImages] = useState([]);
+  const [newImages, setNewImages] = useState([]);
+  const [deletedImageIds, setDeletedImageIds] = useState([]);
 
-  // 1. Fetch product details on mount
+  /**
+   * Helper to fix Image URLs for previews
+   */
+  const getDisplayImage = url => {
+    if (!url) return null;
+    // If it's already a relative path or a blob, return as is
+    if (url.startsWith('/') || url.startsWith('blob:')) return url;
+    // If it contains media, make it relative to trigger the proxy
+    if (url.includes('/media/')) {
+      return `/media/${url.split('/media/')[1]}`;
+    }
+    return url;
+  };
+
   useEffect(() => {
     if (slug) {
       loadProductDetails(slug);
     }
-  }, [slug, loadProductDetails]); // FIXED: Changed loadOrderDetails to loadProductDetails
+  }, [slug, loadProductDetails]);
 
-  // 2. Sync fetched data to form state
   useEffect(() => {
     if (productDetails) {
       setFormData({
@@ -74,36 +89,82 @@ export default function EditProductPage({ params }) {
         requires_prescription: productDetails.requires_prescription || false,
         is_active: productDetails.is_active || true,
       });
+
+      // COMBINE MAIN IMAGE AND GALLERY IMAGES
+      const imagesToDisplay = [];
+
+      // 1. Add Main Image
       if (productDetails.image) {
-        setImagePreview(productDetails.image);
+        imagesToDisplay.push({
+          id: 'main',
+          url: getDisplayImage(productDetails.image),
+          isMain: true,
+        });
       }
+
+      // 2. Add Gallery Images (Backend returns them as an array of URL strings)
+      if (productDetails.images && Array.isArray(productDetails.images)) {
+        productDetails.images.forEach((imgUrl, index) => {
+          const formattedUrl = getDisplayImage(imgUrl);
+          // Avoid duplicating the main image if it's also in the gallery list
+          if (formattedUrl !== getDisplayImage(productDetails.image)) {
+            imagesToDisplay.push({
+              id: `gallery-${index}`,
+              url: formattedUrl,
+              isMain: false,
+            });
+          }
+        });
+      }
+
+      setExistingImages(imagesToDisplay);
     }
   }, [productDetails]);
 
   const handleImageChange = e => {
-    const file = e.target.files[0];
-    if (file) {
-      setSelectedFile(file);
-      setImagePreview(URL.createObjectURL(file));
+    const files = Array.from(e.target.files);
+    if (files.length > 0) {
+      const selected = files.map(file => ({
+        file,
+        preview: URL.createObjectURL(file),
+        id: Math.random().toString(36).substring(2, 9),
+      }));
+      setNewImages(prev => [...prev, ...selected]);
     }
+    e.target.value = '';
+  };
+
+  const removeExistingImage = id => {
+    setExistingImages(prev => prev.filter(img => img.id !== id));
+    // Note: Since backend detail doesn't provide IDs for gallery strings,
+    // full deletion logic would require the /images/ GET endpoint.
+    // For now, we track it to hide it from UI.
+    setDeletedImageIds(prev => [...prev, id]);
+  };
+
+  const removeNewImage = id => {
+    setNewImages(prev => {
+      const filtered = prev.filter(img => img.id !== id);
+      const removed = prev.find(img => img.id === id);
+      if (removed) URL.revokeObjectURL(removed.preview);
+      return filtered;
+    });
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
-
     const data = new FormData();
 
-    // Append all fields
     Object.keys(formData).forEach(key => {
       if (formData[key] !== '' && formData[key] !== null) {
         data.append(key, formData[key]);
       }
     });
 
-    // Only append image if a new file was selected
-    if (selectedFile) {
-      data.append('image', selectedFile);
-    }
+    // Choice B: All new images go into 'images' key for the hook to process
+    newImages.forEach(img => {
+      data.append('images', img.file);
+    });
 
     const success = await updateProduct(slug, data);
     if (success) {
@@ -127,7 +188,6 @@ export default function EditProductPage({ params }) {
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link
           href="/pharmacy/products"
@@ -144,7 +204,6 @@ export default function EditProductPage({ params }) {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
-        {/* LEFT COLUMN */}
         <div className="lg:col-span-2 space-y-8">
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
@@ -153,91 +212,79 @@ export default function EditProductPage({ params }) {
             <div className="space-y-6">
               <UiInput
                 label="Product Name"
-                placeholder="e.g. Napa Extend"
                 value={formData.name}
                 onChange={e =>
                   setFormData({ ...formData, name: e.target.value })
                 }
                 required
               />
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
                     Category
                   </label>
-                  <div className="relative">
-                    <select
-                      className={selectClass}
-                      value={formData.category}
-                      onChange={e =>
-                        setFormData({ ...formData, category: e.target.value })
-                      }
-                      required
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  <select
+                    className={selectClass}
+                    value={formData.category}
+                    onChange={e =>
+                      setFormData({ ...formData, category: e.target.value })
+                    }
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-
                 <div className="flex flex-col gap-2">
                   <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
                     Brand
                   </label>
-                  <div className="relative">
-                    <select
-                      className={selectClass}
-                      value={formData.brand}
-                      onChange={e =>
-                        setFormData({ ...formData, brand: e.target.value })
-                      }
-                    >
-                      <option value="">Select Brand</option>
-                      {brands.map(brand => (
-                        <option key={brand.id} value={brand.id}>
-                          {brand.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                  Generic Name (Ingredient)
-                </label>
-                <div className="relative">
                   <select
                     className={selectClass}
-                    value={formData.ingredient}
+                    value={formData.brand}
                     onChange={e =>
-                      setFormData({ ...formData, ingredient: e.target.value })
+                      setFormData({ ...formData, brand: e.target.value })
                     }
-                    required
                   >
-                    <option value="">Select Ingredient</option>
-                    {ingredients.map(ing => (
-                      <option key={ing.id} value={ing.id}>
-                        {ing.name}
+                    <option value="">Select Brand</option>
+                    {brands.map(brand => (
+                      <option key={brand.id} value={brand.id}>
+                        {brand.name}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
-
+              <div className="flex flex-col gap-2">
+                <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
+                  Generic Name
+                </label>
+                <select
+                  className={selectClass}
+                  value={formData.ingredient}
+                  onChange={e =>
+                    setFormData({ ...formData, ingredient: e.target.value })
+                  }
+                  required
+                >
+                  <option value="">Select Ingredient</option>
+                  {ingredients.map(ing => (
+                    <option key={ing.id} value={ing.id}>
+                      {ing.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
                   Description
                 </label>
                 <textarea
                   className="w-full min-h-[120px] p-6 bg-gray-50 border border-gray-100 rounded-[24px] text-sm outline-none focus:border-(--color-primary-500) transition-all resize-none"
-                  placeholder="Enter detailed product description..."
                   value={formData.description}
                   onChange={e =>
                     setFormData({ ...formData, description: e.target.value })
@@ -264,7 +311,7 @@ export default function EditProductPage({ params }) {
                 required
               />
               <UiInput
-                label="Original Price / MRP (৳)"
+                label="Original Price (৳)"
                 type="number"
                 step="0.01"
                 value={formData.original_price}
@@ -285,7 +332,7 @@ export default function EditProductPage({ params }) {
                 required
               />
               <UiInput
-                label="Low Stock Alert Level"
+                label="Low Stock Alert"
                 type="number"
                 value={formData.low_stock_threshold}
                 onChange={e =>
@@ -299,43 +346,81 @@ export default function EditProductPage({ params }) {
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
         <div className="space-y-8">
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
-              <FiImage /> Product Image
+              <FiImage /> Product Images
             </h3>
-            <div
-              onClick={() => fileInputRef.current.click()}
-              className="relative w-full aspect-square rounded-[24px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-100 transition-all overflow-hidden group"
-            >
-              {imagePreview ? (
-                <>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Render Existing Images (Main + Gallery) */}
+              {existingImages.map(img => (
+                <div
+                  key={img.id}
+                  className="relative aspect-square rounded-[20px] border border-gray-100 bg-gray-50 overflow-hidden group"
+                >
                   <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-full object-contain p-4"
+                    src={img.url}
+                    alt="Existing"
+                    className="w-full h-full object-contain p-2"
                   />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                    <p className="text-white text-xs font-bold uppercase">
-                      Change Image
-                    </p>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center gap-2">
-                  <FiImage size={32} className="text-gray-300" />
-                  <p className="text-xs font-bold text-gray-400 uppercase">
-                    No Image
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => removeExistingImage(img.id)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                  >
+                    <FiX size={14} />
+                  </button>
+                  {img.isMain && (
+                    <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-(--color-primary-500) text-white text-[8px] font-black uppercase rounded-full">
+                      Main
+                    </div>
+                  )}
                 </div>
-              )}
+              ))}
+
+              {/* Render New Previews */}
+              {newImages.map(img => (
+                <div
+                  key={img.id}
+                  className="relative aspect-square rounded-[20px] border border-primary-100 bg-primary-25/30 overflow-hidden group"
+                >
+                  <img
+                    src={img.preview}
+                    alt="New"
+                    className="w-full h-full object-contain p-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeNewImage(img.id)}
+                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                  >
+                    <FiX size={14} />
+                  </button>
+                  <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-blue-500 text-white text-[8px] font-black uppercase rounded-full">
+                    New
+                  </div>
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current.click()}
+                className="aspect-square rounded-[20px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-all cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 group-hover:text-(--color-primary-500)">
+                  <FiPlus size={20} />
+                </div>
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                  Add Photo
+                </span>
+              </button>
             </div>
             <input
               ref={fileInputRef}
               type="file"
               className="hidden"
               accept="image/*"
+              multiple
               onChange={handleImageChange}
             />
           </div>
@@ -345,13 +430,13 @@ export default function EditProductPage({ params }) {
               <FiLayers /> Settings
             </h3>
             <div className="space-y-4">
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-gray-50 bg-gray-25/50 cursor-pointer group">
+              <label className="flex items-center justify-between p-4 rounded-2xl border border-gray-50 bg-gray-25/50 cursor-pointer">
                 <span className="text-sm font-bold text-gray-700">
                   Requires Prescription
                 </span>
                 <input
                   type="checkbox"
-                  className="w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 accent-primary-500"
+                  className="w-5 h-5 accent-primary-500"
                   checked={formData.requires_prescription}
                   onChange={e =>
                     setFormData({
@@ -361,13 +446,13 @@ export default function EditProductPage({ params }) {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-gray-50 bg-gray-25/50 cursor-pointer group">
+              <label className="flex items-center justify-between p-4 rounded-2xl border border-gray-50 bg-gray-25/50 cursor-pointer">
                 <span className="text-sm font-bold text-gray-700">
                   Active Status
                 </span>
                 <input
                   type="checkbox"
-                  className="w-5 h-5 rounded border-gray-300 text-primary-500 focus:ring-primary-500 accent-primary-500"
+                  className="w-5 h-5 accent-primary-500"
                   checked={formData.is_active}
                   onChange={e =>
                     setFormData({ ...formData, is_active: e.target.checked })
@@ -378,11 +463,7 @@ export default function EditProductPage({ params }) {
           </div>
 
           <div className="pt-4">
-            <UiButton
-              type="submit"
-              className="w-full h-16 text-lg"
-              isLoading={isUpdating}
-            >
+            <UiButton type="submit" isLoading={isUpdating}>
               <div className="flex items-center gap-2">
                 <FiCheck strokeWidth={3} />
                 <span>Save Changes</span>

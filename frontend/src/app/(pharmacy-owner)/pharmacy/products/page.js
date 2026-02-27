@@ -27,12 +27,25 @@ export default function ProductManagementPage() {
     totalPages,
     deleteProduct,
     handleSearch,
-    error, // Destructured error from hook
+    error,
   } = usePharmacyProducts();
 
   const handleSearchSubmit = e => {
     e.preventDefault();
     handleSearch(searchTerm);
+  };
+
+  /**
+   * Helper to fix Image URLs
+   * Converts "http://localhost:8000/media/path" to "/media/path"
+   * This leverages the Next.js rewrite and avoids cross-origin/localhost issues.
+   */
+  const getDisplayImage = url => {
+    if (!url) return null;
+    if (url.includes('/media/')) {
+      return `/media/${url.split('/media/')[1]}`;
+    }
+    return url;
   };
 
   const getStockStatus = product => {
@@ -105,7 +118,7 @@ export default function ProductManagementPage() {
         </button>
       </form>
 
-      {/* 3. Error Display Section - Added for 500 error visibility */}
+      {/* 3. Error Display Section */}
       {error && (
         <div className="p-5 bg-red-50 border border-red-100 rounded-[24px] flex items-center gap-4 text-red-600 animate-in slide-in-from-top-2">
           <FiAlertCircle className="shrink-0" size={24} />
@@ -144,6 +157,8 @@ export default function ProductManagementPage() {
               ) : products.length > 0 ? (
                 products.map(product => {
                   const stock = getStockStatus(product);
+                  const displayImage = getDisplayImage(product.image);
+
                   return (
                     <tr
                       key={product.id}
@@ -151,14 +166,15 @@ export default function ProductManagementPage() {
                     >
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 shrink-0">
-                            {product.image ? (
+                          <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                            {displayImage ? (
                               <Image
-                                src={product.image}
+                                src={displayImage}
                                 alt={product.name}
                                 width={40}
                                 height={40}
-                                className="object-contain mix-blend-multiply"
+                                className="object-contain"
+                                unoptimized={true} // Bypasses Next.js cache for local dev if needed
                               />
                             ) : (
                               <FiBox className="text-gray-300" size={20} />

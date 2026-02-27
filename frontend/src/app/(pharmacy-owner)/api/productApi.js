@@ -10,7 +10,6 @@ import {
  */
 
 // 1. Metadata Fetchers (For Dropdowns)
-
 export const fetchBrandsApi = async token => {
   const response = await fetch(BRAND_ENDPOINTS.BASE, {
     method: 'GET',
@@ -51,7 +50,6 @@ export const fetchIngredientsApi = async token => {
 };
 
 // 2. Product CRUD Operations
-
 export const fetchPharmacyProductsApi = async (token, params = {}) => {
   const cleanParams = Object.fromEntries(
     Object.entries(params).filter(([_, v]) => v != null && v !== ''),
@@ -138,19 +136,47 @@ export const deletePharmacyProductApi = async (token, slug) => {
   return true;
 };
 
-export const updatePharmacyInventoryApi = async (token, slug, quantity) => {
-  const response = await fetch(`${PRODUCT_ENDPOINTS.BASE}${slug}/inventory/`, {
-    method: 'PATCH',
+// 3. Gallery Management (Choice B)
+
+/**
+ * Uploads a single image to the product gallery
+ */
+export const addProductGalleryImageApi = async (token, slug, imageFile) => {
+  const formData = new FormData();
+  formData.append('image', imageFile);
+
+  const response = await fetch(`${PRODUCT_ENDPOINTS.BASE}${slug}/images/`, {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ quantity_in_stock: quantity }),
+    body: formData,
   });
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Failed to update inventory');
+    throw new Error(data.detail || 'Failed to upload gallery image');
   }
   return data;
+};
+
+/**
+ * Deletes a specific image from the product gallery
+ */
+export const deleteProductGalleryImageApi = async (token, slug, imageId) => {
+  const response = await fetch(
+    `${PRODUCT_ENDPOINTS.BASE}${slug}/images/${imageId}/`,
+    {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.detail || 'Failed to delete gallery image');
+  }
+  return true;
 };
