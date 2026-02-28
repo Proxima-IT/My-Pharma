@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
 
 export default function RequestOtpForm() {
   const router = useRouter();
@@ -25,24 +26,25 @@ export default function RequestOtpForm() {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+
     // Logic to determine if identifier is email or phone
     const isEmail = identifier.includes('@');
     const payload = isEmail ? { email: identifier } : { phone: identifier };
+
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/request-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
       const data = await response.json();
+
       if (!response.ok) {
         throw new Error(getFriendlyErrorMessage(response.status, data));
       }
+
       // Success: Move to verification step
-      // We pass the identifier and type via URL params for the next step
       const params = new URLSearchParams({
         value: identifier,
         type: isEmail ? 'email' : 'phone',
@@ -58,8 +60,8 @@ export default function RequestOtpForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="shrink-0 w-5 h-5 text-info-500">
+        <div className="flex gap-3 p-4 rounded-xl bg-red-50 border border-red-100 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="shrink-0 w-5 h-5 text-red-500">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -69,7 +71,7 @@ export default function RequestOtpForm() {
               />
             </svg>
           </div>
-          <p className="text-sm font-bold leading-tight text-info-700">
+          <p className="text-sm font-bold leading-tight text-red-700">
             {error}
           </p>
         </div>

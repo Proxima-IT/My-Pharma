@@ -15,6 +15,7 @@ import {
   FiChevronRight,
   FiUser,
 } from 'react-icons/fi';
+import { AUTH_ENDPOINTS, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 const UserSidebar = () => {
   const pathname = usePathname();
@@ -31,7 +32,8 @@ const UserSidebar = () => {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/auth/me/', {
+        // FIXED: Using dynamic AUTH_ENDPOINTS.ME instead of hardcoded localhost
+        const response = await fetch(AUTH_ENDPOINTS.ME, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -56,7 +58,8 @@ const UserSidebar = () => {
   const handleLogout = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      await fetch('http://localhost:8000/api/auth/logout/', {
+      // FIXED: Using dynamic API_BASE_URL instead of hardcoded localhost
+      await fetch(`${API_BASE_URL}/auth/logout/`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -104,13 +107,13 @@ const UserSidebar = () => {
         href={item.href}
         className={`flex items-center justify-between px-4 py-2.5 rounded-full transition-all duration-300 group ${
           isActive
-            ? 'bg-primary-500 text-white'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-primary-500'
+            ? 'bg-(--color-primary-500) text-white'
+            : 'text-gray-600 hover:bg-gray-50 hover:text-(--color-primary-500)'
         }`}
       >
         <div className="flex items-center gap-3">
           <span
-            className={`text-lg ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-primary-500 transition-colors'}`}
+            className={`text-lg ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-(--color-primary-500) transition-colors'}`}
           >
             {item.icon}
           </span>

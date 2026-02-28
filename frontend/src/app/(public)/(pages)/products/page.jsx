@@ -10,6 +10,7 @@ import { FiFilter, FiChevronDown } from 'react-icons/fi';
 import PopularProductCard from '../home/components/PopularProductCard';
 import { useProductData } from '../../hooks/useProductData';
 import Sidebar from '../../components/Sidebar';
+import { BRAND_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
 
 const Products = () => {
   const searchParams = useSearchParams();
@@ -27,13 +28,11 @@ const Products = () => {
   const categoryFilter = searchParams.get('category');
   const searchQuery = searchParams.get('search');
 
-  // 2. Fetch Brands from API
+  // 2. Fetch Brands from API using dynamic config
   useEffect(() => {
     const fetchBrands = async () => {
       try {
-        const response = await fetch(
-          'http://localhost:8000/api/brands/?is_active=true',
-        );
+        const response = await fetch(`${BRAND_ENDPOINTS.BASE}?is_active=true`);
         const data = await response.json();
         setBrands(data.results || data);
       } catch (err) {

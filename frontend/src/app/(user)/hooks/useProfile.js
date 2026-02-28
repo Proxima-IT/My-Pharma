@@ -6,6 +6,7 @@ import {
   requestVerificationOtpApi,
   verifyIdentityOtpApi,
 } from '../api/profileApi';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 export const useProfile = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -36,11 +37,16 @@ export const useProfile = () => {
       if (!token) return;
       const data = await fetchProfileApi(token);
 
-      // WORKAROUND: Handle relative image paths from backend
-      const backendBaseUrl = 'http://localhost:8000';
+      // FIXED: Derive backend base URL dynamically from apiConfig
+      // Removes the '/api' suffix to get the root domain for media files
+      const backendBaseUrl = API_BASE_URL.replace('/api', '');
       let profilePicUrl = data.profile_picture || null;
 
-      if (profilePicUrl && !profilePicUrl.startsWith('http')) {
+      if (
+        profilePicUrl &&
+        !profilePicUrl.startsWith('http') &&
+        !profilePicUrl.startsWith('blob:')
+      ) {
         profilePicUrl = `${backendBaseUrl}${profilePicUrl}`;
       }
 
