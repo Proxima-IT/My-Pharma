@@ -2,25 +2,39 @@
 My Pharma – Django settings (production-oriented).
 API-only, MySQL, Redis, Celery, JWT.
 """
+
 import hashlib
 import os
 from pathlib import Path
 from datetime import timedelta
-
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
+# ------------------------------------------------------------------------------
+# SECURITY
+# ------------------------------------------------------------------------------
+
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production")
-# JWT HMAC-SHA256 requires key >= 32 bytes (RFC 7518); avoid InsecureKeyLengthWarning
-JWT_SIGNING_KEY = hashlib.sha256(SECRET_KEY.encode()).hexdigest()
+
+JWT_SIGNING_KEY = hashlib.sha256(
+    SECRET_KEY.encode()
+).hexdigest()
 
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 
-# FIXED: Combined environment variables with local defaults and production fallbacks
-ALLOWED_HOSTS =["*"]
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,46.202.194.251,app.mypharma.com").split(",")
+ALLOWED_HOSTS = [
+    h.strip()
+    for h in os.environ.get(
+        "ALLOWED_HOSTS",
+        "localhost,127.0.0.1,46.202.194.251,app.mypharma.com",
+    ).split(",")
+]
+
+# ------------------------------------------------------------------------------
+# CORS + CSRF (✅ FIXED)
+# ------------------------------------------------------------------------------
 
 CORS_ALLOW_ALL_ORIGINS = False
 
@@ -33,6 +47,18 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_PRIVATE_NETWORK = True
 
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://46.202.194.251:3000",
+    "https://app.mypharma.com",
+]
+
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+
+# ------------------------------------------------------------------------------
+# APPLICATIONS
+# ------------------------------------------------------------------------------
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -41,15 +67,21 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
+    "corsheaders",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
-    "corsheaders",
     "django_filters",
     "drf_spectacular",
+
     "authentication",
     "core",
 ]
+
+# ------------------------------------------------------------------------------
+# MIDDLEWARE (CORS FIRST!)
+# ------------------------------------------------------------------------------
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -63,31 +95,22 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "my_pharma.urls"
-
-TEMPLATES = [
-    {
-        "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
-        "APP_DIRS": True,
-        "OPTIONS": {
-            "context_processors": [
-                "django.template.context_processors.debug",
-                "django.template.context_processors.request",
-                "django.contrib.auth.context_processors.auth",
-                "django.contrib.messages.context_processors.messages",
-            ],
-        },
-    },
-]
-
 WSGI_APPLICATION = "my_pharma.wsgi.application"
+
+# ------------------------------------------------------------------------------
+# DATABASE
+# ------------------------------------------------------------------------------
 
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.mysql",
         "NAME": os.environ.get("MYSQL_DATABASE", "my_pharma"),
         "USER": os.environ.get("MYSQL_USER", "root"),
-        "PASSWORD": (os.environ.get("MYSQL_PASSWORD", "") or "").strip().strip("'\""),
+        "PASSWORD": (
+            os.environ.get("MYSQL_PASSWORD", "")
+            .strip()
+            .strip("'\"")
+        ),
         "HOST": os.environ.get("MYSQL_HOST", "127.0.0.1"),
         "PORT": os.environ.get("MYSQL_PORT", "3306"),
         "OPTIONS": {
@@ -99,40 +122,30 @@ DATABASES = {
 
 AUTH_USER_MODEL = "authentication.User"
 
-AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
-]
+# ------------------------------------------------------------------------------
+# INTERNATIONALIZATION
+# ------------------------------------------------------------------------------
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Dhaka"
 USE_I18N = True
 USE_TZ = True
 
-STATIC_URL = "static/"
+# ------------------------------------------------------------------------------
+# STATIC & MEDIA
+# ------------------------------------------------------------------------------
+
+STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-# Serve media in dev: set SERVE_MEDIA=true, or we default to True when localhost is in ALLOWED_HOSTS
-_serve_media_env = os.environ.get("SERVE_MEDIA", "").lower()
-if _serve_media_env in ("true", "1", "yes"):
-    SERVE_MEDIA = True
-elif _serve_media_env in ("false", "0", "no"):
-    SERVE_MEDIA = False
-else:
-    SERVE_MEDIA = "localhost" in ALLOWED_HOSTS or "127.0.0.1" in ALLOWED_HOSTS
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# REMOVED: The duplicate hardcoded ALLOWED_HOSTS that was overwriting Line 24
-
-CORS_ALLOW_ALL_ORIGINS = os.environ.get("CORS_ALLOW_ALL", "false").lower() == "true"
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-CORS_ALLOW_CREDENTIALS = True
-
-CSRF_COOKIE_SECURE = not DEBUG
-CSRF_TRUSTED_ORIGINS = [o.strip() for o in os.environ.get("CSRF_TRUSTED_ORIGINS", "").split(",") if o.strip()]
+# ------------------------------------------------------------------------------
+# DJANGO REST FRAMEWORK
+# ------------------------------------------------------------------------------
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -141,21 +154,21 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
     ),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "DEFAULT_PAGINATION_CLASS":
+        "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_FILTER_BACKENDS": ("django_filters.rest_framework.DjangoFilterBackend",),
-    "DEFAULT_THROTTLE_CLASSES": (
-        "authentication.throttling.AuthRateThrottle",
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
     ),
-    "DEFAULT_THROTTLE_RATES": {
-        "auth": "10/minute",
-        "otp_send": "3/hour",
-        "otp_verify": "10/minute",
-        "login": "5/minute",
-    },
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "EXCEPTION_HANDLER": "authentication.exceptions.custom_exception_handler",
+    "DEFAULT_SCHEMA_CLASS":
+        "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER":
+        "authentication.exceptions.custom_exception_handler",
 }
+
+# ------------------------------------------------------------------------------
+# JWT
+# ------------------------------------------------------------------------------
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=24),
@@ -163,69 +176,72 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
-    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
-    "USER_ID_FIELD": "id",
-    "USER_ID_CLAIM": "user_id",
     "SIGNING_KEY": JWT_SIGNING_KEY,
 }
 
-_use_redis_env = os.environ.get("USE_REDIS", "").lower()
-if _use_redis_env in ("true", "1", "yes"):
-    USE_REDIS = True
-elif _use_redis_env in ("false", "0", "no"):
-    USE_REDIS = False
-else:
-    USE_REDIS = not DEBUG
+# ------------------------------------------------------------------------------
+# REDIS CACHE
+# ------------------------------------------------------------------------------
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379/0")
+USE_REDIS = os.environ.get("USE_REDIS", "true").lower() in (
+    "true", "1", "yes"
+)
+
+REDIS_URL = os.environ.get(
+    "REDIS_URL",
+    "redis://127.0.0.1:6379/0"
+)
+
 if USE_REDIS:
     CACHES = {
         "default": {
-            "BACKEND": "django_redis.cache.RedisCache",
+            "BACKEND":
+                "django_redis.cache.RedisCache",
             "LOCATION": REDIS_URL,
-            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
-            "KEY_PREFIX": "my_pharma",
-        }
-    }
-else:
-    CACHES = {
-        "default": {
-            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "OPTIONS": {
+                "CLIENT_CLASS":
+                    "django_redis.client.DefaultClient"
+            },
             "KEY_PREFIX": "my_pharma",
         }
     }
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL)
+# ------------------------------------------------------------------------------
+# CELERY
+# ------------------------------------------------------------------------------
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = REDIS_URL
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
-_eager_env = os.environ.get("CELERY_TASK_ALWAYS_EAGER", "").lower()
-CELERY_TASK_ALWAYS_EAGER = _eager_env in ("true", "1", "yes") or (not USE_REDIS)
 
-AUTH_OTP_LENGTH = 6
-AUTH_OTP_EXPIRY_MINUTES = 5
-AUTH_OTP_MAX_RESEND_PER_HOUR = 3
-AUTH_MAX_FAILED_LOGIN_ATTEMPTS = 5
-AUTH_ACCOUNT_LOCKOUT_MINUTES = 30
-AUTH_PASSWORD_MIN_LENGTH = 8
-AUTH_REGISTRATION_TOKEN_EXPIRY_MINUTES = 10
+# ------------------------------------------------------------------------------
+# API DOCS
+# ------------------------------------------------------------------------------
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "My Pharma API",
-    "DESCRIPTION": "Authentication & core APIs for My Pharma (MVP).",
+    "DESCRIPTION": "Authentication & Core APIs",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "SCHEMA_PATH_PREFIX": r"/api/",
 }
+
+# ------------------------------------------------------------------------------
+# LOGGING
+# ------------------------------------------------------------------------------
+
+LOG_DIR = BASE_DIR.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
-            "format": "{asctime} {levelname} {name} {message}",
+            "format":
+                "{asctime} {levelname} {name} {message}",
             "style": "{",
         },
     },
@@ -233,11 +249,15 @@ LOGGING = {
         "file": {
             "level": "INFO",
             "class": "logging.FileHandler",
-            "filename": str(BASE_DIR.parent / "logs" / "my_pharma.log"),
+            "filename": str(LOG_DIR / "my_pharma.log"),
             "formatter": "verbose",
         },
     },
     "loggers": {
-        "authentication": {"level": "INFO", "handlers": ["file"], "propagate": False},
+        "authentication": {
+            "handlers": ["file"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
