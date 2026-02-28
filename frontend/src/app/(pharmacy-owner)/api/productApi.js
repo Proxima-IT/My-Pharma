@@ -136,7 +136,25 @@ export const deletePharmacyProductApi = async (token, slug) => {
   return true;
 };
 
-// 3. Gallery Management (Choice B)
+// 3. Inventory Management
+export const updatePharmacyInventoryApi = async (token, slug, quantity) => {
+  const response = await fetch(`${PRODUCT_ENDPOINTS.BASE}${slug}/inventory/`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ quantity_in_stock: quantity }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || 'Failed to update inventory');
+  }
+  return data;
+};
+
+// 4. Gallery Management
 
 /**
  * Uploads a single image to the product gallery

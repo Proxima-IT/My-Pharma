@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { usePathname } from 'next/navigation';
 import Header from './(public)/components/Header';
 import Footer from './(public)/components/Footer';
@@ -26,7 +27,6 @@ export default function LayoutWrapper({ children }) {
   const isCheckoutPage = pathname.startsWith('/checkout');
 
   // 3. Logic: Show Sidebar only on Home and Product Details
-  // Exclude all internal panels and specific functional pages
   const showSidebar =
     !isAuthPage &&
     !isUserDashboard &&
@@ -50,10 +50,6 @@ export default function LayoutWrapper({ children }) {
             showSidebar ? 'lg:flex lg:gap-8' : ''
           }`}
         >
-          {/* 
-            THE GLOBAL SIDEBAR:
-            - Hidden on User, Pharmacy, Admin, Products, Cart, and Checkout pages.
-          */}
           {showSidebar && (
             <aside className="hidden lg:block w-[320px] shrink-0">
               <div
@@ -61,14 +57,8 @@ export default function LayoutWrapper({ children }) {
                 style={{
                   scrollbarWidth: 'none',
                   msOverflowStyle: 'none',
-                  WebkitOverflowScrolling: 'touch',
                 }}
               >
-                <style jsx>{`
-                  div::-webkit-scrollbar {
-                    display: none;
-                  }
-                `}</style>
                 <Sidebar />
               </div>
             </aside>

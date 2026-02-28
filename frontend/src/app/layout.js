@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import LayoutWrapper from './LayoutWrapper';
@@ -24,12 +25,14 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="antialiased" suppressHydrationWarning={true}>
-        {/* 
-          CartProvider: Enables real-time cart updates across the app.
-          LayoutWrapper: Manages the conditional rendering of Header, Footer, and Sidebar.
-        */}
         <CartProvider>
-          <LayoutWrapper>{children}</LayoutWrapper>
+          {/* 
+            UNIVERSAL FIX: Wrapping LayoutWrapper in Suspense 
+            resolves useSearchParams() build errors for Header, Sidebar, and all Pages.
+          */}
+          <Suspense fallback={null}>
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </Suspense>
         </CartProvider>
       </body>
     </html>

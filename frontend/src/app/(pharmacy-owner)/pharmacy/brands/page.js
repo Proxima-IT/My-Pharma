@@ -1,4 +1,6 @@
 'use client';
+export const dynamic = 'force-dynamic'; // Forces client-side behavior and fixes build-time Prerender errors
+
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FiPlus, FiSearch, FiEdit2, FiTrash2 } from 'react-icons/fi';
