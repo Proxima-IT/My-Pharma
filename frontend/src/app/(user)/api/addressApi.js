@@ -1,22 +1,30 @@
 import { USER_ENDPOINTS } from '../../(shared)/lib/apiConfig';
 
+/**
+ * Pure API functions for User Address Management
+ * Aligned with /api/auth/addresses/ documentation
+ */
 export const addressApi = {
-  // List all addresses
+  // List all addresses (Paginated)
   getAddresses: async token => {
     const response = await fetch(USER_ENDPOINTS.ADDRESSES, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Failed to fetch addresses');
-    return response.json();
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.detail || 'Failed to fetch addresses');
+    return data;
   },
 
-  // Get list of districts
+  // Get list of BD districts
   getDistricts: async token => {
     const response = await fetch(`${USER_ENDPOINTS.ADDRESSES}districts/`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Failed to fetch districts');
-    return response.json();
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.detail || 'Failed to fetch districts');
+    return data;
   },
 
   // Add new address
@@ -30,7 +38,8 @@ export const addressApi = {
       body: JSON.stringify(addressData),
     });
     const data = await response.json();
-    if (!response.ok) throw new Error(data.detail || 'Failed to add address');
+    if (!response.ok)
+      throw new Error(JSON.stringify(data) || 'Failed to add address');
     return data;
   },
 
@@ -44,8 +53,10 @@ export const addressApi = {
       },
       body: JSON.stringify(addressData),
     });
-    if (!response.ok) throw new Error('Failed to update address');
-    return response.json();
+    const data = await response.json();
+    if (!response.ok)
+      throw new Error(data.detail || 'Failed to update address');
+    return data;
   },
 
   // Delete address
@@ -54,7 +65,10 @@ export const addressApi = {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!response.ok) throw new Error('Failed to delete address');
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.detail || 'Failed to delete address');
+    }
     return true;
   },
 };

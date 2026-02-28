@@ -26,8 +26,7 @@ export const useAddress = () => {
         addressApi.getDistricts(token),
       ]);
 
-      // FIXED: Handle paginated response structure
-      // If the backend returns { results: [...] }, use that. Otherwise use the raw array.
+      // Handle paginated response structure { results: [...] }
       const addressList =
         addressResponse.results ||
         (Array.isArray(addressResponse) ? addressResponse : []);
@@ -45,7 +44,7 @@ export const useAddress = () => {
     loadData();
   }, [loadData]);
 
-  const handleAddAddress = async formData => {
+  const addAddress = async formData => {
     setIsUpdating(true);
     setError(null);
     try {
@@ -55,14 +54,21 @@ export const useAddress = () => {
       await loadData();
       return true;
     } catch (err) {
-      setError(err.message);
+      // Parse field-specific errors if they exist
+      try {
+        const parsedError = JSON.parse(err.message);
+        const firstKey = Object.keys(parsedError)[0];
+        setError(`${firstKey}: ${parsedError[firstKey][0]}`);
+      } catch {
+        setError(err.message);
+      }
       return false;
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const handleRemoveAddress = async id => {
+  const removeAddress = async id => {
     try {
       const token = localStorage.getItem('access_token');
       await addressApi.deleteAddress(token, id);
@@ -72,12 +78,11 @@ export const useAddress = () => {
     }
   };
 
-  const handleSetDefault = async (id, isDefaultValue = true) => {
+  const setDefaultAddress = async id => {
     setIsUpdating(true);
     try {
       const token = localStorage.getItem('access_token');
-      await addressApi.updateAddress(token, id, { is_default: isDefaultValue });
-      setShowSuccess(true);
+      await addressApi.updateAddress(token, id, { is_default: true });
       await loadData();
     } catch (err) {
       setError(err.message);
@@ -94,9 +99,9 @@ export const useAddress = () => {
     error,
     showSuccess,
     setShowSuccess,
-    handleAddAddress,
-    handleRemoveAddress,
-    handleSetDefault,
+    addAddress,
+    removeAddress,
+    setDefaultAddress,
     refresh: loadData,
   };
 };
