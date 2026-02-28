@@ -1,18 +1,23 @@
 """
 JWT authentication with Redis blacklist check for access tokens.
-On logout, access token jti is blacklisted so it is rejected until expiry.
+Invalid or expired tokens are treated as unauthenticated (return None) so that
+endpoints like login that use AllowAny still work when the client sends an old token.
 """
 from rest_framework_simplejwt.authentication import JWTAuthentication
-from rest_framework_simplejwt.exceptions import InvalidToken
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 
 from .utils import token_blacklist_exists
 
 
 class JWTAuthWithBlacklist(JWTAuthentication):
-    """Validates JWT then checks Redis blacklist by jti."""
+    """Validates JWT then checks Redis blacklist by jti. Returns None for invalid/expired tokens."""
 
     def authenticate(self, request):
-        result = super().authenticate(request)
+        try:
+            result = super().authenticate(request)
+        except (InvalidToken, TokenError):
+            # Expired or invalid token: treat as unauthenticated so AllowAny views (e.g. login) still work
+            return None
         if result is None:
             return None
         user, validated_token = result
