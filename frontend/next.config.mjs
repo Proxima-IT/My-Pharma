@@ -21,10 +21,11 @@ const nextConfig = {
     ],
   },
   async rewrites() {
+    const backendBase = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://46.202.194.251:8000';
     return [
       {
         source: '/media/:path*',
-        destination: 'http://localhost:8000/media/:path*',
+        destination: `${backendBase}/media/:path*`,
       },
     ];
   },
