@@ -5,14 +5,13 @@ import { MdArrowForwardIos } from 'react-icons/md';
 import BundleCard from './BundleCard';
 import { useBundleData } from '@/app/(public)/hooks/useBundleData';
 
-export default function BundleSlider({ cardsToShow = 3 }) {
+export default function BundleSlider({ cardsToShow }) {
   const { bundles } = useBundleData();
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [windowWidth, setWindowWidth] = useState(0);
 
-  // Track window width for responsive inline styles
   useEffect(() => {
     setWindowWidth(window.innerWidth);
     const handleResize = () => {
@@ -46,18 +45,31 @@ export default function BundleSlider({ cardsToShow = 3 }) {
     }
   };
 
-  // Calculate width based on screen size
+  /**
+   * 4-Breakpoint Width Calculation
+   */
   const getCardWidth = () => {
-    if (windowWidth < 640) return '100%'; // Mobile: 1 card
-    if (windowWidth < 1024) return 'calc((100% - 20px) / 2)'; // Tablet: 2 cards
+    if (windowWidth === 0) return '100%'; // SSR Fallback
 
-    // Desktop: Dynamic based on prop
-    const gap = 20;
-    return `calc((100% - ${(cardsToShow - 1) * gap}px) / ${cardsToShow})`;
+    // 1. If a specific override is passed (like cardsToShow={1} in Product Page), respect it
+    if (cardsToShow === 1) return '100%';
+
+    // 2. Standard 4-Breakpoint Logic
+    if (windowWidth < 640) {
+      return '100%'; // 4. Phone Screen: 1 Card
+    }
+    if (windowWidth < 1024) {
+      return 'calc((100% - 20px) / 2)'; // 3. Tab Screen: 2 Cards
+    }
+    if (windowWidth < 1280) {
+      return 'calc((100% - 20px) / 2)'; // 2. Laptop Screen: 2 Cards
+    }
+
+    return 'calc((100% - 40px) / 3)'; // 1. Large Screen: 3 Cards
   };
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full animate-in fade-in duration-700">
       {/* Header & Navigation */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <h1 className="font-bold text-xl sm:text-2xl text-gray-900 tracking-tight">
@@ -94,7 +106,7 @@ export default function BundleSlider({ cardsToShow = 3 }) {
       <div
         ref={scrollContainerRef}
         onScroll={checkScrollButtons}
-        className="flex gap-5 overflow-x-auto scrollbar-hide scroll-smooth snap-x snap-mandatory touch-pan-x pb-4"
+        className="flex gap-5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory touch-pan-x pb-4"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -103,7 +115,7 @@ export default function BundleSlider({ cardsToShow = 3 }) {
         {bundles.map(bundle => (
           <div
             key={bundle.id}
-            className="flex-shrink-0 snap-center"
+            className="flex-shrink-0 snap-start"
             style={{ width: getCardWidth() }}
           >
             <BundleCard bundle={bundle} />

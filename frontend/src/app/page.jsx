@@ -19,8 +19,11 @@ export default function Home() {
       <UploadPrescriptionBanner />
       <PopularProduct />
       <BookTestBanner />
-      {/* Set to show 3 cards in a row on desktop */}
-      <SmartHealthBundle cardsToShow={3} />
+      {/* 
+        Removed hardcoded cardsToShow prop to allow the component 
+        to handle responsive grid layouts internally (Large: 3, Laptop: 2).
+      */}
+      <SmartHealthBundle />
       <DealsSection />
     </div>
   );

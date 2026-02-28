@@ -13,21 +13,18 @@ import UploadPrescriptionBanner from '../../home/components/UploadPrescriptionBa
 import { useProductDetails } from '../../../hooks/useProductDetails';
 
 const ProductSingle = ({ params }) => {
-  // 1. Unwrap params using React.use()
   const resolvedParams = use(params);
   const { slug } = resolvedParams;
   const pathname = usePathname();
 
-  // 2. Call the real API hook
   const { product, isLoading, error } = useProductDetails(slug);
 
-  // 3. Generate Breadcrumbs
+  // 1. Generate Breadcrumbs
   const pathSegments = pathname.split('/').filter(segment => segment);
   const breadcrumbs = pathSegments.map((segment, index) => {
     const href = `/${pathSegments.slice(0, index + 1).join('/')}`;
     const isLast = index === pathSegments.length - 1;
 
-    // Use real product name for the last breadcrumb if available
     let name =
       isLast && product
         ? product.name
@@ -36,13 +33,15 @@ const ProductSingle = ({ params }) => {
     return { name, href, isLast };
   });
 
-  // 4. Process Images for Viewer
+  // 2. Process Images for Viewer
   const getProductImages = () => {
     if (!product) return [];
     const images = [];
     if (product.image) images.push(product.image);
 
-    if (product.images && typeof product.images === 'string') {
+    if (product.images && Array.isArray(product.images)) {
+      images.push(...product.images);
+    } else if (product.images && typeof product.images === 'string') {
       try {
         const extraImages = JSON.parse(product.images);
         if (Array.isArray(extraImages)) images.push(...extraImages);
@@ -53,30 +52,6 @@ const ProductSingle = ({ params }) => {
     }
     return [...new Set(images)];
   };
-
-  // Mock data for Alternative Brands (Keep UI only for now)
-  const alternativeProducts = [
-    {
-      id: 101,
-      name: 'Fenac 50',
-      brand: 'ACME',
-      generic: 'Diclofenac Sodium BP 50mg',
-      price: 620,
-      oldPrice: 1230,
-      slug: 'fenac-50',
-      image: '/assets/images/cart1.png',
-    },
-    {
-      id: 102,
-      name: 'Diclo-12',
-      brand: 'SQUARE',
-      generic: 'Diclofenac Sodium BP 50mg',
-      price: 580,
-      oldPrice: 1100,
-      slug: 'diclo-12',
-      image: '/assets/images/cart1.png',
-    },
-  ];
 
   if (isLoading) {
     return (
@@ -104,10 +79,10 @@ const ProductSingle = ({ params }) => {
   }
 
   return (
-    <div className="w-full animate-in fade-in duration-700">
-      {/* Breadcrumb Navigation - Fully Rounded & Content Width */}
-      <nav className="bg-white border border-gray-100/50 rounded-full px-6 py-2.5 w-fit mb-8">
-        <ol className="flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
+    <div className="w-full animate-in fade-in duration-700 pb-10">
+      {/* Breadcrumb Navigation - Responsive Padding */}
+      <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2.5 w-fit mb-6 md:mb-8">
+        <ol className="flex items-center gap-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
           <li className="flex items-center gap-2">
             <Link
               href="/"
@@ -120,7 +95,9 @@ const ProductSingle = ({ params }) => {
           {breadcrumbs.map(crumb => (
             <li key={crumb.href} className="flex items-center gap-2">
               {crumb.isLast ? (
-                <span className="text-gray-900 font-bold">{crumb.name}</span>
+                <span className="text-gray-900 font-bold truncate max-w-[120px] sm:max-w-none">
+                  {crumb.name}
+                </span>
               ) : (
                 <>
                   <Link
@@ -138,46 +115,53 @@ const ProductSingle = ({ params }) => {
       </nav>
 
       {/* 
-        Main Grid Container:
-        - Desktop: 10 columns (7 for Left, 3 for Right)
+        Main Grid Strategy:
+        1. Large Screen (xl): 10-column grid (7:3 split)
+        2. Laptop Screen (lg): 1-column grid (Stacked to accommodate Category Sidebar)
+        3. Tab Screen (md): 1-column grid
+        4. Phone Screen (base): 1-column grid
       */}
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-8 items-start">
-        {/* LEFT COLUMN ITEMS (7/10 width) */}
-        <div className="order-1 lg:col-span-7 flex flex-col gap-8 min-w-0">
+      <div className="grid grid-cols-1 xl:grid-cols-10 gap-6 md:gap-8 items-start">
+        {/* LEFT COLUMN: Image Viewer & Tabs (on Large Screens) */}
+        <div className="xl:col-span-7 flex flex-col gap-6 md:gap-8 min-w-0">
           <ProductImageViewer images={getProductImages()} />
-          <div className="hidden lg:block">
+
+          {/* Tabs shown here only on Large screens to keep the summary card visible on the right */}
+          <div className="hidden xl:block">
             <ProductDetailsTabs product={product} />
           </div>
         </div>
 
-        {/* RIGHT COLUMN ITEMS (3/10 width) */}
-        <div className="order-2 lg:col-span-3 flex flex-col gap-8 min-w-0">
-          {/* Passing the real product data to the Summary Card */}
+        {/* RIGHT COLUMN: Summary, Alternatives, and Tabs (on Laptop/Mobile) */}
+        <div className="xl:col-span-3 flex flex-col gap-6 md:gap-8 min-w-0">
           <ProductSummaryCard product={product} />
 
-          <div className="block lg:hidden">
+          {/* Tabs move here for Laptop, Tab, and Phone screens for better vertical flow */}
+          <div className="block xl:hidden">
             <ProductDetailsTabs product={product} />
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6">
+          {/* Bundle Section */}
+          <div className="bg-white border border-gray-100 rounded-[32px] p-5 md:p-6">
             <BundleSlider cardsToShow={1} />
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6 space-y-6">
+          {/* Alternative Brands Section */}
+          <div className="bg-white border border-gray-100 rounded-[32px] p-5 md:p-6 space-y-6">
             <h3 className="text-lg font-bold text-gray-900 tracking-tight px-1">
               Alternative Brands
             </h3>
             <div className="flex flex-col gap-4">
-              {alternativeProducts.map(alt => (
-                <AlternativeProductCard key={alt.id} product={alt} />
-              ))}
+              {/* Currently showing placeholder as per previous instruction */}
+              <AlternativeProductCard />
             </div>
           </div>
         </div>
       </div>
 
-      <PopularProduct />
-      <div className="mt-10">
+      {/* Footer Sections */}
+      <div className="space-y-10 mt-10">
+        <PopularProduct />
         <UploadPrescriptionBanner />
       </div>
     </div>
