@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
 
 export default function CompleteRegistrationForm() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function CompleteRegistrationForm() {
     const token = sessionStorage.getItem('registration_token');
     const identifier = sessionStorage.getItem('verified_identifier');
     const type = sessionStorage.getItem('verified_type');
-    const storedName = sessionStorage.getItem('temp_reg_name'); // Get name from step 1
+    const storedName = sessionStorage.getItem('temp_reg_name');
 
     if (!token || !identifier || !type) {
       router.replace('/register');
@@ -60,14 +61,11 @@ export default function CompleteRegistrationForm() {
     try {
       const payload =
         verifiedType === 'phone' ? { email: value } : { phone: value };
-      const response = await fetch(
-        'http://localhost:8000/api/auth/request-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) throw new Error('Failed to send verification code.');
       setOtherStep(1);
@@ -89,14 +87,11 @@ export default function CompleteRegistrationForm() {
           ? { email: value, otp: otherOtp }
           : { phone: value, otp: otherOtp };
 
-      const response = await fetch(
-        'http://localhost:8000/api/auth/verify-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.VERIFY_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
 
       if (!response.ok) throw new Error('Invalid verification code.');
       setOtherStep(2);
@@ -125,14 +120,11 @@ export default function CompleteRegistrationForm() {
     const token = sessionStorage.getItem('registration_token');
     const data = new FormData();
 
-    // 1. Required Authentication Data
     data.append('registration_token', token);
     data.append('username', formData.username);
     data.append('password', formData.password);
-    data.append('full_name', fullName); // Include name from step 1
+    data.append('full_name', fullName);
 
-    // 2. Primary Verified Identifier (CRITICAL FIX)
-    // We must send the identifier that was verified in the previous step
     if (verifiedType === 'email') {
       data.append('email', verifiedValue);
       if (formData.phone && otherStep === 2)
@@ -143,24 +135,19 @@ export default function CompleteRegistrationForm() {
         data.append('email', formData.email);
     }
 
-    // 3. Optional Profile Data
     if (formData.address) data.append('address', formData.address);
     if (formData.profile_picture)
       data.append('profile_picture', formData.profile_picture);
 
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/register/complete/',
-        {
-          method: 'POST',
-          body: data,
-        },
-      );
+      const response = await fetch(`${AUTH_ENDPOINTS.REGISTER}complete/`, {
+        method: 'POST',
+        body: data,
+      });
 
       const result = await response.json();
 
       if (!response.ok) {
-        // If there are field-specific errors, show the first one
         const firstError =
           result && typeof result === 'object'
             ? Object.values(result)[0][0] || Object.values(result)[0]
@@ -221,7 +208,6 @@ export default function CompleteRegistrationForm() {
       )}
 
       <div className="grid grid-cols-1 gap-6">
-        {/* Display Full Name from Step 1 */}
         <div className="px-5 py-3 bg-gray-50 rounded-2xl border border-gray-100">
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
             Full Name
@@ -253,7 +239,6 @@ export default function CompleteRegistrationForm() {
           disabled
         />
 
-        {/* Secondary Identifier Section */}
         <div className="space-y-4">
           {verifiedType === 'phone' ? (
             <UiInput

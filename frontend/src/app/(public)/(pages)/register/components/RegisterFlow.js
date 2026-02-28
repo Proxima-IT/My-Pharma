@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { AUTH_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
 
 export default function RegisterFlow() {
   const router = useRouter();
@@ -39,14 +40,11 @@ export default function RegisterFlow() {
       ? { email: formData.identifier }
       : { phone: formData.identifier };
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/request-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.REQUEST_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
       if (!response.ok)
         throw new Error(getFriendlyErrorMessage(response.status, data));
@@ -68,17 +66,15 @@ export default function RegisterFlow() {
       otp: formData.otp,
     };
     try {
-      const response = await fetch(
-        'http://localhost:8000/api/auth/verify-otp/',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        },
-      );
+      const response = await fetch(AUTH_ENDPOINTS.VERIFY_OTP, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
       const data = await response.json();
       if (!response.ok)
         throw new Error(getFriendlyErrorMessage(response.status, data));
+
       // Store tokens and metadata for the final "Complete Registration" step
       sessionStorage.setItem('registration_token', data.registration_token);
       sessionStorage.setItem('verified_identifier', formData.identifier);
@@ -98,8 +94,8 @@ export default function RegisterFlow() {
         className="space-y-6"
       >
         {error && (
-          <div className="flex gap-3 p-4 rounded-xl bg-info-25 border border-info-100 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="shrink-0 w-5 h-5 text-info-500">
+          <div className="flex gap-3 p-4 rounded-xl bg-red-50 border border-red-100 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="shrink-0 w-5 h-5 text-red-500">
               <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -109,7 +105,7 @@ export default function RegisterFlow() {
                 />
               </svg>
             </div>
-            <p className="text-sm font-bold leading-tight text-info-700">
+            <p className="text-sm font-bold leading-tight text-red-700">
               {error}
             </p>
           </div>
@@ -169,7 +165,7 @@ export default function RegisterFlow() {
             <button
               type="button"
               onClick={() => setStep(1)}
-              className="mt-3 text-[10px] font-black text-primary-500 uppercase tracking-widest hover:underline"
+              className="mt-3 text-[10px] font-black text-(--color-primary-500) uppercase tracking-widest hover:underline cursor-pointer"
             >
               Change email/phone
             </button>
