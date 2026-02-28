@@ -22,7 +22,7 @@ JWT_SIGNING_KEY = hashlib.sha256(
     SECRET_KEY.encode()
 ).hexdigest()
 
-DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
+DEBUG = True 
 
 ALLOWED_HOSTS = [
     h.strip()
