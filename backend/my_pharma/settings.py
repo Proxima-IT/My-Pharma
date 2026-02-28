@@ -19,7 +19,20 @@ JWT_SIGNING_KEY = hashlib.sha256(SECRET_KEY.encode()).hexdigest()
 DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
 
 # FIXED: Combined environment variables with local defaults and production fallbacks
+ALLOWED_HOSTS =["*"]
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,46.202.194.251,app.mypharma.com").split(",")
+
+CORS_ALLOW_ALL_ORIGINS = False
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://46.202.194.251:3000",
+    "https://app.mypharma.com",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_PRIVATE_NETWORK = True
+
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -39,8 +52,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
+    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
