@@ -3,19 +3,26 @@
  * Automatically switches between production server and local development
  */
 
-// Check if we are in a browser environment and what the hostname is
+// Check if we are in a browser environment
 const isBrowser = typeof window !== 'undefined';
+
+// Determine if we are running on localhost
 const isLocalhost =
   isBrowser &&
   (window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1');
 
-// Use environment variable if available, otherwise fallback based on environment
+/**
+ * API_BASE_URL Logic:
+ * 1. Uses NEXT_PUBLIC_API_URL if defined in .env
+ * 2. Falls back to localhost:8000 if on a local machine
+ * 3. Falls back to the VPS IP if running in production
+ */
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (isLocalhost
     ? 'http://localhost:8000/api'
-    : 'http://46.202.194.251:8000/api'); // Replace with your actual Backend Production IP/Domain
+    : 'http://46.202.194.251:8000/api');
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
