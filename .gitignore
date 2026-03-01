@@ -1,2 +1,8 @@
+# Django project settings and env (do not track)
+backend/.env
+backend/.env.*
+backend/my_pharma/settings.py
+
+# Logs
 /logs
 .logs

@@ -21,3 +21,6 @@ media/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Project settings (per-environment; do not track)
+my_pharma/settings.py
