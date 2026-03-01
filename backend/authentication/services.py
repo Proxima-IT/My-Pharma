@@ -347,16 +347,19 @@ def perform_login_phone(phone: str, password: str) -> User | None:
 
 
 def create_audit_log(user_id: int | None, action: str, request=None, metadata=None):
-    """Create AuditLog entry; request optional for IP and user_agent."""
-    ip = ""
-    ua = ""
-    if request:
-        ip = request.META.get("REMOTE_ADDR", "")
-        ua = request.META.get("HTTP_USER_AGENT", "")[:512]
-    AuditLog.objects.create(
-        user_id=user_id,
-        action=action,
-        ip_address=ip or None,
-        user_agent=ua,
-        metadata=metadata or {},
-    )
+    """Create AuditLog entry; request optional for IP and user_agent. Swallows errors so audit never breaks the request."""
+    try:
+        ip = ""
+        ua = ""
+        if request:
+            ip = request.META.get("REMOTE_ADDR", "")
+            ua = request.META.get("HTTP_USER_AGENT", "")[:512]
+        AuditLog.objects.create(
+            user_id=user_id,
+            action=action,
+            ip_address=ip or None,
+            user_agent=ua,
+            metadata=metadata or {},
+        )
+    except Exception as e:
+        logger.warning("Audit log failed (action=%s): %s", action, e)

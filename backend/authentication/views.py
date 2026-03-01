@@ -104,6 +104,12 @@ class RequestOTPView(APIView):
                 {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+        except Exception as e:
+            logger.exception("Request OTP failed: %s", e)
+            return Response(
+                {"detail": "Unable to send OTP. Please try again later.", "code": "server_error"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class RegisterPhoneView(APIView):
