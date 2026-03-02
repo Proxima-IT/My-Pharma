@@ -1,0 +1,305 @@
+2026-03-02 15:54:01,388 ERROR authentication.views request-otp failed: 
+Retry limit exceeded while trying to reconnect to the Celery redis result store backend. The Celery application must be restarted.
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 389, in connect_check_health
+    sock = self.retry.call_with_retry(
+        lambda: self._connect(), lambda error: self.disconnect(error)
+    )
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\retry.py", line 105, in call_with_retry
+    return do()
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 390, in <lambda>
+    lambda: self._connect(), lambda error: self.disconnect(error)
+            ~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 803, in _connect
+    raise err
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 787, in _connect
+    sock.connect(socket_address)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+ConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 130, in reconnect_on_error
+    yield
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 180, in _consume_from
+    self._pubsub.subscribe(key)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 1030, in subscribe
+    ret_val = self.execute_command("SUBSCRIBE", *new_channels.keys())
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 860, in execute_command
+    self.connection = self.connection_pool.get_connection()
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\utils.py", line 195, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 1533, in get_connection
+    connection.connect()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 380, in connect
+    self.connect_check_health(check_health=True)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 397, in connect_check_health
+    raise ConnectionError(self._error_message(e))
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. No connection could be made because the target machine actively refused it.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 389, in connect_check_health
+    sock = self.retry.call_with_retry(
+        lambda: self._connect(), lambda error: self.disconnect(error)
+    )
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\retry.py", line 105, in call_with_retry
+    return do()
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 390, in <lambda>
+    lambda: self._connect(), lambda error: self.disconnect(error)
+            ~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 803, in _connect
+    raise err
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 787, in _connect
+    sock.connect(socket_address)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+ConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 133, in reconnect_on_error
+    self._ensure(self._reconnect_pubsub, ())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 428, in ensure
+    return retry_over_time(
+        fun, self.connection_errors, args, {},
+        partial(self.on_connection_error, max_retries),
+        **retry_policy)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\kombu\utils\functional.py", line 318, in retry_over_time
+    return fun(*args, **kwargs)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 109, in _reconnect_pubsub
+    metas = self.backend.client.mget(self.subscribed_to)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\commands\core.py", line 1994, in mget
+    return self.execute_command("MGET", *args, **options)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 621, in execute_command
+    return self._execute_command(*args, **options)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 627, in _execute_command
+    conn = self.connection or pool.get_connection()
+                              ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\utils.py", line 195, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 1533, in get_connection
+    connection.connect()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 380, in connect
+    self.connect_check_health(check_health=True)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 397, in connect_check_health
+    raise ConnectionError(self._error_message(e))
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. No connection could be made because the target machine actively refused it.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Web Dev Projects\Client projects\003_My_Pharma\test\backend\authentication\views.py", line 81, in post
+    request_otp_for_email(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        email,
+        ^^^^^^
+        ip=request.META.get("REMOTE_ADDR", ""),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Web Dev Projects\Client projects\003_My_Pharma\test\backend\authentication\services.py", line 70, in request_otp_for_email
+    send_otp_email.delay(normalized, otp)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\app\task.py", line 444, in delay
+    return self.apply_async(args, kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\app\task.py", line 608, in apply_async
+    return app.send_task(
+           ~~~~~~~~~~~~~^
+        self.name, args, kwargs, task_id=task_id, producer=producer,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        **options
+        ^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\app\base.py", line 946, in send_task
+    self.backend.on_task_call(P, task_id)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 417, in on_task_call
+    self.result_consumer.consume_from(task_id)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 172, in consume_from
+    return self.start(task_id)
+           ~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 150, in start
+    self._consume_from(initial_task_id)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 179, in _consume_from
+    with self.reconnect_on_error():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 136, in reconnect_on_error
+    raise RuntimeError(E_RETRY_LIMIT_EXCEEDED) from e
+RuntimeError: 
+Retry limit exceeded while trying to reconnect to the Celery redis result store backend. The Celery application must be restarted.
+
+2026-03-02 16:05:23,128 ERROR authentication.views request-otp failed: 
+Retry limit exceeded while trying to reconnect to the Celery redis result store backend. The Celery application must be restarted.
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 389, in connect_check_health
+    sock = self.retry.call_with_retry(
+        lambda: self._connect(), lambda error: self.disconnect(error)
+    )
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\retry.py", line 105, in call_with_retry
+    return do()
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 390, in <lambda>
+    lambda: self._connect(), lambda error: self.disconnect(error)
+            ~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 803, in _connect
+    raise err
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 787, in _connect
+    sock.connect(socket_address)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+ConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 130, in reconnect_on_error
+    yield
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 180, in _consume_from
+    self._pubsub.subscribe(key)
+    ~~~~~~~~~~~~~~~~~~~~~~^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 1030, in subscribe
+    ret_val = self.execute_command("SUBSCRIBE", *new_channels.keys())
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 860, in execute_command
+    self.connection = self.connection_pool.get_connection()
+                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\utils.py", line 195, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 1533, in get_connection
+    connection.connect()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 380, in connect
+    self.connect_check_health(check_health=True)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 397, in connect_check_health
+    raise ConnectionError(self._error_message(e))
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. No connection could be made because the target machine actively refused it.
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 389, in connect_check_health
+    sock = self.retry.call_with_retry(
+        lambda: self._connect(), lambda error: self.disconnect(error)
+    )
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\retry.py", line 105, in call_with_retry
+    return do()
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 390, in <lambda>
+    lambda: self._connect(), lambda error: self.disconnect(error)
+            ~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 803, in _connect
+    raise err
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 787, in _connect
+    sock.connect(socket_address)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+ConnectionRefusedError: [WinError 10061] No connection could be made because the target machine actively refused it
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 133, in reconnect_on_error
+    self._ensure(self._reconnect_pubsub, ())
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 428, in ensure
+    return retry_over_time(
+        fun, self.connection_errors, args, {},
+        partial(self.on_connection_error, max_retries),
+        **retry_policy)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\kombu\utils\functional.py", line 318, in retry_over_time
+    return fun(*args, **kwargs)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 109, in _reconnect_pubsub
+    metas = self.backend.client.mget(self.subscribed_to)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\commands\core.py", line 1994, in mget
+    return self.execute_command("MGET", *args, **options)
+           ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 621, in execute_command
+    return self._execute_command(*args, **options)
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\client.py", line 627, in _execute_command
+    conn = self.connection or pool.get_connection()
+                              ~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\utils.py", line 195, in wrapper
+    return func(*args, **kwargs)
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 1533, in get_connection
+    connection.connect()
+    ~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 380, in connect
+    self.connect_check_health(check_health=True)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\redis\connection.py", line 397, in connect_check_health
+    raise ConnectionError(self._error_message(e))
+redis.exceptions.ConnectionError: Error 10061 connecting to 127.0.0.1:6379. No connection could be made because the target machine actively refused it.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Web Dev Projects\Client projects\003_My_Pharma\test\backend\authentication\views.py", line 81, in post
+    request_otp_for_email(
+    ~~~~~~~~~~~~~~~~~~~~~^
+        email,
+        ^^^^^^
+        ip=request.META.get("REMOTE_ADDR", ""),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "D:\Web Dev Projects\Client projects\003_My_Pharma\test\backend\authentication\services.py", line 70, in request_otp_for_email
+    send_otp_email.delay(normalized, otp)
+    ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\app\task.py", line 444, in delay
+    return self.apply_async(args, kwargs)
+           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\app\task.py", line 608, in apply_async
+    return app.send_task(
+           ~~~~~~~~~~~~~^
+        self.name, args, kwargs, task_id=task_id, producer=producer,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<2 lines>...
+        **options
+        ^^^^^^^^^
+    )
+    ^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\app\base.py", line 946, in send_task
+    self.backend.on_task_call(P, task_id)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 417, in on_task_call
+    self.result_consumer.consume_from(task_id)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 172, in consume_from
+    return self.start(task_id)
+           ~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 150, in start
+    self._consume_from(initial_task_id)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 179, in _consume_from
+    with self.reconnect_on_error():
+         ~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\mdbh0\AppData\Local\Programs\Python\Python313\Lib\contextlib.py", line 162, in __exit__
+    self.gen.throw(value)
+    ~~~~~~~~~~~~~~^^^^^^^
+  File "C:\Users\mdbh0\.virtualenvs\backend-89ryVpUP\Lib\site-packages\celery\backends\redis.py", line 136, in reconnect_on_error
+    raise RuntimeError(E_RETRY_LIMIT_EXCEEDED) from e
+RuntimeError: 
+Retry limit exceeded while trying to reconnect to the Celery redis result store backend. The Celery application must be restarted.
+
+2026-03-02 16:11:09,442 INFO authentication.services OTP requested for email (masked); resend count incremented.

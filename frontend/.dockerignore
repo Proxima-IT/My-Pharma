@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build
+.next
+out
+build
+
+# Env (inject at build/run)
+.env
+.env.*
+!.env.example
+
+# Debug / IDE / OS
+npm-debug.log*
+.DS_Store
+.idea
+.vscode
+
+# Misc
+*.md
+.git
+.gitignore
