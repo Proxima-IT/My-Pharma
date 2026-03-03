@@ -30,6 +30,7 @@ DEBUG = False
 ALLOWED_HOSTS = [
     "bluepillc.com",
     "www.bluepillc.com",
+    "46.202.194.251"
 ]
 
 # -----------------------------
