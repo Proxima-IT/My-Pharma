@@ -22,7 +22,7 @@ JWT_SIGNING_KEY = hashlib.sha256(
     SECRET_KEY.encode()
 ).hexdigest()
 
-DEBUG = False
+DEBUG = True
 
 # -----------------------------
 # Allowed Hosts
