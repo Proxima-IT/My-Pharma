@@ -1,5 +1,4 @@
-# My Pharma – Docker Compose (frontend + backend + MySQL + Redis)
-# Usage: see DOCKER_SETUP.md
+version: "3.9"
 
 services:
   backend:
@@ -17,55 +16,42 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
-      # Run OTP tasks in-process so OTP is logged to backend stdout (no worker needed)
-      - USE_REDIS=false
+      - USE_REDIS=true
       - SERVE_MEDIA=true
-      # Allow overriding hosts and CORS/CSRF origins from .env for VPS/production.
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,0.0.0.0}
-      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://frontend:3000,http://127.0.0.1:3000}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://frontend:3000,http://127.0.0.1:3000}
-    ports:
-      - "8000:8000"
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
+    expose:
+      - "8000"
     volumes:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
       - backend_logs:/app/logs
     depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1', 8000)); s.close()",
-        ]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
+      - mysql
+      - redis
+    networks:
+      - mypharma_network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api}
-        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
     container_name: mypharma-frontend
     restart: unless-stopped
     env_file: .env
     environment:
       - NODE_ENV=production
-      # Server-side rewrite: Next.js container must reach backend by service name
       - BACKEND_URL_INTERNAL=http://backend:8000
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     depends_on:
       - backend
+    networks:
+      - mypharma_network
 
   mysql:
     image: mysql:8.0
@@ -73,36 +59,24 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-my_pharma}
-      # MySQL image does not allow MYSQL_USER=root; use mypharma for the app user
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: mypharma
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-${MYSQL_PASSWORD}}
-    ports:
-      - "3307:3306"
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+    command: --default-authentication-plugin=mysql_native_password
+    networks:
+      - mypharma_network
 
   redis:
     image: redis:7-alpine
     container_name: mypharma-redis
     restart: unless-stopped
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 3
+    networks:
+      - mypharma_network
 
 volumes:
   backend_media:
@@ -110,3 +84,7 @@ volumes:
   backend_logs:
   mysql_data:
   redis_data:
+
+networks:
+  mypharma_network:
+    driver: bridge
