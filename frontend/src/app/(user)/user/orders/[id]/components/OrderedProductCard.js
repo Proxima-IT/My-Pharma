@@ -4,17 +4,17 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiChevronRight } from 'react-icons/fi';
 import { formatCurrency } from '../../../../lib/formatters';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 export default function OrderedProductCard({ item, productInfo }) {
   const router = useRouter();
 
   // 1. Data Mapping with Real Product Table Lookup
-  // We prioritize data from productInfo (the real product table)
   const slug = productInfo?.slug || item.product_slug || item.product;
   const productPath = `/product/${slug}`;
 
   const unitPrice = parseFloat(item.price_at_order || 0);
-  const imageUrl = productInfo?.image || item.image_url;
+  const imageUrl = getMediaUrl(productInfo?.image || item.image_url);
 
   // 2. Fallback Logic for Metadata
   const genericName =

@@ -27,6 +27,7 @@ export const API_BASE_URL =
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
   LOGIN: `${API_BASE_URL}/auth/login/`,
+  LOGOUT: `${API_BASE_URL}/auth/logout/`,
   REGISTER: `${API_BASE_URL}/auth/register/`,
   REQUEST_OTP: `${API_BASE_URL}/auth/request-otp/`,
   VERIFY_OTP: `${API_BASE_URL}/auth/verify-otp/`,

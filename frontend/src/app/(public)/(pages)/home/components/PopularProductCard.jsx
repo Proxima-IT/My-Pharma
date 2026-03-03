@@ -7,6 +7,7 @@ import { BsCart3 } from 'react-icons/bs';
 import { GoStarFill } from 'react-icons/go';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { useCart } from '../../../hooks/useCart';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 const PopularProductCard = ({ product }) => {
   const { addItem, isUpdating } = useCart();
@@ -37,7 +38,7 @@ const PopularProductCard = ({ product }) => {
             {/* Product image - Set to fill container */}
             {product?.image ? (
               <Image
-                src={product.image}
+                src={getMediaUrl(product.image)}
                 alt={product.name}
                 fill
                 className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 p-2"

@@ -11,6 +11,7 @@ import BundleSlider from '../../home/components/BundleSlider';
 import PopularProduct from '../../home/components/PopularProduct';
 import UploadPrescriptionBanner from '../../home/components/UploadPrescriptionBanner';
 import { useProductDetails } from '../../../hooks/useProductDetails';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 const ProductSingle = ({ params }) => {
   const resolvedParams = use(params);
@@ -33,24 +34,24 @@ const ProductSingle = ({ params }) => {
     return { name, href, isLast };
   });
 
-  // 2. Process Images for Viewer
+  // 2. Process Images for Viewer (normalize so they load via same-origin /media/ proxy in production)
   const getProductImages = () => {
     if (!product) return [];
     const images = [];
-    if (product.image) images.push(product.image);
+    if (product.image) images.push(getMediaUrl(product.image));
 
     if (product.images && Array.isArray(product.images)) {
-      images.push(...product.images);
+      product.images.forEach(img => images.push(getMediaUrl(img)));
     } else if (product.images && typeof product.images === 'string') {
       try {
         const extraImages = JSON.parse(product.images);
-        if (Array.isArray(extraImages)) images.push(...extraImages);
+        if (Array.isArray(extraImages)) extraImages.forEach(img => images.push(getMediaUrl(img)));
       } catch {
         const extraImages = product.images.split(',').map(img => img.trim());
-        images.push(...extraImages);
+        extraImages.forEach(img => images.push(getMediaUrl(img)));
       }
     }
-    return [...new Set(images)];
+    return [...new Set(images)].filter(Boolean);
   };
 
   if (isLoading) {

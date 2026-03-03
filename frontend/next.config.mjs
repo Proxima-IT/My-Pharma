@@ -19,6 +19,16 @@ const nextConfig = {
         port: '8000',
         pathname: '/media/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'bluepillc.com',
+        pathname: '/media/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'bluepillc.com',
+        pathname: '/media/**',
+      },
     ],
   },
   // /media/* is proxied by src/app/media/[[...path]]/route.js so BACKEND_URL_INTERNAL

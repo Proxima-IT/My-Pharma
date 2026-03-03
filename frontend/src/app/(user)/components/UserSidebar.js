@@ -15,6 +15,7 @@ import {
   FiChevronRight,
   FiUser,
 } from 'react-icons/fi';
+import { AUTH_ENDPOINTS, getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 const UserSidebar = () => {
   const pathname = usePathname();
@@ -31,7 +32,7 @@ const UserSidebar = () => {
         const token = localStorage.getItem('access_token');
         if (!token) return;
 
-        const response = await fetch('http://localhost:8000/api/auth/me/', {
+        const response = await fetch(AUTH_ENDPOINTS.ME, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await response.json();
@@ -42,7 +43,7 @@ const UserSidebar = () => {
               `${data.first_name || ''} ${data.last_name || ''}`.trim() ||
               data.username,
             identifier: data.email || data.phone || data.username,
-            avatar: data.profile_picture,
+            avatar: data.profile_picture ? getMediaUrl(data.profile_picture) : null,
           });
         }
       } catch (err) {
@@ -56,7 +57,7 @@ const UserSidebar = () => {
   const handleLogout = async () => {
     try {
       const token = localStorage.getItem('access_token');
-      await fetch('http://localhost:8000/api/auth/logout/', {
+      await fetch(AUTH_ENDPOINTS.LOGOUT, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
       });

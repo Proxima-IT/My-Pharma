@@ -17,9 +17,14 @@ export async function GET(request, context) {
   const url = `${backendBase}/media${mediaPath}${new URL(request.url).search || ''}`;
 
   try {
+    // Do not forward browser Host header so the backend receives a request it can accept (e.g. backend:8000 in Docker)
+    const fetchHeaders = new Headers();
+    const accept = request.headers.get('accept');
+    if (accept) fetchHeaders.set('accept', accept);
+
     const res = await fetch(url, {
       method: 'GET',
-      headers: new Headers(request.headers),
+      headers: fetchHeaders,
       cache: 'no-store',
     });
     const headers = new Headers();

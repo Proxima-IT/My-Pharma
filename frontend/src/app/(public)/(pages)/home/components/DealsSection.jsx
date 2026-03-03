@@ -9,7 +9,7 @@ import { MdArrowForwardIos } from 'react-icons/md';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { useCart } from '@/app/(public)/hooks/useCart';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
-import { PRODUCT_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
+import { PRODUCT_ENDPOINTS, getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 const DealsSection = () => {
   const [products, setProducts] = useState([]);
@@ -84,7 +84,7 @@ const DealsSection = () => {
                 )}
 
                 <Image
-                  src={product.image || '/assets/images/placeholder.png'}
+                  src={getMediaUrl(product.image) || '/assets/images/placeholder.png'}
                   alt={product.name}
                   fill
                   className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 p-4"
