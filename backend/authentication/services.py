@@ -56,7 +56,7 @@ def _generate_otp() -> str:
     # Static OTP for all flows (registration, login, change email/phone, etc.).
     # NOTE: This is intentionally hard-coded for the current environment.
     # If you re-enable random OTPs in future, update all client-side expectations.
-    return "1122"
+    return "112233"
 
 
 def request_otp_for_email(email: str, ip: str = "", user_agent: str = "") -> None:
