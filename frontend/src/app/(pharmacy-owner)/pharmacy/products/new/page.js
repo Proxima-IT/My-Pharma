@@ -38,8 +38,7 @@ export default function AddProductPage() {
     is_active: true,
   });
 
-  // State for multiple images
-  const [productImages, setProductImages] = useState([]); // Array of { file, preview, id }
+  const [productImages, setProductImages] = useState([]);
 
   const handleImageChange = e => {
     const files = Array.from(e.target.files);
@@ -51,14 +50,12 @@ export default function AddProductPage() {
       }));
       setProductImages(prev => [...prev, ...newImages]);
     }
-    // Reset input so same file can be selected again if removed
     e.target.value = '';
   };
 
   const removeImage = id => {
     setProductImages(prev => {
       const filtered = prev.filter(img => img.id !== id);
-      // Revoke URL to prevent memory leaks
       const removed = prev.find(img => img.id === id);
       if (removed) URL.revokeObjectURL(removed.preview);
       return filtered;
@@ -67,19 +64,16 @@ export default function AddProductPage() {
 
   const handleSubmit = async e => {
     e.preventDefault();
-
     const data = new FormData();
 
-    // Append all text/boolean fields
     Object.keys(formData).forEach(key => {
       if (formData[key] !== '' && formData[key] !== null) {
         data.append(key, formData[key]);
       }
     });
 
-    // Append multiple images
     productImages.forEach(img => {
-      data.append('images', img.file); // Backend should expect a list of 'images'
+      data.append('images', img.file);
     });
 
     const success = await createProduct(data);
@@ -96,7 +90,6 @@ export default function AddProductPage() {
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
-      {/* Header */}
       <div className="flex items-center gap-4">
         <Link
           href="/pharmacy/products"
@@ -113,9 +106,7 @@ export default function AddProductPage() {
         onSubmit={handleSubmit}
         className="grid grid-cols-1 lg:grid-cols-3 gap-8"
       >
-        {/* LEFT COLUMN: Main Details */}
         <div className="lg:col-span-2 space-y-8">
-          {/* 1. Basic Information */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
               <FiInfo /> Basic Information
@@ -179,9 +170,10 @@ export default function AddProductPage() {
                 </div>
               </div>
 
+              {/* Generic Name (Ingredient) - Now Optional */}
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                  Generic Name (Ingredient)
+                  Generic Name (Ingredient) - Optional
                 </label>
                 <div className="relative">
                   <select
@@ -190,7 +182,6 @@ export default function AddProductPage() {
                     onChange={e =>
                       setFormData({ ...formData, ingredient: e.target.value })
                     }
-                    required
                   >
                     <option value="">Select Ingredient</option>
                     {ingredients.map(ing => (
@@ -219,7 +210,6 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          {/* 2. Pricing & Inventory */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
               <FiDollarSign /> Pricing & Inventory
@@ -275,9 +265,7 @@ export default function AddProductPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Media & Settings */}
         <div className="space-y-8">
-          {/* 3. Product Images Gallery */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
               <FiImage /> Product Images
@@ -309,7 +297,6 @@ export default function AddProductPage() {
                 </div>
               ))}
 
-              {/* Upload Trigger */}
               <button
                 type="button"
                 onClick={() => fileInputRef.current.click()}
@@ -338,7 +325,6 @@ export default function AddProductPage() {
             </p>
           </div>
 
-          {/* 4. Settings */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
               <FiLayers /> Settings
@@ -376,7 +362,6 @@ export default function AddProductPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
           <div className="pt-4">
             <UiButton
               type="submit"
