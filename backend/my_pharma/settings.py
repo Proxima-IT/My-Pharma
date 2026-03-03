@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
-
+  
 # ------------------------------------------------------------------------------
 # SECURITY
 # ------------------------------------------------------------------------------
@@ -21,7 +21,7 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "change-me-in-production")
 JWT_SIGNING_KEY = hashlib.sha256(
     SECRET_KEY.encode()
 ).hexdigest()
-
+   
 DEBUG = True
 
 # -----------------------------
