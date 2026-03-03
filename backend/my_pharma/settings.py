@@ -170,6 +170,10 @@ MEDIA_ROOT = BASE_DIR / "media"
 # When True, Django serves MEDIA files at /media/ (for dev or when not using a separate media server)
 SERVE_MEDIA = os.environ.get("SERVE_MEDIA", "true" if DEBUG else "false").lower() in ("true", "1", "yes")
 
+# Allow larger product/prescription image uploads (default 2.5 MB). 413 = Request Entity Too Large.
+FILE_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get("FILE_UPLOAD_MAX_MEMORY_SIZE", 20 * 1024 * 1024))  # 20 MB
+DATA_UPLOAD_MAX_MEMORY_SIZE = int(os.environ.get("DATA_UPLOAD_MAX_MEMORY_SIZE", 20 * 1024 * 1024))  # 20 MB
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # ------------------------------------------------------------------------------
