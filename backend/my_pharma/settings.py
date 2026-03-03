@@ -7,6 +7,7 @@ import hashlib
 import os
 from pathlib import Path
 from datetime import timedelta
+from turtle import Turtle
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -46,6 +47,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "https://bluepillc.com",
     "https://www.bluepillc.com",
+   
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -54,6 +56,7 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 CSRF_TRUSTED_ORIGINS = [
     "https://bluepillc.com",
     "https://www.bluepillc.com",
+    
 ]
 
 CSRF_COOKIE_SECURE = True
