@@ -22,33 +22,35 @@ JWT_SIGNING_KEY = hashlib.sha256(
     SECRET_KEY.encode()
 ).hexdigest()
 
-DEBUG = False; 
+DEBUG = False
 
-ALLOWED_HOSTS = ["http://bluepillc.com/, https://bluepillc.com/"]
+# -----------------------------
+# Allowed Hosts
+# -----------------------------
+ALLOWED_HOSTS = [
+    "bluepillc.com",
+    "www.bluepillc.com",
+]
 
-# ------------------------------------------------------------------------------
-# CORS + CSRF (✅ FIXED)
-# ------------------------------------------------------------------------------
-
+# -----------------------------
+# CORS + CSRF
+# -----------------------------
 CORS_ALLOW_ALL_ORIGINS = False
-
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://46.202.194.251:3000",
-    "https://app.mypharma.com",
+    "https://bluepillc.com",
+    "https://www.bluepillc.com",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_PRIVATE_NETWORK = True
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://46.202.194.251:3000",
-    "https://app.mypharma.com",
+    "https://bluepillc.com",
+    "https://www.bluepillc.com",
 ]
 
-CSRF_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
 
 # ------------------------------------------------------------------------------
 # APPLICATIONS
