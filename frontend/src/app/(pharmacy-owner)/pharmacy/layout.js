@@ -21,7 +21,7 @@ export default function PharmacyLayout({ children }) {
   });
 
   return (
-    <AuthGuard allowedRoles={['PHARMACY_ADMIN']}>
+    <AuthGuard allowedRoles={['PHARMACY_ADMIN', 'SUPER_ADMIN']}>
       <div className="w-full py-6 md:py-10 px-4 md:px-7 flex flex-col lg:flex-row gap-8 items-start min-h-screen bg-white">
         <aside
           className={`${isHubPage ? 'block' : 'hidden'} lg:block w-full lg:w-[320px] lg:shrink-0 sticky top-36`}

@@ -7,7 +7,6 @@ import hashlib
 import os
 from pathlib import Path
 from datetime import timedelta
-from turtle import Turtle
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent

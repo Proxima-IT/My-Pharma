@@ -67,8 +67,9 @@ export default function AddProductPage() {
     const data = new FormData();
 
     Object.keys(formData).forEach(key => {
-      if (formData[key] !== '' && formData[key] !== null) {
-        data.append(key, formData[key]);
+      const value = formData[key];
+      if (value !== '' && value !== null && value !== undefined) {
+        data.append(key, value);
       }
     });
 
