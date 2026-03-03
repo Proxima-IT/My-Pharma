@@ -27,11 +27,17 @@ DEBUG = True
 # -----------------------------
 # Allowed Hosts
 # -----------------------------
-ALLOWED_HOSTS = [
-    "bluepillc.com",
-    "www.bluepillc.com",
-    "46.202.194.251"
+# Build from env so Docker media proxy (Host: backend:8000) is accepted; always include internal hosts.
+_allowed = [
+    h.strip()
+    for h in os.environ.get("ALLOWED_HOSTS", "bluepillc.com,www.bluepillc.com,46.202.194.251").split(",")
+    if h.strip()
 ]
+_internal = ["backend", "backend:8000", "localhost", "127.0.0.1"]
+for host in _internal:
+    if host not in _allowed:
+        _allowed.append(host)
+ALLOWED_HOSTS = _allowed
 
 # -----------------------------
 # CORS + CSRF
