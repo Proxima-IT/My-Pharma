@@ -22,15 +22,9 @@ JWT_SIGNING_KEY = hashlib.sha256(
     SECRET_KEY.encode()
 ).hexdigest()
 
-DEBUG = os.environ.get("DEBUG", "false").lower() == "true"
+DEBUG = False; 
 
-ALLOWED_HOSTS = [
-    h.strip()
-    for h in os.environ.get(
-        "ALLOWED_HOSTS",
-        "localhost,127.0.0.1,46.202.194.251,app.mypharma.com",
-    ).split(",")
-]
+ALLOWED_HOSTS = ["http://bluepillc.com/, https://bluepillc.com/"]
 
 # ------------------------------------------------------------------------------
 # CORS + CSRF (✅ FIXED)
