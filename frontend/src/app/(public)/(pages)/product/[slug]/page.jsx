@@ -34,7 +34,7 @@ const ProductSingle = ({ params }) => {
     return { name, href, isLast };
   });
 
-  // 2. Process Images for Viewer (normalize so they load via same-origin /media/ proxy in production)
+  // 2. Process Images
   const getProductImages = () => {
     if (!product) return [];
     const images = [];
@@ -45,7 +45,8 @@ const ProductSingle = ({ params }) => {
     } else if (product.images && typeof product.images === 'string') {
       try {
         const extraImages = JSON.parse(product.images);
-        if (Array.isArray(extraImages)) extraImages.forEach(img => images.push(getMediaUrl(img)));
+        if (Array.isArray(extraImages))
+          extraImages.forEach(img => images.push(getMediaUrl(img)));
       } catch {
         const extraImages = product.images.split(',').map(img => img.trim());
         extraImages.forEach(img => images.push(getMediaUrl(img)));
@@ -81,7 +82,7 @@ const ProductSingle = ({ params }) => {
 
   return (
     <div className="w-full animate-in fade-in duration-700 pb-10">
-      {/* Breadcrumb Navigation - Responsive Padding */}
+      {/* Breadcrumb Navigation */}
       <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2.5 w-fit mb-6 md:mb-8">
         <ol className="flex items-center gap-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
           <li className="flex items-center gap-2">
@@ -117,50 +118,44 @@ const ProductSingle = ({ params }) => {
 
       {/* 
         Main Grid Strategy:
-        1. Large Screen (xl): 10-column grid (7:3 split)
-        2. Laptop Screen (lg): 1-column grid (Stacked to accommodate Category Sidebar)
-        3. Tab Screen (md): 1-column grid
-        4. Phone Screen (base): 1-column grid
+        - grid-cols-1: Default (Mobile/Tab/Laptop)
+        - 2xl:grid-cols-10: Only side-by-side on very large screens
       */}
-      <div className="grid grid-cols-1 xl:grid-cols-10 gap-6 md:gap-8 items-start">
-        {/* LEFT COLUMN: Image Viewer & Tabs (on Large Screens) */}
-        <div className="xl:col-span-7 flex flex-col gap-6 md:gap-8 min-w-0">
+      <div className="grid grid-cols-1 2xl:grid-cols-10 gap-8 items-start">
+        {/* LEFT COLUMN */}
+        <div className="2xl:col-span-7 flex flex-col gap-8 min-w-0">
           <ProductImageViewer images={getProductImages()} />
 
-          {/* Tabs shown here only on Large screens to keep the summary card visible on the right */}
-          <div className="hidden xl:block">
+          {/* Tabs visible here only on 2xl screens */}
+          <div className="hidden 2xl:block">
             <ProductDetailsTabs product={product} />
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Summary, Alternatives, and Tabs (on Laptop/Mobile) */}
-        <div className="xl:col-span-3 flex flex-col gap-6 md:gap-8 min-w-0">
+        {/* RIGHT COLUMN */}
+        <div className="2xl:col-span-3 flex flex-col gap-8 min-w-0">
           <ProductSummaryCard product={product} />
 
-          {/* Tabs move here for Laptop, Tab, and Phone screens for better vertical flow */}
-          <div className="block xl:hidden">
+          {/* Tabs move here for all screens smaller than 2xl */}
+          <div className="block 2xl:hidden">
             <ProductDetailsTabs product={product} />
           </div>
 
-          {/* Bundle Section */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-5 md:p-6">
+          <div className="bg-white border border-gray-100 rounded-[32px] p-6">
             <BundleSlider cardsToShow={1} />
           </div>
 
-          {/* Alternative Brands Section */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-5 md:p-6 space-y-6">
+          <div className="bg-white border border-gray-100 rounded-[32px] p-6 space-y-6">
             <h3 className="text-lg font-bold text-gray-900 tracking-tight px-1">
               Alternative Brands
             </h3>
             <div className="flex flex-col gap-4">
-              {/* Currently showing placeholder as per previous instruction */}
               <AlternativeProductCard />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Footer Sections */}
       <div className="space-y-10 mt-10">
         <PopularProduct />
         <UploadPrescriptionBanner />
