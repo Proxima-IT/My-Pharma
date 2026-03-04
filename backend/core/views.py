@@ -6,7 +6,6 @@ from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -144,13 +143,18 @@ class ProductViewSet(viewsets.ModelViewSet):
         return qs.filter(is_active=True)
 
     def perform_destroy(self, instance):
-        """Catch ProtectedError when product is referenced by orders or prescriptions."""
+        """Delete product; if protected by related objects, soft-delete instead."""
         try:
             instance.delete()
         except ProtectedError:
-            raise ValidationError(
-                {"detail": "Cannot delete this product: it is referenced by orders or prescriptions. Remove or complete those references first."}
+            # Product is referenced by OrderItem or PrescriptionItem (on_delete=PROTECT).
+            # Keep historical data intact but hide from catalog and zero out stock.
+            Product.objects.filter(pk=instance.pk).update(
+                is_active=False,
+                quantity_in_stock=0,
             )
+            # Remove from any active carts so users can't order it any more.
+            CartItem.objects.filter(product=instance).delete()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
