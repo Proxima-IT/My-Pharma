@@ -3,14 +3,11 @@ import React from 'react';
 
 export default function OrderInfoCard({ label, value, children }) {
   return (
-    <div className="bg-white border border-gray-100 rounded-[24px] p-4 sm:p-5 flex flex-col gap-1 sm:gap-2 flex-1 min-w-0 transition-all">
-      {/* Label: Smaller on mobile, forced truncation to prevent push-out */}
-      <span className="text-[11px] sm:text-[13px] font-medium text-gray-400 whitespace-nowrap uppercase tracking-wider truncate">
+    <div className="bg-white border border-gray-100 rounded-[24px] p-4 sm:p-5 flex flex-col gap-1.5 w-full transition-all hover:border-gray-200">
+      <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.15em] truncate">
         {label}
       </span>
-
-      {/* Value Container: min-w-0 allows the child span to truncate properly */}
-      <div className="text-[14px] sm:text-[15px] font-bold text-gray-900 flex items-center min-w-0">
+      <div className="text-[14px] font-bold text-gray-900 flex items-center min-w-0">
         {value && (
           <span className="truncate" title={value}>
             {value}
