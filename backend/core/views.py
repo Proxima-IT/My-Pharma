@@ -2,9 +2,11 @@
 Core API views with RBAC.
 """
 from decimal import Decimal
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -140,6 +142,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.request.user.is_authenticated:
             return qs
         return qs.filter(is_active=True)
+
+    def perform_destroy(self, instance):
+        """Catch ProtectedError when product is referenced by orders or prescriptions."""
+        try:
+            instance.delete()
+        except ProtectedError:
+            raise ValidationError(
+                {"detail": "Cannot delete this product: it is referenced by orders or prescriptions. Remove or complete those references first."}
+            )
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
