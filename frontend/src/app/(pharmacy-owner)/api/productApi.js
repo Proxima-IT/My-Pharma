@@ -98,9 +98,18 @@ export const createPharmacyProductApi = async (token, formData) => {
     body: formData,
   });
 
-  const data = await response.json();
+  const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(JSON.stringify(data) || 'Failed to create product');
+    const msg =
+      (typeof data.detail === 'string' && data.detail) ||
+      (data.category && (Array.isArray(data.category) ? data.category[0] : data.category)) ||
+      (data.brand && (Array.isArray(data.brand) ? data.brand[0] : data.brand)) ||
+      (data.name && (Array.isArray(data.name) ? data.name[0] : data.name)) ||
+      (data.price && (Array.isArray(data.price) ? data.price[0] : data.price)) ||
+      data.detail ||
+      JSON.stringify(data) ||
+      'Failed to create product';
+    throw new Error(msg);
   }
   return data;
 };

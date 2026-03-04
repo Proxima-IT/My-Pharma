@@ -142,6 +142,7 @@ docker compose down -v
 - Proxy `/api` and `/media` to the backend (e.g. `http://backend:8000`).
 - Proxy `/` to the frontend (e.g. `http://frontend:3000`).
 - Set `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, and `CSRF_TRUSTED_ORIGINS` to your frontend/API domains.
+- **Large uploads (product/prescription images):** If you get **413 Request Entity Too Large**, set a larger body size in Nginx, e.g. `client_max_body_size 20M;` in `http` or in the `location` that proxies to the API.
 
 ### 4. Media and static files
 
@@ -172,6 +173,7 @@ The stack does not start a Celery worker by default. To run async tasks (e.g. OT
 | Migrations fail | Run manually: `docker compose exec backend python manage.py migrate`. |
 | Static/admin CSS missing | Run: `docker compose exec backend python manage.py collectstatic --noinput`. |
 | Port already in use | Change host ports in `docker-compose.yml` (e.g. `"3001:3000"` for frontend). |
+| 413 on image upload | Django allows 20 MB. If using Nginx, add `client_max_body_size 20M;` in the block that proxies to the API. |
 
 ---
 

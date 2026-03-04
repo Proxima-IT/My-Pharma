@@ -2,6 +2,7 @@
 Core API views with RBAC.
 """
 from decimal import Decimal
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
@@ -137,9 +138,26 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.is_authenticated:
+        include_inactive = self.request.query_params.get("include_inactive")
+        # By default, hide inactive (soft-deleted) products from all callers, including pharmacy admin.
+        # Explicitly pass ?include_inactive=1 to see everything (e.g. for back-office reports).
+        if include_inactive in ("1", "true", "True", "yes"):
             return qs
         return qs.filter(is_active=True)
+
+    def perform_destroy(self, instance):
+        """Delete product; if protected by related objects, soft-delete instead."""
+        try:
+            instance.delete()
+        except ProtectedError:
+            # Product is referenced by OrderItem or PrescriptionItem (on_delete=PROTECT).
+            # Keep historical data intact but hide from catalog and zero out stock.
+            Product.objects.filter(pk=instance.pk).update(
+                is_active=False,
+                quantity_in_stock=0,
+            )
+            # Remove from any active carts so users can't order it any more.
+            CartItem.objects.filter(product=instance).delete()
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
@@ -189,6 +207,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     def inventory_list(self, request):
         """GET: paginated list of products with inventory fields for pharmacy admin."""
         qs = Product.objects.select_related("category", "brand").all().order_by("-updated_at")
+        include_inactive = request.query_params.get("include_inactive")
+        if include_inactive not in ("1", "true", "True", "yes"):
+            qs = qs.filter(is_active=True)
         qs = self.filter_queryset(qs)
         page = self.paginate_queryset(qs)
         if page is not None:

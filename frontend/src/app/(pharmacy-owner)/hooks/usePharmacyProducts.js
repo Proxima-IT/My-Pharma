@@ -113,6 +113,10 @@ export const usePharmacyProducts = (initialParams = {}) => {
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
+      if (!token) {
+        setError('Please log in again.');
+        return false;
+      }
 
       // Choice B Logic: Split 'images' into primary 'image' and gallery 'images'
       const allImages = formData.getAll('images');
