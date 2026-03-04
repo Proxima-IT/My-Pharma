@@ -250,7 +250,7 @@ export default function EditProductPage({ params }) {
               </div>
               <div className="flex flex-col gap-2">
                 <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                  Generic Name
+                  Generic Name (Ingredient) - Optional
                 </label>
                 <select
                   className={selectClass}
@@ -258,7 +258,6 @@ export default function EditProductPage({ params }) {
                   onChange={e =>
                     setFormData({ ...formData, ingredient: e.target.value })
                   }
-                  required
                 >
                   <option value="">Select Ingredient</option>
                   {ingredients.map(ing => (

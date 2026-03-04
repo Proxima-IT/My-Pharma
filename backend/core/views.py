@@ -138,7 +138,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        if self.request.user.is_authenticated:
+        include_inactive = self.request.query_params.get("include_inactive")
+        # By default, hide inactive (soft-deleted) products from all callers, including pharmacy admin.
+        # Explicitly pass ?include_inactive=1 to see everything (e.g. for back-office reports).
+        if include_inactive in ("1", "true", "True", "yes"):
             return qs
         return qs.filter(is_active=True)
 
@@ -204,6 +207,9 @@ class ProductViewSet(viewsets.ModelViewSet):
     def inventory_list(self, request):
         """GET: paginated list of products with inventory fields for pharmacy admin."""
         qs = Product.objects.select_related("category", "brand").all().order_by("-updated_at")
+        include_inactive = request.query_params.get("include_inactive")
+        if include_inactive not in ("1", "true", "True", "yes"):
+            qs = qs.filter(is_active=True)
         qs = self.filter_queryset(qs)
         page = self.paginate_queryset(qs)
         if page is not None:
