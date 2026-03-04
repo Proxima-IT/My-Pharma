@@ -165,3 +165,4 @@ const ProductSingle = ({ params }) => {
 };
 
 export default ProductSingle;
+
