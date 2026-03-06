@@ -1,10 +1,6 @@
 'use client';
 import React from 'react';
 
-/**
- * OrderInfoCard Component
- * Updated to support status badges (e.g., Paid/Unpaid) and payment methods.
- */
 export default function OrderInfoCard({
   label,
   value,
@@ -12,41 +8,35 @@ export default function OrderInfoCard({
   badge,
   badgeType = 'success',
 }) {
-  // Define badge styles based on type
   const badgeStyles = {
-    success: 'bg-green-50 text-(--success-600) border-green-100',
-    error: 'bg-red-50 text-red-600 border-red-100',
-    warning: 'bg-orange-50 text-orange-600 border-orange-100',
-    neutral: 'bg-gray-50 text-gray-600 border-gray-100',
+    success:
+      'bg-(--color-admin-success) text-white border-(--color-admin-border)',
+    error: 'bg-(--color-admin-error) text-white border-(--color-admin-border)',
+    warning:
+      'bg-(--color-admin-warning) text-black border-(--color-admin-border)',
+    neutral: 'bg-(--color-gray-200) text-black border-(--color-admin-border)',
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-[24px] p-4 sm:p-5 flex flex-col gap-1.5 sm:gap-2.5 w-full min-w-0 transition-all hover:border-gray-200">
-      {/* Label: High-end tracking and bold hierarchy */}
-      <span className="text-[10px] sm:text-[11px] font-black text-gray-400 whitespace-nowrap uppercase tracking-[0.15em] truncate">
-        {label}
+    <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-5 flex flex-col gap-2 w-full rounded-none transition-colors duration-300 hover:bg-white">
+      <span className="font-mono text-[10px] font-bold text-(--color-text-secondary) uppercase tracking-[0.2em]">
+        {label.replace(/ /g, '_')}
       </span>
 
-      {/* Value Container */}
-      <div className="flex items-center flex-wrap gap-2 min-w-0">
+      <div className="flex items-center flex-wrap gap-3">
         {value && (
-          <span
-            className="text-[14px] sm:text-[16px] font-black text-gray-900 truncate"
-            title={value}
-          >
+          <span className="font-mono text-lg font-bold text-(--color-admin-navy) tracking-tighter">
             {value}
           </span>
         )}
 
-        {/* Status Badge: For Payment Status (Paid/Unpaid) */}
         {badge && (
           <span
-            className={`px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeStyles[badgeType] || badgeStyles.neutral}`}
+            className={`px-2 py-0.5 border font-mono text-[10px] font-bold uppercase tracking-tighter ${badgeStyles[badgeType] || badgeStyles.neutral}`}
           >
             {badge}
           </span>
         )}
-
         {children}
       </div>
     </div>

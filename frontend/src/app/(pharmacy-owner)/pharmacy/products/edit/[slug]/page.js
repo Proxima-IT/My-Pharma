@@ -14,8 +14,6 @@ import {
   FiPlus,
   FiX,
 } from 'react-icons/fi';
-import UiInput from '@/app/(public)/components/UiInput';
-import UiButton from '@/app/(public)/components/UiButton';
 import { usePharmacyProducts } from '../../../../hooks/usePharmacyProducts';
 
 export default function EditProductPage({ params }) {
@@ -79,10 +77,7 @@ export default function EditProductPage({ params }) {
         is_active: productDetails.is_active || true,
       });
 
-      // COMBINE MAIN IMAGE AND GALLERY IMAGES
       const imagesToDisplay = [];
-
-      // 1. Add Main Image
       if (productDetails.image) {
         imagesToDisplay.push({
           id: 'main',
@@ -91,11 +86,9 @@ export default function EditProductPage({ params }) {
         });
       }
 
-      // 2. Add Gallery Images (Backend returns them as an array of URL strings)
       if (productDetails.images && Array.isArray(productDetails.images)) {
         productDetails.images.forEach((imgUrl, index) => {
           const formattedUrl = getDisplayImage(imgUrl);
-          // Avoid duplicating the main image if it's also in the gallery list
           if (formattedUrl !== getDisplayImage(productDetails.image)) {
             imagesToDisplay.push({
               id: `gallery-${index}`,
@@ -105,7 +98,6 @@ export default function EditProductPage({ params }) {
           }
         });
       }
-
       setExistingImages(imagesToDisplay);
     }
   }, [productDetails]);
@@ -125,9 +117,6 @@ export default function EditProductPage({ params }) {
 
   const removeExistingImage = id => {
     setExistingImages(prev => prev.filter(img => img.id !== id));
-    // Note: Since backend detail doesn't provide IDs for gallery strings,
-    // full deletion logic would require the /images/ GET endpoint.
-    // For now, we track it to hide it from UI.
     setDeletedImageIds(prev => [...prev, id]);
   };
 
@@ -143,14 +132,11 @@ export default function EditProductPage({ params }) {
   const handleSubmit = async e => {
     e.preventDefault();
     const data = new FormData();
-
     Object.keys(formData).forEach(key => {
       if (formData[key] !== '' && formData[key] !== null) {
         data.append(key, formData[key]);
       }
     });
-
-    // Choice B: All new images go into 'images' key for the hook to process
     newImages.forEach(img => {
       data.append('images', img.file);
     });
@@ -163,55 +149,71 @@ export default function EditProductPage({ params }) {
 
   if (hookLoading && !productDetails) {
     return (
-      <div className="w-full py-40 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
+      <div className="w-full py-40 flex items-center justify-center bg-(--color-admin-bg)">
+        <div className="font-mono text-sm animate-pulse tracking-widest uppercase text-(--color-admin-primary)">
+          Initializing_Update_Sequence...
+        </div>
       </div>
     );
   }
 
   const sectionTitleClass =
-    'text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-6 flex items-center gap-2';
-  const cardClass = 'bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8';
+    'text-xs font-black text-(--color-admin-primary) uppercase tracking-[0.2em] mb-8 flex items-center gap-3 border-b border-(--color-admin-border) pb-4';
+  const cardClass =
+    'bg-(--color-admin-card) border border-(--color-admin-border) p-6 sm:p-8 rounded-none';
+  const labelClass =
+    'font-mono text-[11px] font-bold text-(--color-text-secondary) uppercase mb-2 block tracking-widest';
+  const inputClass =
+    'w-full h-12 px-4 bg-white border border-(--color-admin-border) rounded-none text-sm font-mono focus:outline-none focus:border-(--color-admin-accent) transition-all uppercase placeholder:text-gray-300';
   const selectClass =
-    'w-full h-[56px] px-6 bg-gray-50 border border-gray-100 rounded-full text-sm outline-none focus:border-(--color-primary-500) transition-all appearance-none cursor-pointer';
+    'w-full h-12 px-4 bg-white border border-(--color-admin-border) rounded-none text-sm font-mono focus:outline-none focus:border-(--color-admin-accent) transition-all appearance-none cursor-pointer uppercase';
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
-      <div className="flex items-center gap-4">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
+      {/* Header */}
+      <div className="flex items-center gap-6 border-b-4 border-(--color-admin-border) pb-6">
         <Link
           href="/pharmacy/products"
-          className="p-2 -ml-2 text-gray-600 hover:text-gray-900 transition-colors"
+          className="p-2 bg-(--color-admin-navy) text-white hover:bg-(--color-admin-accent) transition-colors rounded-none"
         >
-          <FiArrowLeft size={24} />
+          <FiArrowLeft size={20} />
         </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
-          Edit Product
-        </h1>
+        <div>
+          <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
+            Inventory / Action / Update
+          </span>
+          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
+            Edit Product
+          </h1>
+        </div>
       </div>
 
       <form
         onSubmit={handleSubmit}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
+        className="grid grid-cols-1 lg:grid-cols-3 gap-10"
       >
-        <div className="lg:col-span-2 space-y-8">
+        <div className="lg:col-span-2 space-y-10">
+          {/* Basic Information */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
-              <FiInfo /> Basic Information
+              <FiInfo /> BASIC_INFORMATION_LOG
             </h3>
             <div className="space-y-6">
-              <UiInput
-                label="Product Name"
-                value={formData.name}
-                onChange={e =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                required
-              />
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="flex flex-col gap-2">
-                  <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                    Category
-                  </label>
+              <div>
+                <label className={labelClass}>Product_Name</label>
+                <input
+                  className={inputClass}
+                  value={formData.name}
+                  onChange={e =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                  <label className={labelClass}>Category_ID</label>
                   <select
                     className={selectClass}
                     value={formData.category}
@@ -220,18 +222,16 @@ export default function EditProductPage({ params }) {
                     }
                     required
                   >
-                    <option value="">Select Category</option>
+                    <option value="">SELECT_CATEGORY</option>
                     {categories.map(cat => (
                       <option key={cat.id} value={cat.id}>
-                        {cat.name}
+                        {cat.name.toUpperCase()}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                    Brand
-                  </label>
+                <div>
+                  <label className={labelClass}>Brand_ID</label>
                   <select
                     className={selectClass}
                     value={formData.brand}
@@ -239,18 +239,19 @@ export default function EditProductPage({ params }) {
                       setFormData({ ...formData, brand: e.target.value })
                     }
                   >
-                    <option value="">Select Brand</option>
+                    <option value="">SELECT_BRAND</option>
                     {brands.map(brand => (
                       <option key={brand.id} value={brand.id}>
-                        {brand.name}
+                        {brand.name.toUpperCase()}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                  Generic Name (Ingredient) - Optional
+
+              <div>
+                <label className={labelClass}>
+                  Generic_Ingredient (Optional)
                 </label>
                 <select
                   className={selectClass}
@@ -259,20 +260,19 @@ export default function EditProductPage({ params }) {
                     setFormData({ ...formData, ingredient: e.target.value })
                   }
                 >
-                  <option value="">Select Ingredient</option>
+                  <option value="">SELECT_INGREDIENT</option>
                   {ingredients.map(ing => (
                     <option key={ing.id} value={ing.id}>
-                      {ing.name}
+                      {ing.name.toUpperCase()}
                     </option>
                   ))}
                 </select>
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[13px] font-bold text-gray-600 ml-5 uppercase">
-                  Description
-                </label>
+
+              <div>
+                <label className={labelClass}>Technical_Description</label>
                 <textarea
-                  className="w-full min-h-[120px] p-6 bg-gray-50 border border-gray-100 rounded-[24px] text-sm outline-none focus:border-(--color-primary-500) transition-all resize-none"
+                  className="w-full min-h-[150px] p-4 bg-white border border-(--color-admin-border) rounded-none text-sm font-mono focus:outline-none focus:border-(--color-admin-accent) transition-all resize-none uppercase"
                   value={formData.description}
                   onChange={e =>
                     setFormData({ ...formData, description: e.target.value })
@@ -283,109 +283,121 @@ export default function EditProductPage({ params }) {
             </div>
           </div>
 
+          {/* Pricing & Inventory */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
-              <FiDollarSign /> Pricing & Inventory
+              <FiDollarSign /> PRICING_&_INVENTORY_METRICS
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <UiInput
-                label="Selling Price (৳)"
-                type="number"
-                step="0.01"
-                value={formData.price}
-                onChange={e =>
-                  setFormData({ ...formData, price: e.target.value })
-                }
-                required
-              />
-              <UiInput
-                label="Original Price (৳)"
-                type="number"
-                step="0.01"
-                value={formData.original_price}
-                onChange={e =>
-                  setFormData({ ...formData, original_price: e.target.value })
-                }
-              />
-              <UiInput
-                label="Current Stock"
-                type="number"
-                value={formData.quantity_in_stock}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    quantity_in_stock: e.target.value,
-                  })
-                }
-                required
-              />
-              <UiInput
-                label="Low Stock Alert"
-                type="number"
-                value={formData.low_stock_threshold}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    low_stock_threshold: e.target.value,
-                  })
-                }
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <label className={labelClass}>Selling_Price (৳)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={formData.price}
+                  onChange={e =>
+                    setFormData({ ...formData, price: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>MRP_Price (৳)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className={inputClass}
+                  value={formData.original_price}
+                  onChange={e =>
+                    setFormData({ ...formData, original_price: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Current_Stock_Units</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={formData.quantity_in_stock}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      quantity_in_stock: e.target.value,
+                    })
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Low_Stock_Threshold</label>
+                <input
+                  type="number"
+                  className={inputClass}
+                  value={formData.low_stock_threshold}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      low_stock_threshold: e.target.value,
+                    })
+                  }
+                />
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="space-y-8">
+        <div className="space-y-10">
+          {/* Media Assets */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
-              <FiImage /> Product Images
+              <FiImage /> MEDIA_ASSETS
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              {/* Render Existing Images (Main + Gallery) */}
               {existingImages.map(img => (
                 <div
                   key={img.id}
-                  className="relative aspect-square rounded-[20px] border border-gray-100 bg-gray-50 overflow-hidden group"
+                  className="relative aspect-square border border-(--color-admin-border) bg-white overflow-hidden group"
                 >
                   <img
                     src={img.url}
                     alt="Existing"
-                    className="w-full h-full object-contain p-2"
+                    className="w-full h-full object-contain p-2 mix-blend-multiply"
                   />
                   <button
                     type="button"
                     onClick={() => removeExistingImage(img.id)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                    className="absolute top-0 right-0 w-8 h-8 bg-(--color-admin-error) text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
-                    <FiX size={14} />
+                    <FiX size={16} />
                   </button>
                   {img.isMain && (
-                    <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-(--color-primary-500) text-white text-[8px] font-black uppercase rounded-full">
-                      Main
+                    <div className="absolute bottom-0 left-0 right-0 py-1 bg-(--color-admin-navy) text-white text-[8px] font-black uppercase text-center tracking-widest">
+                      PRIMARY_IMAGE
                     </div>
                   )}
                 </div>
               ))}
 
-              {/* Render New Previews */}
               {newImages.map(img => (
                 <div
                   key={img.id}
-                  className="relative aspect-square rounded-[20px] border border-primary-100 bg-primary-25/30 overflow-hidden group"
+                  className="relative aspect-square border border-(--color-admin-primary) bg-(--color-admin-bg) overflow-hidden group"
                 >
                   <img
                     src={img.preview}
                     alt="New"
-                    className="w-full h-full object-contain p-2"
+                    className="w-full h-full object-contain p-2 mix-blend-multiply"
                   />
                   <button
                     type="button"
                     onClick={() => removeNewImage(img.id)}
-                    className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow-sm"
+                    className="absolute top-0 right-0 w-8 h-8 bg-(--color-admin-error) text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                   >
-                    <FiX size={14} />
+                    <FiX size={16} />
                   </button>
-                  <div className="absolute bottom-2 left-2 px-2 py-0.5 bg-blue-500 text-white text-[8px] font-black uppercase rounded-full">
-                    New
+                  <div className="absolute bottom-0 left-0 right-0 py-1 bg-(--color-admin-primary) text-white text-[8px] font-black uppercase text-center tracking-widest">
+                    NEW_UPLOAD
                   </div>
                 </div>
               ))}
@@ -393,13 +405,14 @@ export default function EditProductPage({ params }) {
               <button
                 type="button"
                 onClick={() => fileInputRef.current.click()}
-                className="aspect-square rounded-[20px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-2 hover:bg-gray-100 transition-all cursor-pointer group"
+                className="aspect-square border-2 border-dashed border-(--color-admin-border) bg-white flex flex-col items-center justify-center gap-3 hover:bg-(--color-admin-accent) hover:text-white transition-all duration-300 cursor-pointer group"
               >
-                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-gray-400 group-hover:text-(--color-primary-500)">
-                  <FiPlus size={20} />
-                </div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                  Add Photo
+                <FiPlus
+                  size={24}
+                  className="text-(--color-admin-primary) group-hover:text-white"
+                />
+                <span className="font-mono text-[9px] font-bold uppercase tracking-widest">
+                  UPLOAD_FILE
                 </span>
               </button>
             </div>
@@ -413,18 +426,19 @@ export default function EditProductPage({ params }) {
             />
           </div>
 
+          {/* System Settings */}
           <div className={cardClass}>
             <h3 className={sectionTitleClass}>
-              <FiLayers /> Settings
+              <FiLayers /> SYSTEM_FLAGS
             </h3>
-            <div className="space-y-4">
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-gray-50 bg-gray-25/50 cursor-pointer">
-                <span className="text-sm font-bold text-gray-700">
-                  Requires Prescription
+            <div className="space-y-3">
+              <label className="flex items-center justify-between p-4 border border-(--color-admin-border) bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                <span className="font-mono text-[11px] font-bold text-(--color-admin-navy) uppercase">
+                  Prescription_Required
                 </span>
                 <input
                   type="checkbox"
-                  className="w-5 h-5 accent-primary-500"
+                  className="w-5 h-5 accent-(--color-admin-primary)"
                   checked={formData.requires_prescription}
                   onChange={e =>
                     setFormData({
@@ -434,13 +448,13 @@ export default function EditProductPage({ params }) {
                   }
                 />
               </label>
-              <label className="flex items-center justify-between p-4 rounded-2xl border border-gray-50 bg-gray-25/50 cursor-pointer">
-                <span className="text-sm font-bold text-gray-700">
-                  Active Status
+              <label className="flex items-center justify-between p-4 border border-(--color-admin-border) bg-white cursor-pointer hover:bg-gray-50 transition-colors">
+                <span className="font-mono text-[11px] font-bold text-(--color-admin-navy) uppercase">
+                  Operational_Status
                 </span>
                 <input
                   type="checkbox"
-                  className="w-5 h-5 accent-primary-500"
+                  className="w-5 h-5 accent-(--color-admin-primary)"
                   checked={formData.is_active}
                   onChange={e =>
                     setFormData({ ...formData, is_active: e.target.checked })
@@ -450,17 +464,26 @@ export default function EditProductPage({ params }) {
             </div>
           </div>
 
+          {/* Action Button */}
           <div className="pt-4">
-            <UiButton type="submit" isLoading={isUpdating}>
-              <div className="flex items-center gap-2">
-                <FiCheck strokeWidth={3} />
-                <span>Save Changes</span>
-              </div>
-            </UiButton>
+            <button
+              type="submit"
+              disabled={isUpdating}
+              className="w-full h-20 bg-(--color-admin-primary) text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer disabled:opacity-50 border border-(--color-admin-border)"
+            >
+              {isUpdating ? (
+                <span className="animate-pulse">COMMITTING_CHANGES...</span>
+              ) : (
+                <>
+                  <FiCheck size={24} />
+                  <span>Update_Database_Entry</span>
+                </>
+              )}
+            </button>
             {error && (
-              <p className="text-xs font-bold text-red-500 mt-4 text-center bg-red-50 p-3 rounded-xl border border-red-100">
-                {error}
-              </p>
+              <div className="mt-6 p-4 border border-(--color-admin-error) bg-red-50 text-(--color-admin-error) font-mono text-[10px] font-bold uppercase text-center">
+                CRITICAL_ERROR: {error}
+              </div>
             )}
           </div>
         </div>

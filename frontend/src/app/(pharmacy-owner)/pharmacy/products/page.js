@@ -41,17 +41,20 @@ export default function ProductManagementPage() {
   const getStockStatus = product => {
     if (product.quantity_in_stock <= 0)
       return {
-        label: 'Out of Stock',
-        class: 'bg-red-50 text-red-600 border-red-100',
+        label: 'OUT_OF_STOCK',
+        class:
+          'bg-red-50 text-(--color-admin-error) border-(--color-admin-error)',
       };
     if (product.is_low_stock)
       return {
-        label: 'Low Stock',
-        class: 'bg-orange-50 text-orange-600 border-orange-100',
+        label: 'LOW_STOCK',
+        class:
+          'bg-amber-50 text-(--color-admin-warning) border-(--color-admin-warning)',
       };
     return {
-      label: 'In Stock',
-      class: 'bg-(--success-50) text-(--success-600) border-(--success-100)',
+      label: 'IN_STOCK',
+      class:
+        'bg-green-50 text-(--color-admin-success) border-(--color-admin-success)',
     };
   };
 
@@ -62,22 +65,27 @@ export default function ProductManagementPage() {
   };
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
       {/* 1. Header & Action Section */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-4 border-(--color-admin-border) pb-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">
+          <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
+            Inventory / Records / Products
+          </span>
+          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
             Product Management
           </h1>
-          <p className="text-sm text-gray-500 font-medium mt-1">
-            Total <span className="text-gray-900 font-bold">{totalCount}</span>{' '}
-            products listed
+          <p className="font-mono text-[11px] text-(--color-text-secondary) mt-2 uppercase">
+            TOTAL_LISTED:{' '}
+            <span className="text-(--color-admin-navy) font-bold">
+              {totalCount}
+            </span>
           </p>
         </div>
         <Link href="/pharmacy/products/new" className="w-full sm:w-auto">
-          <button className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white px-8 h-[52px] rounded-full text-[15px] font-bold transition-all cursor-pointer shadow-sm">
-            <FiPlus size={20} strokeWidth={3} />
-            Add New Product
+          <button className="w-full sm:w-auto flex items-center justify-center gap-3 bg-(--color-admin-primary) text-white px-8 h-[52px] rounded-none text-xs font-bold uppercase tracking-widest transition-all duration-300 hover:bg-(--color-admin-accent) cursor-pointer border border-(--color-admin-border)">
+            <FiPlus size={20} />
+            ADD_NEW_ENTRY
           </button>
         </Link>
       </div>
@@ -85,63 +93,72 @@ export default function ProductManagementPage() {
       {/* 2. Search Bar */}
       <form
         onSubmit={handleSearchSubmit}
-        className="bg-white border border-gray-100 rounded-[24px] sm:rounded-full p-2 flex flex-col sm:flex-row items-center gap-2"
+        className="bg-(--color-admin-card) border border-(--color-admin-border) rounded-none p-2 flex flex-col sm:flex-row items-center gap-2"
       >
         <div className="relative w-full flex-1">
           <FiSearch
-            className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute left-5 top-1/2 -translate-y-1/2 text-(--color-text-secondary)"
             size={18}
           />
           <input
             type="text"
-            placeholder="Search by product name or generic..."
+            placeholder="SEARCH_BY_NAME_OR_GENERIC..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full h-12 pl-12 pr-6 bg-transparent rounded-full text-sm focus:outline-none"
+            className="w-full h-12 pl-12 pr-6 bg-transparent rounded-none text-sm font-mono focus:outline-none uppercase tracking-tight"
           />
         </div>
         <button
           type="submit"
-          className="w-full sm:w-auto px-8 h-12 bg-gray-900 text-white rounded-full text-sm font-bold hover:bg-black transition-all cursor-pointer"
+          className="w-full sm:w-auto px-10 h-12 bg-(--color-admin-navy) text-white rounded-none text-xs font-bold uppercase tracking-widest hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer"
         >
-          Search
+          EXECUTE_SEARCH
         </button>
       </form>
 
-      {/* 3. Error Display Section */}
+      {/* 3. Error Display */}
       {error && (
-        <div className="p-5 bg-red-50 border border-red-100 rounded-[24px] flex items-center gap-4 text-red-600 animate-in slide-in-from-top-2">
+        <div className="p-6 bg-red-50 border border-(--color-admin-error) rounded-none flex items-center gap-4 text-(--color-admin-error) animate-in slide-in-from-top-2">
           <FiAlertCircle className="shrink-0" size={24} />
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wider">
-              Search Failed
+          <div className="font-mono">
+            <p className="text-xs font-bold uppercase tracking-widest">
+              SYSTEM_ERROR::SEARCH_FAILED
             </p>
-            <p className="text-sm font-medium opacity-90">
-              The server encountered an error processing your request. Please
-              try a simpler search term.
+            <p className="text-[11px] font-medium mt-1">
+              REQUEST_TERMINATED_BY_SERVER. SIMPLIFY_QUERY_AND_RETRY.
             </p>
           </div>
         </div>
       )}
 
       {/* 4. Main Inventory Table */}
-      <div className="bg-white rounded-[32px] p-4 sm:p-8 border border-gray-100/50 min-h-[500px] flex flex-col">
-        <div className="flex-grow overflow-x-auto no-scrollbar">
-          <table className="w-full border-separate border-spacing-0 rounded-2xl border border-gray-100 overflow-hidden">
-            <thead className="bg-gray-50">
-              <tr className="text-gray-500 text-[11px] uppercase tracking-[0.15em] font-black">
-                <th className="px-6 py-5 text-left">Product Info</th>
-                <th className="px-6 py-5 text-left">Category</th>
-                <th className="px-6 py-5 text-left">Price</th>
-                <th className="px-6 py-5 text-left">Stock</th>
-                <th className="px-6 py-5 text-center">Actions</th>
+      <div className="bg-(--color-admin-card) border border-(--color-admin-border) rounded-none flex flex-col">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-(--color-admin-navy) text-white text-[11px] uppercase tracking-[0.2em] font-bold">
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Product_Info
+                </th>
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Category
+                </th>
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Price_Point
+                </th>
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Stock_Status
+                </th>
+                <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-(--color-admin-border)">
               {isLoading ? (
                 <tr>
                   <td colSpan="5" className="py-32 text-center">
-                    <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="font-mono text-sm animate-pulse tracking-widest text-(--color-admin-primary)">
+                      SYNCING_INVENTORY_DATA...
+                    </div>
                   </td>
                 </tr>
               ) : products.length > 0 ? (
@@ -152,58 +169,61 @@ export default function ProductManagementPage() {
                   return (
                     <tr
                       key={product.id}
-                      className="hover:bg-gray-50/50 transition-colors group"
+                      className="hover:bg-white transition-colors duration-200 group"
                     >
-                      <td className="px-6 py-5">
+                      <td className="px-6 py-5 border-r border-(--color-admin-border)">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center p-2 shrink-0 overflow-hidden">
+                          <div className="w-14 h-14 rounded-none bg-white border border-(--color-admin-border) flex items-center justify-center p-2 shrink-0 overflow-hidden">
                             {displayImage ? (
                               <Image
                                 src={displayImage}
                                 alt={product.name}
-                                width={40}
-                                height={40}
-                                className="object-contain"
-                                unoptimized={true} // Bypasses Next.js cache for local dev if needed
+                                width={48}
+                                height={48}
+                                className="object-contain mix-blend-multiply"
+                                unoptimized={true}
                               />
                             ) : (
-                              <FiBox className="text-gray-300" size={20} />
+                              <FiBox
+                                className="text-(--color-gray-300)"
+                                size={24}
+                              />
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-gray-900 text-sm sm:text-base truncate max-w-[200px]">
+                            <p className="font-bold text-(--color-admin-navy) text-sm uppercase tracking-tight truncate max-w-[200px]">
                               {product.name}
                             </p>
-                            <p className="text-xs text-gray-400 font-medium truncate">
-                              {product.ingredient_name || 'No Generic'}
+                            <p className="font-mono text-[10px] text-(--color-text-secondary) uppercase truncate">
+                              {product.ingredient_name || 'GENERIC_N/A'}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                      <td className="px-6 py-5 border-r border-(--color-admin-border)">
+                        <span className="text-[10px] font-bold text-(--color-admin-primary) bg-(--color-admin-bg) border border-(--color-admin-border) px-3 py-1 uppercase tracking-tighter">
                           {product.category_name}
                         </span>
                       </td>
-                      <td className="px-6 py-5">
-                        <p className="font-bold text-gray-900">
+                      <td className="px-6 py-5 border-r border-(--color-admin-border)">
+                        <p className="font-mono font-bold text-(--color-admin-navy)">
                           {formatCurrency(product.price)}
                         </p>
                         {product.original_price > product.price && (
-                          <p className="text-xs text-gray-400 line-through">
+                          <p className="font-mono text-[10px] text-(--color-text-secondary) line-through">
                             {formatCurrency(product.original_price)}
                           </p>
                         )}
                       </td>
-                      <td className="px-6 py-5">
-                        <div className="flex flex-col gap-1">
+                      <td className="px-6 py-5 border-r border-(--color-admin-border)">
+                        <div className="flex flex-col gap-2">
                           <span
-                            className={`w-fit px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${stock.class}`}
+                            className={`w-fit px-2 py-0.5 border text-[9px] font-bold uppercase tracking-widest ${stock.class}`}
                           >
                             {stock.label}
                           </span>
-                          <p className="text-xs font-bold text-gray-400 ml-1">
-                            {product.quantity_in_stock} units
+                          <p className="font-mono text-[11px] font-bold text-(--color-admin-navy)">
+                            {product.quantity_in_stock} UNITS
                           </p>
                         </div>
                       </td>
@@ -212,7 +232,7 @@ export default function ProductManagementPage() {
                           <Link
                             href={`/pharmacy/products/edit/${product.slug}`}
                           >
-                            <button className="w-9 h-9 rounded-full border border-gray-100 flex items-center justify-center text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-all cursor-pointer">
+                            <button className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white hover:border-(--color-admin-accent) transition-all duration-300 cursor-pointer rounded-none">
                               <FiEdit2 size={16} />
                             </button>
                           </Link>
@@ -220,7 +240,7 @@ export default function ProductManagementPage() {
                             onClick={() =>
                               handleDelete(product.slug, product.name)
                             }
-                            className="w-9 h-9 rounded-full border border-gray-100 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer"
+                            className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center text-(--color-admin-navy) hover:bg-(--color-admin-error) hover:text-white hover:border-(--color-admin-error) transition-all duration-300 cursor-pointer rounded-none"
                           >
                             <FiTrash2 size={16} />
                           </button>
@@ -232,9 +252,11 @@ export default function ProductManagementPage() {
               ) : (
                 <tr>
                   <td colSpan="5" className="py-32 text-center">
-                    <div className="flex flex-col items-center gap-3 text-gray-300">
+                    <div className="flex flex-col items-center gap-4 text-(--color-text-secondary)">
                       <FiBox size={48} />
-                      <p className="text-lg font-bold">No products found</p>
+                      <p className="font-mono text-sm font-bold uppercase tracking-widest">
+                        ZERO_RECORDS_FOUND
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -245,33 +267,33 @@ export default function ProductManagementPage() {
 
         {/* 5. Pagination */}
         {totalPages > 1 && (
-          <div className="mt-8 pt-6 border-t border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-6">
-            <p className="text-sm font-medium text-gray-500">
-              Showing page{' '}
-              <span className="text-gray-900 font-bold">{page}</span> of{' '}
-              <span className="text-gray-900 font-bold">{totalPages}</span>
+          <div className="p-6 border-t border-(--color-admin-border) bg-(--color-admin-bg) flex flex-col sm:flex-row justify-between items-center gap-6">
+            <p className="font-mono text-[11px] font-bold text-(--color-text-secondary) uppercase">
+              Batch <span className="text-(--color-admin-navy)">{page}</span> //
+              Total{' '}
+              <span className="text-(--color-admin-navy)">{totalPages}</span>
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-0 border border-(--color-admin-border) bg-white">
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-black hover:text-black transition-all disabled:opacity-30 cursor-pointer"
+                className="w-12 h-12 flex items-center justify-center border-r border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white transition-all duration-300 disabled:opacity-20 cursor-pointer"
               >
-                <FiChevronLeft size={18} />
+                <FiChevronLeft size={20} />
               </button>
-              <div className="flex items-center border border-gray-200 rounded-full overflow-hidden bg-white">
+              <div className="flex items-center">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                   num => (
                     <button
                       key={num}
                       onClick={() => setPage(num)}
-                      className={`px-5 py-2.5 text-xs font-bold transition-all cursor-pointer ${
+                      className={`w-12 h-12 font-mono text-xs font-bold transition-all border-r border-(--color-admin-border) last:border-r-0 cursor-pointer ${
                         page === num
-                          ? 'bg-black text-white'
-                          : 'text-gray-500 border-l border-gray-100 hover:bg-gray-50 first:border-l-0'
+                          ? 'bg-(--color-admin-primary) text-white'
+                          : 'text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white'
                       }`}
                     >
-                      {num}
+                      {num.toString().padStart(2, '0')}
                     </button>
                   ),
                 )}
@@ -279,9 +301,9 @@ export default function ProductManagementPage() {
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-black hover:text-black transition-all disabled:opacity-30 cursor-pointer"
+                className="w-12 h-12 flex items-center justify-center border-l border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white transition-all duration-300 disabled:opacity-20 cursor-pointer"
               >
-                <FiChevronRight size={18} />
+                <FiChevronRight size={20} />
               </button>
             </div>
           </div>

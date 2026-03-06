@@ -1,75 +1,115 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import PharmacySidebar from '../components/PharmacySidebar';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
+import LoadingOverlay from '../components/LoadingOverlay';
 
 export default function PharmacyLayout({ children }) {
   const pathname = usePathname();
+  const [showLoading, setShowLoading] = useState(false);
+
   const isHubPage = pathname === '/pharmacy';
   const pathSegments = pathname.split('/').filter(segment => segment);
+
+  useEffect(() => {
+    // Check if the panel was already loaded in this session
+    const isLoaded = sessionStorage.getItem('pharma_panel_loaded');
+    if (!isLoaded) {
+      setShowLoading(true);
+    }
+  }, []);
+
+  const handleLoadingFinish = () => {
+    sessionStorage.setItem('pharma_panel_loaded', 'true');
+    setShowLoading(false);
+  };
 
   const breadcrumbs = pathSegments.map((segment, index) => {
     const href = `/${pathSegments.slice(0, index + 1).join('/')}`;
     const isLast = index === pathSegments.length - 1;
     let name =
       segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
-    if (name.toLowerCase() === 'pharmacy') name = 'Admin Panel';
+    if (name.toLowerCase() === 'pharmacy') name = 'DASHBOARD';
     return { name, href, isLast };
   });
 
   return (
     <AuthGuard allowedRoles={['PHARMACY_ADMIN', 'SUPER_ADMIN']}>
-      <div className="w-full py-6 md:py-10 px-4 md:px-7 flex flex-col lg:flex-row gap-8 items-start min-h-screen bg-white">
+      {/* System Boot Overlay */}
+      {showLoading && <LoadingOverlay onFinish={handleLoadingFinish} />}
+
+      <div
+        className={`flex flex-col lg:flex-row min-h-screen bg-(--color-admin-bg) rounded-none ${showLoading ? 'overflow-hidden h-screen' : ''}`}
+      >
+        {/* Fixed Sidebar for Desktop */}
         <aside
-          className={`${isHubPage ? 'block' : 'hidden'} lg:block w-full lg:w-[320px] lg:shrink-0 sticky top-36`}
+          className={`${isHubPage ? 'block' : 'hidden'} lg:block w-full lg:w-[280px] lg:fixed lg:inset-y-0 lg:left-0 z-50`}
         >
           <PharmacySidebar />
         </aside>
 
-        <div
-          className={`${isHubPage ? 'hidden' : 'block'} lg:block flex-1 min-w-0 space-y-6`}
-        >
-          {!isHubPage && (
-            <nav className="bg-white border border-gray-100 rounded-full px-6 py-2.5 w-fit animate-in fade-in slide-in-from-left-4 duration-500">
-              <ol className="flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
-                <li className="flex items-center gap-2">
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col lg:pl-[280px]">
+          {/* Top Header / Breadcrumbs */}
+          <header className="sticky top-0 z-40 bg-(--color-admin-card) border-b border-(--color-admin-border) px-6 py-4 flex items-center justify-between rounded-none">
+            <nav className="flex items-center">
+              <ol className="flex items-center font-mono text-[11px] tracking-tight">
+                <li className="flex items-center">
                   <Link
                     href="/"
-                    className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-medium"
+                    className="text-(--color-text-secondary) hover:text-(--color-admin-navy) transition-colors"
                   >
-                    Home
+                    ROOT
                   </Link>
-                  <span className="text-gray-300 font-light">{'>'}</span>
+                  <span className="mx-2 text-(--color-border)">/</span>
                 </li>
                 {breadcrumbs.map(crumb => (
-                  <li key={crumb.href} className="flex items-center gap-2">
+                  <li key={crumb.href} className="flex items-center">
                     {crumb.isLast ? (
-                      <span className="text-gray-900 font-bold">
+                      <span className="text-(--color-admin-navy) font-bold uppercase">
                         {crumb.name}
                       </span>
                     ) : (
                       <>
                         <Link
                           href={crumb.href}
-                          className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-medium"
+                          className="text-(--color-text-secondary) hover:text-(--color-admin-navy) transition-colors uppercase"
                         >
                           {crumb.name}
                         </Link>
-                        <span className="text-gray-300 font-light">{'>'}</span>
+                        <span className="mx-2 text-(--color-border)">/</span>
                       </>
                     )}
                   </li>
                 ))}
               </ol>
             </nav>
-          )}
 
-          <div className="w-full">
-            <Suspense fallback={null}>{children}</Suspense>
-          </div>
+            <div className="hidden md:flex items-center gap-4">
+              <div className="font-mono text-[10px] border border-(--color-admin-border) px-3 py-1 bg-(--color-admin-bg) font-bold text-(--color-admin-navy)">
+                SYS_STATUS:{' '}
+                <span className="text-(--color-admin-success)">ONLINE</span>
+              </div>
+            </div>
+          </header>
+
+          {/* Page Content */}
+          <main className="p-6 lg:p-10 min-h-[calc(100vh-68px)]">
+            <div className="max-w-full">
+              <Suspense
+                fallback={
+                  <div className="font-mono text-sm p-10 animate-pulse text-(--color-admin-primary)">
+                    LOADING_SYSTEM_RESOURCES...
+                  </div>
+                }
+              >
+                {children}
+              </Suspense>
+            </div>
+          </main>
         </div>
       </div>
     </AuthGuard>

@@ -23,16 +23,16 @@ const PharmacySidebar = () => {
   };
 
   const menuItems = [
-    { name: 'Dashboard', icon: <FiPieChart />, href: '/pharmacy' },
+    { name: 'DASHBOARD', icon: <FiPieChart />, href: '/pharmacy' },
     {
-      name: 'Order Management',
+      name: 'ORDER MANAGEMENT',
       icon: <FiShoppingBag />,
       href: '/pharmacy/orders',
     },
-    { name: 'Product Management', icon: <FiBox />, href: '/pharmacy/products' },
-    { name: 'Brand Management', icon: <FiAward />, href: '/pharmacy/brands' },
+    { name: 'PRODUCT MANAGEMENT', icon: <FiBox />, href: '/pharmacy/products' },
+    { name: 'BRAND MANAGEMENT', icon: <FiAward />, href: '/pharmacy/brands' },
     {
-      name: 'Category Management',
+      name: 'CATEGORY MANAGEMENT',
       icon: <FiGrid />,
       href: '/pharmacy/categories',
     },
@@ -43,54 +43,65 @@ const PharmacySidebar = () => {
     return (
       <Link
         href={item.href}
-        className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all duration-300 group ${
+        className={`flex items-center justify-between px-5 py-4 transition-all duration-150 border-b border-[#DAD7CD] rounded-none group ${
           isActive
-            ? 'bg-(--color-primary-500) text-white'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-(--color-primary-500)'
+            ? 'bg-[#E8F0EA] text-[#1F3324]' // Primary-50 background, Primary-900 text
+            : 'text-[#6B6B5E] hover:bg-[#F1F1E6] hover:text-[#1B1B1B]' // Neutral-600 text, Neutral-100 hover
         }`}
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           <span
-            className={`text-lg ${isActive ? 'text-white' : 'text-gray-400 group-hover:text-(--color-primary-500)'}`}
+            className={`text-xl ${isActive ? 'text-[#3A5A40]' : 'text-[#8A8A78]'}`}
           >
             {item.icon}
           </span>
-          <span className="text-sm font-bold tracking-tight">{item.name}</span>
+          <span className="text-xs font-bold tracking-[0.1em] font-inter">
+            {item.name}
+          </span>
         </div>
         <FiChevronRight
-          className={`transition-transform duration-300 ${isActive ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`}
+          className={`transition-transform duration-200 ${isActive ? 'rotate-90 opacity-100' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'}`}
         />
       </Link>
     );
   };
 
   return (
-    <aside className="w-full lg:max-w-[320px] flex flex-col gap-6">
-      {/* Management Section */}
-      <div className="bg-white rounded-[32px] p-4 border border-gray-100">
-        <div className="px-5 py-2 mb-2">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">
-            Pharmacy Admin
+    <aside className="w-full flex flex-col h-full bg-[#FAF7F2] border-r border-[#DAD7CD] rounded-none navy-scrollbar overflow-y-auto">
+      {/* Brand Header */}
+      <div className="p-8 border-b border-[#DAD7CD] bg-[#F1F1E6]">
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[10px] font-bold text-[#8A8A78] uppercase tracking-[0.3em]">
+            System Terminal
           </span>
+          <h2 className="text-[#1B1B1B] font-black text-xl tracking-tighter">
+            MY_PHARMA<span className="text-[#588157]">_</span>
+          </h2>
         </div>
-        <nav className="flex flex-col gap-1.5">
-          {menuItems.map(item => (
-            <NavItem key={item.name} item={item} />
-          ))}
-        </nav>
       </div>
 
-      {/* Logout Section */}
-      <div className="bg-white rounded-[32px] p-3 border border-gray-100">
+      {/* Navigation Section */}
+      <div className="px-6 py-4 bg-[#FAF7F2]">
+        <span className="font-mono text-[9px] font-bold text-[#B7B7A4] uppercase tracking-[0.2em]">
+          Core Modules
+        </span>
+      </div>
+
+      <nav className="flex flex-col flex-1 bg-[#FAF7F2]">
+        {menuItems.map(item => (
+          <NavItem key={item.name} item={item} />
+        ))}
+      </nav>
+
+      {/* Logout Footer */}
+      <div className="p-6 mt-auto border-t border-[#DAD7CD] bg-[#F1F1E6]">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-5 py-3.5 rounded-full text-red-600 hover:bg-red-50 transition-all duration-300 group cursor-pointer"
+          className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-[#2B2B2B] text-[#2B2B2B] font-bold rounded-none hover:bg-[#1B1B1B] hover:text-white transition-colors cursor-pointer"
         >
-          <span className="text-lg">
-            <FiLogOut />
-          </span>
-          <span className="text-sm font-bold tracking-tight uppercase">
-            Logout
+          <FiLogOut className="text-lg" />
+          <span className="text-[10px] font-bold tracking-[0.2em] uppercase">
+            Terminate Session
           </span>
         </button>
       </div>

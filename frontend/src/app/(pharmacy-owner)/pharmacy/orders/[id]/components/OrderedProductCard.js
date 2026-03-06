@@ -9,62 +9,59 @@ export default function OrderedProductCard({ item }) {
   const productPath = `/product/${item.product_slug || item.product}`;
 
   return (
-    <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex flex-col sm:flex-row items-start sm:items-stretch gap-6 transition-all hover:border-(--color-primary-100) group">
-      {/* Product Image */}
-      <div className="w-full sm:w-[140px] h-[120px] bg-(--color-imageBG) rounded-[18px] flex items-center justify-center p-4 shrink-0">
+    <div className="bg-(--color-admin-card) border border-(--color-admin-border) flex flex-col sm:flex-row items-stretch rounded-none transition-all duration-300 hover:bg-white group">
+      {/* Product Image Container */}
+      <div className="w-full sm:w-[160px] h-[140px] bg-white border-b sm:border-b-0 sm:border-r border-(--color-admin-border) flex items-center justify-center p-4 shrink-0">
         {item.image_url ? (
           <img
             src={item.image_url}
             alt={item.product_name}
-            className="max-w-full max-h-full object-contain mix-blend-multiply transition-transform group-hover:scale-105"
+            className="max-w-full max-h-full object-contain mix-blend-multiply"
           />
         ) : (
-          <div className="text-(--color-gray-300) text-[10px] font-bold uppercase text-center">
-            No Image
+          <div className="font-mono text-[10px] font-bold text-(--color-gray-300) uppercase">
+            NO_IMAGE
           </div>
         )}
       </div>
 
       {/* Product Details */}
-      <div className="flex-1 w-full flex flex-col justify-center">
-        <h3 className="text-[18px] font-bold text-gray-900 mb-1">
+      <div className="flex-1 p-6 flex flex-col justify-center border-r border-(--color-admin-border)">
+        <h3 className="text-lg font-black text-(--color-admin-navy) uppercase tracking-tight mb-1">
           {item.product_name}
         </h3>
-
-        <p className="text-[14px] text-gray-500 mb-3 font-medium line-clamp-1">
-          {item.product_description || 'Generic Information N/A'}
+        <p className="text-xs text-(--color-text-secondary) font-bold uppercase tracking-wide mb-4">
+          {item.product_unit_label || 'Standard Unit'}
         </p>
 
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[14px] font-bold text-gray-700">
-          <span>
-            {item.product_unit_label || 'Unit N/A'}{' '}
-            <span className="text-gray-400 font-normal ml-1">
-              (Qty: {item.quantity})
-            </span>
-          </span>
+        <div className="flex flex-wrap gap-4 font-mono text-[11px] font-bold text-(--color-text-secondary) uppercase">
+          <div className="bg-(--color-admin-bg) px-2 py-1 border border-(--color-admin-border)">
+            QTY:{' '}
+            <span className="text-(--color-admin-navy)">{item.quantity}</span>
+          </div>
           {item.product_dosage && (
-            <div className="flex items-center gap-2">
-              <span className="text-gray-400 font-medium">Dosage:</span>
-              <span>{item.product_dosage}</span>
+            <div className="bg-(--color-admin-bg) px-2 py-1 border border-(--color-admin-border)">
+              DOSAGE:{' '}
+              <span className="text-(--color-admin-navy)">
+                {item.product_dosage}
+              </span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Right Column: Price and Actions */}
-      <div className="flex flex-col items-end justify-between shrink-0 w-full sm:w-auto gap-4 sm:gap-0 border-t sm:border-none border-gray-50 pt-4 sm:pt-0">
-        <span className="text-[20px] font-bold text-gray-900">
+      {/* Price and Action */}
+      <div className="w-full sm:w-[180px] p-6 flex flex-col justify-between items-end bg-(--color-admin-bg)/30">
+        <span className="font-mono text-xl font-bold text-(--color-admin-navy)">
           {formatCurrency(unitPrice * item.quantity)}
         </span>
 
-        <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
-          <Link
-            href={productPath}
-            className="flex items-center gap-1 text-[14px] font-bold text-(--color-primary-500) hover:underline transition-all cursor-pointer"
-          >
-            View Product <FiChevronRight />
-          </Link>
-        </div>
+        <Link
+          href={productPath}
+          className="flex items-center gap-2 bg-(--color-admin-primary) text-white px-3 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-(--color-admin-accent) transition-all duration-300"
+        >
+          VIEW_DETAILS <FiChevronRight />
+        </Link>
       </div>
     </div>
   );

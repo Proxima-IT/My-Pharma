@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
 
 /* =========================
@@ -97,4 +98,80 @@ body {
 
 .font-playfair {
   font-family: var(--font-playfair), serif;
+}
+
+/* --- ADDITIONS FOR SHARP DESIGN SYSTEM (Admin/Pharmacy) --- */
+
+@theme {
+  --font-mono: "JetBrains Mono", monospace;
+  
+  /* Retro + Calm Palette Mapping */
+  --color-admin-bg: #FAF7F2;          /* Neutral-50 */
+  --color-admin-card: #F1F1E6;        /* Neutral-100 */
+  --color-admin-navy: #1B1B1B;        /* Neutral-900 (Sidebar) */
+  --color-admin-border: #2B2B2B;      /* Neutral-800 (Sharp Definition) */
+  
+  /* Brand Colors */
+  --color-admin-primary: #3A5A40;     /* Primary-700 */
+  --color-admin-primary-hover: #588157; /* Primary-500 */
+  --color-admin-secondary: #D4A373;   /* Secondary-200 */
+  --color-admin-accent: #F59E0B;      /* Accent-500 */
+  
+  /* State Colors */
+  --color-admin-success: #10B981;
+  --color-admin-error: #EF4444;
+  --color-admin-warning: #F59E0B;
+}
+
+@layer utilities {
+  .sharp-none {
+    border-radius: 0px !important;
+  }
+
+  .sharp-table {
+    border-collapse: collapse !important;
+    width: 100%;
+  }
+
+  .sharp-table th, 
+  .sharp-table td {
+    border: 2px solid var(--color-admin-border) !important;
+    border-radius: 0px !important;
+  }
+
+  .navy-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .navy-scrollbar::-webkit-scrollbar-track {
+    background: #1B1B1B;
+  }
+  .navy-scrollbar::-webkit-scrollbar-thumb {
+    background: #3A5A40;
+  }
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+@layer utilities {
+  /* Access Granted Blinking Animation */
+  .animate-access-blink {
+    animation: access-blink 0.5s ease-in-out 3;
+  }
+
+  /* Screen Slide Up Exit */
+  .animate-exit-up {
+    animation: exit-up 0.8s cubic-bezier(0.87, 0, 0.13, 1) forwards;
+  }
+
+  @keyframes access-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  @keyframes exit-up {
+    from { transform: translateY(0); }
+    to { transform: translateY(-100%); }
+  }
 }

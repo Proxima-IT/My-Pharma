@@ -9,19 +9,20 @@ import Sidebar from './(public)/components/Sidebar';
 export default function LayoutWrapper({ children }) {
   const pathname = usePathname();
 
-  // 1. Pages with NO Header/Footer/Sidebar (Auth Suite)
+  // 1. Pages with NO Header/Footer/Sidebar (Auth, Pharmacy, and Admin Panels)
   const authPaths = [
     '/login',
     '/register',
     '/forgot-password',
     '/reset-password',
   ];
+
   const isAuthPage = authPaths.some(path => pathname.startsWith(path));
+  const isPharmacyPanel = pathname.startsWith('/pharmacy');
+  const isAdminPanel = pathname.startsWith('/admin');
 
   // 2. Pages with Header/Footer but NO Global Public Sidebar
   const isUserDashboard = pathname.startsWith('/user');
-  const isPharmacyPanel = pathname.startsWith('/pharmacy');
-  const isAdminPanel = pathname.startsWith('/admin');
   const isProductsListPage = pathname.startsWith('/products');
   const isCartPage = pathname.startsWith('/cart');
   const isCheckoutPage = pathname.startsWith('/checkout');
@@ -36,7 +37,9 @@ export default function LayoutWrapper({ children }) {
     !isCartPage &&
     !isCheckoutPage;
 
-  if (isAuthPage) {
+  // If it's an Auth page, Pharmacy Panel, or Admin Panel, return children directly
+  // This removes the universal Header, Footer, and Sidebar
+  if (isAuthPage || isPharmacyPanel || isAdminPanel) {
     return <>{children}</>;
   }
 

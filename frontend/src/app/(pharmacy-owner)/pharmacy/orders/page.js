@@ -18,111 +18,132 @@ export default function PharmacyOrdersPage() {
   const getStatusStyles = status => {
     switch (status?.toUpperCase()) {
       case 'DELIVERED':
-        return 'text-(--color-success-600) bg-(--color-success-50) border-(--color-success-100)';
+        return 'border-(--color-admin-success) text-(--color-admin-success) bg-green-50/50';
       case 'SHIPPED':
-        return 'text-blue-600 bg-blue-50 border-blue-100';
+        return 'border-blue-600 text-blue-600 bg-blue-50/50';
       case 'CANCELLED':
-        return 'text-red-600 bg-red-50 border-red-100';
+        return 'border-(--color-admin-error) text-(--color-admin-error) bg-red-50/50';
       case 'PENDING':
-        return 'text-amber-600 bg-amber-50 border-amber-100';
+        return 'border-(--color-admin-warning) text-(--color-admin-warning) bg-amber-50/50';
       default:
-        return 'text-gray-500 bg-gray-50 border-gray-200';
+        return 'border-(--color-text-secondary) text-(--color-text-secondary) bg-gray-50/50';
     }
   };
 
   if (error) {
     return (
-      <div className="w-full py-20 text-center bg-white rounded-[32px] border border-gray-100">
-        <p className="text-red-500 font-bold">Error: {error}</p>
+      <div className="w-full py-20 text-center bg-(--color-admin-card) border border-(--color-admin-error) rounded-none">
+        <p className="text-(--color-admin-error) font-mono font-bold uppercase tracking-widest">
+          Error::System_Failure: {error}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-4 border-(--color-admin-border) pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
+            Database / Records / Orders
+          </span>
+          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
             Order Management
           </h1>
-          <p className="text-sm text-gray-400 font-medium mt-1">
-            Showing{' '}
-            <span className="text-gray-900 font-bold">{orders.length}</span> of{' '}
-            <span className="text-gray-900 font-bold">{totalCount}</span> total
-            orders
+          <p className="font-mono text-[11px] text-(--color-text-secondary) mt-2 uppercase">
+            TOTAL_RECORDS:{' '}
+            <span className="text-(--color-admin-navy) font-bold">
+              {totalCount}
+            </span>{' '}
+            | CURRENT_BATCH:{' '}
+            <span className="text-(--color-admin-navy) font-bold">
+              {orders.length}
+            </span>
           </p>
         </div>
       </div>
 
       {/* Main Table Container */}
-      <div className="bg-white rounded-[32px] p-4 sm:p-8 border border-gray-100 min-h-[600px] flex flex-col">
-        <div className="flex-grow overflow-x-auto no-scrollbar">
-          <table className="w-full border-separate border-spacing-0 rounded-2xl border border-gray-100 overflow-hidden">
-            <thead className="bg-gray-50">
-              <tr className="text-gray-500 text-[11px] uppercase tracking-[0.15em] font-black">
-                <th className="px-6 py-5 text-left">Order ID</th>
-                <th className="px-6 py-5 text-left">Customer</th>
-                <th className="px-6 py-5 text-left">Date</th>
-                <th className="px-6 py-5 text-left">Status</th>
-                <th className="px-6 py-5 text-right">Total Amount</th>
-                <th className="px-6 py-5 text-center">Actions</th>
+      <div className="bg-(--color-admin-card) border border-(--color-admin-border) rounded-none flex flex-col">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-(--color-admin-navy) text-white text-[11px] uppercase tracking-[0.2em] font-bold">
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Order ID
+                </th>
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Customer Entity
+                </th>
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Timestamp
+                </th>
+                <th className="px-6 py-4 text-left border-r border-white/10">
+                  Status_Code
+                </th>
+                <th className="px-6 py-4 text-right border-r border-white/10">
+                  Net_Amount
+                </th>
+                <th className="px-6 py-4 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody className="divide-y divide-(--color-admin-border)">
               {isLoading ? (
                 <tr>
                   <td colSpan="6" className="py-32 text-center">
-                    <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin mx-auto" />
+                    <div className="font-mono text-sm animate-pulse tracking-widest text-(--color-admin-primary)">
+                      FETCHING_DATA_FROM_SERVER...
+                    </div>
                   </td>
                 </tr>
               ) : orders.length > 0 ? (
                 orders.map(order => (
                   <tr
                     key={order.id}
-                    className="hover:bg-gray-50/50 transition-colors group"
+                    className="hover:bg-white transition-colors duration-200 group"
                   >
-                    <td className="px-6 py-5 text-sm font-bold text-gray-900">
+                    <td className="px-6 py-5 border-r border-(--color-admin-border) font-mono text-sm font-bold text-(--color-admin-navy)">
                       #{order.id}
                     </td>
-                    <td className="px-6 py-5">
-                      <p className="text-sm font-bold text-gray-900">
-                        {order.user_username || 'Guest'}
+                    <td className="px-6 py-5 border-r border-(--color-admin-border)">
+                      <p className="text-sm font-bold text-(--color-admin-navy) uppercase tracking-tight">
+                        {order.user_username || 'Guest_User'}
                       </p>
-                      <p className="text-xs text-gray-400 font-medium">
+                      <p className="font-mono text-[10px] text-(--color-text-secondary)">
                         {order.user_email}
                       </p>
                     </td>
-                    <td className="px-6 py-5 text-sm text-gray-600 font-medium">
-                      {formatDate(order.created_at)}
+                    <td className="px-6 py-5 border-r border-(--color-admin-border) font-mono text-xs text-(--color-text-secondary)">
+                      {formatDate(order.created_at).toUpperCase()}
                     </td>
-                    <td className="px-6 py-5">
+                    <td className="px-6 py-5 border-r border-(--color-admin-border)">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusStyles(order.status)}`}
+                        className={`inline-block px-3 py-1 border text-[10px] font-bold uppercase ${getStatusStyles(order.status)}`}
                       >
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-5 text-sm font-bold text-gray-900 text-right">
+                    <td className="px-6 py-5 border-r border-(--color-admin-border) font-mono text-sm font-bold text-(--color-admin-navy) text-right">
                       {formatCurrency(order.total)}
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex justify-center">
-                        <Link href={`/pharmacy/orders/${order.id}`}>
-                          <button className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-gray-400 hover:text-(--color-primary-500) hover:bg-(--color-primary-50) transition-all cursor-pointer">
-                            <FiEye size={18} />
-                          </button>
-                        </Link>
-                      </div>
+                    <td className="px-6 py-5 text-center">
+                      <Link href={`/pharmacy/orders/${order.id}`}>
+                        <button className="inline-flex items-center justify-center w-10 h-10 border border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white hover:border-(--color-admin-accent) transition-all duration-300 cursor-pointer rounded-none">
+                          <FiEye size={18} />
+                        </button>
+                      </Link>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
                   <td colSpan="6" className="py-32 text-center">
-                    <div className="flex flex-col items-center gap-3 text-gray-300">
+                    <div className="flex flex-col items-center gap-4 text-(--color-text-secondary)">
                       <FiShoppingBag size={48} />
-                      <p className="text-lg font-bold">No orders found</p>
+                      <p className="font-mono text-sm font-bold uppercase tracking-widest">
+                        Zero_Records_Found
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -131,51 +152,51 @@ export default function PharmacyOrdersPage() {
           </table>
         </div>
 
-        {/* 3. Dynamic Pagination Section */}
+        {/* Pagination Section */}
         {totalPages > 1 && (
-          <div className="mt-8 pt-6 border-t border-gray-50 flex flex-col sm:flex-row justify-between items-center gap-6">
-            <p className="text-sm font-medium text-gray-500">
-              Showing page{' '}
-              <span className="text-gray-900 font-bold">{page}</span> of{' '}
-              <span className="text-gray-900 font-bold">{totalPages}</span>
+          <div className="p-6 border-t border-(--color-admin-border) bg-(--color-admin-bg) flex flex-col sm:flex-row justify-between items-center gap-6">
+            <p className="font-mono text-[11px] font-bold text-(--color-text-secondary) uppercase">
+              Page <span className="text-(--color-admin-navy)">{page}</span> //
+              Total{' '}
+              <span className="text-(--color-admin-navy)">{totalPages}</span>
             </p>
 
-            <div className="flex items-center gap-3">
-              {/* Prev Arrow */}
+            <div className="flex items-center gap-0 border border-(--color-admin-border) bg-white">
+              {/* Prev Button */}
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-black hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                className="w-12 h-12 flex items-center justify-center border-r border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white transition-all duration-300 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
               >
-                <FiChevronLeft size={18} />
+                <FiChevronLeft size={20} />
               </button>
 
-              {/* Page Numbers Container */}
-              <div className="flex items-center border border-gray-200 rounded-full overflow-hidden bg-white">
+              {/* Page Numbers */}
+              <div className="flex items-center">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
                   num => (
                     <button
                       key={num}
                       onClick={() => setPage(num)}
-                      className={`px-5 py-2.5 text-xs font-bold transition-all cursor-pointer ${
+                      className={`w-12 h-12 font-mono text-xs font-bold transition-all border-r border-(--color-admin-border) last:border-r-0 cursor-pointer ${
                         page === num
-                          ? 'bg-black text-white'
-                          : 'text-gray-500 border-l border-gray-100 hover:bg-gray-50 first:border-l-0'
+                          ? 'bg-(--color-admin-primary) text-white'
+                          : 'text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white'
                       }`}
                     >
-                      {num}
+                      {num.toString().padStart(2, '0')}
                     </button>
                   ),
                 )}
               </div>
 
-              {/* Next Arrow */}
+              {/* Next Button */}
               <button
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 hover:border-black hover:text-black transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                className="w-12 h-12 flex items-center justify-center border-l border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white transition-all duration-300 disabled:opacity-20 disabled:cursor-not-allowed cursor-pointer"
               >
-                <FiChevronRight size={18} />
+                <FiChevronRight size={20} />
               </button>
             </div>
           </div>

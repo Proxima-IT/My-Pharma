@@ -20,33 +20,46 @@ export default function NewBrandPage() {
   };
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* Navigation Header */}
-      <div className="flex items-center justify-between">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
+      {/* Header Section */}
+      <div className="flex items-center gap-6 border-b-4 border-(--color-admin-border) pb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-500 font-bold text-sm hover:text-gray-900 transition-colors group cursor-pointer"
+          className="p-2 bg-(--color-admin-navy) text-white hover:bg-(--color-admin-accent) transition-colors rounded-none cursor-pointer border border-(--color-admin-border)"
         >
-          <FiArrowLeft className="transition-transform group-hover:-translate-x-1" />{' '}
-          BACK TO LIST
+          <FiArrowLeft size={20} />
         </button>
+        <div>
+          <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
+            Store Records / Add / New Company
+          </span>
+          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
+            Add New Company
+          </h1>
+        </div>
       </div>
 
-      {/* Full Width Card Container */}
-      <div className="bg-white rounded-[40px] border border-gray-100 p-8 md:p-12">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Add New Brand
-          </h1>
-          <p className="text-gray-500 mt-2 font-medium">
-            Create a new manufacturer profile for your products.
+      {/* Main Form Container */}
+      <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8 md:p-12 rounded-none">
+        <div className="mb-10 border-b border-(--color-admin-border) pb-8">
+          <h2 className="font-mono text-sm font-bold text-(--color-admin-navy) uppercase tracking-widest">
+            New Company Details
+          </h2>
+          <p className="text-(--color-text-secondary) mt-2 font-medium text-xs uppercase tracking-wide">
+            Add a new medicine company or manufacturer to your shop list.
           </p>
         </div>
 
-        {/* Form wrapper set to full width */}
+        {/* Form wrapper */}
         <div className="w-full">
           <BrandForm onSubmit={handleSubmit} isLoading={loading} />
         </div>
+      </div>
+
+      {/* Decorative System Footer */}
+      <div className="flex justify-between items-center px-4 font-mono text-[10px] text-(--color-text-secondary) uppercase tracking-[0.3em]">
+        <span>Status: Waiting for Information</span>
+        <span>System: v1.0.4</span>
       </div>
     </div>
   );

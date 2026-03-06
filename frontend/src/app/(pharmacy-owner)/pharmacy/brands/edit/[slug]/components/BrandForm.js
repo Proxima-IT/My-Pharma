@@ -1,12 +1,9 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import UiInput from '@/app/(public)/components/UiInput';
-import UiButton from '@/app/(public)/components/UiButton';
 
 /**
- * BrandForm Component
- * Handles both Create and Edit logic for Brands.
- * Uses the "Relaxing Vibe" design system: no shadows, high rounding.
+ * BrandForm Component - Refactored for "Sharp" Design
+ * Language simplified for Bangladeshi Pharmacy Owners.
  */
 const BrandForm = ({ initialData, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -14,22 +11,11 @@ const BrandForm = ({ initialData, onSubmit, isLoading }) => {
     is_active: true,
   });
 
-  // Sync initialData when editing - Optimized to prevent cascading renders
   useEffect(() => {
     if (initialData) {
-      const normalizedInitial = {
+      setFormData({
         name: initialData.name || '',
         is_active: initialData.is_active ?? true,
-      };
-
-      setFormData(prev => {
-        if (
-          prev.name === normalizedInitial.name &&
-          prev.is_active === normalizedInitial.is_active
-        ) {
-          return prev;
-        }
-        return normalizedInitial;
       });
     }
   }, [initialData]);
@@ -39,50 +25,76 @@ const BrandForm = ({ initialData, onSubmit, isLoading }) => {
     onSubmit(formData);
   };
 
+  const labelClass =
+    'font-mono text-[11px] font-bold text-(--color-text-secondary) uppercase mb-2 block tracking-widest';
+  const inputClass =
+    'w-full h-12 px-4 bg-white border border-(--color-admin-border) rounded-none text-sm font-mono focus:outline-none focus:border-(--color-admin-accent) transition-all uppercase placeholder:text-gray-300';
+
   return (
     <form
       onSubmit={handleSubmit}
-      className="w-full flex flex-col gap-8 items-stretch"
+      className="w-full flex flex-col gap-10 items-stretch"
     >
-      {/* Brand Name Input - Explicitly w-full */}
-      <UiInput
-        label="Brand Name"
-        placeholder="e.g. Square Pharmaceuticals Ltd."
-        value={formData.name}
-        onChange={e => setFormData({ ...formData, name: e.target.value })}
-        required
-      />
+      {/* Brand Name Input */}
+      <div className="w-full">
+        <label className={labelClass}>BRAND NAME / COMPANY NAME</label>
+        <input
+          type="text"
+          placeholder="E.G. SQUARE PHARMA OR BEXIMCO"
+          className={inputClass}
+          value={formData.name}
+          onChange={e => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
+      </div>
 
-      {/* Status Toggle Area - Full Width */}
-      <div className="w-full flex items-center justify-between px-6 py-5 bg-gray-50/50 rounded-[24px] border border-gray-100">
-        <div className="flex flex-col">
-          <span className="text-[13px] font-bold text-gray-700">
-            Active Status
+      {/* Status Toggle Area - Sharp Square Design */}
+      <div className="w-full flex items-center justify-between px-6 py-6 bg-white border border-(--color-admin-border) rounded-none">
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[13px] font-bold text-(--color-admin-navy) uppercase tracking-tight">
+            ACTIVE STATUS
           </span>
-          <span className="text-[11px] text-gray-500 font-medium">
-            Toggle whether this brand is visible in the shop
+          <span className="font-mono text-[10px] text-(--color-text-secondary) uppercase tracking-wide">
+            SHOW THIS BRAND TO CUSTOMERS IN THE SHOP?
           </span>
         </div>
 
-        <label className="relative inline-flex items-center cursor-pointer">
+        <div className="relative flex items-center">
           <input
             type="checkbox"
-            className="sr-only peer"
+            id="is_active"
+            className="w-8 h-8 border-2 border-(--color-admin-border) rounded-none bg-white accent-(--color-admin-primary) cursor-pointer"
             checked={formData.is_active}
             onChange={e =>
               setFormData({ ...formData, is_active: e.target.checked })
             }
           />
-          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-(--color-primary-500)"></div>
-        </label>
+        </div>
       </div>
 
-      {/* Submit Button - Explicitly w-full */}
-      <div className="w-full mt-2">
-        <UiButton type="submit" isLoading={isLoading}>
-          {initialData ? 'Update Brand Details' : 'Save New Brand'}
-        </UiButton>
+      {/* Submit Button - Sharp Action */}
+      <div className="w-full">
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full h-16 bg-(--color-admin-primary) text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer border border-(--color-admin-border) rounded-none disabled:opacity-50"
+        >
+          {isLoading ? (
+            <span className="animate-pulse font-mono">
+              SAVING... PLEASE WAIT
+            </span>
+          ) : (
+            <span className="font-mono">
+              {initialData ? 'SAVE CHANGES' : 'SAVE BRAND'}
+            </span>
+          )}
+        </button>
       </div>
+
+      {/* System Note */}
+      <p className="font-mono text-[9px] text-(--color-text-secondary) text-center uppercase tracking-[0.2em]">
+        NOTE: ALL CHANGES ARE SAVED SECURELY IN THE SYSTEM.
+      </p>
     </form>
   );
 };

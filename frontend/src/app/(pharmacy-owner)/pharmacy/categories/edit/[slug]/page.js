@@ -7,9 +7,7 @@ import { useCategories } from '../../../../hooks/useCategories';
 
 export default function EditCategoryPage() {
   const router = useRouter();
-  const params = useParams();
-  const slug = params?.slug;
-
+  const { slug } = useParams();
   const {
     getCategoryDetails,
     getCategoryTree,
@@ -17,28 +15,23 @@ export default function EditCategoryPage() {
     categoryTree,
     loading,
   } = useCategories();
-
   const [category, setCategory] = useState(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
   useEffect(() => {
     if (!slug) return;
-
     const fetchData = async () => {
       const token = localStorage.getItem('access_token');
       try {
-        // Fetch both the specific category details and the tree for the dropdown
         const details = await getCategoryDetails(token, slug);
         await getCategoryTree(token);
         setCategory(details);
       } catch (err) {
-        console.error('Error fetching category data:', err);
         router.push('/pharmacy/categories');
       } finally {
         setIsInitialLoading(false);
       }
     };
-
     fetchData();
   }, [slug, getCategoryDetails, getCategoryTree, router]);
 
@@ -48,18 +41,17 @@ export default function EditCategoryPage() {
       await updateCategory(token, slug, formData);
       router.push('/pharmacy/categories');
     } catch (err) {
-      console.error('Failed to update category:', err);
+      console.error(err);
     }
   };
 
-  // Loading State UI
   if (isInitialLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
-          <p className="text-gray-400 font-bold tracking-tight">
-            Loading Category Data...
+      <div className="flex items-center justify-center py-40 bg-(--color-admin-bg)">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-(--color-admin-primary) border-t-transparent animate-spin" />
+          <p className="font-mono text-xs font-bold uppercase tracking-widest">
+            Loading_Data...
           </p>
         </div>
       </div>
@@ -67,41 +59,43 @@ export default function EditCategoryPage() {
   }
 
   return (
-    <div className="w-full flex flex-col gap-6">
-      {/* Navigation Header */}
-      <div className="flex items-center justify-between">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
+      <div className="flex items-center gap-6 border-b-4 border-(--color-admin-border) pb-6">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-500 font-bold text-sm hover:text-gray-900 transition-colors group cursor-pointer"
+          className="p-2 bg-(--color-admin-navy) text-white hover:bg-(--color-admin-accent) transition-colors border border-(--color-admin-border) cursor-pointer"
         >
-          <FiArrowLeft className="transition-transform group-hover:-translate-x-1" />{' '}
-          BACK TO LIST
+          <FiArrowLeft size={20} />
         </button>
+        <div>
+          <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
+            Store Records / Edit / Group
+          </span>
+          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
+            Edit Group Details
+          </h1>
+        </div>
       </div>
 
-      {/* Full Width Card Container */}
-      <div className="bg-white rounded-[40px] border border-gray-100 p-8 md:p-12">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Edit Category
-          </h1>
-          <p className="text-gray-500 mt-2 font-medium">
-            Modify the details for{' '}
-            <span className="text-(--color-primary-500)">{category?.name}</span>
-            . Changing the parent will move this category and all its sub-items.
+      <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8 md:p-12">
+        <div className="mb-10 border-b border-(--color-admin-border) pb-8">
+          <h2 className="font-mono text-sm font-bold text-(--color-admin-navy) uppercase tracking-widest">
+            Group Settings
+          </h2>
+          <p className="text-(--color-text-secondary) mt-2 font-medium text-xs uppercase tracking-wide">
+            Changing details for:{' '}
+            <span className="text-(--color-admin-primary) font-black underline">
+              {category?.name}
+            </span>
           </p>
         </div>
-
-        {/* Form wrapper */}
-        <div className="w-full">
-          <CategoryForm
-            key={category?.id || 'edit-category'}
-            initialData={category}
-            categoryTree={categoryTree}
-            onSubmit={handleSubmit}
-            isLoading={loading}
-          />
-        </div>
+        <CategoryForm
+          key={category?.id || 'edit'}
+          initialData={category}
+          categoryTree={categoryTree}
+          onSubmit={handleSubmit}
+          isLoading={loading}
+        />
       </div>
     </div>
   );

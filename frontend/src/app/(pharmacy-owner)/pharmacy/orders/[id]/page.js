@@ -7,18 +7,13 @@ import {
   FiPackage,
   FiUser,
   FiMapPin,
-  FiCheckCircle,
-  FiTruck,
-  FiXCircle,
-  FiClock,
-  FiLoader,
   FiPhone,
   FiMail,
-  FiCreditCard,
 } from 'react-icons/fi';
 import { usePharmacyOrders } from '../../../hooks/usePharmacyOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 import OrderInfoCard from './components/OrderInfoCard';
+import OrderedProductCard from './components/OrderedProductCard';
 
 export default function PharmacyOrderDetailsPage({ params }) {
   const resolvedParams = use(params);
@@ -55,24 +50,26 @@ export default function PharmacyOrderDetailsPage({ params }) {
 
   if (isLoading && !orderDetails) {
     return (
-      <div className="w-full py-40 flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
+      <div className="w-full py-40 flex items-center justify-center bg-(--color-admin-bg)">
+        <div className="font-mono text-sm animate-pulse tracking-widest uppercase text-(--color-admin-primary)">
+          Initializing_Order_Data...
+        </div>
       </div>
     );
   }
 
   if (error || !orderDetails) {
     return (
-      <div className="w-full py-20 px-4 text-center">
-        <div className="bg-white rounded-[32px] border border-gray-100 p-8">
-          <p className="text-red-500 font-bold mb-4">
-            {error || 'Order not found'}
+      <div className="w-full py-20 px-4 bg-(--color-admin-bg)">
+        <div className="bg-(--color-admin-card) border border-(--color-admin-error) p-10 text-center">
+          <p className="font-mono text-(--color-admin-error) font-bold mb-6 uppercase tracking-widest">
+            ERROR::RECORD_NOT_FOUND: {error || 'NULL_REFERENCE'}
           </p>
           <Link
             href="/pharmacy/orders"
-            className="text-(--color-primary-500) font-bold underline"
+            className="inline-block bg-(--color-admin-navy) text-white px-6 py-3 font-bold uppercase text-xs tracking-widest hover:bg-(--color-admin-accent) transition-all duration-300"
           >
-            Back to Orders
+            Return to Database
           </Link>
         </div>
       </div>
@@ -82,196 +79,155 @@ export default function PharmacyOrderDetailsPage({ params }) {
   const getStatusStyles = status => {
     switch (status?.toUpperCase()) {
       case 'DELIVERED':
-        return 'bg-(--color-success-50) border-(--color-success-100) text-(--color-success-600)';
+        return 'bg-(--color-admin-success) text-white border-(--color-admin-border)';
       case 'SHIPPED':
-        return 'bg-blue-50 border-blue-100 text-blue-600';
-      case 'PROCESSING':
-        return 'bg-indigo-50 border-indigo-100 text-indigo-600';
-      case 'CONFIRMED':
-        return 'bg-cyan-50 border-cyan-100 text-cyan-600';
+        return 'bg-blue-600 text-white border-(--color-admin-border)';
       case 'CANCELLED':
-        return 'bg-red-50 border-red-100 text-red-600';
+        return 'bg-(--color-admin-error) text-white border-(--color-admin-border)';
       default:
-        return 'bg-amber-50 border-amber-100 text-amber-600';
-    }
-  };
-
-  const getStatusIcon = status => {
-    switch (status?.toUpperCase()) {
-      case 'DELIVERED':
-        return <FiCheckCircle />;
-      case 'SHIPPED':
-        return <FiTruck />;
-      case 'PROCESSING':
-        return <FiLoader className="animate-spin" />;
-      case 'CANCELLED':
-        return <FiXCircle />;
-      default:
-        return <FiClock />;
+        return 'bg-(--color-admin-warning) text-black border-(--color-admin-border)';
     }
   };
 
   return (
-    <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
+    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
       {/* Header */}
-      <div className="flex items-center gap-4 sm:gap-6">
-        <Link href="/pharmacy/orders">
-          <button className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-white border border-gray-100 rounded-full text-xs sm:text-[14px] font-bold text-gray-900 hover:bg-gray-50 transition-all cursor-pointer">
-            <FiChevronLeft size={18} />{' '}
-            <span className="hidden xs:inline">Back to Orders</span>
-            <span className="xs:hidden">Back</span>
-          </button>
-        </Link>
-        <h1 className="text-xl sm:text-[28px] font-bold text-gray-900 tracking-tight truncate">
-          Order #{orderDetails.id}
-        </h1>
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b-4 border-(--color-admin-border) pb-8">
+        <div className="flex flex-col gap-4">
+          <Link href="/pharmacy/orders">
+            <button className="flex items-center gap-2 px-4 py-2 bg-(--color-admin-navy) text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer">
+              <FiChevronLeft /> BACK_TO_RECORDS
+            </button>
+          </Link>
+          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
+            Order <span className="font-mono">#{orderDetails.id}</span>
+          </h1>
+        </div>
+        <div className="font-mono text-xs bg-(--color-admin-card) border border-(--color-admin-border) px-4 py-2 font-bold text-(--color-admin-navy)">
+          RECORD_TYPE: TRANSACTION_LOG
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 items-start">
-        {/* MAIN COLUMN: Order Info & Items */}
-        <div className="xl:col-span-2 space-y-6 sm:space-y-8">
-          {/* 1. Order Summary Grid */}
-          <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-10 items-start">
+        {/* MAIN COLUMN */}
+        <div className="xl:col-span-2 space-y-10">
+          {/* 1. Summary Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 border border-(--color-admin-border) bg-(--color-admin-border)">
             <OrderInfoCard
               label="Order Date"
-              value={formatDate(orderDetails.created_at)}
+              value={formatDate(orderDetails.created_at).toUpperCase()}
             />
             <OrderInfoCard
-              label="Total Amount"
+              label="Net Amount"
               value={formatCurrency(orderDetails.total)}
             />
-            <OrderInfoCard label="Payment Method" value="Cash on Delivery" />
-            <OrderInfoCard
-              label="Payment Status"
-              badge="Unpaid"
-              badgeType="error"
-            />
+            <OrderInfoCard label="Method" value="CASH_ON_DELIVERY" />
+            <OrderInfoCard label="Payment" badge="UNPAID" badgeType="error" />
           </div>
 
-          {/* 2. Items List Card */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-6 sm:space-y-8">
-            <div className="space-y-5 sm:space-y-6">
-              <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
-                <FiPackage className="text-gray-400" />
-                Ordered Items
+          {/* 2. Items List */}
+          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-0">
+            <div className="bg-(--color-admin-navy) text-white px-6 py-4 flex items-center gap-3">
+              <FiPackage />
+              <h3 className="text-sm font-bold uppercase tracking-widest">
+                Manifest_Entries
               </h3>
-              <div className="space-y-3">
-                {orderDetails.items?.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex flex-col xs:flex-row xs:items-center justify-between p-4 sm:p-5 rounded-[24px] border border-gray-50 bg-gray-25/30 gap-3 xs:gap-0"
-                  >
-                    <div className="flex flex-col">
-                      <p className="font-bold text-gray-900 text-sm sm:text-base">
-                        {item.product_name}
-                      </p>
-                      <p className="text-[11px] sm:text-xs text-gray-500 font-medium">
-                        Unit Price: {formatCurrency(item.price_at_order)}
-                      </p>
-                    </div>
-                    <div className="text-left xs:text-right border-t xs:border-none border-gray-100 pt-2 xs:pt-0">
-                      <p className="text-xs sm:text-sm font-bold text-gray-900">
-                        Qty: {item.quantity}
-                      </p>
-                      <p className="text-sm sm:text-base font-black text-gray-900">
-                        {formatCurrency(item.price_at_order * item.quantity)}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            </div>
+            <div className="p-6 space-y-4">
+              {orderDetails.items?.map((item, idx) => (
+                <OrderedProductCard key={idx} item={item} />
+              ))}
             </div>
           </div>
 
-          {/* 3. Shipping Address Card */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-4">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
-              <FiMapPin className="text-gray-400" />
-              Shipping Destination
+          {/* 3. Shipping Address */}
+          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8">
+            <h3 className="text-sm font-black text-(--color-admin-navy) uppercase tracking-widest flex items-center gap-3 mb-6 border-b border-(--color-admin-border) pb-4">
+              <FiMapPin className="text-(--color-text-secondary)" />
+              Delivery_Coordinates
             </h3>
-            <p className="text-sm sm:text-base text-gray-600 leading-relaxed font-medium">
+            <p className="font-mono text-sm text-(--color-admin-navy) leading-relaxed font-bold uppercase">
               {parsedData.address}
             </p>
           </div>
         </div>
 
-        {/* SIDEBAR COLUMN: Status Management & Customer Info */}
-        <div className="xl:col-span-1 space-y-6 sm:space-y-8">
-          {/* Status Update Card */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-6">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900">
-              Order Status
-            </h3>
-            <div
-              className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${getStatusStyles(orderDetails.status)}`}
-            >
-              <span className="text-xl">
-                {getStatusIcon(orderDetails.status)}
-              </span>
-              <span className="font-black uppercase text-[10px] sm:text-xs tracking-widest">
-                {orderDetails.status}
-              </span>
+        {/* SIDEBAR COLUMN */}
+        <div className="xl:col-span-1 space-y-10">
+          {/* Status Management */}
+          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-0">
+            <div className="bg-(--color-admin-navy) text-white px-6 py-4">
+              <h3 className="text-sm font-bold uppercase tracking-widest">
+                System_Status
+              </h3>
             </div>
-            <div className="space-y-3 pt-4 border-t border-gray-50">
-              <p className="text-[10px] sm:text-[11px] font-black text-gray-400 uppercase tracking-widest px-1">
-                Update Status To:
-              </p>
-              <div className="grid grid-cols-1 xs:grid-cols-2 xl:grid-cols-1 gap-2">
-                {[
-                  'PENDING',
-                  'CONFIRMED',
-                  'PROCESSING',
-                  'SHIPPED',
-                  'DELIVERED',
-                  'CANCELLED',
-                ].map(status => (
-                  <button
-                    key={status}
-                    disabled={isUpdating || orderDetails.status === status}
-                    onClick={() => handleStatusChange(status)}
-                    className={`w-full py-3 sm:py-3.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-widest transition-all cursor-pointer border ${
-                      orderDetails.status === status
-                        ? 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-white border-gray-100 text-gray-700 hover:border-(--color-primary-500) hover:text-(--color-primary-500)'
-                    }`}
-                  >
-                    {isUpdating && orderDetails.status !== status
-                      ? 'Updating...'
-                      : status}
-                  </button>
-                ))}
+            <div className="p-6 space-y-6">
+              <div
+                className={`flex items-center justify-center gap-3 py-4 border font-mono font-black uppercase text-sm tracking-widest ${getStatusStyles(orderDetails.status)}`}
+              >
+                {orderDetails.status}
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-mono text-[10px] font-bold text-(--color-text-secondary) uppercase tracking-widest mb-4">
+                  EXECUTE_STATUS_CHANGE:
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  {[
+                    'CONFIRMED',
+                    'PROCESSING',
+                    'SHIPPED',
+                    'DELIVERED',
+                    'CANCELLED',
+                  ].map(status => (
+                    <button
+                      key={status}
+                      disabled={isUpdating || orderDetails.status === status}
+                      onClick={() => handleStatusChange(status)}
+                      className={`w-full py-3 border font-mono text-[10px] font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+                        orderDetails.status === status
+                          ? 'bg-(--color-admin-bg) border-(--color-admin-border) text-(--color-text-secondary) cursor-not-allowed'
+                          : 'border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white hover:border-(--color-admin-accent)'
+                      }`}
+                    >
+                      {status}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Customer Info Card */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-5 sm:p-8 space-y-6">
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 flex items-center gap-2">
-              <FiUser className="text-gray-400" />
-              Customer Info
-            </h3>
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-                  <FiUser size={18} />
+          {/* Customer Info */}
+          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-0">
+            <div className="bg-(--color-admin-navy) text-white px-6 py-4 flex items-center gap-3">
+              <FiUser />
+              <h3 className="text-sm font-bold uppercase tracking-widest">
+                Entity_Details
+              </h3>
+            </div>
+            <div className="p-8 space-y-6 font-mono">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center bg-white">
+                  <FiUser size={18} className="text-(--color-admin-primary)" />
                 </div>
-                <p className="font-bold text-gray-900 text-sm sm:text-base truncate">
+                <p className="font-bold text-(--color-admin-navy) uppercase text-sm">
                   {parsedData.name}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-                  <FiMail size={18} />
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center bg-white">
+                  <FiMail size={18} className="text-(--color-admin-primary)" />
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
+                <p className="text-xs font-bold text-(--color-text-secondary) truncate uppercase">
                   {parsedData.email}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
-                  <FiPhone size={18} />
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center bg-white">
+                  <FiPhone size={18} className="text-(--color-admin-primary)" />
                 </div>
-                <p className="text-xs sm:text-sm text-gray-600 font-medium">
+                <p className="text-sm font-bold text-(--color-admin-navy)">
                   {parsedData.phone}
                 </p>
               </div>
