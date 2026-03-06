@@ -45,8 +45,8 @@ const PharmacySidebar = () => {
         href={item.href}
         className={`flex items-center justify-between px-5 py-4 transition-all duration-150 border-b border-[#DAD7CD] rounded-none group ${
           isActive
-            ? 'bg-[#E8F0EA] text-[#1F3324]' // Primary-50 background, Primary-900 text
-            : 'text-[#6B6B5E] hover:bg-[#F1F1E6] hover:text-[#1B1B1B]' // Neutral-600 text, Neutral-100 hover
+            ? 'bg-[#E8F0EA] text-[#1F3324]'
+            : 'text-[#6B6B5E] hover:bg-[#F1F1E6] hover:text-[#1B1B1B]'
         }`}
       >
         <div className="flex items-center gap-4">
@@ -55,7 +55,7 @@ const PharmacySidebar = () => {
           >
             {item.icon}
           </span>
-          <span className="text-xs font-bold tracking-[0.1em] font-inter">
+          <span className="text-xs font-bold tracking-[0.1em] font-inter uppercase">
             {item.name}
           </span>
         </div>
