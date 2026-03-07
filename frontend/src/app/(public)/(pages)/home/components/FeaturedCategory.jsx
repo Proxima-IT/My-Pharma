@@ -44,7 +44,7 @@ const FeaturedCategory = () => {
   };
 
   return (
-    <div className="pt-[70px] px-4 w-full">
+    <div className="px-4 w-full">
       {/* Header Section */}
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-bold text-lg lg:text-2xl text-gray-900 tracking-tight">
@@ -80,7 +80,7 @@ const FeaturedCategory = () => {
 
           <Link href="/products">
             <button className="border border-gray-100 bg-white rounded-full px-4 lg:px-6 py-2 lg:py-3 text-(--color-primary-500) flex gap-2 lg:gap-3 items-center text-xs lg:text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
-              See More
+              See More Categories
               <MdArrowForwardIos size={14} />
             </button>
           </Link>

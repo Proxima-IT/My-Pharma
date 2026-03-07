@@ -55,10 +55,10 @@ const DealsSection = () => {
   if (products.length === 0) return null;
 
   return (
-    <div className="pt-[70px] px-4 animate-in fade-in duration-700">
+    <div className="pb-[70px] px-4 animate-in fade-in duration-700">
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-bold text-lg lg:text-2xl text-gray-900 tracking-tight">
-          Top Deals you can&apos;t miss
+          Unilever: Deals you can&apos;t miss
         </h1>
         <Link href="/products">
           <button className="border border-gray-100 bg-white rounded-full px-5 lg:px-8 py-2.5 lg:py-3.5 text-(--color-primary-500) flex gap-2 lg:gap-3 items-center text-xs lg:text-[14px] font-bold cursor-pointer hover:border-(--color-primary-500) transition-all active:scale-95">
@@ -84,7 +84,10 @@ const DealsSection = () => {
                 )}
 
                 <Image
-                  src={getMediaUrl(product.image) || '/assets/images/placeholder.png'}
+                  src={
+                    getMediaUrl(product.image) ||
+                    '/assets/images/placeholder.png'
+                  }
                   alt={product.name}
                   fill
                   className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 p-4"

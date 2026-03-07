@@ -5,7 +5,7 @@ import { LuCloudUpload } from 'react-icons/lu';
 const BookTestBanner = () => {
   return (
     <div>
-      <div className=" py-[70px]">
+      <div className=" pt-[70px]">
         {/* <Image
         src="/assets/images/uploadbanner.png"
         alt="upload banner"

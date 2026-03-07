@@ -47,7 +47,7 @@ const UploadPrescriptionBanner = () => {
   };
 
   return (
-    <div className="py-[70px] px-4">
+    <div className="px-4">
       <div
         className="w-full h-auto bg-center bg-no-repeat bg-cover rounded-[32px] border border-gray-100 grid grid-cols-1 lg:grid-cols-2 items-center gap-6 py-12 overflow-hidden"
         style={{

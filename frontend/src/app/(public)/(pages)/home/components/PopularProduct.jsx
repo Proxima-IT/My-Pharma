@@ -18,7 +18,7 @@ const PopularProduct = () => {
   }
 
   return (
-    <div className="pt-[70px] px-4 animate-in fade-in duration-700">
+    <div className="px-4 animate-in fade-in duration-700">
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-bold text-lg lg:text-2xl text-gray-900 tracking-tight">
           Popular Products
