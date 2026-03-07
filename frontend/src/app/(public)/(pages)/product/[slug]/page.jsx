@@ -81,7 +81,7 @@ const ProductSingle = ({ params }) => {
   }
 
   return (
-    <div className="w-full animate-in fade-in duration-700 pb-10">
+    <div className="w-full animate-in fade-in duration-700 pb-10 overflow-hidden">
       {/* Breadcrumb Navigation */}
       <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2.5 w-fit mb-6 md:mb-8">
         <ol className="flex items-center gap-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
@@ -117,35 +117,37 @@ const ProductSingle = ({ params }) => {
       </nav>
 
       {/* 
-        Main Grid Strategy:
-        - grid-cols-1: Default (Mobile/Tab/Laptop)
-        - 2xl:grid-cols-10: Only side-by-side on very large screens
+        60/40 FLEX STRATEGY:
+        - lg:flex-row: Side-by-side on Laptop (1024px+) and Desktop (1920px).
+        - lg:w-[60%] and lg:w-[40%]: Precise width allocation.
+        - min-w-0: Prevents content from breaking the layout.
       */}
-      <div className="grid grid-cols-1 2xl:grid-cols-10 gap-8 items-start">
-        {/* LEFT COLUMN */}
-        <div className="2xl:col-span-7 flex flex-col gap-8 min-w-0">
-          <ProductImageViewer images={getProductImages()} />
+      <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
+        {/* LEFT COLUMN: Image Viewer & Tabs (60%) */}
+        <div className="w-full lg:w-[60%] min-w-0 space-y-8">
+          <div className="w-full">
+            <ProductImageViewer images={getProductImages()} />
+          </div>
 
-          {/* Tabs visible here only on 2xl screens */}
-          <div className="hidden 2xl:block">
+          <div className="w-full">
             <ProductDetailsTabs product={product} />
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="2xl:col-span-3 flex flex-col gap-8 min-w-0">
+        {/* RIGHT COLUMN: Summary, Bundles, Alternatives (40%) */}
+        <div className="w-full lg:w-[40%] min-w-0 space-y-8">
           <ProductSummaryCard product={product} />
 
-          {/* Tabs move here for all screens smaller than 2xl */}
-          <div className="block 2xl:hidden">
-            <ProductDetailsTabs product={product} />
-          </div>
-
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6">
+          {/* Bundle/Combo Package Section */}
+          <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
+            <h3 className="text-lg font-bold text-gray-900 tracking-tight mb-4 px-1">
+              Bundle/Combo Package
+            </h3>
             <BundleSlider cardsToShow={1} />
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6 space-y-6">
+          {/* Alternative Brands Section */}
+          <div className="bg-white border border-gray-100 rounded-[32px] p-6 space-y-6 shadow-sm">
             <h3 className="text-lg font-bold text-gray-900 tracking-tight px-1">
               Alternative Brands
             </h3>
@@ -156,6 +158,7 @@ const ProductSingle = ({ params }) => {
         </div>
       </div>
 
+      {/* Bottom Sections */}
       <div className="space-y-10 mt-10">
         <PopularProduct />
         <UploadPrescriptionBanner />
@@ -165,4 +168,3 @@ const ProductSingle = ({ params }) => {
 };
 
 export default ProductSingle;
-
