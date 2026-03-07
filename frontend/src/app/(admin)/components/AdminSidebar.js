@@ -12,6 +12,7 @@ import {
   FiGrid,
   FiAward,
   FiDroplet,
+  FiLayout,
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
@@ -32,6 +33,7 @@ const AdminSidebar = () => {
     { name: 'Generic Names', icon: <FiDroplet />, href: '/admin/ingredients' },
     { name: 'Company List', icon: <FiAward />, href: '/admin/brands' },
     { name: 'Medicine Groups', icon: <FiGrid />, href: '/admin/categories' },
+    { name: 'Sidebar Menu', icon: <FiLayout />, href: '/admin/sidebar' },
     { name: 'Settings', icon: <FiSettings />, href: '/admin/settings' },
   ];
 

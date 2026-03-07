@@ -5,29 +5,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, usePathname } from 'next/navigation';
 import {
-  FiHome,
-  FiHeart,
-  FiActivity,
-  FiSmile,
-  FiZap,
   FiSearch,
   FiCommand,
   FiGrid,
   FiCheckCircle,
   FiTruck,
 } from 'react-icons/fi';
-import {
-  GiPill,
-  GiHerbsBundle,
-  GiHealthCapsule,
-  GiDogBowl,
-} from 'react-icons/gi';
-import {
-  MdOutlineScience,
-  MdOutlineFaceRetouchingNatural,
-  MdOutlineHomeWork,
-} from 'react-icons/md';
-import { getCategories } from '@/data/categories';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 const Sidebar = () => {
   const searchParams = useSearchParams();
@@ -35,49 +19,25 @@ const Sidebar = () => {
   const currentCategory = searchParams.get('category');
 
   const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      const data = await getCategories();
-      setCategories(data);
+    const fetchSidebarCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/sidebar-categories/`);
+        const data = await response.json();
+        // The API returns a paginated list, so we take the 'results' array
+        setCategories(data.results || []);
+      } catch (error) {
+        console.error('Error fetching sidebar categories:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    loadCategories();
+    fetchSidebarCategories();
   }, []);
 
-  const getIcon = name => {
-    switch (name) {
-      case 'All Product':
-        return <FiGrid size={20} />;
-      case 'Home':
-        return <FiHome size={20} />;
-      case 'Medicine':
-        return <GiPill size={20} />;
-      case 'Healthcare':
-        return <FiHeart size={20} />;
-      case 'Lab Test':
-        return <MdOutlineScience size={20} />;
-      case 'Beauty':
-        return <MdOutlineFaceRetouchingNatural size={20} />;
-      case 'Sexual Wellness':
-        return <FiZap size={20} />;
-      case 'Baby Care':
-        return <FiSmile size={20} />;
-      case 'Herbal':
-        return <GiHerbsBundle size={20} />;
-      case 'Home Care':
-        return <MdOutlineHomeWork size={20} />;
-      case 'Supplement':
-        return <GiHealthCapsule size={20} />;
-      case 'Pet Care':
-        return <GiDogBowl size={20} />;
-      case 'Nutrition':
-        return <FiActivity size={20} />;
-      default:
-        return <FiHome size={20} />;
-    }
-  };
-
-  // Check if "All Products" is active (Path is /products and no category slug in URL)
+  // Check if "All Products" is active
   const isAllProductsActive = pathname === '/products' && !currentCategory;
 
   return (
@@ -90,8 +50,6 @@ const Sidebar = () => {
 
         {/* Search Bar */}
         <div className="relative mb-1">
-          {' '}
-          {/* Reduced margin to 1 to remove white space */}
           <FiSearch
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
             size={18}
@@ -113,6 +71,7 @@ const Sidebar = () => {
 
         {/* Category List */}
         <nav className="flex flex-col">
+          {/* Static All Product Button */}
           <Link
             href="/products"
             className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all mb-1 ${
@@ -129,51 +88,56 @@ const Sidebar = () => {
             </div>
             <span
               className={`text-xs font-bold ${isAllProductsActive ? 'opacity-80' : 'text-gray-400'}`}
-            >
-              20
+            >    
             </span>
           </Link>
 
-          {categories.map((cat, index) => {
-            const isActive = currentCategory === cat.slug;
-            return (
-              <React.Fragment key={cat.id}>
-                <Link
-                  href={`/products?category=${cat.slug}`}
-                  className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all group ${
-                    isActive
-                      ? 'bg-[#233b8c] text-white shadow-md'
-                      : 'text-gray-500 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-4">
-                    <span
-                      className={
-                        isActive
-                          ? 'text-white'
-                          : 'text-gray-400 group-hover:text-(--color-primary-500)'
-                      }
-                    >
-                      {getIcon(cat.name)}
-                    </span>
-                    <span
-                      className={`text-[15px] tracking-tight ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
-                    >
-                      {cat.name}
-                    </span>
-                  </div>
-                  <span
-                    className={`text-xs font-medium ${isActive ? 'opacity-80' : 'text-gray-400 group-hover:text-gray-600'}`}
+          {/* Dynamic Categories from API */}
+          {isLoading ? (
+            <div className="py-10 flex justify-center">
+              <div className="w-6 h-6 border-2 border-gray-200 border-t-(--color-primary-500) rounded-full animate-spin" />
+            </div>
+          ) : (
+            categories.map((cat, index) => {
+              // Using title as the slug/identifier for the URL
+              const isActive = currentCategory === cat.title;
+              return (
+                <React.Fragment key={cat.id}>
+                  <Link
+                    href={`/products?category=${encodeURIComponent(cat.title)}`}
+                    className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all group ${
+                      isActive
+                        ? 'bg-[#233b8c] text-white shadow-md'
+                        : 'text-gray-500 hover:bg-gray-50'
+                    }`}
                   >
-                    {cat.count}
-                  </span>
-                </Link>
-                {index < categories.length - 1 && !isActive && (
-                  <div className="h-[1px] bg-gray-50 mx-4" />
-                )}
-              </React.Fragment>
-            );
-          })}
+                    <div className="flex items-center gap-4">
+                      <div className="w-5 h-5 relative shrink-0">
+                        <Image
+                          src={cat.image_url || '/assets/images/applogo.png'}
+                          alt={cat.title}
+                          fill
+                          className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
+                        />
+                      </div>
+                      <span
+                        className={`text-[15px] tracking-tight ${
+                          isActive
+                            ? 'font-bold'
+                            : 'font-medium group-hover:text-gray-900'
+                        }`}
+                      >
+                        {cat.title}
+                      </span>
+                    </div>
+                  </Link>
+                  {index < categories.length - 1 && !isActive && (
+                    <div className="h-[1px] bg-gray-50 mx-4" />
+                  )}
+                </React.Fragment>
+              );
+            })
+          )}
         </nav>
       </div>
 
