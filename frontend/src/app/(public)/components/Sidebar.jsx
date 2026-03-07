@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import Image from 'next/image';
+import { useSearchParams, usePathname } from 'next/navigation';
 import {
   FiHome,
   FiHeart,
@@ -11,6 +12,9 @@ import {
   FiZap,
   FiSearch,
   FiCommand,
+  FiGrid,
+  FiCheckCircle,
+  FiTruck,
 } from 'react-icons/fi';
 import {
   GiPill,
@@ -27,31 +31,23 @@ import { getCategories } from '@/data/categories';
 
 const Sidebar = () => {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const currentCategory = searchParams.get('category');
 
   const [categories, setCategories] = useState([]);
-  const [expandedId, setExpandedId] = useState(null);
 
   useEffect(() => {
     const loadCategories = async () => {
       const data = await getCategories();
       setCategories(data);
-
-      // Auto-expand the parent if a sub-category is active in the URL
-      if (currentCategory) {
-        const parent = data.find(
-          cat =>
-            cat.slug === currentCategory ||
-            cat.subCategories?.some(sub => sub.slug === currentCategory),
-        );
-        if (parent) setExpandedId(parent.id);
-      }
     };
     loadCategories();
-  }, [currentCategory]);
+  }, []);
 
   const getIcon = name => {
     switch (name) {
+      case 'All Product':
+        return <FiGrid size={20} />;
       case 'Home':
         return <FiHome size={20} />;
       case 'Medicine':
@@ -81,121 +77,146 @@ const Sidebar = () => {
     }
   };
 
-  return (
-    <div className="w-full bg-white border border-(--color-gray-100) rounded-[32px] p-6 animate-in fade-in duration-700">
-      <h2 className="text-[22px] font-bold text-(--color-gray-900) mb-6 tracking-tight">
-        All Product Category
-      </h2>
+  // Check if "All Products" is active (Path is /products and no category slug in URL)
+  const isAllProductsActive = pathname === '/products' && !currentCategory;
 
-      {/* Search Bar */}
-      <div className="relative mb-6">
-        <FiSearch
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-          size={18}
-        />
-        <input
-          type="text"
-          placeholder="Search"
-          className="w-full h-12 pl-11 pr-20 bg-white border border-(--color-gray-100) rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
-        />
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-          <div className="w-7 h-7 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
-            <FiCommand size={14} />
+  return (
+    <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
+      {/* 1. MAIN CATEGORY CARD */}
+      <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
+        <h2 className="text-[22px] font-bold text-gray-900 mb-6 tracking-tight">
+          All Product Category
+        </h2>
+
+        {/* Search Bar */}
+        <div className="relative mb-1">
+          {' '}
+          {/* Reduced margin to 1 to remove white space */}
+          <FiSearch
+            className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+          />
+          <input
+            type="text"
+            placeholder="Search"
+            className="w-full h-12 pl-11 pr-16 bg-white border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
+          />
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            <div className="w-6 h-6 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
+              <FiCommand size={12} />
+            </div>
+            <div className="w-6 h-6 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 text-[10px] font-bold">
+              K
+            </div>
           </div>
-          <div className="w-7 h-7 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 text-[10px] font-bold">
-            K
+        </div>
+
+        {/* Category List */}
+        <nav className="flex flex-col">
+          <Link
+            href="/products"
+            className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all mb-1 ${
+              isAllProductsActive
+                ? 'bg-[#233b8c] text-white shadow-md'
+                : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center gap-4">
+              <FiGrid size={20} />
+              <span className="text-[15px] font-bold tracking-tight">
+                All Product
+              </span>
+            </div>
+            <span
+              className={`text-xs font-bold ${isAllProductsActive ? 'opacity-80' : 'text-gray-400'}`}
+            >
+              20
+            </span>
+          </Link>
+
+          {categories.map((cat, index) => {
+            const isActive = currentCategory === cat.slug;
+            return (
+              <React.Fragment key={cat.id}>
+                <Link
+                  href={`/products?category=${cat.slug}`}
+                  className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all group ${
+                    isActive
+                      ? 'bg-[#233b8c] text-white shadow-md'
+                      : 'text-gray-500 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={
+                        isActive
+                          ? 'text-white'
+                          : 'text-gray-400 group-hover:text-(--color-primary-500)'
+                      }
+                    >
+                      {getIcon(cat.name)}
+                    </span>
+                    <span
+                      className={`text-[15px] tracking-tight ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
+                    >
+                      {cat.name}
+                    </span>
+                  </div>
+                  <span
+                    className={`text-xs font-medium ${isActive ? 'opacity-80' : 'text-gray-400 group-hover:text-gray-600'}`}
+                  >
+                    {cat.count}
+                  </span>
+                </Link>
+                {index < categories.length - 1 && !isActive && (
+                  <div className="h-[1px] bg-gray-50 mx-4" />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* 2. PROMOTIONAL IMAGE BANNER */}
+      <div className="w-full rounded-[32px] overflow-hidden leading-[0]">
+        <Image
+          src="/assets/images/applogo.png"
+          alt="Promotional Banner"
+          width={400}
+          height={500}
+          className="w-full h-auto object-cover"
+          priority
+        />
+      </div>
+
+      {/* 3. TRUST BADGES */}
+      <div className="flex flex-col gap-3 pb-4">
+        <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-[#e6f7ed] flex items-center justify-center shrink-0">
+            <FiCheckCircle size={20} color="#00ab49" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-gray-900">
+              Genuine Medicine
+            </h4>
+            <p className="text-[11px] text-gray-500 font-medium">
+              100% authentic products
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 rounded-full bg-[#e6f7ed] flex items-center justify-center shrink-0">
+            <FiTruck size={20} color="#00ab49" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-gray-900">Fast Delivery</h4>
+            <p className="text-[11px] text-gray-500 font-medium">
+              Within Dhaka City
+            </p>
           </div>
         </div>
       </div>
-
-      {/* Category List */}
-      <nav className="space-y-1">
-        {categories.map(cat => {
-          const isExpanded = expandedId === cat.id;
-          const isActive = currentCategory === cat.slug;
-
-          return (
-            <div key={cat.id} className="flex flex-col">
-              <Link
-                href={`/products?category=${cat.slug}`}
-                onClick={() => setExpandedId(isExpanded ? null : cat.id)}
-                className={`flex items-center justify-between px-4 py-3 rounded-full transition-all group ${
-                  isActive || isExpanded
-                    ? 'bg-(--color-primary-500) text-white'
-                    : 'text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center gap-4">
-                  <span
-                    className={
-                      isActive || isExpanded
-                        ? 'text-white'
-                        : 'text-gray-400 group-hover:text-(--color-primary-500)'
-                    }
-                  >
-                    {getIcon(cat.name)}
-                  </span>
-                  <span className="text-[15px] font-bold tracking-tight">
-                    {cat.name}
-                  </span>
-                </div>
-                <div
-                  className={`flex items-center justify-center min-w-[28px] h-7 rounded-full text-xs font-bold ${
-                    isActive || isExpanded
-                      ? 'bg-white/20 text-white'
-                      : 'text-gray-400'
-                  }`}
-                >
-                  {cat.count}
-                </div>
-              </Link>
-
-              {/* Sub-categories */}
-              {isExpanded && cat.subCategories && (
-                <div className="ml-6 mt-1 relative border-l border-gray-100">
-                  {cat.subCategories.map((sub, idx) => {
-                    const isSubActive = currentCategory === sub.slug;
-                    return (
-                      <div
-                        key={idx}
-                        className="relative flex items-center py-2 pl-6 group/sub"
-                      >
-                        <div className="absolute left-0 top-0 w-5 h-1/2 border-b border-gray-100 rounded-bl-xl" />
-
-                        <Link
-                          href={`/products?category=${sub.slug}`}
-                          className={`flex items-center gap-3 w-full p-2 rounded-2xl transition-all ${
-                            isSubActive ? 'bg-gray-100' : 'hover:bg-gray-50/50'
-                          }`}
-                        >
-                          <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center overflow-hidden shrink-0">
-                            <div
-                              className={`w-full h-full flex items-center justify-center text-[10px] font-bold ${
-                                isSubActive
-                                  ? 'bg-(--color-primary-500) text-white'
-                                  : 'bg-gray-50 text-gray-400'
-                              }`}
-                            >
-                              {sub.name.charAt(0)}
-                            </div>
-                          </div>
-                          <span
-                            className={`text-[14px] font-medium ${isSubActive ? 'text-gray-900 font-bold' : 'text-gray-600'}`}
-                          >
-                            {sub.name}
-                          </span>
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {!isExpanded && <div className="h-px bg-gray-50 mx-4 my-0.5" />}
-            </div>
-          );
-        })}
-      </nav>
     </div>
   );
 };

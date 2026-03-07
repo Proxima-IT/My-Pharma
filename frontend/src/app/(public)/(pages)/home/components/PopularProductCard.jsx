@@ -13,12 +13,12 @@ const PopularProductCard = ({ product }) => {
   const { addItem, isUpdating } = useCart();
 
   const handleAddToCart = async e => {
-    // Prevent the Link from navigating to the product details page
     e.preventDefault();
     e.stopPropagation();
 
     if (product?.id) {
-      await addItem(product.id, 1);
+      // FIX: Pass the entire 'product' object instead of just 'product.id'
+      await addItem(product, 1);
     }
   };
 
@@ -26,16 +26,13 @@ const PopularProductCard = ({ product }) => {
     <div className="group">
       <Link href={`/product/${product?.slug}`}>
         <div className="relative bg-white rounded-[24px] border border-gray-100 p-3 transition-all hover:border-(--color-primary-100)">
-          {/* 1. Image wrapper - Removed padding to allow image to take full space */}
           <div className="relative bg-(--color-imageBG) rounded-[18px] w-full aspect-square flex items-center justify-center overflow-hidden border border-gray-50">
-            {/* Dynamic Discount badge */}
             {product?.discount_percentage > 0 && (
               <span className="absolute top-3 right-3 bg-(--success-500) text-white text-[10px] font-black px-2.5 py-1 rounded-full z-10 uppercase tracking-wider">
                 -{product.discount_percentage}% off
               </span>
             )}
 
-            {/* Product image - Set to fill container */}
             {product?.image ? (
               <Image
                 src={getMediaUrl(product.image)}
@@ -52,7 +49,6 @@ const PopularProductCard = ({ product }) => {
             )}
           </div>
 
-          {/* 2. Product Information */}
           <div className="px-1">
             <h1 className="font-bold text-base lg:text-lg text-gray-900 mt-4 leading-tight truncate">
               {product?.name || 'Product Name'}
@@ -68,10 +64,8 @@ const PopularProductCard = ({ product }) => {
               </p>
             </div>
 
-            {/* 3. Price and Buy Section */}
             <div className="flex items-center justify-between mt-5 pt-1">
               <div className="flex flex-col">
-                {/* current price */}
                 <div className="flex items-center text-lg font-black text-gray-900">
                   <TbCurrencyTaka className="text-xl -ml-1" />
                   <span>
@@ -79,7 +73,6 @@ const PopularProductCard = ({ product }) => {
                   </span>
                 </div>
 
-                {/* original price - only shown if there is a discount */}
                 {product?.original_price &&
                   parseFloat(product.original_price) >
                     parseFloat(product.price) && (
@@ -92,7 +85,6 @@ const PopularProductCard = ({ product }) => {
                   )}
               </div>
 
-              {/* Buy Button */}
               <button
                 onClick={handleAddToCart}
                 disabled={isUpdating}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   addToCartApi,
   updateCartItemApi,
@@ -8,26 +8,81 @@ import {
   placeOrderApi,
 } from '../api/cartApi';
 import { useCartContext } from '../context/CartContext';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 export const useCart = () => {
-  // Access global state and the new silent refresh from context
-  const { cart, refreshCart, isLoading } = useCartContext();
-
+  const { cart, refreshCart, isLoading: contextLoading } = useCartContext();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [guestItems, setGuestItems] = useState([]);
+  const [guestSummary, setGuestSummary] = useState(null);
   const [error, setError] = useState(null);
 
-  // 1. Add Item to Cart
-  const addItem = async (productId, quantity = 1) => {
+  const getGuestCart = () =>
+    JSON.parse(localStorage.getItem('guest_cart') || '{"items": []}');
+
+  const saveGuestCart = data => {
+    localStorage.setItem('guest_cart', JSON.stringify(data));
+    setGuestItems(data.items);
+    calculateGuestSummary(data.items);
+  };
+
+  const calculateGuestSummary = items => {
+    const subTotal = items.reduce(
+      (acc, item) => acc + parseFloat(item.current_price || 0) * item.quantity,
+      0,
+    );
+    const shipping = 150;
+
+    setGuestSummary({
+      sub_total: subTotal,
+      total_amount: subTotal + shipping,
+      shipping_charge: shipping,
+      discount_amount: 0,
+    });
+  };
+
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      const local = getGuestCart();
+      setGuestItems(local.items || []);
+      calculateGuestSummary(local.items || []);
+    }
+  }, [cart]);
+
+  const addItem = async (product, quantity = 1) => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('Please login to add items to cart');
 
-      await addToCartApi(token, productId, quantity);
+      if (token) {
+        await addToCartApi(token, product.id, quantity);
+      } else {
+        const guestCart = getGuestCart();
+        const existing = guestCart.items.find(i => i.id === product.id);
 
-      // FIXED: Instead of setting state with partial data,
-      // we trigger a silent refresh to get the full updated cart.
+        if (existing) {
+          existing.quantity += quantity;
+        } else {
+          // SNAPSHOT: Save full details so the Cart Page doesn't need the API
+          guestCart.items.push({
+            id: product.id,
+            product: product.slug,
+            quantity: quantity,
+            product_name: product.name,
+            current_price: product.price,
+            product_original_price: product.original_price,
+            image_url: getMediaUrl(product.image),
+            product_description: product.description,
+            product_unit_label: product.unit_label,
+            product_dosage: product.dosage,
+            is_guest_item: true,
+          });
+        }
+        saveGuestCart(guestCart);
+      }
+
       await refreshCart(null, false);
       return true;
     } catch (err) {
@@ -38,65 +93,58 @@ export const useCart = () => {
     }
   };
 
-  // 2. Update Item Quantity
   const updateQuantity = async (itemId, newQuantity) => {
-    if (newQuantity < 1) return;
     setIsUpdating(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    if (token) {
       await updateCartItemApi(token, itemId, newQuantity);
-
-      // FIXED: Trigger silent refresh to sync the full cart and summary
-      await refreshCart(null, false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsUpdating(false);
+    } else {
+      const guestCart = getGuestCart();
+      const item = guestCart.items.find(i => i.id === itemId);
+      if (item) item.quantity = newQuantity;
+      saveGuestCart(guestCart);
     }
+    await refreshCart(null, false);
+    setIsUpdating(false);
   };
 
-  // 3. Remove Item from Cart
   const removeItem = async itemId => {
     setIsUpdating(true);
-    setError(null);
-    try {
-      const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('access_token');
+    if (token) {
       await removeFromCartApi(token, itemId);
-
-      // Re-fetch full cart to update summary and badge
-      await refreshCart(null, false);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsUpdating(false);
+    } else {
+      const guestCart = getGuestCart();
+      guestCart.items = guestCart.items.filter(i => i.id !== itemId);
+      saveGuestCart(guestCart);
     }
+    await refreshCart(null, false);
+    setIsUpdating(false);
   };
 
-  // 4. Place Order
   const placeOrder = async orderData => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return null;
     setIsUpdating(true);
-    setError(null);
     try {
-      const token = localStorage.getItem('access_token');
       const result = await placeOrderApi(token, orderData);
-
-      // Re-fetch to clear/update cart state globally after order
       await refreshCart(null, true);
       return result;
     } catch (err) {
-      setError(err.message);
       return null;
     } finally {
       setIsUpdating(false);
     }
   };
 
+  const token =
+    typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+
   return {
     cart,
-    items: cart?.items || [],
-    summary: cart?.summary || null,
-    isLoading,
+    items: token ? cart?.items || [] : guestItems,
+    summary: token ? cart?.summary || null : guestSummary,
+    isLoading: contextLoading,
     isUpdating,
     error,
     refresh: refreshCart,

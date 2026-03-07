@@ -21,6 +21,7 @@ import Logo from './Logo';
 import MobileDrawer from './MobileDrawer';
 import AddressSelectorPopup from './AddressSelectorPopup';
 import { uploadPrescriptionApi } from '../../(user)/api/prescriptionApi';
+import { addToCartApi } from '../api/cartApi';
 import { useAddress } from '../../(user)/hooks/useAddress';
 import { useCart } from '../hooks/useCart';
 import { useProfile } from '../../(user)/hooks/useProfile';
@@ -35,11 +36,23 @@ const Header = () => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const { addresses } = useAddress();
-  const { items } = useCart();
+  const { items, refresh: refreshCart } = useCart();
   const { formData: profile } = useProfile();
 
   const cartCount = items?.length || 0;
   const [searchQuery, setSearchQuery] = useState('');
+
+  const base64ToFile = (base64String, filename) => {
+    const arr = base64String.split(',');
+    const mime = arr[0].match(/:(.*?);/)[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -53,6 +66,51 @@ const Header = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // SYNC LOGIC: Industry standard "Merge" on login
+  useEffect(() => {
+    const syncGuestData = async () => {
+      const token = localStorage.getItem('access_token');
+      if (!isLoggedIn || !token) return;
+
+      // 1. Sync Prescriptions
+      const guestPresData = localStorage.getItem('guest_prescriptions');
+      if (guestPresData) {
+        try {
+          const prescriptions = JSON.parse(guestPresData);
+          for (const item of prescriptions) {
+            const file = base64ToFile(item.fileData, item.fileName);
+            const formData = new FormData();
+            formData.append('file', file);
+            await uploadPrescriptionApi(token, formData);
+          }
+          localStorage.removeItem('guest_prescriptions');
+        } catch (err) {
+          console.error('Prescription sync failed', err);
+        }
+      }
+
+      // 2. Sync Cart Items
+      const guestCartData = localStorage.getItem('guest_cart');
+      if (guestCartData) {
+        try {
+          const guestCart = JSON.parse(guestCartData);
+          if (guestCart.items?.length > 0) {
+            for (const item of guestCart.items) {
+              // item.id is the snapshot ID we saved
+              await addToCartApi(token, item.id, item.quantity);
+            }
+          }
+          localStorage.removeItem('guest_cart');
+          await refreshCart(null, false);
+        } catch (err) {
+          console.error('Cart sync failed', err);
+        }
+      }
+    };
+
+    syncGuestData();
+  }, [isLoggedIn, refreshCart]);
 
   const handleSearch = e => {
     if (e) e.preventDefault();
@@ -72,31 +130,56 @@ const Header = () => {
 
   const handlePrescriptionClick = e => {
     e.preventDefault();
-    if (!isLoggedIn) router.push('/login');
-    else fileInputRef.current.click();
+    fileInputRef.current.click();
   };
 
   const handleFileUpload = async e => {
     const file = e.target.files[0];
     if (!file) return;
+
     try {
       setIsUploading(true);
       const token = localStorage.getItem('access_token');
-      const formData = new FormData();
-      formData.append('file', file);
-      await uploadPrescriptionApi(token, formData);
-      alert('Prescription uploaded successfully!');
-      router.push('/user/prescriptions');
+
+      if (isLoggedIn && token) {
+        const formData = new FormData();
+        formData.append('file', file);
+        await uploadPrescriptionApi(token, formData);
+        alert('Prescription uploaded successfully!');
+        router.push('/user/prescriptions');
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const base64String = reader.result;
+          const guestPrescriptions = JSON.parse(
+            localStorage.getItem('guest_prescriptions') || '[]',
+          );
+          guestPrescriptions.push({
+            id: Date.now(),
+            fileName: file.name,
+            fileData: base64String,
+            uploadedAt: new Date().toISOString(),
+          });
+          localStorage.setItem(
+            'guest_prescriptions',
+            JSON.stringify(guestPrescriptions),
+          );
+          alert(
+            'Prescription saved locally! Log in to sync with your account.',
+          );
+        };
+        reader.readAsDataURL(file);
+      }
     } catch (err) {
       alert(err.message || 'Upload failed.');
     } finally {
       setIsUploading(false);
+      e.target.value = '';
     }
   };
 
   return (
     <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
-      {/* Top Nav */}
       <div className="hidden lg:flex justify-between items-center text-black py-2.5 px-9 bg-gradient-to-r from-gray-50 to-green-50">
         <h1 className="text-sm text-gray-800 font-medium">
           <span className="font-bold">Call Us: </span>01755697233, 09677333000
@@ -117,9 +200,7 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Main Nav */}
       <div className="py-4 px-4 md:px-8 flex items-center gap-4 lg:gap-8 w-full">
-        {/* Logo Section */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="block lg:hidden">
             <MobileDrawer />
@@ -129,7 +210,6 @@ const Header = () => {
           </Link>
         </div>
 
-        {/* Search Bar - Increased height and added shadow */}
         <form onSubmit={handleSearch} className="relative flex-1 min-w-0">
           <input
             type="text"
@@ -146,7 +226,6 @@ const Header = () => {
           </button>
         </form>
 
-        {/* Right Icons */}
         <div className="flex items-center gap-2 md:gap-4 shrink-0">
           <button
             onClick={handlePrescriptionClick}
@@ -159,12 +238,11 @@ const Header = () => {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".pdf,.jpg,.jpeg,.png"
             className="hidden"
+            accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileUpload}
           />
 
-          {/* Location Icon with Shadow */}
           <div
             className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-50 shadow-sm transition-all"
             onClick={() =>
@@ -174,12 +252,10 @@ const Header = () => {
             <FiMapPin size={20} className="text-gray-700" />
           </div>
 
-          {/* Notification Icon with Shadow */}
           <div className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-50 shadow-sm transition-all">
             <FiBell size={20} className="text-gray-700" />
           </div>
 
-          {/* Cart Icon with Shadow */}
           <Link
             href="/cart"
             className="relative w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 flex items-center justify-center cursor-pointer hover:bg-gray-50 shadow-sm transition-all"
@@ -192,7 +268,6 @@ const Header = () => {
             )}
           </Link>
 
-          {/* Profile Section with Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <div
               className="w-11 h-11 md:w-12 md:h-12 rounded-full border border-gray-100 flex items-center justify-center cursor-pointer overflow-hidden shadow-sm transition-all hover:border-(--color-primary-500)/30"
@@ -215,7 +290,6 @@ const Header = () => {
               )}
             </div>
 
-            {/* Dropdown Menu */}
             {isLoggedIn && isProfileOpen && (
               <div className="absolute right-0 top-[calc(100%+12px)] w-56 bg-white border border-gray-100 rounded-[24px] py-3 shadow-xl animate-in fade-in zoom-in-95 duration-200 z-50">
                 <div className="px-5 py-2 mb-2 border-b border-gray-50">

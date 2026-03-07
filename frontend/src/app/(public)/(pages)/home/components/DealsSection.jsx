@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { BsCart3 } from 'react-icons/bs';
 import { GoStarFill } from 'react-icons/go';
+import { FiBox } from 'react-icons/fi'; // Imported Box Icon
 import { MdArrowForwardIos } from 'react-icons/md';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { useCart } from '@/app/(public)/hooks/useCart';
@@ -19,13 +20,11 @@ const DealsSection = () => {
   useEffect(() => {
     const fetchDeals = async () => {
       try {
-        // FIXED: Using the dynamic endpoint from apiConfig instead of hardcoded localhost
         const response = await fetch(
           `${PRODUCT_ENDPOINTS.BASE}?is_active=true`,
         );
         const data = await response.json();
 
-        // Filter products that actually have a discount for the "Deals" section
         const deals = (data.results || data)
           .filter(p => p.discount_percentage && p.discount_percentage > 0)
           .slice(0, 4);
@@ -40,10 +39,10 @@ const DealsSection = () => {
     fetchDeals();
   }, []);
 
-  const handleAddToCart = async (e, productId) => {
+  const handleAddToCart = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
-    await addItem(productId, 1);
+    await addItem(product, 1);
   };
 
   if (isLoading)
@@ -83,15 +82,22 @@ const DealsSection = () => {
                   </span>
                 )}
 
-                <Image
-                  src={
-                    getMediaUrl(product.image) ||
-                    '/assets/images/placeholder.png'
-                  }
-                  alt={product.name}
-                  fill
-                  className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 p-4"
-                />
+                {/* Conditional Rendering: Image vs Icon */}
+                {product.image ? (
+                  <Image
+                    src={getMediaUrl(product.image)}
+                    alt={product.name}
+                    fill
+                    className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 p-4"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-gray-300">
+                    <FiBox size={48} />
+                    <span className="text-[10px] font-bold uppercase tracking-widest">
+                      No Photo
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-col flex-1 py-1 pr-2">
@@ -131,7 +137,7 @@ const DealsSection = () => {
                   </div>
 
                   <button
-                    onClick={e => handleAddToCart(e, product.id)}
+                    onClick={e => handleAddToCart(e, product)}
                     disabled={isUpdating}
                     className="w-11 h-11 bg-(--color-primary-25) rounded-full border border-(--color-primary-50) flex items-center justify-center text-(--color-primary-500) cursor-pointer hover:bg-(--color-primary-500) hover:text-white transition-all active:scale-90 disabled:opacity-50"
                   >

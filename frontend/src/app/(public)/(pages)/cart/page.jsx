@@ -13,7 +13,6 @@ import OrderSummaryCard from './components/OrderSummaryCard';
 import { useCart } from '../../hooks/useCart';
 
 const Cart = () => {
-  // Destructured 'refresh' to handle coupon application logic
   const {
     items,
     summary,
@@ -50,7 +49,6 @@ const Cart = () => {
 
   return (
     <div className="w-full px-4 md:px-7 pt-7 pb-28">
-      {/* Page Heading */}
       <div className="flex items-center gap-5 mb-8">
         <LinkComponent href="/products">
           <button className="border border-gray-100 bg-white rounded-full px-6 py-2 text-center text-(--color-primary-500) flex gap-2 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
@@ -64,13 +62,11 @@ const Cart = () => {
       </div>
 
       {items.length > 0 ? (
-        /* Cart Content Grid */
         <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
-          {/* Left Column: Cart Items */}
           <div className="w-full lg:w-[58%] flex flex-col gap-4">
-            {items.map(item => (
+            {items.map((item, index) => (
               <CartCard
-                key={item.id}
+                key={item.id || `cart-item-${index}`} // Fixed unique key warning
                 item={item}
                 onUpdate={updateQuantity}
                 onRemove={removeItem}
@@ -78,10 +74,8 @@ const Cart = () => {
             ))}
           </div>
 
-          {/* Right Column: Address & Summary */}
           <div className="w-full lg:w-[42%] flex flex-col gap-8">
             <ShippingAddressCard />
-            {/* Passed 'refresh' prop to handle coupon logic */}
             <OrderSummaryCard
               summary={summary}
               items={items}
@@ -90,8 +84,7 @@ const Cart = () => {
           </div>
         </div>
       ) : (
-        /* Empty Cart State */
-        <div className="w-full py-20 flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[32px] text-center space-y-6">
+        <div className="w-full py-20 flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[32px] text-center space-y-6 shadow-sm">
           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
             <FiShoppingBag size={40} />
           </div>
@@ -100,8 +93,7 @@ const Cart = () => {
               Your cart is empty
             </h2>
             <p className="text-gray-500 max-w-xs mx-auto">
-              Looks like you haven&apos;t added any medicines or products to
-              your cart yet.
+              Looks like you haven&apos;t added any medicines yet.
             </p>
           </div>
           <LinkComponent href="/products">
@@ -112,7 +104,6 @@ const Cart = () => {
         </div>
       )}
 
-      {/* home page sections */}
       <div className="mt-20 space-y-20">
         <DealsSection />
         <SmartHealthBundle />

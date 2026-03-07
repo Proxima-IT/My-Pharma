@@ -17,12 +17,9 @@ export const CartProvider = ({ children }) => {
 
   const processCartResponse = data => {
     if (!data) return null;
-    // Handle DRF Pagination { count, results: [] }
     if (data.results && Array.isArray(data.results))
       return data.results[0] || null;
-    // Handle raw array []
     if (Array.isArray(data)) return data[0] || null;
-    // Handle single object {}
     return data;
   };
 
@@ -31,11 +28,17 @@ export const CartProvider = ({ children }) => {
       if (showLoading) setIsLoading(true);
       try {
         const token = localStorage.getItem('access_token');
+
         if (!token) {
-          setCart(null);
+          // GUEST LOGIC: Load from LocalStorage
+          const localCart = localStorage.getItem('guest_cart');
+          setCart(
+            localCart ? JSON.parse(localCart) : { items: [], is_guest: true },
+          );
           setIsLoading(false);
           return;
         }
+
         const params = couponCode ? { coupon_code: couponCode } : {};
         const data = await fetchCartApi(token, params);
         setCart(processCartResponse(data));
