@@ -55,6 +55,24 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 
 ---
 
+## 2a. Sidebar categories (left sidebar)
+
+Left sidebar items: image + title. List and retrieve are public; create/update/delete require Pharmacy Admin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/sidebar-categories/` | List sidebar categories. |
+| GET | `/api/sidebar-categories/{id}/` | Retrieve one sidebar category. |
+| POST | `/api/sidebar-categories/` | Create sidebar category (admin). |
+| PUT / PATCH | `/api/sidebar-categories/{id}/` | Update sidebar category (admin). |
+| DELETE | `/api/sidebar-categories/{id}/` | Delete sidebar category (admin). |
+
+**Response fields:** `id`, `image`, `image_url` (absolute URL), `title`.
+
+**Create/Update (multipart for image):** `image` (file, optional), `title` (string, required on create).
+
+---
+
 ## 3. Brands (CRUD)
 
 Brands for product catalog and filters.
@@ -294,6 +312,7 @@ Default page size: **20** (configurable in backend).
 | Resource | List | Get one | Create | Update | Delete |
 |----------|------|---------|--------|--------|--------|
 | Categories | GET /api/categories/ | GET /api/categories/{slug}/ | POST | PUT/PATCH | DELETE |
+| Sidebar categories | GET /api/sidebar-categories/ | GET /api/sidebar-categories/{id}/ | POST | PUT/PATCH | DELETE |
 | Brands | GET /api/brands/ | GET /api/brands/{slug}/ | POST | PUT/PATCH | DELETE |
 | Ingredients | GET /api/ingredients/ | GET /api/ingredients/{slug}/ | POST | PUT/PATCH | DELETE |
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |

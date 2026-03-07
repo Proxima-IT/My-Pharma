@@ -10,6 +10,7 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema_view, extend_schema
 
 from authentication.permissions import (
     IsSuperAdmin,
@@ -22,7 +23,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, ProductImage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon
+from .models import Brand, Category, Ingredient, Product, ProductImage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -49,6 +50,7 @@ from .serializers import (
     ConsultationRequestSerializer,
     ConsultationResponseSerializer,
     PageSerializer,
+    SidebarCategorySerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -587,3 +589,22 @@ class PageViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve") and not (getattr(self.request, "user", None) and self.request.user.is_authenticated):
             return qs.filter(is_published=True)
         return qs
+
+
+# ---- Sidebar category (left sidebar: image + title). List/retrieve: anyone; write: Pharmacy Admin / Super ----
+@extend_schema_view(
+    list=extend_schema(tags=["Sidebar"], summary="List sidebar categories"),
+    retrieve=extend_schema(tags=["Sidebar"], summary="Get a sidebar category"),
+    create=extend_schema(tags=["Sidebar"], summary="Create sidebar category (admin)"),
+    update=extend_schema(tags=["Sidebar"], summary="Update sidebar category (admin)"),
+    partial_update=extend_schema(tags=["Sidebar"], summary="Partial update sidebar category (admin)"),
+    destroy=extend_schema(tags=["Sidebar"], summary="Delete sidebar category (admin)"),
+)
+class SidebarCategoryViewSet(viewsets.ModelViewSet):
+    queryset = SidebarCategory.objects.all()
+    serializer_class = SidebarCategorySerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]

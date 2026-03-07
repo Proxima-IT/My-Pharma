@@ -6,6 +6,7 @@ from . import views
 
 router = DefaultRouter()
 router.register(r"categories", views.CategoryViewSet, basename="category")
+router.register(r"sidebar-categories", views.SidebarCategoryViewSet, basename="sidebar-category")
 router.register(r"brands", views.BrandViewSet, basename="brand")
 router.register(r"ingredients", views.IngredientViewSet, basename="ingredient")
 router.register(r"products", views.ProductViewSet, basename="product")
