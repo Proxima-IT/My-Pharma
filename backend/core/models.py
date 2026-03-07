@@ -37,6 +37,20 @@ class Category(models.Model):
         super().save(*args, **kwargs)
 
 
+class SidebarCategory(models.Model):
+    """Left sidebar category row: icon/image + title (e.g. All Product, Medicine, Healthcare)."""
+    image = models.ImageField(upload_to="sidebar/%Y/%m/", blank=True, null=True)
+    title = models.CharField(max_length=100)
+
+    class Meta:
+        db_table = "core_sidebar_category"
+        verbose_name_plural = "Sidebar categories"
+        ordering = ["id"]
+
+    def __str__(self):
+        return self.title
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150, unique=True, db_index=True)

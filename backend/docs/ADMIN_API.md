@@ -60,6 +60,17 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 **Permission:** `IsPharmacyAdminOrSuper`.
 
+**Sidebar categories (left sidebar: image + title):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/sidebar-categories/` | List sidebar categories (public) |
+| GET | `/api/sidebar-categories/{id}/` | Retrieve one (public) |
+| POST | `/api/sidebar-categories/` | Create (Pharmacy/Super only) |
+| PUT / PATCH | `/api/sidebar-categories/{id}/` | Update (Pharmacy/Super only) |
+| DELETE | `/api/sidebar-categories/{id}/` | Delete (Pharmacy/Super only) |
+
+**Permission:** List/retrieve: any (including guest). Create/update/delete: `IsPharmacyAdminOrSuper`.
+
 **Brands (autocomplete for product search):**  
 | Method | Path | Description |
 |--------|------|-------------|

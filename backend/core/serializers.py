@@ -19,6 +19,7 @@ from .models import (
     PrescriptionItem,
     Consultation,
     Page,
+    SidebarCategory,
 )
 from .validators import validate_prescription_file, validate_issue_date_not_older_than_six_months
 
@@ -42,6 +43,21 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     def get_children(self, obj):
         children = obj.children.filter(is_active=True).order_by("name")
         return CategoryTreeSerializer(children, many=True, context=self.context).data
+
+
+# ---- Sidebar category (left sidebar: image + title) ----
+class SidebarCategorySerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SidebarCategory
+        fields = ("id", "image", "image_url", "title")
+        read_only_fields = ("id", "image_url")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
 
 
 # ---- Brand (autocomplete) ----
