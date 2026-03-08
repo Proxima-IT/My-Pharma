@@ -105,7 +105,6 @@ export default function AdminOrderDetailsPage({ params }) {
           <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
             Order Details
           </h1>
-          {/* Order ID moved here below the title */}
           <div className="font-mono text-sm font-bold text-[#8A8A78] uppercase tracking-widest">
             Order_ID: <span className="text-[#1B1B1B]">#{orderDetails.id}</span>
           </div>
@@ -161,14 +160,23 @@ export default function AdminOrderDetailsPage({ params }) {
                   key={idx}
                   className="p-6 flex justify-between items-center hover:bg-gray-50/50 transition-colors"
                 >
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <p className="font-bold text-[#1B1B1B] text-sm uppercase">
                       {item.product_name}
                     </p>
-                    <p className="font-mono text-[11px] text-[#8A8A78]">
-                      Price: {formatCurrency(item.price_at_order)} x{' '}
-                      {item.quantity}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <p className="font-mono text-[11px] text-[#8A8A78]">
+                        Price: {formatCurrency(item.price_at_order)} x{' '}
+                        {item.quantity}
+                      </p>
+
+                      {/* DOSAGE UI: Highlighted for Admin visibility */}
+                      {item.dosage && (
+                        <span className="px-2 py-0.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[10px] font-bold uppercase">
+                          Dosage: {item.dosage}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <span className="font-mono font-bold text-[#1B1B1B]">
                     {formatCurrency(item.price_at_order * item.quantity)}

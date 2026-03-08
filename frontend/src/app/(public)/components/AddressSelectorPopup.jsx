@@ -17,7 +17,8 @@ import { useAddress } from '@/app/(user)/hooks/useAddress';
 
 const AddressSelectorPopup = ({ isOpen, onClose, onSelect }) => {
   const router = useRouter();
-  const { addresses, isLoading, handleRemoveAddress, handleSetDefault } =
+  // FIXED: Corrected function names from the useAddress hook
+  const { addresses, isLoading, removeAddress, setDefaultAddress } =
     useAddress();
 
   const [selectedId, setSelectedId] = useState(null);
@@ -58,8 +59,8 @@ const AddressSelectorPopup = ({ isOpen, onClose, onSelect }) => {
   const handleConfirm = async () => {
     const selected = addresses.find(a => a.id === selectedId);
     if (selected) {
-      // Update backend to make this the default address
-      await handleSetDefault(selectedId, true);
+      // FIXED: Using correct function name setDefaultAddress
+      await setDefaultAddress(selectedId);
 
       // Pass data to parent component (Cart/Checkout)
       if (onSelect) {
@@ -67,7 +68,7 @@ const AddressSelectorPopup = ({ isOpen, onClose, onSelect }) => {
           ...selected,
           name: selected.full_name,
           fullAddress: selected.address,
-          deistic: selected.district,
+          district: selected.district,
         });
       }
     }
@@ -151,7 +152,8 @@ const AddressSelectorPopup = ({ isOpen, onClose, onSelect }) => {
                           {!addr.is_default && (
                             <button
                               onClick={() => {
-                                handleSetDefault(addr.id, true);
+                                // FIXED: Using correct function name setDefaultAddress
+                                setDefaultAddress(addr.id);
                                 setOpenMenuId(null);
                               }}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-colors cursor-pointer"
@@ -166,7 +168,8 @@ const AddressSelectorPopup = ({ isOpen, onClose, onSelect }) => {
                           {!addr.is_default && (
                             <button
                               onClick={() => {
-                                handleRemoveAddress(addr.id);
+                                // FIXED: Using correct function name removeAddress
+                                removeAddress(addr.id);
                                 setOpenMenuId(null);
                               }}
                               className="w-full flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors cursor-pointer"

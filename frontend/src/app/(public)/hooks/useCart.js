@@ -66,7 +66,6 @@ export const useCart = () => {
         );
       } else {
         const guestCart = getGuestCart();
-        // Check for existing item with SAME ID and SAME DOSAGE
         const existing = guestCart.items.find(
           i =>
             i.id === product.id &&
@@ -87,7 +86,7 @@ export const useCart = () => {
             product_description: product.description,
             product_unit_label: product.unit_label,
             product_dosage: product.dosage,
-            selected_dosage: product.selected_dosage, // Save the user's choice
+            selected_dosage: product.selected_dosage,
             is_guest_item: true,
           });
         }
@@ -108,7 +107,9 @@ export const useCart = () => {
     setIsUpdating(true);
     const token = localStorage.getItem('access_token');
     if (token) {
-      await updateCartItemApi(token, itemId, newQuantity);
+      // Find the item in the current cart to preserve its dosage during quantity update
+      const currentItem = cart?.items?.find(i => i.id === itemId);
+      await updateCartItemApi(token, itemId, newQuantity, currentItem?.dosage);
     } else {
       const guestCart = getGuestCart();
       const item = guestCart.items.find(i => i.id === itemId);
@@ -142,6 +143,7 @@ export const useCart = () => {
       await refreshCart(null, true);
       return result;
     } catch (err) {
+      setError(err.message);
       return null;
     } finally {
       setIsUpdating(false);

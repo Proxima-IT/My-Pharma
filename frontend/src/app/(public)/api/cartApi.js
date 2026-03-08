@@ -24,18 +24,26 @@ export const fetchCartApi = async (token, params = {}) => {
   return data;
 };
 
-// POST /api/cart/add/
-export const addToCartApi = async (token, productId, quantity) => {
+// POST /api/cart/add/ - Updated to accept dosage
+export const addToCartApi = async (
+  token,
+  productId,
+  quantity,
+  dosage = null,
+) => {
+  const body = {
+    product: productId,
+    quantity: quantity,
+  };
+  if (dosage) body.dosage = dosage;
+
   const response = await fetch(CART_ENDPOINTS.ADD, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      product: productId,
-      quantity: quantity,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json();
@@ -45,17 +53,23 @@ export const addToCartApi = async (token, productId, quantity) => {
   return data;
 };
 
-// PATCH /api/cart/items/{id}/
-export const updateCartItemApi = async (token, itemId, quantity) => {
+// PATCH /api/cart/items/{id}/ - Updated to accept dosage
+export const updateCartItemApi = async (
+  token,
+  itemId,
+  quantity,
+  dosage = null,
+) => {
+  const body = { quantity: quantity };
+  if (dosage) body.dosage = dosage;
+
   const response = await fetch(`${CART_ENDPOINTS.ITEMS}${itemId}/`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      quantity: quantity,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await response.json();
@@ -95,8 +109,6 @@ export const placeOrderApi = async (token, orderData) => {
 
   const data = await response.json();
   if (!response.ok) {
-    // FIXED: Return the full error object as a string if 'detail' is missing
-    // This helps us see field-level validation errors like {"shipping_address_id": ["..."]}
     const errorMsg = data.detail || JSON.stringify(data);
     throw new Error(errorMsg);
   }

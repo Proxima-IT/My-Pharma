@@ -19,7 +19,17 @@ import UiButton from '@/app/(public)/components/UiButton';
 
 const Checkout = () => {
   const router = useRouter();
-  const { items, summary, isLoading, error, placeOrder, refresh } = useCart();
+  // Added updateQuantity and removeItem to destructuring
+  const {
+    items,
+    summary,
+    isLoading,
+    error,
+    placeOrder,
+    refresh,
+    updateQuantity,
+    removeItem,
+  } = useCart();
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('BKASH');
@@ -61,7 +71,6 @@ const Checkout = () => {
     );
   }
 
-  // 4. Success View - Increased width to prevent button text wrapping
   if (orderSuccess) {
     return (
       <div className="w-full px-4 md:px-7 pt-10 pb-28 flex justify-center items-center animate-in fade-in duration-700">
@@ -82,7 +91,6 @@ const Checkout = () => {
             <span className="text-gray-900 font-bold">#{orderSuccess.id}</span>
           </p>
 
-          {/* Increased max-width of button container to max-w-2xl */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
             <Link href="/user/orders" className="w-full">
               <UiButton className="w-full h-14">
@@ -155,7 +163,12 @@ const Checkout = () => {
             </h2>
             <div className="flex flex-col gap-4">
               {items.map(item => (
-                <CartCard key={item.id} item={item} />
+                <CartCard
+                  key={item.id}
+                  item={item}
+                  onUpdate={updateQuantity} // Passed function
+                  onRemove={removeItem} // Passed function
+                />
               ))}
             </div>
           </div>

@@ -24,11 +24,14 @@ export default function OrderedProductCard({ item, productInfo }) {
     'Generic Information';
   const unitLabel =
     productInfo?.unit_label || item.product_unit_label || 'Standard Pack';
-  const dosage = productInfo?.dosage || item.product_dosage;
+
+  // Updated to prioritize the specific dosage saved in the order record
+  const displayDosage =
+    item.dosage || item.product_dosage || productInfo?.dosage;
 
   return (
-    <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex flex-col sm:flex-row items-start sm:items-stretch gap-6 transition-all hover:border-(--color-primary-100) group">
-      {/* 1. Product Image - Fetched from Real Product Table */}
+    <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex flex-col sm:flex-row items-start gap-6 transition-all hover:border-(--color-primary-100) group">
+      {/* 1. Product Image */}
       <div
         className="w-full sm:w-[140px] h-[120px] bg-(--color-imageBG) rounded-[18px] flex items-center justify-center p-4 shrink-0 cursor-pointer"
         onClick={() => router.push(productPath)}
@@ -65,10 +68,15 @@ export default function OrderedProductCard({ item, productInfo }) {
               (Qty: {item.quantity})
             </span>
           </span>
-          {dosage && (
+
+          {/* Displaying the Dosage selected during the order */}
+          {displayDosage && (
             <div className="flex items-center gap-2">
+              <span className="text-gray-300 font-light">|</span>
               <span className="text-gray-400 font-medium">Dosage:</span>
-              <span>{dosage}</span>
+              <span className="text-(--color-primary-500)">
+                {displayDosage}
+              </span>
             </div>
           )}
         </div>
@@ -76,12 +84,10 @@ export default function OrderedProductCard({ item, productInfo }) {
 
       {/* 3. Right Column: Price and Actions */}
       <div className="flex flex-col items-end justify-between shrink-0 w-full sm:w-auto gap-4 sm:gap-0 border-t sm:border-none border-gray-50 pt-4 sm:pt-0">
-        {/* Total Price for this item */}
         <span className="text-[20px] font-bold text-gray-900">
           {formatCurrency(unitPrice * item.quantity)}
         </span>
 
-        {/* Action Buttons */}
         <div className="flex items-center gap-6 w-full sm:w-auto justify-between sm:justify-end">
           <Link
             href={productPath}

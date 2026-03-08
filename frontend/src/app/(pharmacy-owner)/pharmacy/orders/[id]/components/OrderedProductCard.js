@@ -39,11 +39,13 @@ export default function OrderedProductCard({ item }) {
             QTY:{' '}
             <span className="text-(--color-admin-navy)">{item.quantity}</span>
           </div>
-          {item.product_dosage && (
+
+          {/* Displaying the specific dosage ordered */}
+          {(item.dosage || item.product_dosage) && (
             <div className="bg-(--color-admin-bg) px-2 py-1 border border-(--color-admin-border)">
               DOSAGE:{' '}
               <span className="text-(--color-admin-navy)">
-                {item.product_dosage}
+                {item.dosage || item.product_dosage}
               </span>
             </div>
           )}
