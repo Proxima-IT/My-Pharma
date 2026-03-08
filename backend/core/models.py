@@ -51,6 +51,24 @@ class SidebarCategory(models.Model):
         return self.title
 
 
+class Ad(models.Model):
+    """Promotional ad/banner: image + destination link. Optional order and is_active for display control."""
+    image = models.ImageField(upload_to="ads/%Y/%m/")
+    link = models.URLField(max_length=500, blank=True, help_text="Destination URL when ad is clicked.")
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_ad"
+        verbose_name_plural = "Ads"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.link or f"Ad #{self.id}"
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150, unique=True, db_index=True)

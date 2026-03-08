@@ -73,6 +73,24 @@ Left sidebar items: image + title. List and retrieve are public; create/update/d
 
 ---
 
+## 2b. Ads (banners: image + link)
+
+Promotional ads: image and destination link. List and retrieve are public (only active ads for guests); create/update/delete require Pharmacy Admin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/ads/` | List ads. Query: `is_active`. Guests see only active. |
+| GET | `/api/ads/{id}/` | Retrieve one ad. |
+| POST | `/api/ads/` | Create ad (admin). |
+| PUT / PATCH | `/api/ads/{id}/` | Update ad (admin). |
+| DELETE | `/api/ads/{id}/` | Delete ad (admin). |
+
+**Response fields:** `id`, `image`, `image_url` (absolute URL), `link`, `order`, `is_active`, `created_at`, `updated_at`.
+
+**Create/Update (multipart for image):** `image` (file, required on create), `link` (URL string, optional), `order` (int, default 0), `is_active` (bool, default true).
+
+---
+
 ## 3. Brands (CRUD)
 
 Brands for product catalog and filters.
@@ -313,6 +331,7 @@ Default page size: **20** (configurable in backend).
 |----------|------|---------|--------|--------|--------|
 | Categories | GET /api/categories/ | GET /api/categories/{slug}/ | POST | PUT/PATCH | DELETE |
 | Sidebar categories | GET /api/sidebar-categories/ | GET /api/sidebar-categories/{id}/ | POST | PUT/PATCH | DELETE |
+| Ads | GET /api/ads/ | GET /api/ads/{id}/ | POST | PUT/PATCH | DELETE |
 | Brands | GET /api/brands/ | GET /api/brands/{slug}/ | POST | PUT/PATCH | DELETE |
 | Ingredients | GET /api/ingredients/ | GET /api/ingredients/{slug}/ | POST | PUT/PATCH | DELETE |
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |

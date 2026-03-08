@@ -71,6 +71,17 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 **Permission:** List/retrieve: any (including guest). Create/update/delete: `IsPharmacyAdminOrSuper`.
 
+**Ads (banners: image + link):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/ads/` | List ads (public: active only; auth: filter by `is_active`) |
+| GET | `/api/ads/{id}/` | Retrieve one (public: active only) |
+| POST | `/api/ads/` | Create ad (Pharmacy/Super only) |
+| PUT / PATCH | `/api/ads/{id}/` | Update ad (Pharmacy/Super only) |
+| DELETE | `/api/ads/{id}/` | Delete ad (Pharmacy/Super only) |
+
+**Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
+
 **Brands (autocomplete for product search):**  
 | Method | Path | Description |
 |--------|------|-------------|
