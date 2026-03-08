@@ -15,6 +15,7 @@ export const useProductData = (initialFilters = {}) => {
     category: '',
     search: '',
     ordering: '',
+    brand_id: '', // Added brand_id to filters
     ...initialFilters,
   });
 

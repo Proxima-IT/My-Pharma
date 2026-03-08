@@ -13,6 +13,7 @@ import {
   FiAward,
   FiDroplet,
   FiLayout,
+  FiArchive,
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
@@ -30,6 +31,11 @@ const AdminSidebar = () => {
     { name: 'User Management', icon: <FiUsers />, href: '/admin/users' },
     { name: 'Order Records', icon: <FiShoppingBag />, href: '/admin/orders' },
     { name: 'Product List', icon: <FiBox />, href: '/admin/products' },
+    {
+      name: 'Inventory Management',
+      icon: <FiArchive />,
+      href: '/admin/inventory',
+    },
     { name: 'Generic Names', icon: <FiDroplet />, href: '/admin/ingredients' },
     { name: 'Company List', icon: <FiAward />, href: '/admin/brands' },
     { name: 'Medicine Groups', icon: <FiGrid />, href: '/admin/categories' },

@@ -1,19 +1,21 @@
+'use client';
+
 import Image from 'next/image';
-import React from 'react';
-import { IoSearchOutline } from 'react-icons/io5';
+import React, { useRef } from 'react';
 import { LuCloudUpload } from 'react-icons/lu';
+
 const BookTestBanner = () => {
+  const fileInputRef = useRef(null);
+
+  const handleButtonClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
   return (
     <div>
       <div className=" pt-[70px]">
-        {/* <Image
-        src="/assets/images/uploadbanner.png"
-        alt="upload banner"
-        width={1000}
-        height={1000}
-        className=" lg:w-full object-contain"
-        priority
-      /> */}
         <div
           className="w-full min-h-[480px] lg:min-h-0 bg-center bg-no-repeat bg-cover rounded-xl min-w-full grid grid-cols-1 lg:grid-cols-2 items-start justify-center gap-6 p-9 relative overflow-hidden lg:overflow-visible"
           style={{
@@ -43,7 +45,25 @@ const BookTestBanner = () => {
               hygienic procedures, and timely digital results all from the
               comfort of your home.
             </p>
-            <button className="mt-5 sm:mt-6 flex items-center gap-2 cursor-pointer rounded-full bg-white px-6 py-2 text-black text-sm sm:text-base font-semibold hover:bg-blue-50 transition">
+
+            {/* Hidden File Input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/*"
+              onChange={e => {
+                if (e.target.files[0]) {
+                  console.log('File selected:', e.target.files[0].name);
+                }
+              }}
+            />
+
+            <button
+              type="button"
+              onClick={handleButtonClick}
+              className="mt-5 sm:mt-6 flex items-center gap-2 cursor-pointer rounded-full bg-white px-6 py-2 text-black text-sm sm:text-base font-semibold hover:bg-blue-50 transition"
+            >
               <span>
                 <LuCloudUpload />
               </span>
@@ -55,4 +75,5 @@ const BookTestBanner = () => {
     </div>
   );
 };
+
 export default BookTestBanner;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { GoStarFill } from 'react-icons/go';
 import { BsCart3 } from 'react-icons/bs';
 import { MdArrowForwardIos } from 'react-icons/md';
@@ -24,7 +25,8 @@ const ProductSummaryCard = ({ product }) => {
 
   const handleAddToCart = async () => {
     if (product?.id) {
-      await addItem(product.id, quantity);
+      // Updated to pass the full product object for guest cart support
+      await addItem(product, quantity);
     }
   };
 
@@ -43,10 +45,15 @@ const ProductSummaryCard = ({ product }) => {
         <p className="text-[20px] text-[#4B5563] font-medium">
           {product?.ingredient_name || 'Ivermectin BP 12 mg'}
         </p>
-        <button className="flex items-center gap-2 text-[15px] font-bold text-[#1D3583] uppercase tracking-wide hover:underline cursor-pointer">
+
+        {/* Dynamic Brand Link */}
+        <Link
+          href={`/products?brand=${product?.brand}`}
+          className="flex items-center gap-2 text-[15px] font-bold text-[#1D3583] uppercase tracking-wide hover:underline cursor-pointer w-fit"
+        >
           {product?.brand_name || 'DELTA PHARMA LIMITED'}
           <MdArrowForwardIos size={14} strokeWidth={2} />
-        </button>
+        </Link>
       </div>
 
       {/* Rating */}
@@ -130,7 +137,7 @@ const ProductSummaryCard = ({ product }) => {
           </div>
         </div>
         <p className="text-[16px] text-[#6B7280] font-medium">
-          2 Strip (20 Tablets)
+          {quantity} Unit(s) selected
         </p>
       </div>
 

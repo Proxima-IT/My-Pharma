@@ -14,20 +14,27 @@ import Sidebar from '../../components/Sidebar';
 const Products = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const { loading, products } = useProductData();
 
-  // States for filters
+  // 1. Extract URL parameters
+  const categoryFilter = searchParams.get('category') || '';
+  const searchQuery = searchParams.get('search') || '';
+  const brandIdFromUrl = searchParams.get('brand') || '';
+
+  // 2. Initialize Hook with URL parameters
+  const { loading, products, filters, updateFilters } = useProductData({
+    category: categoryFilter,
+    search: searchQuery,
+    brand_id: brandIdFromUrl,
+  });
+
+  // States for local UI filters
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [brands, setBrands] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
 
-  // 1. Extract URL parameters
-  const categoryFilter = searchParams.get('category');
-  const searchQuery = searchParams.get('search');
-
-  // 2. Fetch Brands from API
+  // 3. Fetch Brands and sync URL brandId with UI checkboxes
   useEffect(() => {
     const fetchBrands = async () => {
       try {
@@ -35,38 +42,28 @@ const Products = () => {
           'http://localhost:8000/api/brands/?is_active=true',
         );
         const data = await response.json();
-        setBrands(data.results || data);
+        const brandList = data.results || data;
+        setBrands(brandList);
+
+        // If there's a brand ID in the URL, check the corresponding checkbox
+        if (brandIdFromUrl) {
+          const brandObj = brandList.find(
+            b => b.id.toString() === brandIdFromUrl,
+          );
+          if (brandObj) {
+            setSelectedBrands([brandObj.name]);
+          }
+        }
       } catch (err) {
         console.error('Failed to fetch brands:', err);
       }
     };
     fetchBrands();
-  }, []);
+  }, [brandIdFromUrl]);
 
-  // 3. Combined Filtering Logic
+  // 4. Combined Filtering Logic (Client-side for Price and Multi-Brand selection)
   const filteredProducts = useMemo(() => {
     let result = products;
-
-    // Filter by Category
-    if (categoryFilter) {
-      result = result.filter(
-        product =>
-          product.category_name?.toLowerCase() ===
-            categoryFilter.toLowerCase() ||
-          product.category?.toString() === categoryFilter ||
-          product.category_slug === categoryFilter,
-      );
-    }
-
-    // Filter by Search Query
-    if (searchQuery) {
-      const term = searchQuery.toLowerCase();
-      result = result.filter(
-        product =>
-          product.name?.toLowerCase().includes(term) ||
-          product.ingredient_name?.toLowerCase().includes(term),
-      );
-    }
 
     // Filter by Price Range
     if (minPrice) {
@@ -76,20 +73,13 @@ const Products = () => {
       result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
     }
 
-    // Filter by Selected Brands
-    if (selectedBrands.length > 0) {
+    // Filter by Selected Brands (if multiple selected via checkboxes)
+    if (selectedBrands.length > 0 && !brandIdFromUrl) {
       result = result.filter(p => selectedBrands.includes(p.brand_name));
     }
 
     return result;
-  }, [
-    products,
-    categoryFilter,
-    searchQuery,
-    minPrice,
-    maxPrice,
-    selectedBrands,
-  ]);
+  }, [products, minPrice, maxPrice, selectedBrands, brandIdFromUrl]);
 
   const toggleBrand = brandName => {
     setSelectedBrands(prev =>
@@ -97,6 +87,10 @@ const Products = () => {
         ? prev.filter(b => b !== brandName)
         : [...prev, brandName],
     );
+    // Clear the URL brand ID if user starts manually toggling checkboxes
+    if (brandIdFromUrl) {
+      router.push('/products');
+    }
   };
 
   const clearAllFilters = () => {
@@ -116,22 +110,7 @@ const Products = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
-      {/* 1. Sidebar Column with Custom Thin Scrollbar */}
-      <aside
-        className={`
-          w-full lg:w-[360px] shrink-0 lg:sticky lg:top-36 lg:self-start lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto 
-          pr-2 lg:pr-4
-          /* Firefox thin scrollbar */
-          [scrollbar-width:thin] [scrollbar-color:var(--color-gray-200)_transparent]
-          /* Chrome/Safari/Edge thin scrollbar */
-          [&::-webkit-scrollbar]:w-1.5
-          [&::-webkit-scrollbar-track]:bg-transparent
-          [&::-webkit-scrollbar-thumb]:bg-gray-200
-          [&::-webkit-scrollbar-thumb]:rounded-full
-          hover:[&::-webkit-scrollbar-thumb]:bg-gray-300
-        `}
-      >
-        {/* Mobile Filter Toggle */}
+      <aside className="w-full lg:w-[360px] shrink-0 lg:sticky lg:top-36 lg:self-start lg:max-h-[calc(100vh-160px)] lg:overflow-y-auto pr-2 lg:pr-4 [scrollbar-width:thin] [scrollbar-color:var(--color-gray-200)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
         <button
           onClick={() => setIsMobileFilterOpen(!isMobileFilterOpen)}
           className="lg:hidden w-full flex items-center justify-between bg-white border border-gray-100 rounded-full px-6 py-4 mb-4 cursor-pointer transition-all active:scale-95"
@@ -165,7 +144,6 @@ const Products = () => {
             </button>
           </div>
 
-          {/* Price Filter Card */}
           <div className="bg-white rounded-[32px] border border-gray-100 p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
@@ -181,7 +159,6 @@ const Products = () => {
                 <IoReloadOutline size={18} />
               </button>
             </div>
-
             <div className="flex items-center gap-3">
               <div className="flex-1 bg-gray-50 border border-gray-100 rounded-full px-4 py-2.5 flex items-center gap-2">
                 <TbCurrencyTaka className="text-gray-400" size={18} />
@@ -207,7 +184,6 @@ const Products = () => {
             </div>
           </div>
 
-          {/* Brands Filter Card */}
           <div className="bg-white rounded-[32px] border border-gray-100 p-6">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
@@ -220,15 +196,7 @@ const Products = () => {
                 <IoReloadOutline size={18} />
               </button>
             </div>
-
-            <div
-              className="space-y-1 max-h-[300px] overflow-y-auto 
-              [scrollbar-width:thin] [scrollbar-color:var(--color-gray-100)_transparent]
-              [&::-webkit-scrollbar]:w-1
-              [&::-webkit-scrollbar-thumb]:bg-gray-100
-              [&::-webkit-scrollbar-thumb]:rounded-full
-            "
-            >
+            <div className="space-y-1 max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-gray-100)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full">
               {brands.map(brand => (
                 <label
                   key={brand.id}
@@ -249,24 +217,22 @@ const Products = () => {
                   </div>
                 </label>
               ))}
-              {brands.length === 0 && (
-                <p className="text-xs text-gray-400 text-center py-4">
-                  No brands available
-                </p>
-              )}
             </div>
           </div>
-
           <Sidebar />
         </div>
       </aside>
 
-      {/* 2. Main Products Grid */}
       <div className="flex-1 min-w-0">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 px-2">
           <h1 className="font-bold text-2xl text-gray-900 tracking-tight">
             {searchQuery ? (
               <>Search results for &quot;{searchQuery}&quot;</>
+            ) : brandIdFromUrl && brands.length > 0 ? (
+              <>
+                Products by{' '}
+                {brands.find(b => b.id.toString() === brandIdFromUrl)?.name}
+              </>
             ) : (
               <>
                 {filteredProducts.length} items found{' '}
@@ -276,12 +242,10 @@ const Products = () => {
               </>
             )}
           </h1>
-
           <div className="flex items-center gap-4">
             <p className="text-gray-400 text-sm font-medium">Sort by:</p>
             <button className="bg-white border border-gray-100 rounded-full px-6 py-2.5 text-gray-900 flex gap-3 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
-              Newest First
-              <IoIosArrowDown className="text-gray-400" />
+              Newest First <IoIosArrowDown className="text-gray-400" />
             </button>
           </div>
         </div>

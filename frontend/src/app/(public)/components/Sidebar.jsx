@@ -19,26 +19,33 @@ const Sidebar = () => {
   const currentCategory = searchParams.get('category');
 
   const [categories, setCategories] = useState([]);
+  const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSidebarCategories = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/sidebar-categories/`);
-        const data = await response.json();
-        // The API returns a paginated list, so we take the 'results' array
-        setCategories(data.results || []);
+        const [catRes, adsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/sidebar-categories/`),
+          fetch(`${API_BASE_URL}/ads/?is_active=true`),
+        ]);
+
+        const catData = await catRes.json();
+        const adsData = await adsRes.json();
+
+        setCategories(catData.results || []);
+        setAds(adsData.results || []);
       } catch (error) {
-        console.error('Error fetching sidebar categories:', error);
+        console.error('Error fetching sidebar data:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchSidebarCategories();
+    fetchData();
   }, []);
 
-  // Check if "All Products" is active
   const isAllProductsActive = pathname === '/products' && !currentCategory;
+  const activeAd = ads.length > 0 ? ads[0] : null;
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
@@ -48,7 +55,6 @@ const Sidebar = () => {
           All Product Category
         </h2>
 
-        {/* Search Bar */}
         <div className="relative mb-1">
           <FiSearch
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
@@ -69,9 +75,7 @@ const Sidebar = () => {
           </div>
         </div>
 
-        {/* Category List */}
         <nav className="flex flex-col">
-          {/* Static All Product Button */}
           <Link
             href="/products"
             className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all mb-1 ${
@@ -86,20 +90,14 @@ const Sidebar = () => {
                 All Product
               </span>
             </div>
-            <span
-              className={`text-xs font-bold ${isAllProductsActive ? 'opacity-80' : 'text-gray-400'}`}
-            >    
-            </span>
           </Link>
 
-          {/* Dynamic Categories from API */}
           {isLoading ? (
             <div className="py-10 flex justify-center">
               <div className="w-6 h-6 border-2 border-gray-200 border-t-(--color-primary-500) rounded-full animate-spin" />
             </div>
           ) : (
             categories.map((cat, index) => {
-              // Using title as the slug/identifier for the URL
               const isActive = currentCategory === cat.title;
               return (
                 <React.Fragment key={cat.id}>
@@ -121,11 +119,7 @@ const Sidebar = () => {
                         />
                       </div>
                       <span
-                        className={`text-[15px] tracking-tight ${
-                          isActive
-                            ? 'font-bold'
-                            : 'font-medium group-hover:text-gray-900'
-                        }`}
+                        className={`text-[15px] tracking-tight ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
                       >
                         {cat.title}
                       </span>
@@ -141,16 +135,18 @@ const Sidebar = () => {
         </nav>
       </div>
 
-      {/* 2. PROMOTIONAL IMAGE BANNER */}
+      {/* 2. DYNAMIC PROMOTIONAL IMAGE BANNER - Fixed to fill container perfectly */}
       <div className="w-full rounded-[32px] overflow-hidden leading-[0]">
-        <Image
-          src="/assets/images/applogo.png"
-          alt="Promotional Banner"
-          width={400}
-          height={500}
-          className="w-full h-auto object-cover"
-          priority
-        />
+        <Link href={activeAd?.link || '#'} className="block w-full h-full">
+          <Image
+            src={activeAd?.image_url || '/assets/images/applogo.png'}
+            alt="Promotional Banner"
+            width={400}
+            height={500}
+            className="w-full h-auto object-cover"
+            priority
+          />
+        </Link>
       </div>
 
       {/* 3. TRUST BADGES */}
