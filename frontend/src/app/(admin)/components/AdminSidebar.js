@@ -14,6 +14,7 @@ import {
   FiDroplet,
   FiLayout,
   FiArchive,
+  FiImage,
 } from 'react-icons/fi';
 
 const AdminSidebar = () => {
@@ -26,21 +27,67 @@ const AdminSidebar = () => {
     router.replace('/login');
   };
 
-  const menuItems = [
-    { name: 'Overview', icon: <FiPieChart />, href: '/admin' },
-    { name: 'User Management', icon: <FiUsers />, href: '/admin/users' },
-    { name: 'Order Records', icon: <FiShoppingBag />, href: '/admin/orders' },
-    { name: 'Product List', icon: <FiBox />, href: '/admin/products' },
+  // Grouped Menu Structure
+  const menuGroups = [
     {
-      name: 'Inventory Management',
-      icon: <FiArchive />,
-      href: '/admin/inventory',
+      title: 'Dashboard',
+      items: [{ name: 'Overview', icon: <FiPieChart />, href: '/admin' }],
     },
-    { name: 'Generic Names', icon: <FiDroplet />, href: '/admin/ingredients' },
-    { name: 'Company List', icon: <FiAward />, href: '/admin/brands' },
-    { name: 'Medicine Groups', icon: <FiGrid />, href: '/admin/categories' },
-    { name: 'Sidebar Menu', icon: <FiLayout />, href: '/admin/sidebar' },
-    { name: 'Settings', icon: <FiSettings />, href: '/admin/settings' },
+    {
+      title: 'Logistics & Sales',
+      items: [
+        {
+          name: 'Order Records',
+          icon: <FiShoppingBag />,
+          href: '/admin/orders',
+        },
+        {
+          name: 'Inventory Control',
+          icon: <FiArchive />,
+          href: '/admin/inventory',
+        },
+      ],
+    },
+    {
+      title: 'Product Catalog',
+      items: [
+        { name: 'Medicine List', icon: <FiBox />, href: '/admin/products' },
+        {
+          name: 'Generic Names',
+          icon: <FiDroplet />,
+          href: '/admin/ingredients',
+        },
+        { name: 'Company Registry', icon: <FiAward />, href: '/admin/brands' },
+        {
+          name: 'Medicine Groups',
+          icon: <FiGrid />,
+          href: '/admin/categories',
+        },
+      ],
+    },
+    {
+      title: 'Website Content',
+      items: [
+        { name: 'Sidebar Menu', icon: <FiLayout />, href: '/admin/sidebar' },
+        { name: 'Ads Management', icon: <FiImage />, href: '/admin/ads' },
+      ],
+    },
+    {
+      title: 'Access Control',
+      items: [
+        { name: 'User Management', icon: <FiUsers />, href: '/admin/users' },
+      ],
+    },
+    {
+      title: 'Configuration',
+      items: [
+        {
+          name: 'Global Settings',
+          icon: <FiSettings />,
+          href: '/admin/settings',
+        },
+      ],
+    },
   ];
 
   const NavItem = ({ item }) => {
@@ -73,9 +120,10 @@ const AdminSidebar = () => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col bg-white border-r border-gray-100">
+    /* Applied admin-scrollbar class here */
+    <div className="w-full h-full flex flex-col bg-white border-r border-gray-100 admin-scrollbar overflow-y-auto">
       {/* Brand Header */}
-      <div className="p-10 mb-4">
+      <div className="p-10 mb-4 shrink-0">
         <div className="flex flex-col gap-0.5">
           <span className="font-mono text-[9px] font-bold text-[#B7B7A4] uppercase tracking-[0.2em]">
             Admin Console
@@ -86,23 +134,26 @@ const AdminSidebar = () => {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex flex-col flex-1">
-        <div className="px-6 mb-4">
-          <div className="px-5 border-l-2 border-transparent">
-            <span className="text-[10px] font-bold text-[#DAD7CD] uppercase tracking-[0.2em]">
-              Main Menu
-            </span>
+      {/* Navigation Groups */}
+      <nav className="flex flex-col flex-1 pb-10">
+        {menuGroups.map((group, gIdx) => (
+          <div key={group.title} className={gIdx !== 0 ? 'mt-6' : ''}>
+            <div className="px-6 mb-2">
+              <div className="px-5 border-l-2 border-transparent">
+                <span className="text-[10px] font-bold text-[#DAD7CD] uppercase tracking-[0.2em]">
+                  {group.title}
+                </span>
+              </div>
+            </div>
+            {group.items.map(item => (
+              <NavItem key={item.name} item={item} />
+            ))}
           </div>
-        </div>
-
-        {menuItems.map(item => (
-          <NavItem key={item.name} item={item} />
         ))}
       </nav>
 
       {/* Logout */}
-      <div className="p-8 mt-auto">
+      <div className="p-8 mt-auto shrink-0">
         <div className="px-2">
           <button
             onClick={handleLogout}

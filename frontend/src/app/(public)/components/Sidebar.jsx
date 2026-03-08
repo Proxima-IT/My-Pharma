@@ -50,7 +50,7 @@ const Sidebar = () => {
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
       {/* 1. MAIN CATEGORY CARD */}
-      <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
+      <div className="bg-white border border-gray-100 rounded-[32px] p-6">
         <h2 className="text-[22px] font-bold text-gray-900 mb-6 tracking-tight">
           All Product Category
         </h2>

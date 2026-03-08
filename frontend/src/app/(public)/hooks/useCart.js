@@ -57,15 +57,25 @@ export const useCart = () => {
       const token = localStorage.getItem('access_token');
 
       if (token) {
-        await addToCartApi(token, product.id, quantity);
+        // Pass selected_dosage to the API
+        await addToCartApi(
+          token,
+          product.id,
+          quantity,
+          product.selected_dosage,
+        );
       } else {
         const guestCart = getGuestCart();
-        const existing = guestCart.items.find(i => i.id === product.id);
+        // Check for existing item with SAME ID and SAME DOSAGE
+        const existing = guestCart.items.find(
+          i =>
+            i.id === product.id &&
+            i.selected_dosage === product.selected_dosage,
+        );
 
         if (existing) {
           existing.quantity += quantity;
         } else {
-          // SNAPSHOT: Save full details so the Cart Page doesn't need the API
           guestCart.items.push({
             id: product.id,
             product: product.slug,
@@ -77,6 +87,7 @@ export const useCart = () => {
             product_description: product.description,
             product_unit_label: product.unit_label,
             product_dosage: product.dosage,
+            selected_dosage: product.selected_dosage, // Save the user's choice
             is_guest_item: true,
           });
         }

@@ -44,7 +44,8 @@ export default function AdminEditProductPage({ params }) {
     name: '',
     category: '',
     brand: '',
-    ingredient: '', // New Field
+    ingredient: '',
+    dosages: '', // New Field: Comma separated string for UI
     price: '',
     original_price: '',
     quantity_in_stock: '',
@@ -68,7 +69,11 @@ export default function AdminEditProductPage({ params }) {
         name: productDetails.name || '',
         category: productDetails.category || '',
         brand: productDetails.brand || '',
-        ingredient: productDetails.ingredient || '', // Syncing ingredient
+        ingredient: productDetails.ingredient || '',
+        // Convert Array ["6mg", "12mg"] -> String "6mg, 12mg"
+        dosages: Array.isArray(productDetails.dosages)
+          ? productDetails.dosages.join(', ')
+          : productDetails.dosages || '',
         price: productDetails.price || '',
         original_price: productDetails.original_price || '',
         quantity_in_stock: productDetails.quantity_in_stock || '',
@@ -111,7 +116,21 @@ export default function AdminEditProductPage({ params }) {
   const handleSubmit = async e => {
     e.preventDefault();
     const data = new FormData();
-    Object.keys(formData).forEach(key => data.append(key, formData[key]));
+
+    Object.keys(formData).forEach(key => {
+      if (key === 'dosages') {
+        // Convert "6mg, 12mg" -> ["6mg", "12mg"] for API
+        const dosageArray = formData.dosages
+          .split(',')
+          .map(d => d.trim())
+          .filter(d => d !== '');
+
+        dosageArray.forEach(val => data.append('dosages', val));
+      } else if (formData[key] !== '' && formData[key] !== null) {
+        data.append(key, formData[key]);
+      }
+    });
+
     if (newMainImage?.file) data.append('image', newMainImage.file);
 
     const success = await updateProduct(slug, data);
@@ -178,7 +197,6 @@ export default function AdminEditProductPage({ params }) {
                 />
               </div>
 
-              {/* Generic Name Dropdown */}
               <div>
                 <label className={labelClass}>Generic Name (Ingredient)</label>
                 <select
@@ -198,6 +216,24 @@ export default function AdminEditProductPage({ params }) {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Dosages Field */}
+              <div>
+                <label className={labelClass}>
+                  Available Dosages (Comma Separated)
+                </label>
+                <input
+                  className={inputClass}
+                  placeholder="E.G. 6MG, 12MG, 24MG"
+                  value={formData.dosages}
+                  onChange={e =>
+                    setFormData({ ...formData, dosages: e.target.value })
+                  }
+                />
+                <p className="text-[10px] text-[#8A8A78] mt-2 uppercase">
+                  Separate multiple dosages with a comma (,)
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

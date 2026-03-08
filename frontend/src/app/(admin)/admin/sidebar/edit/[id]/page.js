@@ -1,9 +1,9 @@
 'use client';
 import React, { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiImage, FiCheck, FiX } from 'react-icons/fi';
-import { useSidebarAdmin } from '../../../hooks/useSidebarAdmin';
-import { sidebarAdminApi } from '../../../../api/sidebarAdminApi';
+import { FiArrowLeft, FiImage, FiCheck } from 'react-icons/fi';
+import { useSidebarAdmin } from '@/app/(admin)/hooks/useSidebarAdmin';
+import { sidebarAdminApi } from '@/app/(admin)/api/sidebarAdminApi';
 
 export default function AdminEditSidebarItemPage({ params }) {
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function AdminEditSidebarItemPage({ params }) {
     image: null,
   });
 
-  // ১. বিদ্যমান ডাটা লোড করা
+  // 1. Load existing banner data
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -32,7 +32,7 @@ export default function AdminEditSidebarItemPage({ params }) {
         const data = await sidebarAdminApi.getDetail(token, id);
         setFormData({
           title: data.title || '',
-          image: null, // New image starts as null
+          image: null,
         });
         if (data.image_url) {
           setPreviewImage(data.image_url);
@@ -73,7 +73,7 @@ export default function AdminEditSidebarItemPage({ params }) {
     return (
       <div className="flex items-center justify-center py-40">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin" />
+          <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin rounded-none" />
           <p className="font-mono text-xs font-bold uppercase tracking-widest text-[#8A8A78]">
             Loading Data...
           </p>
@@ -89,11 +89,10 @@ export default function AdminEditSidebarItemPage({ params }) {
 
   return (
     <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
-      {/* Header Section */}
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer group border border-transparent"
+          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer group border border-transparent rounded-none"
         >
           <FiArrowLeft
             size={16}
@@ -114,8 +113,7 @@ export default function AdminEditSidebarItemPage({ params }) {
         </div>
       </div>
 
-      {/* Form Container - Full Width */}
-      <div className="bg-white border border-gray-100 p-8 md:p-12 w-full">
+      <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none">
         <div className="mb-10 border-b border-gray-50 pb-6">
           <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
             Menu Details
@@ -126,7 +124,6 @@ export default function AdminEditSidebarItemPage({ params }) {
           onSubmit={handleSubmit}
           className="grid grid-cols-1 lg:grid-cols-2 gap-12"
         >
-          {/* Left: Text Details */}
           <div className="space-y-8">
             <div>
               <label className={labelClass}>Menu Title / Name</label>
@@ -147,12 +144,11 @@ export default function AdminEditSidebarItemPage({ params }) {
             </div>
           </div>
 
-          {/* Right: Image Upload */}
           <div className="space-y-4">
             <label className={labelClass}>Current Icon / Photo</label>
             <div
               onClick={() => fileInputRef.current.click()}
-              className="aspect-square max-w-[200px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative"
+              className="aspect-square max-w-[200px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative rounded-none"
             >
               {previewImage ? (
                 <img
@@ -184,12 +180,11 @@ export default function AdminEditSidebarItemPage({ params }) {
             </p>
           </div>
 
-          {/* Full Width Submit Button */}
           <div className="lg:col-span-2 pt-4">
             <button
               type="submit"
               disabled={isUpdating}
-              className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer disabled:opacity-50"
+              className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer disabled:opacity-50 border border-transparent rounded-none"
             >
               {isUpdating ? (
                 'SAVING...'
@@ -202,14 +197,13 @@ export default function AdminEditSidebarItemPage({ params }) {
           </div>
 
           {updateError && (
-            <div className="lg:col-span-2 p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center">
+            <div className="lg:col-span-2 p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center rounded-none">
               Error: {updateError}
             </div>
           )}
         </form>
       </div>
 
-      {/* Footer */}
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
         System_ID: #SID_{id}
       </div>

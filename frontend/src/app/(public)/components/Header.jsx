@@ -67,7 +67,7 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // SYNC LOGIC: Industry standard "Merge" on login
+  // SYNC LOGIC: Sync guest data (Prescriptions & Cart) to DB after login
   useEffect(() => {
     const syncGuestData = async () => {
       const token = localStorage.getItem('access_token');
@@ -86,7 +86,7 @@ const Header = () => {
           }
           localStorage.removeItem('guest_prescriptions');
         } catch (err) {
-          console.error('Prescription sync failed', err);
+          console.error('Failed to sync guest prescriptions:', err);
         }
       }
 
@@ -97,14 +97,19 @@ const Header = () => {
           const guestCart = JSON.parse(guestCartData);
           if (guestCart.items?.length > 0) {
             for (const item of guestCart.items) {
-              // item.id is the snapshot ID we saved
-              await addToCartApi(token, item.id, item.quantity);
+              // Pass ID, Quantity, and the stored Selected Dosage to the API
+              await addToCartApi(
+                token,
+                item.id,
+                item.quantity,
+                item.selected_dosage,
+              );
             }
           }
           localStorage.removeItem('guest_cart');
-          await refreshCart(null, false);
+          await refreshCart(null, false); // Refresh global cart state
         } catch (err) {
-          console.error('Cart sync failed', err);
+          console.error('Failed to sync guest cart:', err);
         }
       }
     };
@@ -180,6 +185,7 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
+      {/* Top Nav */}
       <div className="hidden lg:flex justify-between items-center text-black py-2.5 px-9 bg-gradient-to-r from-gray-50 to-green-50">
         <h1 className="text-sm text-gray-800 font-medium">
           <span className="font-bold">Call Us: </span>01755697233, 09677333000
@@ -200,6 +206,7 @@ const Header = () => {
         </div>
       </div>
 
+      {/* Main Nav */}
       <div className="py-4 px-4 md:px-8 flex items-center gap-4 lg:gap-8 w-full">
         <div className="flex items-center gap-3 shrink-0">
           <div className="block lg:hidden">

@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   FiSearch,
-  FiEye,
+  FiEdit2,
   FiChevronLeft,
   FiChevronRight,
   FiShoppingBag,
@@ -90,7 +90,7 @@ export default function AdminOrdersPage() {
                 <th className="px-8 py-4 text-right border-r border-gray-100">
                   Total Price
                 </th>
-                <th className="px-8 py-4 text-center">Options</th>
+                <th className="px-8 py-4 text-right">Options</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -146,12 +146,14 @@ export default function AdminOrdersPage() {
                     <td className="px-8 py-6 border-r border-gray-100 text-right font-mono font-bold text-[#1B1B1B]">
                       {formatCurrency(order.total)}
                     </td>
-                    <td className="px-8 py-6 text-center">
-                      <Link href={`/admin/orders/${order.id}`}>
-                        <button className="w-10 h-10 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-[#3A5A40] hover:text-white transition-all duration-300 cursor-pointer">
-                          <FiEye size={16} />
-                        </button>
-                      </Link>
+                    <td className="px-8 py-6 text-right">
+                      <div className="flex items-center justify-end">
+                        <Link href={`/admin/orders/${order.id}`}>
+                          <button className="w-10 h-10 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-[#3A5A40] hover:text-white transition-all duration-300 cursor-pointer">
+                            <FiEdit2 size={16} />
+                          </button>
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 ))

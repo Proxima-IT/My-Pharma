@@ -1,6 +1,6 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap");
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+@import 'tailwindcss';
 
 /* =========================
   Design System – Colors
@@ -10,8 +10,6 @@
   --bg-main: #f3f4f6;
   --text-main: #000000;
 }
-
-
 
 @theme {
   /* ===== Required prefix: --color- for color utilities ===== */
@@ -77,8 +75,8 @@
 
   /* ===== Font ===== */
   --font-primary:
-    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Ubuntu, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Ubuntu, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
 }
 
 /* =========================
@@ -103,24 +101,24 @@ body {
 /* --- ADDITIONS FOR SHARP DESIGN SYSTEM (Admin/Pharmacy) --- */
 
 @theme {
-  --font-mono: "JetBrains Mono", monospace;
-  
+  --font-mono: 'JetBrains Mono', monospace;
+
   /* Retro + Calm Palette Mapping */
-  --color-admin-bg: #FAF7F2;          /* Neutral-50 */
-  --color-admin-card: #F1F1E6;        /* Neutral-100 */
-  --color-admin-navy: #1B1B1B;        /* Neutral-900 (Sidebar) */
-  --color-admin-border: #2B2B2B;      /* Neutral-800 (Sharp Definition) */
-  
+  --color-admin-bg: #faf7f2; /* Neutral-50 */
+  --color-admin-card: #f1f1e6; /* Neutral-100 */
+  --color-admin-navy: #1b1b1b; /* Neutral-900 (Sidebar) */
+  --color-admin-border: #2b2b2b; /* Neutral-800 (Sharp Definition) */
+
   /* Brand Colors */
-  --color-admin-primary: #3A5A40;     /* Primary-700 */
+  --color-admin-primary: #3a5a40; /* Primary-700 */
   --color-admin-primary-hover: #588157; /* Primary-500 */
-  --color-admin-secondary: #D4A373;   /* Secondary-200 */
-  --color-admin-accent: #F59E0B;      /* Accent-500 */
-  
+  --color-admin-secondary: #d4a373; /* Secondary-200 */
+  --color-admin-accent: #f59e0b; /* Accent-500 */
+
   /* State Colors */
-  --color-admin-success: #10B981;
-  --color-admin-error: #EF4444;
-  --color-admin-warning: #F59E0B;
+  --color-admin-success: #10b981;
+  --color-admin-error: #ef4444;
+  --color-admin-warning: #f59e0b;
 }
 
 @layer utilities {
@@ -133,7 +131,7 @@ body {
     width: 100%;
   }
 
-  .sharp-table th, 
+  .sharp-table th,
   .sharp-table td {
     border: 2px solid var(--color-admin-border) !important;
     border-radius: 0px !important;
@@ -143,10 +141,34 @@ body {
     width: 4px;
   }
   .navy-scrollbar::-webkit-scrollbar-track {
-    background: #1B1B1B;
+    background: #1b1b1b;
   }
   .navy-scrollbar::-webkit-scrollbar-thumb {
-    background: #3A5A40;
+    background: #3a5a40;
+  }
+
+  .admin-scrollbar::-webkit-scrollbar {
+    width: 4px; /* Thin scrollbar */
+  }
+
+  .admin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .admin-scrollbar::-webkit-scrollbar-thumb {
+    background: #dad7cd; /* Neutral-300 (Subtle default) */
+    border-radius: 0px !important; /* Sharp edges */
+  }
+
+  /* Brand color on hover (Lighter shading: #588157) */
+  .admin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #588157;
+  }
+
+  /* Firefox Support */
+  .admin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #dad7cd transparent;
   }
 }
 
@@ -166,12 +188,21 @@ body {
   }
 
   @keyframes access-blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
   }
 
   @keyframes exit-up {
-    from { transform: translateY(0); }
-    to { transform: translateY(-100%); }
+    from {
+      transform: translateY(0);
+    }
+    to {
+      transform: translateY(-100%);
+    }
   }
 }
