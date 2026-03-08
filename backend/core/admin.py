@@ -16,6 +16,7 @@ from .models import (
     PrescriptionItem,
     Product,
     ProductImage,
+    ProductDosage,
     Cart,
     CartItem,
     Coupon,
@@ -52,6 +53,12 @@ class ProductImageInline(admin.TabularInline):
     fields = ("image", "order")
 
 
+class ProductDosageInline(admin.TabularInline):
+    model = ProductDosage
+    extra = 1
+    fields = ("dosage_label", "order")
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -70,7 +77,7 @@ class ProductAdmin(admin.ModelAdmin):
     prepopulated_fields = {"slug": ("name",)}
     list_select_related = ("category", "brand", "ingredient")
     list_editable = ("is_active", "quantity_in_stock")
-    inlines = [ProductImageInline]
+    inlines = [ProductImageInline, ProductDosageInline]
 
 
 class OrderItemInline(admin.TabularInline):

@@ -10,6 +10,7 @@ from .models import (
     Ingredient,
     Product,
     ProductImage,
+    ProductDosage,
     Order,
     OrderItem,
     Cart,
@@ -112,6 +113,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     is_low_stock = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
+    dosages = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -120,7 +122,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "ingredient", "ingredient_name", "requires_prescription",
             "price", "original_price", "discount_percentage", "image",
             "images",
-            "unit_label", "dosage",
+            "unit_label", "dosage", "dosages",
             "rating_avg", "review_count",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
             "created_at", "updated_at",
@@ -128,6 +130,11 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_images(self, obj):
         return _product_image_urls(obj, self.context.get("request"))
+
+    def get_dosages(self, obj):
+        if hasattr(obj, "dosage_options"):
+            return [d.dosage_label for d in obj.dosage_options.all()]
+        return []
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -137,6 +144,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     is_low_stock = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
+    dosages = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -145,7 +153,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "ingredient", "ingredient_name", "requires_prescription",
             "description", "price", "original_price", "discount_percentage", "image",
             "images",
-            "unit_label", "dosage",
+            "unit_label", "dosage", "dosages",
             "rating_avg", "review_count",
             "key_benefits", "specifications",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
@@ -155,8 +163,21 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     def get_images(self, obj):
         return _product_image_urls(obj, self.context.get("request"))
 
+    def get_dosages(self, obj):
+        if hasattr(obj, "dosage_options"):
+            return [d.dosage_label for d in obj.dosage_options.all()]
+        return []
+
 
 class ProductWriteSerializer(serializers.ModelSerializer):
+    dosages = serializers.ListField(
+        child=serializers.CharField(max_length=50, allow_blank=False),
+        required=False,
+        allow_empty=True,
+        write_only=True,
+        help_text="Optional list of dosage labels (e.g. ['50mg', '500mg']). Replaces existing dosage options.",
+    )
+
     class Meta:
         model = Product
         fields = (
@@ -166,8 +187,31 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             "rating_avg", "review_count",
             "key_benefits", "specifications",
             "quantity_in_stock", "low_stock_threshold", "is_active",
+            "dosages",
         )
         extra_kwargs = {"slug": {"required": False}}
+
+    def create(self, validated_data):
+        dosages = validated_data.pop("dosages", None)
+        product = super().create(validated_data)
+        if dosages is not None:
+            ProductDosage.objects.filter(product=product).delete()
+            for i, label in enumerate(dosages):
+                label = (label or "").strip()
+                if label:
+                    ProductDosage.objects.create(product=product, dosage_label=label, order=i)
+        return product
+
+    def update(self, instance, validated_data):
+        dosages = validated_data.pop("dosages", None)
+        product = super().update(instance, validated_data)
+        if dosages is not None:
+            ProductDosage.objects.filter(product=product).delete()
+            for i, label in enumerate(dosages):
+                label = (label or "").strip()
+                if label:
+                    ProductDosage.objects.create(product=product, dosage_label=label, order=i)
+        return product
 
 
 class ProductImageSerializer(serializers.ModelSerializer):
@@ -187,6 +231,18 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductImageCreateSerializer(serializers.Serializer):
     image = serializers.ImageField(required=True)
     order = serializers.IntegerField(default=0, min_value=0)
+
+
+class ProductDosageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductDosage
+        fields = ("id", "dosage_label", "order")
+        read_only_fields = ("id",)
+
+
+class ProductDosageCreateSerializer(serializers.Serializer):
+    dosage_label = serializers.CharField(max_length=50, trim_whitespace=True)
+    order = serializers.IntegerField(default=0, min_value=0, required=False)
 
 
 class InventoryProductSerializer(serializers.ModelSerializer):

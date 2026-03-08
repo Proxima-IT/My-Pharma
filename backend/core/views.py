@@ -23,7 +23,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, ProductImage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad
+from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -34,6 +34,8 @@ from .serializers import (
     ProductWriteSerializer,
     ProductImageSerializer,
     ProductImageCreateSerializer,
+    ProductDosageSerializer,
+    ProductDosageCreateSerializer,
     InventoryProductSerializer,
     OrderSerializer,
     OrderWriteSerializer,
@@ -122,7 +124,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 # ---- Product (catalog search & filter per PRODUCT_CATALOG.md). Inventory = quantity_in_stock ----
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category", "brand", "ingredient").prefetch_related("images").all()
+    queryset = Product.objects.select_related("category", "brand", "ingredient").prefetch_related("images", "dosage_options").all()
     filterset_class = ProductFilter
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
@@ -204,6 +206,36 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not img:
             return Response({"detail": "Image not found."}, status=status.HTTP_404_NOT_FOUND)
         img.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="dosages")
+    def dosages(self, request, slug=None):
+        """GET: list dosage options. POST: add a dosage (body: dosage_label, optional order)."""
+        product = self.get_object()
+        if request.method == "GET":
+            qs = product.dosage_options.all().order_by("order", "id")
+            return Response(ProductDosageSerializer(qs, many=True).data)
+        serializer = ProductDosageCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        obj, created = ProductDosage.objects.get_or_create(
+            product=product,
+            dosage_label=data["dosage_label"].strip(),
+            defaults={"order": data.get("order", 0)},
+        )
+        if not created:
+            obj.order = data.get("order", obj.order)
+            obj.save(update_fields=["order"])
+        return Response(ProductDosageSerializer(obj).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["delete"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="dosages/(?P<dosage_pk>[^/.]+)")
+    def delete_dosage(self, request, slug=None, dosage_pk=None):
+        """Delete a dosage option by id."""
+        product = self.get_object()
+        dosage = ProductDosage.objects.filter(product=product, pk=dosage_pk).first()
+        if not dosage:
+            return Response({"detail": "Dosage not found."}, status=status.HTTP_404_NOT_FOUND)
+        dosage.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=["get"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="inventory-list")

@@ -229,6 +229,30 @@ class ProductImage(models.Model):
         return f"{self.product.name} – image #{self.order}"
 
 
+class ProductDosage(models.Model):
+    """Multiple dosage options per product (e.g. 50mg, 500mg). Product.dosage remains primary/default."""
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="dosage_options",
+        db_index=True,
+    )
+    dosage_label = models.CharField(
+        max_length=50,
+        help_text="Strength e.g. '50mg', '500mg', '5ml'.",
+    )
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+
+    class Meta:
+        db_table = "core_product_dosage"
+        ordering = ["order", "id"]
+        unique_together = [["product", "dosage_label"]]
+        verbose_name_plural = "Product dosages"
+
+    def __str__(self):
+        return f"{self.product.name} – {self.dosage_label}"
+
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
