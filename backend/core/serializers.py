@@ -266,13 +266,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = OrderItem
-        fields = ("id", "product", "product_name", "quantity", "price_at_order")
+        fields = ("id", "product", "product_name", "quantity", "price_at_order", "dosage")
 
 
 class OrderItemWriteSerializer(serializers.ModelSerializer):
+    dosage = serializers.CharField(max_length=50, required=False, allow_blank=True)
+
     class Meta:
         model = OrderItem
-        fields = ("product", "quantity")
+        fields = ("product", "quantity", "dosage")
 
 
 class OrderSerializer(serializers.ModelSerializer):
@@ -352,7 +354,8 @@ class OrderWriteSerializer(serializers.ModelSerializer):
                     {f"product {product.id}": f"Insufficient stock. Available: {product.quantity_in_stock}"}
                 )
             price = product.price
-            OrderItem.objects.create(order=order, product=product, quantity=quantity, price_at_order=price)
+            dosage = (item_data.get("dosage") or "").strip()[:50]
+            OrderItem.objects.create(order=order, product=product, quantity=quantity, price_at_order=price, dosage=dosage)
             total += price * quantity
             product.quantity_in_stock -= quantity
             product.save(update_fields=["quantity_in_stock"])
@@ -413,6 +416,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_unit_label",
             "product_dosage",
+            "dosage",
             "image_url",
             "quantity",
             "price_at_order",
@@ -440,6 +444,7 @@ class CartItemSerializer(serializers.ModelSerializer):
 class AddToCartSerializer(serializers.Serializer):
     product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True))
     quantity = serializers.IntegerField(min_value=1)
+    dosage = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
     def validate(self, attrs):
         product = attrs["product"]
@@ -452,7 +457,8 @@ class AddToCartSerializer(serializers.Serializer):
 
 
 class UpdateCartItemSerializer(serializers.Serializer):
-    quantity = serializers.IntegerField(min_value=0)
+    quantity = serializers.IntegerField(min_value=0, required=False)
+    dosage = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
 
 class CartSummarySerializer(serializers.Serializer):

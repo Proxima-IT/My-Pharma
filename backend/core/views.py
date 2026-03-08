@@ -352,26 +352,28 @@ class CartViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], url_path="add")
     def add(self, request):
-        """POST /api/cart/add/ – body: { product: id, quantity: int }."""
+        """POST /api/cart/add/ – body: { product: id, quantity: int, dosage?: str }."""
         serializer = AddToCartSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         product = serializer.validated_data["product"]
         quantity = serializer.validated_data["quantity"]
+        dosage = (serializer.validated_data.get("dosage") or "").strip()[:50]
         cart = get_or_create_cart(request.user)
         from .models import CartItem
         item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
-            defaults={"quantity": quantity, "price_at_order": product.price},
+            defaults={"quantity": quantity, "price_at_order": product.price, "dosage": dosage},
         )
         if not created:
             item.quantity += quantity
+            item.dosage = dosage
             if item.quantity > product.quantity_in_stock:
                 return Response(
                     {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            item.save(update_fields=["quantity"])
+            item.save(update_fields=["quantity", "dosage"])
         cart.save(update_fields=["updated_at"])
         cart.refresh_from_db()
         return Response(CartSerializer(cart, context={"request": request}).data, status=status.HTTP_201_CREATED)
@@ -431,6 +433,7 @@ class CartViewSet(viewsets.GenericViewSet):
                 product=item.product,
                 quantity=item.quantity,
                 price_at_order=item.price_at_order,
+                dosage=(item.dosage or "").strip()[:50],
             )
             item.product.quantity_in_stock -= item.quantity
             item.product.save(update_fields=["quantity_in_stock"])
@@ -456,6 +459,7 @@ class CartItemViewSet(viewsets.GenericViewSet):
         item = self.get_object()
         serializer = UpdateCartItemSerializer(data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        update_fields = []
         qty = serializer.validated_data.get("quantity")
         if qty is not None:
             if qty == 0:
@@ -467,7 +471,12 @@ class CartItemViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             item.quantity = qty
-            item.save(update_fields=["quantity"])
+            update_fields.append("quantity")
+        if "dosage" in serializer.validated_data:
+            item.dosage = (serializer.validated_data["dosage"] or "").strip()[:50]
+            update_fields.append("dosage")
+        if update_fields:
+            item.save(update_fields=update_fields)
         return Response(CartItemSerializer(item, context={"request": request}).data)
 
     def destroy(self, request, pk=None):

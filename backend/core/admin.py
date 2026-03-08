@@ -84,12 +84,14 @@ class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
     raw_id_fields = ("product",)
+    fields = ("product", "quantity", "price_at_order", "dosage")
 
 
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 0
     raw_id_fields = ("product",)
+    fields = ("product", "quantity", "price_at_order", "dosage")
 
 
 @admin.register(Cart)

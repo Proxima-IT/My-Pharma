@@ -298,6 +298,11 @@ class OrderItem(models.Model):
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="order_items")
     quantity = models.PositiveIntegerField()
     price_at_order = models.DecimalField(max_digits=12, decimal_places=2)
+    dosage = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Selected dosage for this line (e.g. 50mg, 500mg).",
+    )
 
     class Meta:
         db_table = "core_order_item"
@@ -342,6 +347,11 @@ class CartItem(models.Model):
     )
     quantity = models.PositiveIntegerField(default=1)
     price_at_order = models.DecimalField(max_digits=12, decimal_places=2)
+    dosage = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="Selected dosage for this line (e.g. 50mg, 500mg).",
+    )
 
     class Meta:
         db_table = "core_cart_item"
