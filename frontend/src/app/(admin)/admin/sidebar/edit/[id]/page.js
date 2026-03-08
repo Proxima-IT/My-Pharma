@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiImage, FiCheck, FiX } from 'react-icons/fi';
-import { useSidebarAdmin } from '../../../hooks/useSidebarAdmin';
+import { useSidebarAdmin } from '../../../../hooks/useSidebarAdmin';
 import { sidebarAdminApi } from '../../../../api/sidebarAdminApi';
 
 export default function AdminEditSidebarItemPage({ params }) {
