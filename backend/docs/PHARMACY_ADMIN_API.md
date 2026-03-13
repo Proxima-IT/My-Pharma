@@ -103,7 +103,7 @@ Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. wi
 | PUT / PATCH | `/api/combos/{id}/` | Update combo (admin). |
 | DELETE | `/api/combos/{id}/` | Delete combo (admin). |
 
-**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `link`, `price`, `original_price`, `order`, `is_active`, `created_at`, `updated_at`.
+**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `link`, `price`, `original_price`, `bg_color`, `order`, `is_active`, `created_at`, `updated_at`.
 
 **Create/Update (multipart for image):**
 
@@ -113,6 +113,7 @@ Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. wi
 - `link` (URL, optional) – where the CTA goes
 - `price` (decimal, required) – combo price to display on card
 - `original_price` (decimal, optional) – crossed-out price for discount
+- `bg_color` (string, optional) – background color (e.g. `#F3F4FF` or a CSS/Tailwind class)
 - `order` (int, default 0) – lower first
 - `is_active` (bool, default true)
 

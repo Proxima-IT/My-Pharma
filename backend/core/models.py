@@ -87,6 +87,11 @@ class Combo(models.Model):
         blank=True,
         help_text="Optional struck-through price for showing discount on combo.",
     )
+    bg_color = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="Optional background color for combo card (e.g. hex code or Tailwind class).",
+    )
     order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

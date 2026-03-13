@@ -109,6 +109,7 @@ class ComboSerializer(serializers.ModelSerializer):
             "link",
             "price",
             "original_price",
+            "bg_color",
             "order",
             "is_active",
             "created_at",

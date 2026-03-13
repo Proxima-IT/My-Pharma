@@ -91,6 +91,8 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | PUT / PATCH | `/api/combos/{id}/` | Update combo (Pharmacy/Super only) |
 | DELETE | `/api/combos/{id}/` | Delete combo (Pharmacy/Super only) |
 
+**Fields:** Include `title`, `description`, `image`, `link`, `price`, `original_price`, `bg_color`, `order`, `is_active`.
+
 **Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
 
 **App logos (slug + image):**  
