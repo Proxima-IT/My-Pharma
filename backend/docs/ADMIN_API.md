@@ -93,6 +93,17 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 **Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
 
+**App logos (slug + image):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/logos/` | List app logos (public) |
+| GET | `/api/logos/{slug}/` | Retrieve one app logo (public) |
+| POST | `/api/logos/` | Create app logo (Pharmacy/Super only) |
+| PUT / PATCH | `/api/logos/{slug}/` | Update app logo (Pharmacy/Super only) |
+| DELETE | `/api/logos/{slug}/` | Delete app logo (Pharmacy/Super only) |
+
+**Permission:** List/retrieve: any (including guest). Create/update/delete: `IsPharmacyAdminOrSuper`.
+
 **Brands (autocomplete for product search):**  
 | Method | Path | Description |
 |--------|------|-------------|

@@ -101,6 +101,27 @@ class Combo(models.Model):
         return self.title
 
 
+class AppLogo(models.Model):
+    """App logo assets (e.g. primary header logo, footer logo) keyed by slug."""
+    slug = models.SlugField(
+        max_length=100,
+        unique=True,
+        db_index=True,
+        help_text="Identifier for where the logo is used (e.g. 'header', 'footer').",
+    )
+    image = models.ImageField(upload_to="logos/%Y/%m/")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_app_logo"
+        verbose_name_plural = "App logos"
+        ordering = ["slug"]
+
+    def __str__(self):
+        return self.slug
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150, unique=True, db_index=True)

@@ -23,7 +23,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo
+from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -55,6 +55,7 @@ from .serializers import (
     SidebarCategorySerializer,
     AdSerializer,
     ComboSerializer,
+    AppLogoSerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -646,6 +647,27 @@ class PageViewSet(viewsets.ModelViewSet):
 class SidebarCategoryViewSet(viewsets.ModelViewSet):
     queryset = SidebarCategory.objects.all()
     serializer_class = SidebarCategorySerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+
+# ---- App logo (slug + image). List/retrieve: anyone; write: Pharmacy Admin / Super ----
+@extend_schema_view(
+    list=extend_schema(tags=["AppLogos"], summary="List app logos"),
+    retrieve=extend_schema(tags=["AppLogos"], summary="Get an app logo"),
+    create=extend_schema(tags=["AppLogos"], summary="Create app logo (admin)"),
+    update=extend_schema(tags=["AppLogos"], summary="Update app logo (admin)"),
+    partial_update=extend_schema(tags=["AppLogos"], summary="Partial update app logo (admin)"),
+    destroy=extend_schema(tags=["AppLogos"], summary="Delete app logo (admin)"),
+)
+class AppLogoViewSet(viewsets.ModelViewSet):
+    queryset = AppLogo.objects.all()
+    serializer_class = AppLogoSerializer
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):

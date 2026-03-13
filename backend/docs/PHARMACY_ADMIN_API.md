@@ -118,6 +118,27 @@ Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. wi
 
 ---
 
+## 2d. App logos
+
+App logo assets (e.g. primary header logo, footer logo) keyed by a `slug`. List and retrieve are public; create/update/delete require Pharmacy Admin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/logos/` | List app logos. |
+| GET | `/api/logos/{slug}/` | Retrieve one app logo by slug. |
+| POST | `/api/logos/` | Create app logo (admin). |
+| PUT / PATCH | `/api/logos/{slug}/` | Update app logo (admin). |
+| DELETE | `/api/logos/{slug}/` | Delete app logo (admin). |
+
+**Response fields:** `id`, `slug`, `image`, `image_url`, `created_at`, `updated_at`.
+
+**Create/Update (multipart for image):**
+
+- `slug` (string, required, unique) – identifier, e.g. `header`, `footer`, `mobile-header`.
+- `image` (file, required on create; optional on update).
+
+---
+
 ## 3. Brands (CRUD)
 
 Brands for product catalog and filters.
@@ -360,6 +381,7 @@ Default page size: **20** (configurable in backend).
 | Sidebar categories | GET /api/sidebar-categories/ | GET /api/sidebar-categories/{id}/ | POST | PUT/PATCH | DELETE |
 | Ads | GET /api/ads/ | GET /api/ads/{id}/ | POST | PUT/PATCH | DELETE |
 | Combos | GET /api/combos/ | GET /api/combos/{id}/ | POST | PUT/PATCH | DELETE |
+| App logos | GET /api/logos/ | GET /api/logos/{slug}/ | POST | PUT/PATCH | DELETE |
 | Brands | GET /api/brands/ | GET /api/brands/{slug}/ | POST | PUT/PATCH | DELETE |
 | Ingredients | GET /api/ingredients/ | GET /api/ingredients/{slug}/ | POST | PUT/PATCH | DELETE |
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |
