@@ -22,6 +22,7 @@ from .models import (
     Page,
     SidebarCategory,
     Ad,
+    Combo,
 )
 from .validators import validate_prescription_file, validate_issue_date_not_older_than_six_months
 
@@ -69,6 +70,34 @@ class AdSerializer(serializers.ModelSerializer):
     class Meta:
         model = Ad
         fields = ("id", "image", "image_url", "link", "order", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "image_url", "created_at", "updated_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+
+# ---- Combo (combo packages: image + price + link) ----
+class ComboSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Combo
+        fields = (
+            "id",
+            "title",
+            "description",
+            "image",
+            "image_url",
+            "link",
+            "price",
+            "original_price",
+            "order",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
         read_only_fields = ("id", "image_url", "created_at", "updated_at")
 
     def get_image_url(self, obj):

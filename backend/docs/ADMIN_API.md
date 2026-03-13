@@ -82,6 +82,17 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 **Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
 
+**Combos (combo packages: image + price + link):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/combos/` | List combos (public: active only; auth: filter by `is_active`) |
+| GET | `/api/combos/{id}/` | Retrieve one combo (public: active only) |
+| POST | `/api/combos/` | Create combo (Pharmacy/Super only) |
+| PUT / PATCH | `/api/combos/{id}/` | Update combo (Pharmacy/Super only) |
+| DELETE | `/api/combos/{id}/` | Delete combo (Pharmacy/Super only) |
+
+**Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
+
 **Brands (autocomplete for product search):**  
 | Method | Path | Description |
 |--------|------|-------------|

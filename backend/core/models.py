@@ -69,6 +69,38 @@ class Ad(models.Model):
         return self.link or f"Ad #{self.id}"
 
 
+class Combo(models.Model):
+    """Combo package card (e.g. Health Combo, Baby Care Combo) with image, link, and fixed price."""
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    image = models.ImageField(upload_to="combos/%Y/%m/", blank=True, null=True)
+    link = models.URLField(
+        max_length=500,
+        blank=True,
+        help_text="Destination URL when combo card is clicked (e.g. product list or CMS page).",
+    )
+    price = models.DecimalField(max_digits=12, decimal_places=2)
+    original_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Optional struck-through price for showing discount on combo.",
+    )
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_combo"
+        verbose_name_plural = "Combos"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.title
+
+
 class Brand(models.Model):
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=150, unique=True, db_index=True)

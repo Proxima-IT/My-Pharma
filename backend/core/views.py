@@ -23,7 +23,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad
+from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -54,6 +54,7 @@ from .serializers import (
     PageSerializer,
     SidebarCategorySerializer,
     AdSerializer,
+    ComboSerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -664,6 +665,32 @@ class SidebarCategoryViewSet(viewsets.ModelViewSet):
 class AdViewSet(viewsets.ModelViewSet):
     queryset = Ad.objects.all()
     serializer_class = AdSerializer
+    filterset_fields = ["is_active"]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action in ("list", "retrieve") and not (getattr(self.request, "user", None) and self.request.user.is_authenticated):
+            return qs.filter(is_active=True)
+        return qs
+
+
+# ---- Combo (combo packages). List/retrieve: anyone; write: Pharmacy Admin / Super ----
+@extend_schema_view(
+    list=extend_schema(tags=["Combos"], summary="List combos"),
+    retrieve=extend_schema(tags=["Combos"], summary="Get a combo"),
+    create=extend_schema(tags=["Combos"], summary="Create combo (admin)"),
+    update=extend_schema(tags=["Combos"], summary="Update combo (admin)"),
+    partial_update=extend_schema(tags=["Combos"], summary="Partial update combo (admin)"),
+    destroy=extend_schema(tags=["Combos"], summary="Delete combo (admin)"),
+)
+class ComboViewSet(viewsets.ModelViewSet):
+    queryset = Combo.objects.all()
+    serializer_class = ComboSerializer
     filterset_fields = ["is_active"]
 
     def get_permissions(self):

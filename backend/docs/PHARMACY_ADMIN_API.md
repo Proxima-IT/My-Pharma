@@ -91,6 +91,33 @@ Promotional ads: image and destination link. List and retrieve are public (only 
 
 ---
 
+## 2c. Combo packages (cards)
+
+Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. with image, link, and price. List and retrieve are public (only active combos for guests); create/update/delete require Pharmacy Admin.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/combos/` | List combos. Query: `is_active`. Guests see only active. |
+| GET | `/api/combos/{id}/` | Retrieve one combo. |
+| POST | `/api/combos/` | Create combo (admin). |
+| PUT / PATCH | `/api/combos/{id}/` | Update combo (admin). |
+| DELETE | `/api/combos/{id}/` | Delete combo (admin). |
+
+**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `link`, `price`, `original_price`, `order`, `is_active`, `created_at`, `updated_at`.
+
+**Create/Update (multipart for image):**
+
+- `title` (string, required) – e.g. "Health Combo Packages"
+- `description` (string, optional) – short tagline for the card
+- `image` (file, optional on update; required if you want an image)
+- `link` (URL, optional) – where the CTA goes
+- `price` (decimal, required) – combo price to display on card
+- `original_price` (decimal, optional) – crossed-out price for discount
+- `order` (int, default 0) – lower first
+- `is_active` (bool, default true)
+
+---
+
 ## 3. Brands (CRUD)
 
 Brands for product catalog and filters.
@@ -332,6 +359,7 @@ Default page size: **20** (configurable in backend).
 | Categories | GET /api/categories/ | GET /api/categories/{slug}/ | POST | PUT/PATCH | DELETE |
 | Sidebar categories | GET /api/sidebar-categories/ | GET /api/sidebar-categories/{id}/ | POST | PUT/PATCH | DELETE |
 | Ads | GET /api/ads/ | GET /api/ads/{id}/ | POST | PUT/PATCH | DELETE |
+| Combos | GET /api/combos/ | GET /api/combos/{id}/ | POST | PUT/PATCH | DELETE |
 | Brands | GET /api/brands/ | GET /api/brands/{slug}/ | POST | PUT/PATCH | DELETE |
 | Ingredients | GET /api/ingredients/ | GET /api/ingredients/{slug}/ | POST | PUT/PATCH | DELETE |
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |
