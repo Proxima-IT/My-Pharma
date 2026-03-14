@@ -43,12 +43,15 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 | PUT / PATCH | `/api/categories/{slug}/` | Update category. |
 | DELETE | `/api/categories/{slug}/` | Delete category. |
 
-**Create/Update body (JSON):**
+**Response fields:** `id`, `parent`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `created_at`, `updated_at`.
+
+**Create/Update:** Use **multipart/form-data** when sending `image`; otherwise **application/json** is fine.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | name | string | Yes (create) | Category name. |
 | parent | int (id) or null | No | Parent category id; null for root. |
+| image | file | No | Category image/icon. |
 | is_active | boolean | No | Default true. |
 
 `slug` is auto-generated from `name` on create.

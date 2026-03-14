@@ -72,6 +72,14 @@ from .filters import ProductFilter
 
 
 # ---- Category (hierarchy: parent / children). List/tree: anyone; CRUD: Pharmacy Admin / Super ----
+@extend_schema_view(
+    list=extend_schema(tags=["Categories"], summary="List categories"),
+    retrieve=extend_schema(tags=["Categories"], summary="Get a category by slug"),
+    create=extend_schema(tags=["Categories"], summary="Create category (multipart for image)"),
+    update=extend_schema(tags=["Categories"], summary="Update category (multipart for image)"),
+    partial_update=extend_schema(tags=["Categories"], summary="Partial update category (multipart for image)"),
+    destroy=extend_schema(tags=["Categories"], summary="Delete category"),
+)
 class CategoryViewSet(viewsets.ModelViewSet):
     queryset = Category.objects.select_related("parent").prefetch_related("children").all()
     serializer_class = CategorySerializer

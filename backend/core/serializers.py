@@ -32,19 +32,32 @@ from .validators import validate_prescription_file, validate_issue_date_not_olde
 
 # ---- Category (hierarchy: parent / children) ----
 class CategorySerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
     class Meta:
         model = Category
-        fields = ("id", "parent", "name", "slug", "is_active", "created_at", "updated_at")
-        read_only_fields = ("id", "slug", "created_at", "updated_at")
+        fields = ("id", "parent", "name", "slug", "image", "image_url", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "slug", "image_url", "created_at", "updated_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
 
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
     """Category with nested children for hierarchy (PRODUCT CATALOG > MEDICINES, SUPPLEMENTS, DEVICES)."""
     children = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ("id", "parent", "name", "slug", "is_active", "children", "created_at", "updated_at")
+        fields = ("id", "parent", "name", "slug", "image", "image_url", "is_active", "children", "created_at", "updated_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
 
     def get_children(self, obj):
         children = obj.children.filter(is_active=True).order_by("name")

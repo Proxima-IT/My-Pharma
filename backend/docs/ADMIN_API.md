@@ -58,6 +58,8 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | PUT / PATCH | `/api/categories/{slug}/` | Update category |
 | DELETE | `/api/categories/{slug}/` | Delete category |
 
+**Fields:** `name`, `parent`, `image` (optional), `is_active`. Use multipart/form-data when uploading `image`.
+
 **Permission:** `IsPharmacyAdminOrSuper`.
 
 **Sidebar categories (left sidebar: image + title):**  
