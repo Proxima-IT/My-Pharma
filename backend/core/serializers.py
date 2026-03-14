@@ -11,6 +11,8 @@ from .models import (
     Product,
     ProductImage,
     ProductDosage,
+    ProductReview,
+    ProductReviewImage,
     Order,
     OrderItem,
     Cart,
@@ -289,6 +291,67 @@ class ProductDosageSerializer(serializers.ModelSerializer):
 class ProductDosageCreateSerializer(serializers.Serializer):
     dosage_label = serializers.CharField(max_length=50, trim_whitespace=True)
     order = serializers.IntegerField(default=0, min_value=0, required=False)
+
+
+# ---- Product review (rating + comment + images) ----
+class ProductReviewImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProductReviewImage
+        fields = ("id", "image", "image_url", "order", "created_at")
+        read_only_fields = ("id", "image_url", "created_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+
+class ProductReviewSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source="user.username", read_only=True)
+    images = ProductReviewImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductReview
+        fields = ("id", "product", "user", "user_name", "rating", "title", "comment", "images", "created_at", "updated_at")
+        read_only_fields = ("id", "user", "created_at", "updated_at")
+
+
+class ProductReviewCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductReview
+        fields = ("product", "rating", "title", "comment")
+
+    def validate_rating(self, value):
+        if value is None or value < 1 or value > 5:
+            raise serializers.ValidationError("Rating must be between 1 and 5.")
+        return value
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        product = attrs["product"]
+        # Must have purchased the product (at least one delivered order containing this product)
+        from .models import Order
+        has_purchased = OrderItem.objects.filter(
+            order__user=user,
+            order__status=Order.Status.DELIVERED,
+            product=product,
+        ).exists()
+        if not has_purchased:
+            raise serializers.ValidationError(
+                {"product": "You can only review products you have purchased (delivered orders)."}
+            )
+        # One review per user per product
+        if ProductReview.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError(
+                {"product": "You have already reviewed this product. Update or delete your existing review."}
+            )
+        return attrs
+
+    def create(self, validated_data):
+        user = validated_data.pop("user", None) or self.context["request"].user
+        return ProductReview.objects.create(user=user, **validated_data)
 
 
 class InventoryProductSerializer(serializers.ModelSerializer):

@@ -17,6 +17,8 @@ from .models import (
     Product,
     ProductImage,
     ProductDosage,
+    ProductReview,
+    ProductReviewImage,
     Cart,
     CartItem,
     Coupon,
@@ -78,6 +80,22 @@ class ProductAdmin(admin.ModelAdmin):
     list_select_related = ("category", "brand", "ingredient")
     list_editable = ("is_active", "quantity_in_stock")
     inlines = [ProductImageInline, ProductDosageInline]
+
+
+class ProductReviewImageInline(admin.TabularInline):
+    model = ProductReviewImage
+    extra = 0
+    fields = ("image", "order")
+
+
+@admin.register(ProductReview)
+class ProductReviewAdmin(admin.ModelAdmin):
+    list_display = ("id", "product", "user", "rating", "title", "created_at")
+    list_filter = ("rating",)
+    search_fields = ("user__username", "user__email", "product__name", "title", "comment")
+    raw_id_fields = ("user", "product")
+    inlines = [ProductReviewImageInline]
+    date_hierarchy = "created_at"
 
 
 class OrderItemInline(admin.TabularInline):

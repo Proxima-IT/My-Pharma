@@ -143,6 +143,19 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 ---
 
+**Product reviews (rating + comment + images):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/reviews/` | List reviews (public). Filter: `product`, `product_slug`, `rating`. |
+| GET | `/api/reviews/{id}/` | Retrieve one review (public). |
+| POST | `/api/reviews/` | Create review (REGISTERED_USER only; must have purchased the product – delivered order). Body: `product`, `rating` (1–5), `title`, `comment`; multipart: multiple `images`. |
+| PUT / PATCH | `/api/reviews/{id}/` | Update review (owner only). |
+| DELETE | `/api/reviews/{id}/` | Delete review (owner only). |
+
+**Permission:** List/retrieve: any. Create: `IsRegisteredUserOnly` (and product must be purchased). Update/delete: owner only.
+
+---
+
 ## 5. Doctor Consultations (SUPER_ADMIN, DOCTOR – manage; REGISTERED_USER – request)
 
 | Method | Path                               | Description                                                                                 |
@@ -178,8 +191,8 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | **SUPER_ADMIN**     | All: users, categories, products, orders, prescriptions, consultations, pages (full CRUD + inventory, verify, respond, CMS create/delete)                                                     |
 | **PHARMACY_ADMIN**  | Categories, products, orders, prescriptions, pages (no user management; no consultation respond; no CMS create/delete)                                                                        |
 | **DOCTOR**          | Consultations list/retrieve/respond; own profile (me)                                                                                                                                         |
-| **REGISTERED_USER** | Own orders (list, retrieve, create/place order); own prescriptions (list, retrieve, upload); own consultations (list, retrieve, create); products list/retrieve (browse); pages list/retrieve |
-| **GUEST**           | Products list/retrieve (active only); pages list/retrieve (published only)                                                                                                                    |
+| **REGISTERED_USER** | Own orders (list, retrieve, create/place order); own prescriptions (list, retrieve, upload); own consultations (list, retrieve, create); product reviews (list, retrieve, create for purchased products, update/delete own); products list/retrieve (browse); pages list/retrieve |
+| **GUEST**           | Products list/retrieve (active only); pages list/retrieve (published only); reviews list/retrieve                                                                                                                              |
 
 ---
 

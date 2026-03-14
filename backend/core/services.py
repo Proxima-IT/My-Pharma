@@ -21,7 +21,7 @@ from .constants import (
     PAYMENT_FEE_RATES,
     PAYMENT_METHOD_COD,
 )
-from .models import Order, Cart, CartItem, Coupon, Product
+from .models import Order, Cart, CartItem, Coupon, Product, ProductReview
 
 
 def get_delivery_fee(subtotal: Decimal, delivery_zone: str = None) -> Decimal:
@@ -132,3 +132,15 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None):
         "discount_display": discount_display,
         "coupon_code": coupon_code,
     }
+
+
+def update_product_review_aggregates(product):
+    """Recompute Product.rating_avg and Product.review_count from ProductReview for the given product."""
+    from django.db.models import Avg, Count
+    agg = ProductReview.objects.filter(product=product).aggregate(
+        avg_rating=Avg("rating"),
+        count=Count("id"),
+    )
+    product.rating_avg = Decimal(str(round(agg["avg_rating"] or 0, 2)))
+    product.review_count = agg["count"] or 0
+    product.save(update_fields=["rating_avg", "review_count"])

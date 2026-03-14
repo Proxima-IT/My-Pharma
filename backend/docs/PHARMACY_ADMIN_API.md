@@ -185,6 +185,32 @@ Generic/active ingredients (e.g. for “Available Dosage” and generic search).
 
 ---
 
+## 4a. Product reviews (rating + images)
+
+Users can rate and review **purchased** products (one review per user per product). List and retrieve are public; create requires the user to have purchased the product (at least one **delivered** order containing it); update/delete only by the review owner.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/reviews/` | List reviews. Query: `product` (id), `product_slug`, `rating`. |
+| GET | `/api/reviews/{id}/` | Retrieve one review (includes `images`). |
+| POST | `/api/reviews/` | Create review (authenticated, must have purchased product). **Multipart:** `product`, `rating`, `title`, `comment`, and multiple `images`. |
+| PUT / PATCH | `/api/reviews/{id}/` | Update your review (rating, title, comment). Owner only. |
+| DELETE | `/api/reviews/{id}/` | Delete your review. Owner only. |
+
+**Response fields:** `id`, `product`, `user`, `user_name`, `rating`, `title`, `comment`, `images` (array of `id`, `image`, `image_url`, `order`), `created_at`, `updated_at`.
+
+**Create (multipart/form-data):**
+
+- `product` (int, required) – product id (must be in a delivered order of the user).
+- `rating` (int, required) – 1–5.
+- `title` (string, optional).
+- `comment` (string, optional).
+- `images` – multiple file uploads (same field name `images` repeated, or multiple files under `images[]` depending on client).
+
+Product `rating_avg` and `review_count` are updated automatically when reviews are created, updated, or deleted.
+
+---
+
 ## 5. Products (CRUD, upload, images, inventory)
 
 ### 5.1 List and retrieve
@@ -390,6 +416,7 @@ Default page size: **20** (configurable in backend).
 | Inventory | GET /api/products/inventory-list/ | — | — | PATCH .../inventory/ | — |
 | Orders | GET /api/orders/ | GET /api/orders/{id}/ | — | PATCH (status) | — |
 | Prescriptions | GET /api/prescriptions/ | GET /api/prescriptions/{id}/ | — | PATCH (verify) | — |
+| Reviews | GET /api/reviews/ | GET /api/reviews/{id}/ | (user) | (owner) | (owner) |
 
 ---
 

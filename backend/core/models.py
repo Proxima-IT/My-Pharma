@@ -370,6 +370,59 @@ class OrderItem(models.Model):
         return f"{self.product.name} x {self.quantity}"
 
 
+class ProductReview(models.Model):
+    """User review and rating for a product. One review per user per product; user must have purchased the product."""
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="product_reviews",
+        db_index=True,
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+        db_index=True,
+    )
+    rating = models.PositiveSmallIntegerField(
+        help_text="Rating 1–5.",
+    )
+    title = models.CharField(max_length=200, blank=True)
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_product_review"
+        ordering = ["-created_at"]
+        unique_together = [["user", "product"]]
+        verbose_name_plural = "Product reviews"
+        indexes = [models.Index(fields=["product"])]
+
+    def __str__(self):
+        return f"{self.user_id} – {self.product.name} ({self.rating})"
+
+
+class ProductReviewImage(models.Model):
+    """Image attached to a product review."""
+    review = models.ForeignKey(
+        ProductReview,
+        on_delete=models.CASCADE,
+        related_name="images",
+        db_index=True,
+    )
+    image = models.ImageField(upload_to="reviews/%Y/%m/")
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_product_review_image"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return f"Review #{self.review_id} – image #{self.order}"
+
+
 class Cart(models.Model):
     """One cart per user; holds items until checkout."""
     user = models.OneToOneField(

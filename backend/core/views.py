@@ -23,7 +23,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -56,6 +56,9 @@ from .serializers import (
     AdSerializer,
     ComboSerializer,
     AppLogoSerializer,
+    ProductReviewSerializer,
+    ProductReviewCreateSerializer,
+    ProductReviewImageSerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -63,6 +66,7 @@ from .services import (
     validate_coupon,
     get_delivery_zone_for_district,
     validate_min_order,
+    update_product_review_aggregates,
 )
 from .filters import ProductFilter
 
@@ -725,3 +729,64 @@ class ComboViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve") and not (getattr(self.request, "user", None) and self.request.user.is_authenticated):
             return qs.filter(is_active=True)
         return qs
+
+
+# ---- Product reviews (rating + comment + images). List/retrieve: anyone; create: authenticated (must have purchased); update/delete: owner ----
+@extend_schema_view(
+    list=extend_schema(tags=["Reviews"], summary="List product reviews"),
+    retrieve=extend_schema(tags=["Reviews"], summary="Get a product review"),
+    create=extend_schema(tags=["Reviews"], summary="Create product review"),
+    update=extend_schema(tags=["Reviews"], summary="Update product review"),
+    partial_update=extend_schema(tags=["Reviews"], summary="Partial update product review"),
+    destroy=extend_schema(tags=["Reviews"], summary="Delete product review"),
+)
+class ProductReviewViewSet(viewsets.ModelViewSet):
+    queryset = ProductReview.objects.prefetch_related("images").select_related("user", "product").all()
+    serializer_class = ProductReviewSerializer
+    filterset_fields = ["product", "rating"]
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return ProductReviewCreateSerializer
+        return ProductReviewSerializer
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        if self.action == "create":
+            return [IsAuthenticated(), IsRegisteredUserOnly()]
+        return [IsAuthenticated(), IsOwnerOrReadOnly()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        product_id = self.request.query_params.get("product")
+        product_slug = self.request.query_params.get("product_slug")
+        if product_id:
+            qs = qs.filter(product_id=product_id)
+        if product_slug:
+            qs = qs.filter(product__slug=product_slug)
+        if self.action in ("update", "partial_update", "destroy") and self.request.user.is_authenticated:
+            if getattr(self.request.user, "role", None) not in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
+                qs = qs.filter(user=self.request.user)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        review = serializer.save(user=request.user)
+        for i, f in enumerate(request.FILES.getlist("images", [])):
+            ProductReviewImage.objects.create(review=review, image=f, order=i)
+        update_product_review_aggregates(review.product)
+        return Response(
+            ProductReviewSerializer(review, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def perform_update(self, serializer):
+        serializer.save()
+        update_product_review_aggregates(serializer.instance.product)
+
+    def perform_destroy(self, instance):
+        product = instance.product
+        instance.delete()
+        update_product_review_aggregates(product)
