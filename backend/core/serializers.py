@@ -2,6 +2,9 @@
 Serializers for core API: Category, Product, Order, Prescription, Consultation, Page.
 """
 from decimal import Decimal
+from zoneinfo import ZoneInfo
+
+from django.utils import timezone
 from rest_framework import serializers
 
 from .models import (
@@ -17,6 +20,7 @@ from .models import (
     Order,
     OrderImage,
     OrderItem,
+    OrderStatusHistory,
     Cart,
     CartItem,
     Coupon,
@@ -414,9 +418,40 @@ class OrderImageSerializer(serializers.ModelSerializer):
         return obj.image.url if obj.image else None
 
 
+# Bangladesh timezone for order status timeline
+BD_TZ = ZoneInfo("Asia/Dhaka")
+
+
+class OrderStatusHistorySerializer(serializers.ModelSerializer):
+    """Status timeline entry; date/time in Bangladeshi time (Asia/Dhaka)."""
+    created_at_bd = serializers.SerializerMethodField()
+    date_bd = serializers.SerializerMethodField()
+    time_bd = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderStatusHistory
+        fields = ("id", "status", "created_at", "created_at_bd", "date_bd", "time_bd")
+
+    def _bd_datetime(self, obj):
+        dt = obj.created_at
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt)
+        return dt.astimezone(BD_TZ)
+
+    def get_created_at_bd(self, obj):
+        return self._bd_datetime(obj).strftime("%Y-%m-%d %H:%M:%S %Z")
+
+    def get_date_bd(self, obj):
+        return self._bd_datetime(obj).strftime("%Y-%m-%d")
+
+    def get_time_bd(self, obj):
+        return self._bd_datetime(obj).strftime("%H:%M:%S")
+
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     images = OrderImageSerializer(many=True, read_only=True)
+    status_history = OrderStatusHistorySerializer(many=True, read_only=True)
     user_email = serializers.CharField(source="user.email", read_only=True)
     user_username = serializers.CharField(source="user.username", read_only=True)
     duration_name = serializers.CharField(source="duration.name", read_only=True, allow_null=True)
@@ -426,7 +461,7 @@ class OrderSerializer(serializers.ModelSerializer):
         model = Order
         fields = (
             "id", "user", "user_email", "user_username", "prescription", "duration", "duration_name", "duration_days",
-            "status", "total", "shipping_address", "notes", "message", "items", "images",
+            "status", "total", "shipping_address", "notes", "message", "items", "images", "status_history",
             "created_at", "updated_at",
         )
         read_only_fields = ("id", "total", "created_at", "updated_at")

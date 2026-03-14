@@ -24,7 +24,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -326,7 +326,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = (
             Order.objects.select_related("user", "prescription", "duration")
-            .prefetch_related("items__product", "images")
+            .prefetch_related("items__product", "images", "status_history")
             .all()
         )
         role = getattr(self.request.user, "role", None)
@@ -360,6 +360,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = serializer.save()
         for i, f in enumerate(request.FILES.getlist("images", [])):
             OrderImage.objects.create(order=order, image=f, order_display=i)
+        OrderStatusHistory.objects.create(order=order, status=Order.Status.PENDING)
         return Response(
             OrderSerializer(order, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -373,6 +374,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = OrderStatusSerializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+        if "status" in request.data:
+            OrderStatusHistory.objects.create(order=order, status=order.status)
+        order.refresh_from_db()
+        qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "duration")
+        order = qs.get()
         return Response(OrderSerializer(order, context={"request": request}).data)
 
     def update(self, request, *args, **kwargs):

@@ -137,7 +137,7 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | Method | Path                | Description                                                                                                                                 |
 | ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/orders/`      | List orders (Pharmacy/Super: all; User: own). Filter: status                                                                                |
-| GET    | `/api/orders/{id}/` | Retrieve order (items, images, prescription, duration, message)                                                                             |
+| GET    | `/api/orders/{id}/` | Retrieve order (items, images, prescription, duration, message, **status_history** timeline in Bangladesh time)                             |
 | POST   | `/api/orders/`      | Place order (REGISTERED_USER only). Body: shipping_address, notes, **message** (optional), **items** [{ product, quantity, dosage? }], optional **prescription** (id), optional **duration** (id). Use **multipart/form-data** to upload multiple **images** (field name `images`); when multipart, send `items` as JSON string. Prescription rules unchanged. |
 | PATCH  | `/api/orders/{id}/` | Update order status and/or duration (Pharmacy/Super only). Body: `status`, `duration` (optional).                                             |
 

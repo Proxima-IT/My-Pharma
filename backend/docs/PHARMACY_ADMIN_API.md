@@ -316,7 +316,7 @@ Pharmacy admin can list all orders and update status (and optional delivery dura
 | GET | `/api/orders/{id}/` | Order detail (items, images, prescription, duration, message). |
 | PATCH | `/api/orders/{id}/` | Update order status and/or duration. |
 
-**Response fields:** `id`, `user`, `user_email`, `user_username`, `prescription`, `duration`, `duration_name`, `duration_days`, `status`, `total`, `shipping_address`, `notes`, `message`, `items`, `images` (array of `id`, `image`, `image_url`, `order_display`), `created_at`, `updated_at`.
+**Response fields:** `id`, `user`, `user_email`, `user_username`, `prescription`, `duration`, `duration_name`, `duration_days`, `status`, `total`, `shipping_address`, `notes`, `message`, `items`, `images` (array of `id`, `image`, `image_url`, `order_display`), **`status_history`** (timeline: array of `id`, `status`, `created_at` (UTC), `created_at_bd`, `date_bd`, `time_bd` — date/time in **Bangladesh time, Asia/Dhaka**), `created_at`, `updated_at`.
 
 **PATCH** body (JSON):
 

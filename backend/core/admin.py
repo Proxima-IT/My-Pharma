@@ -13,6 +13,7 @@ from .models import (
     Order,
     OrderImage,
     OrderItem,
+    OrderStatusHistory,
     Page,
     Prescription,
     PrescriptionItem,
@@ -113,6 +114,15 @@ class OrderImageInline(admin.TabularInline):
     fields = ("image", "order_display")
 
 
+class OrderStatusHistoryInline(admin.TabularInline):
+    model = OrderStatusHistory
+    extra = 0
+    readonly_fields = ("status", "created_at")
+    can_delete = False
+    ordering = ("created_at",)
+    show_change_link = False
+
+
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 0
@@ -150,7 +160,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("user__email", "user__phone", "id")
     raw_id_fields = ("user", "prescription", "duration")
-    inlines = [OrderItemInline, OrderImageInline]
+    inlines = [OrderItemInline, OrderImageInline, OrderStatusHistoryInline]
     date_hierarchy = "created_at"
 
 

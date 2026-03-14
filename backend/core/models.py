@@ -413,6 +413,26 @@ class OrderImage(models.Model):
         return f"Order #{self.order_id} – image #{self.order_display}"
 
 
+class OrderStatusHistory(models.Model):
+    """Timeline of order status changes; timestamps in Bangladeshi time (Asia/Dhaka) for display."""
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="status_history",
+        db_index=True,
+    )
+    status = models.CharField(max_length=20, choices=Order.Status.choices, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_order_status_history"
+        ordering = ["created_at"]
+        verbose_name_plural = "Order status history"
+
+    def __str__(self):
+        return f"Order #{self.order_id} – {self.status} at {self.created_at}"
+
+
 class ProductReview(models.Model):
     """User review and rating for a product. One review per user per product; user must have purchased the product."""
     user = models.ForeignKey(
