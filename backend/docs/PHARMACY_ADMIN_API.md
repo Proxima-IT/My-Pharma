@@ -308,25 +308,39 @@ Same fields as create; only send fields you want to change.
 
 ## 6. Orders (view and update status)
 
-Pharmacy admin can list all orders and update status.
+Pharmacy admin can list all orders and update status (and optional delivery duration).
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/orders/` | List all orders. Query: `status`. |
-| GET | `/api/orders/{id}/` | Order detail (items, prescription if linked). |
-| PATCH | `/api/orders/{id}/` | Update order status. |
+| GET | `/api/orders/{id}/` | Order detail (items, images, prescription, duration, message). |
+| PATCH | `/api/orders/{id}/` | Update order status and/or duration. |
+
+**Response fields:** `id`, `user`, `user_email`, `user_username`, `prescription`, `duration`, `duration_name`, `duration_days`, `status`, `total`, `shipping_address`, `notes`, `message`, `items`, `images` (array of `id`, `image`, `image_url`, `order_display`), `created_at`, `updated_at`.
 
 **PATCH** body (JSON):
 
-```json
-{
-  "status": "CONFIRMED"
-}
-```
+| Field | Type | Description |
+|-------|------|-------------|
+| status | string | One of: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`. |
+| duration | int or null | Optional. Delivery duration id (from `/api/delivery-durations/`). |
 
-Allowed statuses: `PENDING`, `CONFIRMED`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`.
+**Note:** Placing orders (POST) is for **registered customers** only. Customers can send `shipping_address`, `notes`, `message`, `items`, optional `prescription`, optional `duration`; use **multipart/form-data** to upload multiple **images** (field name `images`). When using multipart, send `items` as a JSON string.
+---
 
-**Note:** Placing orders (POST) is for **registered customers** only, not pharmacy admin.
+## 6a. Delivery durations (admin CRUD)
+
+Manage delivery duration options (e.g. "Standard 3–5 days") that can be attached to an order.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/delivery-durations/` | List all delivery durations. |
+| GET | `/api/delivery-durations/{id}/` | Retrieve one. |
+| POST | `/api/delivery-durations/` | Create (admin). |
+| PUT / PATCH | `/api/delivery-durations/{id}/` | Update (admin). |
+| DELETE | `/api/delivery-durations/{id}/` | Delete (admin). |
+
+**Fields:** `id`, `name`, `days` (optional), `order` (display order; lower first).
 
 ---
 
@@ -417,7 +431,8 @@ Default page size: **20** (configurable in backend).
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |
 | Product images | GET .../images/ | — | POST .../images/ | — | DELETE .../images/{id}/ |
 | Inventory | GET /api/products/inventory-list/ | — | — | PATCH .../inventory/ | — |
-| Orders | GET /api/orders/ | GET /api/orders/{id}/ | — | PATCH (status) | — |
+| Orders | GET /api/orders/ | GET /api/orders/{id}/ | — | PATCH (status, duration) | — |
+| Delivery durations | GET /api/delivery-durations/ | GET /api/delivery-durations/{id}/ | POST | PUT/PATCH | DELETE |
 | Prescriptions | GET /api/prescriptions/ | GET /api/prescriptions/{id}/ | — | PATCH (verify) | — |
 | Reviews | GET /api/reviews/ | GET /api/reviews/{id}/ | (user) | (owner) | (owner) |
 

@@ -8,8 +8,10 @@ from .models import (
     Brand,
     Category,
     Consultation,
+    DeliveryDuration,
     Ingredient,
     Order,
+    OrderImage,
     OrderItem,
     Page,
     Prescription,
@@ -105,6 +107,12 @@ class OrderItemInline(admin.TabularInline):
     fields = ("product", "quantity", "price_at_order", "dosage")
 
 
+class OrderImageInline(admin.TabularInline):
+    model = OrderImage
+    extra = 0
+    fields = ("image", "order_display")
+
+
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 0
@@ -138,12 +146,19 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "status", "total", "created_at")
+    list_display = ("id", "user", "status", "duration", "total", "created_at")
     list_filter = ("status",)
     search_fields = ("user__email", "user__phone", "id")
-    raw_id_fields = ("user", "prescription")
-    inlines = [OrderItemInline]
+    raw_id_fields = ("user", "prescription", "duration")
+    inlines = [OrderItemInline, OrderImageInline]
     date_hierarchy = "created_at"
+
+
+@admin.register(DeliveryDuration)
+class DeliveryDurationAdmin(admin.ModelAdmin):
+    list_display = ("name", "days", "order")
+    list_editable = ("days", "order")
+    ordering = ("order", "id")
 
 
 class PrescriptionItemInline(admin.TabularInline):

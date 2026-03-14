@@ -137,11 +137,22 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | Method | Path                | Description                                                                                                                                 |
 | ------ | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/api/orders/`      | List orders (Pharmacy/Super: all; User: own). Filter: status                                                                                |
-| GET    | `/api/orders/{id}/` | Retrieve order (includes prescription when linked)                                                                                           |
-| POST   | `/api/orders/`      | Place order (REGISTERED_USER only). Body: shipping_address, notes, **items** [{ product, quantity }], optional **prescription** (id). If any product has requires_prescription, prescription is required (must be APPROVED, owned by user); medicine match and quantity limit validated. Prescription set to USED and linked to order. |
-| PATCH  | `/api/orders/{id}/` | Update order status (Pharmacy/Super only)                                                                                                    |
+| GET    | `/api/orders/{id}/` | Retrieve order (items, images, prescription, duration, message)                                                                             |
+| POST   | `/api/orders/`      | Place order (REGISTERED_USER only). Body: shipping_address, notes, **message** (optional), **items** [{ product, quantity, dosage? }], optional **prescription** (id), optional **duration** (id). Use **multipart/form-data** to upload multiple **images** (field name `images`); when multipart, send `items` as JSON string. Prescription rules unchanged. |
+| PATCH  | `/api/orders/{id}/` | Update order status and/or duration (Pharmacy/Super only). Body: `status`, `duration` (optional).                                             |
 
 **Permission:** Create: `IsRegisteredUserOnly`. List/retrieve: `IsRegisteredUser` (queryset filtered by role). PATCH: Pharmacy/Super only.
+
+**Delivery durations (admin CRUD):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/delivery-durations/` | List delivery durations |
+| GET | `/api/delivery-durations/{id}/` | Retrieve one |
+| POST | `/api/delivery-durations/` | Create (Pharmacy/Super) |
+| PUT / PATCH | `/api/delivery-durations/{id}/` | Update (Pharmacy/Super) |
+| DELETE | `/api/delivery-durations/{id}/` | Delete (Pharmacy/Super) |
+
+**Fields:** `name`, `days` (optional), `order` (display order).
 
 ---
 

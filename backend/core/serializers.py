@@ -7,6 +7,7 @@ from rest_framework import serializers
 from .models import (
     Brand,
     Category,
+    DeliveryDuration,
     Ingredient,
     Product,
     ProductImage,
@@ -14,6 +15,7 @@ from .models import (
     ProductReview,
     ProductReviewImage,
     Order,
+    OrderImage,
     OrderItem,
     Cart,
     CartItem,
@@ -399,16 +401,33 @@ class OrderItemWriteSerializer(serializers.ModelSerializer):
         fields = ("product", "quantity", "dosage")
 
 
+class OrderImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OrderImage
+        fields = ("id", "image", "image_url", "order_display")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
+    images = OrderImageSerializer(many=True, read_only=True)
     user_email = serializers.CharField(source="user.email", read_only=True)
     user_username = serializers.CharField(source="user.username", read_only=True)
+    duration_name = serializers.CharField(source="duration.name", read_only=True, allow_null=True)
+    duration_days = serializers.IntegerField(source="duration.days", read_only=True, allow_null=True)
 
     class Meta:
         model = Order
         fields = (
-            "id", "user", "user_email", "user_username", "prescription", "status", "total",
-            "shipping_address", "notes", "items", "created_at", "updated_at",
+            "id", "user", "user_email", "user_username", "prescription", "duration", "duration_name", "duration_days",
+            "status", "total", "shipping_address", "notes", "message", "items", "images",
+            "created_at", "updated_at",
         )
         read_only_fields = ("id", "total", "created_at", "updated_at")
 
@@ -421,10 +440,15 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text="Required when order contains prescription-only medicines; must be APPROVED and owned by you.",
     )
+    duration = serializers.PrimaryKeyRelatedField(
+        queryset=DeliveryDuration.objects.all(),
+        required=False,
+        allow_null=True,
+    )
 
     class Meta:
         model = Order
-        fields = ("shipping_address", "notes", "items", "prescription")
+        fields = ("shipping_address", "notes", "message", "items", "prescription", "duration")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -466,7 +490,13 @@ class OrderWriteSerializer(serializers.ModelSerializer):
                             {f"product {product.id}": f"Cannot exceed prescribed quantity ({rx_items[product.id]})."}
                         )
 
-        order = Order.objects.create(user=user, status=Order.Status.PENDING, prescription=prescription, **validated_data)
+        order = Order.objects.create(
+            user=user,
+            status=Order.Status.PENDING,
+            prescription=prescription,
+            duration=validated_data.pop("duration", None),
+            **validated_data,
+        )
         total = Decimal("0")
         for item_data in items_data:
             product = item_data["product"]
@@ -492,9 +522,24 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
 
 class OrderStatusSerializer(serializers.ModelSerializer):
+    """Admin PATCH: status and/or duration."""
+    duration = serializers.PrimaryKeyRelatedField(
+        queryset=DeliveryDuration.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
     class Meta:
         model = Order
-        fields = ("status",)
+        fields = ("status", "duration")
+
+
+# ---- Delivery duration (admin CRUD) ----
+class DeliveryDurationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DeliveryDuration
+        fields = ("id", "name", "days", "order")
+        read_only_fields = ("id",)
 
 
 # ---- Cart ----

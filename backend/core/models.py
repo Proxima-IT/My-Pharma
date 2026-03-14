@@ -312,6 +312,24 @@ class ProductDosage(models.Model):
         return f"{self.product.name} – {self.dosage_label}"
 
 
+class DeliveryDuration(models.Model):
+    """Delivery duration options (e.g. 2–3 days, 1 week). Admin CRUD; order can reference one."""
+    name = models.CharField(max_length=100, help_text="e.g. Standard 3–5 days")
+    days = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional number of days for display.",
+    )
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+
+    class Meta:
+        db_table = "core_delivery_duration"
+        ordering = ["order", "id"]
+
+    def __str__(self):
+        return self.name
+
+
 class Order(models.Model):
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"
@@ -336,10 +354,20 @@ class Order(models.Model):
         db_index=True,
         help_text="Linked prescription when order contains prescription-only medicines.",
     )
+    duration = models.ForeignKey(
+        "DeliveryDuration",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        db_index=True,
+        help_text="Expected delivery duration (admin can set).",
+    )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
     total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     shipping_address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
+    message = models.TextField(blank=True, help_text="Customer message with the order.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -369,6 +397,20 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+
+
+class OrderImage(models.Model):
+    """Multiple images uploaded by the customer when placing an order."""
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="images", db_index=True)
+    image = models.ImageField(upload_to="orders/%Y/%m/")
+    order_display = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+
+    class Meta:
+        db_table = "core_order_image"
+        ordering = ["order_display", "id"]
+
+    def __str__(self):
+        return f"Order #{self.order_id} – image #{self.order_display}"
 
 
 class ProductReview(models.Model):

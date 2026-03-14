@@ -1,6 +1,7 @@
 """
 Core API views with RBAC.
 """
+import json
 from decimal import Decimal
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
@@ -23,7 +24,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -40,6 +41,7 @@ from .serializers import (
     OrderSerializer,
     OrderWriteSerializer,
     OrderStatusSerializer,
+    DeliveryDurationSerializer,
     CartSerializer,
     CartItemSerializer,
     AddToCartSerializer,
@@ -308,6 +310,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 
 
 # ---- Order: Pharmacy/Super see all; User sees own. Purchase = create (RegisteredUserOnly) ----
+@extend_schema_view(
+    list=extend_schema(tags=["Orders"], summary="List orders"),
+    retrieve=extend_schema(tags=["Orders"], summary="Get order by id"),
+    create=extend_schema(tags=["Orders"], summary="Place order (multipart: images, message, duration)"),
+    partial_update=extend_schema(tags=["Orders"], summary="Update order status/duration (admin)"),
+    update=extend_schema(tags=["Orders"], summary="Update order status/duration (admin)"),
+)
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
@@ -315,7 +324,11 @@ class OrderViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "patch", "head", "options"]
 
     def get_queryset(self):
-        qs = Order.objects.select_related("user", "prescription").prefetch_related("items__product").all()
+        qs = (
+            Order.objects.select_related("user", "prescription", "duration")
+            .prefetch_related("items__product", "images")
+            .all()
+        )
         role = getattr(self.request.user, "role", None)
         if role in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
             return qs
@@ -334,10 +347,23 @@ class OrderViewSet(viewsets.ModelViewSet):
         return OrderSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+        data = request.data.copy()
+        if "multipart" in (request.content_type or ""):
+            items_raw = data.get("items")
+            if isinstance(items_raw, str) and items_raw.strip():
+                try:
+                    data["items"] = json.loads(items_raw)
+                except (ValueError, TypeError):
+                    pass
+        serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
         order = serializer.save()
-        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+        for i, f in enumerate(request.FILES.getlist("images", [])):
+            OrderImage.objects.create(order=order, image=f, order_display=i)
+        return Response(
+            OrderSerializer(order, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     def partial_update(self, request, *args, **kwargs):
         order = self.get_object()
@@ -347,10 +373,25 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer = OrderStatusSerializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        return Response(OrderSerializer(order).data)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
     def update(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
+
+
+# ---- Delivery duration (admin CRUD) ----
+@extend_schema_view(
+    list=extend_schema(tags=["DeliveryDurations"], summary="List delivery durations"),
+    retrieve=extend_schema(tags=["DeliveryDurations"], summary="Get a delivery duration"),
+    create=extend_schema(tags=["DeliveryDurations"], summary="Create delivery duration (admin)"),
+    update=extend_schema(tags=["DeliveryDurations"], summary="Update delivery duration (admin)"),
+    partial_update=extend_schema(tags=["DeliveryDurations"], summary="Partial update delivery duration (admin)"),
+    destroy=extend_schema(tags=["DeliveryDurations"], summary="Delete delivery duration (admin)"),
+)
+class DeliveryDurationViewSet(viewsets.ModelViewSet):
+    queryset = DeliveryDuration.objects.all()
+    serializer_class = DeliveryDurationSerializer
+    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
 
 
 # ---- Cart: one cart per user; add, update/remove items, summary, place order ----
