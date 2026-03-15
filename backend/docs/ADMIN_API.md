@@ -145,16 +145,16 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 **Permission:** Create: `IsRegisteredUserOnly`. List/retrieve: `IsRegisteredUser` (queryset filtered by role). PATCH: Pharmacy/Super only.
 
-**Delivery durations (admin CRUD):**  
+**Delivery durations:**  
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/delivery-durations/` | List delivery durations |
-| GET | `/api/delivery-durations/{id}/` | Retrieve one |
+| GET | `/api/delivery-durations/` | List delivery durations (any authenticated user) |
+| GET | `/api/delivery-durations/{id}/` | Retrieve one (any authenticated user) |
 | POST | `/api/delivery-durations/` | Create (Pharmacy/Super) |
 | PUT / PATCH | `/api/delivery-durations/{id}/` | Update (Pharmacy/Super) |
 | DELETE | `/api/delivery-durations/{id}/` | Delete (Pharmacy/Super) |
 
-**Fields:** `name`, `days` (optional), `order` (display order).
+**Fields:** `name`, `days` (optional), `order` (display order). List/retrieve: any authenticated user; create/update/delete: Pharmacy/Super only.
 
 ---
 

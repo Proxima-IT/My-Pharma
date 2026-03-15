@@ -397,7 +397,12 @@ class OrderViewSet(viewsets.ModelViewSet):
 class DeliveryDurationViewSet(viewsets.ModelViewSet):
     queryset = DeliveryDuration.objects.all()
     serializer_class = DeliveryDurationSerializer
-    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
+    permission_classes = [IsAuthenticated]
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [IsAuthenticated()]  # Any authenticated user can read (e.g. select when placing order)
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
 
 # ---- Cart: one cart per user; add, update/remove items, summary, place order ----

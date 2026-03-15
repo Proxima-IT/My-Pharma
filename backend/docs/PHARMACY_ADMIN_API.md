@@ -328,14 +328,14 @@ Pharmacy admin can list all orders and update status (and optional delivery dura
 **Note:** Placing orders (POST) is for **registered customers** only. Customers can send `shipping_address`, `notes`, `message`, `items`, optional `prescription`, optional `duration`; use **multipart/form-data** to upload multiple **images** (field name `images`). When using multipart, send `items` as a JSON string.
 ---
 
-## 6a. Delivery durations (admin CRUD)
+## 6a. Delivery durations
 
-Manage delivery duration options (e.g. "Standard 3–5 days") that can be attached to an order.
+Delivery duration options (e.g. "Standard 3–5 days") that can be attached to an order. **Any authenticated user** can list and retrieve (e.g. to select when placing an order). Create/update/delete are admin only.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/delivery-durations/` | List all delivery durations. |
-| GET | `/api/delivery-durations/{id}/` | Retrieve one. |
+| GET | `/api/delivery-durations/` | List all delivery durations (any authenticated user). |
+| GET | `/api/delivery-durations/{id}/` | Retrieve one (any authenticated user). |
 | POST | `/api/delivery-durations/` | Create (admin). |
 | PUT / PATCH | `/api/delivery-durations/{id}/` | Update (admin). |
 | DELETE | `/api/delivery-durations/{id}/` | Delete (admin). |
