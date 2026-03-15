@@ -37,6 +37,9 @@ from .models import (
 )
 from .validators import validate_prescription_file, validate_issue_date_not_older_than_six_months
 
+# For PrescriptionUploadSerializer.shipping_address default queryset (overridden in __init__ when request in context)
+from authentication.models import UserAddress
+
 
 # ---- Category (hierarchy: parent / children) ----
 class CategorySerializer(serializers.ModelSerializer):
@@ -806,7 +809,7 @@ class PrescriptionUploadSerializer(serializers.ModelSerializer):
     """Upload prescription order: multipart with images (or file), shipping_address, duration, note, save_prescription."""
 
     shipping_address = serializers.PrimaryKeyRelatedField(
-        queryset=None,  # set in __init__ from request.user.addresses
+        queryset=UserAddress.objects.none(),
         required=False,
         allow_null=True,
         help_text="UserAddress id for shipping (from /api/auth/addresses/).",
@@ -824,8 +827,9 @@ class PrescriptionUploadSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if "request" in self.context:
-            from authentication.models import UserAddress
-            self.fields["shipping_address"].queryset = UserAddress.objects.filter(user=self.context["request"].user)
+            self.fields["shipping_address"].queryset = UserAddress.objects.filter(
+                user=self.context["request"].user
+            )
 
     def validate(self, attrs):
         # Either file (legacy) or images via FILES in view - no need to require file here when images present
