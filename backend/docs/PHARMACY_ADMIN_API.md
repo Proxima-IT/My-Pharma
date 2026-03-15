@@ -344,13 +344,36 @@ Manage delivery duration options (e.g. "Standard 3–5 days") that can be attach
 
 ---
 
-## 7. Prescriptions (list and verify)
+## 7. Prescription ordering (full CRUD – user upload; admin verify, update, delete)
+
+Prescription ordering: user uploads prescription (multiple images), selects shipping address, medicine supply duration, and note. Admin can list all, retrieve, verify/reject (with status timeline), and delete.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/prescriptions/` | List all prescriptions. Query: `status`. |
-| GET | `/api/prescriptions/{id}/` | Prescription detail (items when approved). |
-| PATCH | `/api/prescriptions/{id}/` | Verify or reject. |
+| GET | `/api/prescriptions/` | List prescriptions (Admin: all; User: own). Query: `status`. |
+| GET | `/api/prescriptions/{id}/` | Prescription detail (images, shipping, duration, note, items, **status_history** in Bangladesh time). |
+| POST | `/api/prescriptions/` | **Upload prescription order** (user). Multipart: see below. |
+| PATCH | `/api/prescriptions/{id}/` | Verify or reject (admin). |
+| PUT | `/api/prescriptions/{id}/` | Same as PATCH (admin). |
+| DELETE | `/api/prescriptions/{id}/` | Delete prescription (admin only). |
+
+**Response fields:** `id`, `user`, `user_email`, `shipping_address`, **`shipping_address_detail`** (full_name, email, phone, gender, district, thana, address, address_type, is_default), **`save_prescription`**, **`medicine_supply_duration`** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **`custom_supply_days`**, **`prescription_note`**, `image`, `file`, **`images`** (array of `id`, `image`, `image_url`, `order_display`), `status`, `issue_date`, `patient_name_on_rx`, `doctor_name`, `doctor_reg_number`, `has_signature`, `verified_by`, `verified_at`, `notes`, `items`, **`status_history`** (timeline: `id`, `status`, `created_at`, `created_at_bd`, `date_bd`, `time_bd` – Bangladesh time), `created_at`, `updated_at`.
+
+**POST (upload prescription order)** – use **multipart/form-data**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| images | files | Yes* | Multiple prescription images. *Or single `file` (JPG/PNG/PDF, max 10MB). |
+| file | file | No | Legacy single file (if not using `images`). |
+| shipping_address | int | No | UserAddress id (from `/api/auth/addresses/`). |
+| save_prescription | boolean | No | Save for future reference. Default false. |
+| medicine_supply_duration | string | No | `7_DAYS`, `15_DAYS`, `1_MONTH`, `2_MONTHS`, `CUSTOM`. |
+| custom_supply_days | int | When CUSTOM | Required when duration is CUSTOM. |
+| prescription_note | string | No | User note for the prescription. |
+| issue_date | string | No | YYYY-MM-DD; must not be older than 6 months. |
+| patient_name_on_rx | string | No | Patient name as on Rx. |
+| doctor_name | string | No | Doctor name. |
+| doctor_reg_number | string | No | Doctor registration number. |
 
 **PATCH** body (verify/reject) – JSON:
 
@@ -364,7 +387,7 @@ Manage delivery duration options (e.g. "Standard 3–5 days") that can be attach
 | patient_name_on_rx | string | No | Patient name as on Rx. |
 | items | array | When approving | `[{ "product": <id>, "quantity_prescribed": <int> }]`. |
 
-**PATCH** `/api/prescriptions/{id}/verify/` is an alias for the same update.
+**PATCH** `/api/prescriptions/{id}/verify/` is an alias for the same update. Status changes are recorded in **status_history** with date/time in **Bangladesh time (Asia/Dhaka)**.
 
 ---
 
@@ -433,7 +456,7 @@ Default page size: **20** (configurable in backend).
 | Inventory | GET /api/products/inventory-list/ | — | — | PATCH .../inventory/ | — |
 | Orders | GET /api/orders/ | GET /api/orders/{id}/ | — | PATCH (status, duration) | — |
 | Delivery durations | GET /api/delivery-durations/ | GET /api/delivery-durations/{id}/ | POST | PUT/PATCH | DELETE |
-| Prescriptions | GET /api/prescriptions/ | GET /api/prescriptions/{id}/ | — | PATCH (verify) | — |
+| Prescriptions | GET /api/prescriptions/ | GET /api/prescriptions/{id}/ | POST (upload) | PATCH / PUT (verify) | DELETE |
 | Reviews | GET /api/reviews/ | GET /api/reviews/{id}/ | (user) | (owner) | (owner) |
 
 ---

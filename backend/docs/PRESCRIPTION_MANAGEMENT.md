@@ -44,23 +44,25 @@ APPROVED
 
 ## API Summary
 
-### User (own prescriptions)
+### User (own prescriptions – prescription ordering)
 
-- **POST** `/api/prescriptions/` – **Upload** (REGISTERED_USER only).  
-  Body: `file` (required; JPG/PNG/PDF, max 10MB), optional: `issue_date`, `patient_name_on_rx`, `doctor_name`, `doctor_reg_number`.  
-  Creates prescription in **PENDING** status.
+- **POST** `/api/prescriptions/` – **Upload prescription order** (REGISTERED_USER only). Use **multipart/form-data**.  
+  **Images:** multiple `images` or single `file` (JPG/PNG/PDF, max 10MB).  
+  **Optional:** `shipping_address` (UserAddress id from `/api/auth/addresses/`), `save_prescription`, `medicine_supply_duration` (`7_DAYS`, `15_DAYS`, `1_MONTH`, `2_MONTHS`, `CUSTOM`), `custom_supply_days` (when CUSTOM), `prescription_note`, `issue_date`, `patient_name_on_rx`, `doctor_name`, `doctor_reg_number`.  
+  Creates prescription in **PENDING** status; first entry added to **status_history** (Bangladesh time).
 - **GET** `/api/prescriptions/` – **List** own prescriptions (filter: `status`).
-- **GET** `/api/prescriptions/{id}/` – **Retrieve** own prescription (includes `items` when approved).
+- **GET** `/api/prescriptions/{id}/` – **Retrieve** own prescription (includes `images`, `shipping_address_detail`, `medicine_supply_duration`, `prescription_note`, `items`, **status_history** timeline in Bangladesh time).
 
 Each user sees only their own uploaded prescriptions for list and retrieve.
 
-### Verify (PHARMACY_ADMIN, SUPER_ADMIN only)
+### Admin (PHARMACY_ADMIN, SUPER_ADMIN) – full CRUD
 
 - **GET** `/api/prescriptions/` – List **all** prescriptions (filter: `status`).
-- **GET** `/api/prescriptions/{id}/` – Retrieve any prescription (includes `items` when approved).
-- **PATCH** `/api/prescriptions/{id}/` or **PATCH** `/api/prescriptions/{id}/verify/` – **Verify or reject**.  
+- **GET** `/api/prescriptions/{id}/` – Retrieve any prescription (full detail including status_history).
+- **PATCH** or **PUT** `/api/prescriptions/{id}/` or **PATCH** `/api/prescriptions/{id}/verify/` – **Verify or reject**.  
   Body: `status` = `APPROVED` or `REJECTED`, `notes`, and when approving: `doctor_name`, `doctor_reg_number`, `has_signature` (true), optional `patient_name_on_rx`, and **items**: `[{ "product": <id>, "quantity_prescribed": <int> }]`.  
-  When **APPROVED**, prescription items (medicines and quantities) are stored for order validation.
+  Status change recorded in **status_history** (date/time in Bangladesh, Asia/Dhaka).
+- **DELETE** `/api/prescriptions/{id}/` – Delete prescription (admin only).
 
 ### Order with prescription
 

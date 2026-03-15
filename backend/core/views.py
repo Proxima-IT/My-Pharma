@@ -24,7 +24,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionItem, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -546,13 +546,23 @@ class CartItemViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-# ---- Prescription: Pharmacy/Super list & verify; User upload (flow: PENDING -> APPROVED/REJECTED; APPROVED -> USED when linked to order) ----
+# ---- Prescription ordering: User upload (multipart + images); Admin full CRUD + verify + status timeline ----
+@extend_schema_view(
+    list=extend_schema(tags=["Prescriptions"], summary="List prescriptions"),
+    retrieve=extend_schema(tags=["Prescriptions"], summary="Get prescription by id"),
+    create=extend_schema(tags=["Prescriptions"], summary="Upload prescription order (multipart: images, address, duration, note)"),
+    partial_update=extend_schema(tags=["Prescriptions"], summary="Verify/update prescription (admin)"),
+    update=extend_schema(tags=["Prescriptions"], summary="Update prescription (admin)"),
+    destroy=extend_schema(tags=["Prescriptions"], summary="Delete prescription (admin)"),
+)
 class PrescriptionViewSet(viewsets.ModelViewSet):
-    queryset = Prescription.objects.select_related("user", "verified_by").prefetch_related("items__product").all()
+    queryset = Prescription.objects.select_related("user", "verified_by", "shipping_address").prefetch_related(
+        "items__product", "images", "status_history"
+    ).all()
     serializer_class = PrescriptionSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["status"]
-    http_method_names = ["get", "post", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -564,24 +574,45 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "create":
             return PrescriptionUploadSerializer
-        if self.action in ("verify", "partial_update"):
+        if self.action in ("verify", "partial_update", "update"):
             return PrescriptionVerifySerializer
         return PrescriptionSerializer
 
     def get_permissions(self):
         if self.action == "create":
             return [IsAuthenticated(), IsRegisteredUserOnly()]
-        if self.action in ("partial_update", "verify"):
+        if self.action in ("partial_update", "update", "destroy", "verify"):
             return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
-        # list, retrieve: any authenticated user (get_queryset restricts to own for non-Pharmacy/Super)
         return [IsAuthenticated(), IsRegisteredUser()]
 
     def create(self, request, *args, **kwargs):
-        serializer = PrescriptionUploadSerializer(data=request.data)
+        data = request.data.copy()
+        if "multipart" in (request.content_type or ""):
+            for key in ("issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number", "save_prescription", "medicine_supply_duration", "prescription_note", "shipping_address"):
+                val = data.get(key)
+                if val is not None and isinstance(val, str) and key == "issue_date" and val.strip():
+                    pass  # keep as date string
+                elif val is not None and isinstance(val, str) and key == "shipping_address" and val.strip().isdigit():
+                    data[key] = int(val)
+                elif val is not None and isinstance(val, str) and key == "save_prescription":
+                    data[key] = val.lower() in ("true", "1", "yes")
+                elif val is not None and isinstance(val, str) and key == "custom_supply_days" and val.strip().isdigit():
+                    data["custom_supply_days"] = int(val)
+            if "custom_supply_days" in request.data and "custom_supply_days" not in data:
+                data["custom_supply_days"] = request.data.get("custom_supply_days")
+        serializer = PrescriptionUploadSerializer(data=data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        data = {k: v for k, v in serializer.validated_data.items()}
-        prescription = Prescription.objects.create(user=request.user, status=Prescription.Status.PENDING, **data)
-        return Response(PrescriptionSerializer(prescription).data, status=status.HTTP_201_CREATED)
+        payload = {k: v for k, v in serializer.validated_data.items() if k != "file" or v is not None}
+        if not payload.get("file") and request.FILES.get("file"):
+            payload["file"] = request.FILES["file"]
+        prescription = Prescription.objects.create(user=request.user, status=Prescription.Status.PENDING, **payload)
+        for i, f in enumerate(request.FILES.getlist("images", [])):
+            PrescriptionImage.objects.create(prescription=prescription, image=f, order_display=i)
+        PrescriptionStatusHistory.objects.create(prescription=prescription, status=Prescription.Status.PENDING)
+        return Response(
+            PrescriptionSerializer(prescription, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
     def partial_update(self, request, *args, **kwargs):
         """Verify or reject prescription. PENDING -> APPROVED (with doctor details + items) or REJECTED."""
@@ -597,7 +628,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         prescription.patient_name_on_rx = data.get("patient_name_on_rx", prescription.patient_name_on_rx)
         prescription.verified_by = request.user
         prescription.verified_at = timezone.now()
-        prescription.save(update_fields=["status", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "verified_by", "verified_at"])
+        prescription.save(update_fields=["status", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "verified_by", "verified_at", "updated_at"])
         if prescription.status == Prescription.Status.APPROVED and "items" in data and data["items"]:
             PrescriptionItem.objects.filter(prescription=prescription).delete()
             for entry in data["items"]:
@@ -609,12 +640,26 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
                         product_id=product_id,
                         quantity_prescribed=qty,
                     )
-        return Response(PrescriptionSerializer(prescription).data)
+        if "status" in request.data:
+            PrescriptionStatusHistory.objects.create(prescription=prescription, status=prescription.status)
+        prescription.refresh_from_db()
+        qs = Prescription.objects.filter(pk=prescription.pk).select_related("user", "verified_by", "shipping_address").prefetch_related("items__product", "images", "status_history")
+        prescription = qs.get()
+        return Response(PrescriptionSerializer(prescription, context={"request": request}).data)
+
+    def update(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        """Admin only: delete prescription."""
+        prescription = self.get_object()
+        prescription.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["patch"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="verify")
-    def verify(self, request, pk=None):
+    def verify(self, request, **kwargs):
         """Alias for PATCH prescription (verify/reject)."""
-        return self.partial_update(request)
+        return self.partial_update(request, **kwargs)
 
 
 # ---- Consultation: Doctor/Super manage; User request ----

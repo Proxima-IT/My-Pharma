@@ -21,17 +21,19 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 ---
 
-## 2. Prescriptions (list/retrieve own; verify: Pharmacy/Super)
+## 2. Prescription ordering (full CRUD – user upload; admin verify, delete)
 
 | Method | Path                               | Description |
 |--------|------------------------------------|-------------|
 | GET    | `/api/prescriptions/`              | List prescriptions. **Pharmacy/Super:** all. **User:** own only. Filter: `status`. |
-| GET    | `/api/prescriptions/{id}/`         | Retrieve prescription (includes items when approved). Users see only own. |
-| POST   | `/api/prescriptions/`              | Upload prescription (REGISTERED_USER only). Body: **file** (required; JPG/PNG/PDF, max 10MB), optional: issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING. |
-| PATCH  | `/api/prescriptions/{id}/`          | Verify or reject (PHARMACY_ADMIN, SUPER_ADMIN only). Body: **status** = APPROVED or REJECTED, notes; when approving: doctor_name, doctor_reg_number, has_signature (true), optional patient_name_on_rx, **items** [{ product, quantity_prescribed }]. Sets verified_by, verified_at. |
+| GET    | `/api/prescriptions/{id}/`         | Retrieve prescription (images, shipping_address_detail, medicine_supply_duration, prescription_note, items, **status_history** in Bangladesh time). Users see only own. |
+| POST   | `/api/prescriptions/`              | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (multiple files) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
+| PATCH  | `/api/prescriptions/{id}/`          | Verify or reject (PHARMACY_ADMIN, SUPER_ADMIN only). Body: **status** = APPROVED or REJECTED, notes; when approving: doctor_name, doctor_reg_number, has_signature (true), optional patient_name_on_rx, **items** [{ product, quantity_prescribed }]. Status change recorded in status_history (Bangladesh time). |
+| PUT    | `/api/prescriptions/{id}/`         | Same as PATCH (admin). |
+| DELETE | `/api/prescriptions/{id}/`         | Delete prescription (PHARMACY_ADMIN, SUPER_ADMIN only). |
 | PATCH  | `/api/prescriptions/{id}/verify/`  | Alias for PATCH prescription (verify/reject). |
 
-**Permission:** List/retrieve: any authenticated user (queryset filtered so users see only own). Upload: `IsRegisteredUserOnly`. Verify (PATCH): `IsPharmacyAdminOrSuper`. See [PRESCRIPTION_MANAGEMENT.md](PRESCRIPTION_MANAGEMENT.md).
+**Permission:** List/retrieve: any authenticated user (queryset filtered so users see only own). Upload: `IsRegisteredUserOnly`. Verify/PATCH/PUT/DELETE: `IsPharmacyAdminOrSuper`. See [PRESCRIPTION_MANAGEMENT.md](PRESCRIPTION_MANAGEMENT.md).
 
 ---
 

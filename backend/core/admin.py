@@ -16,7 +16,9 @@ from .models import (
     OrderStatusHistory,
     Page,
     Prescription,
+    PrescriptionImage,
     PrescriptionItem,
+    PrescriptionStatusHistory,
     Product,
     ProductImage,
     ProductDosage,
@@ -177,13 +179,27 @@ class PrescriptionItemInline(admin.TabularInline):
     raw_id_fields = ("product",)
 
 
+class PrescriptionImageInline(admin.TabularInline):
+    model = PrescriptionImage
+    extra = 0
+    fields = ("image", "order_display")
+
+
+class PrescriptionStatusHistoryInline(admin.TabularInline):
+    model = PrescriptionStatusHistory
+    extra = 0
+    readonly_fields = ("status", "created_at")
+    can_delete = False
+    ordering = ("created_at",)
+
+
 @admin.register(Prescription)
 class PrescriptionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "status", "patient_name_on_rx", "created_at")
-    list_filter = ("status",)
-    search_fields = ("user__email", "user__phone", "patient_name_on_rx", "doctor_name")
-    raw_id_fields = ("user", "verified_by")
-    inlines = [PrescriptionItemInline]
+    list_display = ("id", "user", "status", "medicine_supply_duration", "patient_name_on_rx", "created_at")
+    list_filter = ("status", "medicine_supply_duration")
+    search_fields = ("user__email", "user__phone", "patient_name_on_rx", "doctor_name", "prescription_note")
+    raw_id_fields = ("user", "verified_by", "shipping_address")
+    inlines = [PrescriptionItemInline, PrescriptionImageInline, PrescriptionStatusHistoryInline]
     date_hierarchy = "created_at"
 
 

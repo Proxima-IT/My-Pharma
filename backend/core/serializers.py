@@ -25,7 +25,9 @@ from .models import (
     CartItem,
     Coupon,
     Prescription,
+    PrescriptionImage,
     PrescriptionItem,
+    PrescriptionStatusHistory,
     Consultation,
     Page,
     SidebarCategory,
@@ -724,33 +726,121 @@ class PrescriptionItemSerializer(serializers.ModelSerializer):
         fields = ("id", "product", "product_name", "quantity_prescribed")
 
 
+class PrescriptionImageSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrescriptionImage
+        fields = ("id", "image", "image_url", "order_display")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+
+class PrescriptionStatusHistorySerializer(serializers.ModelSerializer):
+    """Status timeline entry; date/time in Bangladeshi time (Asia/Dhaka)."""
+    created_at_bd = serializers.SerializerMethodField()
+    date_bd = serializers.SerializerMethodField()
+    time_bd = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrescriptionStatusHistory
+        fields = ("id", "status", "created_at", "created_at_bd", "date_bd", "time_bd")
+
+    def _bd_datetime(self, obj):
+        dt = obj.created_at
+        if timezone.is_naive(dt):
+            dt = timezone.make_aware(dt)
+        return dt.astimezone(BD_TZ)
+
+    def get_created_at_bd(self, obj):
+        return self._bd_datetime(obj).strftime("%Y-%m-%d %H:%M:%S %Z")
+
+    def get_date_bd(self, obj):
+        return self._bd_datetime(obj).strftime("%Y-%m-%d")
+
+    def get_time_bd(self, obj):
+        return self._bd_datetime(obj).strftime("%H:%M:%S")
+
+
 class PrescriptionSerializer(serializers.ModelSerializer):
     user_email = serializers.CharField(source="user.email", read_only=True)
     items = PrescriptionItemSerializer(many=True, read_only=True)
+    images = PrescriptionImageSerializer(many=True, read_only=True)
+    status_history = PrescriptionStatusHistorySerializer(many=True, read_only=True)
+    shipping_address_detail = serializers.SerializerMethodField()
 
     class Meta:
         model = Prescription
         fields = (
-            "id", "user", "user_email", "image", "file", "status", "issue_date",
+            "id", "user", "user_email", "shipping_address", "shipping_address_detail",
+            "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note",
+            "image", "file", "images", "status", "issue_date",
             "patient_name_on_rx", "doctor_name", "doctor_reg_number", "has_signature",
-            "verified_by", "verified_at", "notes", "items", "created_at",
+            "verified_by", "verified_at", "notes", "items", "status_history",
+            "created_at", "updated_at",
         )
-        read_only_fields = ("id", "status", "verified_by", "verified_at", "created_at")
+        read_only_fields = ("id", "status", "verified_by", "verified_at", "created_at", "updated_at")
+
+    def get_shipping_address_detail(self, obj):
+        if not obj.shipping_address:
+            return None
+        addr = obj.shipping_address
+        return {
+            "id": addr.id,
+            "full_name": addr.full_name,
+            "email": getattr(addr, "email", "") or "",
+            "phone": addr.phone,
+            "gender": getattr(addr, "gender", None),
+            "district": addr.district,
+            "thana": getattr(addr, "thana", "") or "",
+            "address": addr.address,
+            "address_type": addr.address_type,
+            "is_default": addr.is_default,
+        }
 
 
 class PrescriptionUploadSerializer(serializers.ModelSerializer):
-    """Upload: file (JPG/PNG/PDF, max 10MB); optional issue_date, patient_name_on_rx, doctor_name, doctor_reg_number."""
+    """Upload prescription order: multipart with images (or file), shipping_address, duration, note, save_prescription."""
+
+    shipping_address = serializers.PrimaryKeyRelatedField(
+        queryset=None,  # set in __init__ from request.user.addresses
+        required=False,
+        allow_null=True,
+        help_text="UserAddress id for shipping (from /api/auth/addresses/).",
+    )
 
     class Meta:
         model = Prescription
-        fields = ("file", "issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number")
-        extra_kwargs = {"file": {"required": True}}
+        fields = (
+            "file", "issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number",
+            "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note",
+            "shipping_address",
+        )
+        extra_kwargs = {"file": {"required": False}}
 
-    def validate_file(self, value):
-        if not value:
-            raise serializers.ValidationError("File is required. Allowed: JPG, PNG, PDF; max 10MB.")
-        validate_prescription_file(value)
-        return value
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "request" in self.context:
+            from authentication.models import UserAddress
+            self.fields["shipping_address"].queryset = UserAddress.objects.filter(user=self.context["request"].user)
+
+    def validate(self, attrs):
+        # Either file (legacy) or images via FILES in view - no need to require file here when images present
+        if not attrs.get("file") and "request" in self.context:
+            files = self.context["request"].FILES
+            if not files.getlist("images") and not files.get("file"):
+                raise serializers.ValidationError(
+                    {"file": "Either upload a file or multiple images (field: images) is required."}
+                )
+        if attrs.get("medicine_supply_duration") == Prescription.MedicineSupplyDuration.CUSTOM:
+            if not attrs.get("custom_supply_days"):
+                raise serializers.ValidationError(
+                    {"custom_supply_days": "Required when medicine_supply_duration is CUSTOM."}
+                )
+        return attrs
 
     def validate_issue_date(self, value):
         if value is not None:

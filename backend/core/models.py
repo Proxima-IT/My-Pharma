@@ -564,8 +564,8 @@ class Coupon(models.Model):
 
 class Prescription(models.Model):
     """
-    Prescription flow: UPLOADED -> PENDING (in queue) -> APPROVED or REJECTED.
-    APPROVED -> USED when linked to an order.
+    Prescription ordering flow: user uploads images, selects address, duration, note.
+    Status: PENDING -> APPROVED/REJECTED (admin verify); APPROVED -> USED when linked to order.
     """
     class Status(models.TextChoices):
         PENDING = "PENDING", "Pending"       # In review queue (uploaded)
@@ -573,11 +573,48 @@ class Prescription(models.Model):
         REJECTED = "REJECTED", "Rejected"    # Invalid/Expired
         USED = "USED", "Used"                # Linked to order
 
+    class MedicineSupplyDuration(models.TextChoices):
+        SEVEN_DAYS = "7_DAYS", "7 Days"
+        FIFTEEN_DAYS = "15_DAYS", "15 Days"
+        ONE_MONTH = "1_MONTH", "1 Month"
+        TWO_MONTHS = "2_MONTHS", "2 Months"
+        CUSTOM = "CUSTOM", "Custom"
+
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="prescriptions",
         db_index=True,
+    )
+    # Shipping: user selects from saved addresses (UserAddress)
+    shipping_address = models.ForeignKey(
+        "authentication.UserAddress",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="prescription_orders",
+        db_index=True,
+        help_text="Selected shipping address for this prescription order.",
+    )
+    save_prescription = models.BooleanField(
+        default=False,
+        help_text="Save prescription for future reference/reorder.",
+    )
+    medicine_supply_duration = models.CharField(
+        max_length=20,
+        choices=MedicineSupplyDuration.choices,
+        blank=True,
+        db_index=True,
+        help_text="7 Days, 15 Days, 1 Month, 2 Months, or Custom.",
+    )
+    custom_supply_days = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="When medicine_supply_duration is CUSTOM, number of days.",
+    )
+    prescription_note = models.TextField(
+        blank=True,
+        help_text="User note for the uploading prescription.",
     )
     image = models.ImageField(upload_to="prescriptions/%Y/%m/", blank=True, null=True)  # legacy
     file = models.FileField(upload_to="prescriptions/%Y/%m/", blank=True, null=True)  # JPG/PNG/PDF, max 10MB
@@ -595,8 +632,9 @@ class Prescription(models.Model):
         related_name="verified_prescriptions",
     )
     verified_at = models.DateTimeField(null=True, blank=True)
-    notes = models.TextField(blank=True)
+    notes = models.TextField(blank=True, help_text="Internal admin notes.")
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "core_prescription"
@@ -605,6 +643,45 @@ class Prescription(models.Model):
 
     def __str__(self):
         return f"Prescription #{self.id} ({self.user_id})"
+
+
+class PrescriptionImage(models.Model):
+    """Multiple prescription images per order (upload prescription flow)."""
+    prescription = models.ForeignKey(
+        Prescription,
+        on_delete=models.CASCADE,
+        related_name="images",
+        db_index=True,
+    )
+    image = models.ImageField(upload_to="prescriptions/%Y/%m/")
+    order_display = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+
+    class Meta:
+        db_table = "core_prescription_image"
+        ordering = ["order_display", "id"]
+
+    def __str__(self):
+        return f"Prescription #{self.prescription_id} – image #{self.order_display}"
+
+
+class PrescriptionStatusHistory(models.Model):
+    """Timeline of prescription status changes; timestamps in Bangladeshi time (Asia/Dhaka) for display."""
+    prescription = models.ForeignKey(
+        Prescription,
+        on_delete=models.CASCADE,
+        related_name="status_history",
+        db_index=True,
+    )
+    status = models.CharField(max_length=20, choices=Prescription.Status.choices, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_prescription_status_history"
+        ordering = ["created_at"]
+        verbose_name_plural = "Prescription status history"
+
+    def __str__(self):
+        return f"Prescription #{self.prescription_id} – {self.status} at {self.created_at}"
 
 
 class PrescriptionItem(models.Model):
