@@ -562,12 +562,19 @@ def _create_order_from_prescription(prescription):
     if prescription.shipping_address:
         addr = prescription.shipping_address
         shipping_text = f"{addr.full_name}, {getattr(addr, 'email', '') or ''}, {addr.phone}, {addr.district}, {getattr(addr, 'thana', '') or ''}, {addr.address}"
+    # Combine user/admin notes and additional products note into order notes
+    combined_notes_parts = [
+        (prescription.prescription_note or "").strip(),
+        (prescription.additional_products_note or "").strip(),
+        (prescription.notes or "").strip(),
+    ]
+    combined_notes = "\n\n".join([p for p in combined_notes_parts if p])
     order = Order.objects.create(
         user=prescription.user,
         prescription=prescription,
         status=Order.Status.CONFIRMED,
         shipping_address=shipping_text,
-        notes=prescription.prescription_note or prescription.notes,
+        notes=combined_notes,
         total=Decimal("0"),
     )
     total = Decimal("0")

@@ -779,7 +779,7 @@ class PrescriptionSerializer(serializers.ModelSerializer):
         model = Prescription
         fields = (
             "id", "user", "user_email", "shipping_address", "shipping_address_detail",
-            "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note",
+            "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note", "additional_products_note",
             "image", "file", "images", "status", "issue_date",
             "patient_name_on_rx", "doctor_name", "doctor_reg_number", "has_signature",
             "verified_by", "verified_at", "notes", "items", "status_history",
@@ -819,7 +819,7 @@ class PrescriptionUploadSerializer(serializers.ModelSerializer):
         model = Prescription
         fields = (
             "file", "issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number",
-            "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note",
+            "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note", "additional_products_note",
             "shipping_address",
         )
         extra_kwargs = {"file": {"required": False}}
