@@ -385,7 +385,9 @@ Prescription ordering: user uploads prescription (multiple images), selects ship
 | doctor_reg_number | string | Yes when approving | Registration number. |
 | has_signature | boolean | Yes when approving | true if signature present. |
 | patient_name_on_rx | string | No | Patient name as on Rx. |
-| items | array | When approving | `[{ "product": <id>, "quantity_prescribed": <int> }]`. |
+| items | array | **Required when approving** | `[{ "product": <id>, "quantity_prescribed": <int> }]`. Add at least one product to confirm the order. Stock is validated. |
+
+When admin **approves with items**, the backend **creates an Order** for the user (linked to this prescription), deducts stock, and sets prescription to USED. The user sees the order in their orders list.
 
 **PATCH** `/api/prescriptions/{id}/verify/` is an alias for the same update. Status changes are recorded in **status_history** with date/time in **Bangladesh time (Asia/Dhaka)**.
 

@@ -551,6 +551,46 @@ class CartItemViewSet(viewsets.GenericViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+def _create_order_from_prescription(prescription):
+    """When admin approves prescription with items: create Order so user has an order to track. Sets prescription to USED."""
+    items = list(
+        PrescriptionItem.objects.filter(prescription=prescription).select_related("product")
+    )
+    if not items:
+        return
+    shipping_text = ""
+    if prescription.shipping_address:
+        addr = prescription.shipping_address
+        shipping_text = f"{addr.full_name}, {getattr(addr, 'email', '') or ''}, {addr.phone}, {addr.district}, {getattr(addr, 'thana', '') or ''}, {addr.address}"
+    order = Order.objects.create(
+        user=prescription.user,
+        prescription=prescription,
+        status=Order.Status.CONFIRMED,
+        shipping_address=shipping_text,
+        notes=prescription.prescription_note or prescription.notes,
+        total=Decimal("0"),
+    )
+    total = Decimal("0")
+    for pi in items:
+        price = pi.product.price
+        qty = pi.quantity_prescribed
+        OrderItem.objects.create(
+            order=order,
+            product=pi.product,
+            quantity=qty,
+            price_at_order=price,
+            dosage="",
+        )
+        total += price * qty
+        pi.product.quantity_in_stock -= qty
+        pi.product.save(update_fields=["quantity_in_stock"])
+    order.total = total
+    order.save(update_fields=["total"])
+    prescription.status = Prescription.Status.USED
+    prescription.save(update_fields=["status"])
+    OrderStatusHistory.objects.create(order=order, status=Order.Status.CONFIRMED)
+
+
 # ---- Prescription ordering: User upload (multipart + images); Admin full CRUD + verify + status timeline ----
 @extend_schema_view(
     list=extend_schema(tags=["Prescriptions"], summary="List prescriptions"),
@@ -645,6 +685,8 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
                         product_id=product_id,
                         quantity_prescribed=qty,
                     )
+            # Confirm order: create Order from prescription so user has an order to track
+            _create_order_from_prescription(prescription)
         if "status" in request.data:
             PrescriptionStatusHistory.objects.create(prescription=prescription, status=prescription.status)
         prescription.refresh_from_db()

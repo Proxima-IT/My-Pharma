@@ -1,31 +1,38 @@
 # 5. Prescription Management Flow
 
-Prescription handling is a critical compliance feature ensuring proper verification before dispensing prescription medicines. Aligned with [ADMIN_API.md](ADMIN_API.md) (Verify Prescriptions, Orders).
+Prescription ordering: **user uploads prescription images only** (no product selection). **Pharmacy admin** sees pending prescriptions, **adds required products** (prescription items), and **approves to confirm the order**; the backend then creates an **Order** for the user so they can track it. Aligned with [ADMIN_API.md](ADMIN_API.md).
+
+---
+
+## Prescription ordering flow
+
+1. **User:** Uploads one or multiple prescription images, selects shipping address, medicine supply duration, and prescription note. **User does not add or select products.**
+2. **Pharmacy admin:** Lists PENDING prescriptions, opens one, **adds required products** (items with product id and quantity_prescribed), and **approves** (status = APPROVED with doctor details and items).
+3. **Backend:** On approve with items, creates an **Order** (linked to the prescription) with those items, reduces stock, and sets prescription status to **USED**. The user sees the order in their orders list.
 
 ---
 
 ## Prescription Status State Machine
 
 ```
-UPLOADED (user submits)
+UPLOADED (user submits images + details, no products)
     → PENDING (in review queue)
 
 PENDING
-    → APPROVED (valid Rx)
+    → APPROVED (admin added products and approved; Order is created, prescription → USED)
     → REJECTED (Invalid/Expired)
 
-APPROVED
-    → USED (linked to order when order is placed with this prescription)
+APPROVED (with items) → USED (Order created automatically when admin confirms)
 ```
 
-| Status       | Description                                             |
-| ------------ | ------------------------------------------------------- |
-| **PENDING**  | User has uploaded; in review queue.                     |
-| **APPROVED** | Valid prescription; can be linked to an order.          |
-| **REJECTED** | Invalid or expired; cannot be used.                     |
-| **USED**     | Linked to an order; no longer available for new orders. |
+| Status       | Description                                                                 |
+| ------------ | --------------------------------------------------------------------------- |
+| **PENDING**  | User has uploaded; in review queue. Admin adds products and approves.       |
+| **APPROVED** | Admin approved with items; an Order is created and prescription becomes USED. |
+| **REJECTED** | Invalid or expired; cannot be used.                                         |
+| **USED**     | Order was created from this prescription; user can track it under Orders.   |
 
-**Backend:** Only transitions allowed: `PENDING → APPROVED`, `PENDING → REJECTED`, and `APPROVED → USED` (set automatically when order is created with this prescription).
+**Backend:** `PENDING → APPROVED` (with items) creates an Order and sets prescription to USED. `PENDING → REJECTED` for invalid prescriptions.
 
 ---
 
@@ -55,22 +62,26 @@ APPROVED
 
 Each user sees only their own uploaded prescriptions for list and retrieve.
 
-### Admin (PHARMACY_ADMIN, SUPER_ADMIN) – full CRUD
+### Admin (PHARMACY_ADMIN, SUPER_ADMIN) – add products and confirm order
 
 - **GET** `/api/prescriptions/` – List **all** prescriptions (filter: `status`).
 - **GET** `/api/prescriptions/{id}/` – Retrieve any prescription (full detail including status_history).
-- **PATCH** or **PUT** `/api/prescriptions/{id}/` or **PATCH** `/api/prescriptions/{id}/verify/` – **Verify or reject**.  
-  Body: `status` = `APPROVED` or `REJECTED`, `notes`, and when approving: `doctor_name`, `doctor_reg_number`, `has_signature` (true), optional `patient_name_on_rx`, and **items**: `[{ "product": <id>, "quantity_prescribed": <int> }]`.  
-  Status change recorded in **status_history** (date/time in Bangladesh, Asia/Dhaka).
+- **PATCH** or **PUT** `/api/prescriptions/{id}/` or **PATCH** `/api/prescriptions/{id}/verify/` – **Add required products and approve to confirm order**.  
+  Body: `status` = `APPROVED` or `REJECTED`, `notes`, and when **approving**: `doctor_name`, `doctor_reg_number`, `has_signature` (true), optional `patient_name_on_rx`, and **items** (required when approving): `[{ "product": <id>, "quantity_prescribed": <int> }]`. At least one product with quantity is required. Stock is validated; if insufficient, approval fails. On success, an **Order** is created for the user (linked to this prescription), items are deducted from stock, and prescription status is set to **USED**. Status change recorded in **status_history** (Bangladesh time).
 - **DELETE** `/api/prescriptions/{id}/` – Delete prescription (admin only).
 
-### Order with prescription
+### Order from prescription (automatic when admin confirms)
+
+When admin **approves** a prescription with **items**, the backend creates an **Order** automatically: order is linked to the prescription, order items are created from the prescription items, stock is reduced, and prescription status is set to **USED**. The user sees this order in **GET** `/api/orders/` and can track it like any other order.
+
+### Optional: Place order with existing approved prescription (cart flow)
 
 - **POST** `/api/orders/`  
   Body: `shipping_address`, `notes`, **items** `[{ "product", "quantity" }]`, optional **prescription** (id).  
   If any item’s product has `requires_prescription=true`, **prescription** is required, must be **APPROVED** and owned by the user.  
   Validations: medicine match (product on prescription) and quantity limit (order qty ≤ prescribed qty).  
-  On success, prescription status is set to **USED** and order is linked to the prescription.
+  On success, prescription status is set to **USED** and order is linked to the prescription.  
+  *(This is the cart/checkout flow; the main prescription flow is upload → admin adds products and approves → order created automatically.)*
 
 ---
 

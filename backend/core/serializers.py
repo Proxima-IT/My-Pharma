@@ -885,6 +885,29 @@ class PrescriptionVerifySerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"doctor_reg_number": "Required when approving (doctor registration number)."})
             if not attrs.get("has_signature", instance.has_signature if instance else False):
                 raise serializers.ValidationError({"has_signature": "Must be true when approving (signature required)."})
+            # Confirm order: admin must add required products (items) when approving
+            items = attrs.get("items") or []
+            if not items or not any(
+                entry.get("quantity_prescribed") and (entry.get("product") or entry.get("product_id"))
+                for entry in items
+            ):
+                raise serializers.ValidationError(
+                    {"items": "When approving, add at least one product with quantity_prescribed to confirm the order."}
+                )
+            # Validate stock for each product
+            from .models import Product
+            for entry in items:
+                pid = entry.get("product") if isinstance(entry.get("product"), int) else entry.get("product_id")
+                qty = entry.get("quantity_prescribed") or 0
+                if pid and qty > 0:
+                    try:
+                        p = Product.objects.get(pk=pid)
+                        if p.quantity_in_stock < qty:
+                            raise serializers.ValidationError(
+                                {"items": f"Insufficient stock for {p.name}. Available: {p.quantity_in_stock}."}
+                            )
+                    except Product.DoesNotExist:
+                        raise serializers.ValidationError({"items": f"Product id {pid} not found."})
         return attrs
 
 
