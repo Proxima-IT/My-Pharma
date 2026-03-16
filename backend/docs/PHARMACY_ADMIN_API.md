@@ -352,7 +352,7 @@ Prescription ordering: user uploads prescription (multiple images), selects ship
 |--------|------|-------------|
 | GET | `/api/prescriptions/` | List prescriptions (Admin: all; User: own). Query: `status`. |
 | GET | `/api/prescriptions/{id}/` | Prescription detail (images, shipping, duration, note, items, **status_history** in Bangladesh time). |
-| POST | `/api/prescriptions/` | **Upload prescription order** (user). Multipart: see below. |
+| POST | `/api/prescription-orders/` | **Upload prescription order** (user). Multipart: see below. (`POST /api/prescriptions/` remains as a legacy alias.) |
 | PATCH | `/api/prescriptions/{id}/` | Verify or reject (admin). |
 | PUT | `/api/prescriptions/{id}/` | Same as PATCH (admin). |
 | DELETE | `/api/prescriptions/{id}/` | Delete prescription (admin only). |
@@ -370,6 +370,7 @@ Prescription ordering: user uploads prescription (multiple images), selects ship
 | medicine_supply_duration | string | No | `7_DAYS`, `15_DAYS`, `1_MONTH`, `2_MONTHS`, `CUSTOM`. |
 | custom_supply_days | int | When CUSTOM | Required when duration is CUSTOM. |
 | prescription_note | string | No | User note for the prescription. |
+| additional_products_note | string | No | Optional note about additional products the user wants with this prescription. |
 | issue_date | string | No | YYYY-MM-DD; must not be older than 6 months. |
 | patient_name_on_rx | string | No | Patient name as on Rx. |
 | doctor_name | string | No | Doctor name. |

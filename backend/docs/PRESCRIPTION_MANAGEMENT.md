@@ -53,10 +53,11 @@ APPROVED (with items) → USED (Order created automatically when admin confirms)
 
 ### User (own prescriptions – prescription ordering)
 
-- **POST** `/api/prescriptions/` – **Upload prescription order** (REGISTERED_USER only). Use **multipart/form-data**.  
+- **POST** `/api/prescription-orders/` – **Upload prescription order** (REGISTERED_USER only). Use **multipart/form-data**.  
   **Images:** multiple `images` or single `file` (JPG/PNG/PDF, max 10MB).  
-  **Optional:** `shipping_address` (UserAddress id from `/api/auth/addresses/`), `save_prescription`, `medicine_supply_duration` (`7_DAYS`, `15_DAYS`, `1_MONTH`, `2_MONTHS`, `CUSTOM`), `custom_supply_days` (when CUSTOM), `prescription_note`, `issue_date`, `patient_name_on_rx`, `doctor_name`, `doctor_reg_number`.  
+  **Optional:** `shipping_address` (UserAddress id from `/api/auth/addresses/`), `save_prescription`, `medicine_supply_duration` (`7_DAYS`, `15_DAYS`, `1_MONTH`, `2_MONTHS`, `CUSTOM`), `custom_supply_days` (when CUSTOM), `prescription_note`, `additional_products_note`, `issue_date`, `patient_name_on_rx`, `doctor_name`, `doctor_reg_number`.  
   Creates prescription in **PENDING** status; first entry added to **status_history** (Bangladesh time).
+- **POST** `/api/prescriptions/` – Legacy alias; same behavior as `/api/prescription-orders/`. Prefer the new `/api/prescription-orders/` endpoint from frontend.
 - **GET** `/api/prescriptions/` – **List** own prescriptions (filter: `status`).
 - **GET** `/api/prescriptions/{id}/` – **Retrieve** own prescription (includes `images`, `shipping_address_detail`, `medicine_supply_duration`, `prescription_note`, `items`, **status_history** timeline in Bangladesh time).
 
