@@ -616,6 +616,10 @@ class Prescription(models.Model):
         blank=True,
         help_text="User note for the uploading prescription.",
     )
+    additional_products_note = models.TextField(
+        blank=True,
+        help_text="Optional note about additional products the user wants with this prescription.",
+    )
     image = models.ImageField(upload_to="prescriptions/%Y/%m/", blank=True, null=True)  # legacy
     file = models.FileField(upload_to="prescriptions/%Y/%m/", blank=True, null=True)  # JPG/PNG/PDF, max 10MB
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)

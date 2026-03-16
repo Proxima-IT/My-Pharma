@@ -27,13 +27,18 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 |--------|------------------------------------|-------------|
 | GET    | `/api/prescriptions/`              | List prescriptions. **Pharmacy/Super:** all. **User:** own only. Filter: `status`. |
 | GET    | `/api/prescriptions/{id}/`         | Retrieve prescription (images, shipping_address_detail, medicine_supply_duration, prescription_note, items, **status_history** in Bangladesh time). Users see only own. |
-| POST   | `/api/prescriptions/`              | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (multiple files) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
+| POST   | `/api/prescriptions/`              | **Upload prescription order** (REGISTERED_USER only). Same behavior as `/api/prescription-orders/` below; kept for backward compatibility. |
 | PATCH  | `/api/prescriptions/{id}/`          | Add products and approve or reject (PHARMACY_ADMIN, SUPER_ADMIN only). Body: **status** = APPROVED or REJECTED, notes; when approving: doctor_name, doctor_reg_number, has_signature (true), optional patient_name_on_rx, **items** (required) [{ product, quantity_prescribed }]. When approved with items, an **Order** is created for the user and prescription set to USED. Status change recorded in status_history (Bangladesh time). |
 | PUT    | `/api/prescriptions/{id}/`         | Same as PATCH (admin). |
 | DELETE | `/api/prescriptions/{id}/`         | Delete prescription (PHARMACY_ADMIN, SUPER_ADMIN only). |
 | PATCH  | `/api/prescriptions/{id}/verify/`  | Alias for PATCH prescription (verify/reject). |
 
 **Permission:** List/retrieve: any authenticated user (queryset filtered so users see only own). Upload: `IsRegisteredUserOnly`. Verify/PATCH/PUT/DELETE: `IsPharmacyAdminOrSuper`. See [PRESCRIPTION_MANAGEMENT.md](PRESCRIPTION_MANAGEMENT.md).
+
+**Dedicated prescription ordering endpoint (preferred from frontend):**  
+| Method | Path                          | Description |
+|--------|-------------------------------|-------------|
+| POST   | `/api/prescription-orders/`   | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (multiple files) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, **additional_products_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
 
 ---
 

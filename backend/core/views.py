@@ -562,12 +562,19 @@ def _create_order_from_prescription(prescription):
     if prescription.shipping_address:
         addr = prescription.shipping_address
         shipping_text = f"{addr.full_name}, {getattr(addr, 'email', '') or ''}, {addr.phone}, {addr.district}, {getattr(addr, 'thana', '') or ''}, {addr.address}"
+    # Combine user/admin notes and additional products note into order notes
+    combined_notes_parts = [
+        (prescription.prescription_note or "").strip(),
+        (prescription.additional_products_note or "").strip(),
+        (prescription.notes or "").strip(),
+    ]
+    combined_notes = "\n\n".join([p for p in combined_notes_parts if p])
     order = Order.objects.create(
         user=prescription.user,
         prescription=prescription,
         status=Order.Status.CONFIRMED,
         shipping_address=shipping_text,
-        notes=prescription.prescription_note or prescription.notes,
+        notes=combined_notes,
         total=Decimal("0"),
     )
     total = Decimal("0")
@@ -707,6 +714,44 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     def verify(self, request, **kwargs):
         """Alias for PATCH prescription (verify/reject)."""
         return self.partial_update(request, **kwargs)
+
+
+@extend_schema_view(
+    create=extend_schema(
+        tags=["Prescriptions"],
+        summary="Upload prescription order (use this endpoint from frontend)",
+        description="Alias for POST /api/prescriptions/. User uploads one or more prescription images, selects shipping address, duration, and notes. No products are required here; pharmacy admin will add products later when approving.",
+    )
+)
+class PrescriptionOrderViewSet(viewsets.GenericViewSet):
+    """Standalone endpoint for prescription ordering: POST /api/prescription-orders/."""
+
+    serializer_class = PrescriptionUploadSerializer
+    permission_classes = [IsAuthenticated, IsRegisteredUserOnly]
+    http_method_names = ["post", "head", "options"]
+
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        if "multipart" in (request.content_type or ""):
+            for key in ("issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number", "save_prescription", "medicine_supply_duration", "prescription_note", "additional_products_note", "shipping_address"):
+                val = data.get(key)
+                if key == "shipping_address" and isinstance(val, str) and val.strip().isdigit():
+                    data[key] = int(val)
+                elif key == "save_prescription" and isinstance(val, str):
+                    data[key] = val.lower() in ("true", "1", "yes")
+        serializer = PrescriptionUploadSerializer(data=data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        payload = {k: v for k, v in serializer.validated_data.items() if k != "file" or v is not None}
+        if not payload.get("file") and request.FILES.get("file"):
+            payload["file"] = request.FILES["file"]
+        prescription = Prescription.objects.create(user=request.user, status=Prescription.Status.PENDING, **payload)
+        for i, f in enumerate(request.FILES.getlist("images", [])):
+            PrescriptionImage.objects.create(prescription=prescription, image=f, order_display=i)
+        PrescriptionStatusHistory.objects.create(prescription=prescription, status=Prescription.Status.PENDING)
+        return Response(
+            PrescriptionSerializer(prescription, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # ---- Consultation: Doctor/Super manage; User request ----
