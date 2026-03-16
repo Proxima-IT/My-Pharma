@@ -2,7 +2,7 @@ import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * My Pharma - Order Management API
- * Updated: Improved error handling to return specific backend validation messages.
+ * Updated: Switched to dedicated prescription-orders endpoint.
  */
 export const orderApi = {
   getOrders: async (token, params = {}) => {
@@ -32,10 +32,11 @@ export const orderApi = {
 
   /**
    * Place an order using a prescription
-   * @param {FormData} formData - { uploaded_images, duration, message, shipping_address }
+   * Endpoint: /api/prescription-orders/
+   * @param {FormData} formData - { images, address, duration, note }
    */
   createPrescriptionOrder: async (token, formData) => {
-    const response = await fetch(`${API_BASE_URL}/orders/`, {
+    const response = await fetch(`${API_BASE_URL}/prescription-orders/`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -45,7 +46,6 @@ export const orderApi = {
 
     const data = await response.json();
     if (!response.ok) {
-      // Throw the actual backend error object (e.g., { uploaded_images: [...] })
       throw data;
     }
     return data;

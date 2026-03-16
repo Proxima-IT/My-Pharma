@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -7,10 +7,17 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiShoppingBag,
+  FiFileText,
 } from 'react-icons/fi';
 import { useOrders } from '../../hooks/useOrders';
+import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { formatCurrency, formatDate } from '../../lib/formatters';
 
+/**
+ * MyOrdersPage Component
+ * Updated: Merges standard orders and prescription orders into a unified list.
+ * Features: Dynamic routing based on order type (Standard vs Prescription).
+ */
 export default function MyOrdersPage() {
   const router = useRouter();
   const {
@@ -20,16 +27,37 @@ export default function MyOrdersPage() {
     page,
     setPage,
     totalPages,
-    isLoading,
-    error,
+    isLoading: ordersLoading,
   } = useOrders();
+
+  // Fetch prescription-based orders
+  const { prescriptions, isLoading: rxLoading } = usePrescriptions();
 
   const [selectedOrders, setSelectedOrders] = useState([]);
   const filters = ['All', 'Confirmed', 'Delivered', 'Cancelled'];
 
+  // 1. Merge and Sort Orders
+  const combinedOrders = useMemo(() => {
+    const stdOrders = orders.map(o => ({ ...o, isPrescription: false }));
+    const rxOrders = prescriptions.map(p => ({ ...p, isPrescription: true }));
+
+    const merged = [...stdOrders, ...rxOrders];
+
+    // Filter by status if not 'All'
+    const filtered =
+      filter === 'All'
+        ? merged
+        : merged.filter(o => o.status?.toUpperCase() === filter.toUpperCase());
+
+    // Sort by date descending
+    return filtered.sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    );
+  }, [orders, prescriptions, filter]);
+
   const handleSelectAll = e => {
     if (e.target.checked) {
-      setSelectedOrders(orders.map(o => o.id));
+      setSelectedOrders(combinedOrders.map(o => o.id));
     } else {
       setSelectedOrders([]);
     }
@@ -51,14 +79,10 @@ export default function MyOrdersPage() {
     return 'text-amber-600 bg-amber-50 border-amber-100';
   };
 
+  const isLoading = ordersLoading || rxLoading;
+
   return (
-    /* 
-      CRITICAL FIX: 
-      - grid & grid-cols-1: Forces the container to respect the parent's width.
-      - min-w-0: Prevents the grid item from expanding beyond the screen.
-    */
     <div className="grid grid-cols-1 min-w-0 w-full max-w-full animate-in fade-in duration-700 pb-20 overflow-hidden">
-      {/* Phone Screen Header */}
       <div className="flex items-center gap-4 lg:hidden mb-4 px-1">
         <Link
           href="/user"
@@ -71,19 +95,7 @@ export default function MyOrdersPage() {
         </h1>
       </div>
 
-      {/* 
-        Main White Card:
-        - w-full & min-w-0: Ensures it stays inside the layout.
-        - overflow-hidden: Prevents internal elements from pushing the card out.
-      */}
-      <div
-        className="bg-white rounded-[32px] border border-gray-100/50 min-h-[600px] flex flex-col w-full min-w-0 overflow-hidden
-        p-4           /* Phone */
-        md:p-6        /* Tab */
-        lg:p-8        /* Laptop */
-        xl:p-10       /* Large Screen */
-      "
-      >
+      <div className="bg-white rounded-[32px] border border-gray-100/50 min-h-[600px] flex flex-col w-full min-w-0 overflow-hidden p-4 md:p-6 lg:p-8 xl:p-10">
         {/* 1. Filter Tabs */}
         <div className="bg-gray-50/50 p-1.5 rounded-full mb-8 w-fit max-w-full border border-gray-100 overflow-hidden shrink-0">
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar px-1">
@@ -103,11 +115,7 @@ export default function MyOrdersPage() {
           </div>
         </div>
 
-        {/* 
-          2. Table Section:
-          - relative & w-full: Keeps the scroll container bounded.
-          - overflow-x-auto: The ONLY place where horizontal scrolling happens.
-        */}
+        {/* 2. Table Section */}
         <div className="relative w-full min-w-0 flex-1 overflow-hidden">
           <div className="w-full overflow-x-auto rounded-2xl border border-gray-100 no-scrollbar">
             <table className="w-full border-separate border-spacing-0 min-w-[1000px] table-auto">
@@ -119,16 +127,15 @@ export default function MyOrdersPage() {
                       className="w-4 h-4 rounded border-gray-300 accent-black cursor-pointer"
                       onChange={handleSelectAll}
                       checked={
-                        selectedOrders.length === orders.length &&
-                        orders.length > 0
+                        selectedOrders.length === combinedOrders.length &&
+                        combinedOrders.length > 0
                       }
                     />
                   </th>
                   <th className="px-4 py-5 text-left">Order ID</th>
+                  <th className="px-4 py-5 text-left">Type</th>
                   <th className="px-4 py-5 text-left">Shipping To</th>
-                  <th className="px-4 py-5 text-left">Phone</th>
                   <th className="px-4 py-5 text-left">Date</th>
-                  <th className="px-4 py-5 text-left">Payment</th>
                   <th className="px-4 py-5 text-left">Status</th>
                   <th className="px-6 py-5 text-right">Total</th>
                 </tr>
@@ -137,14 +144,24 @@ export default function MyOrdersPage() {
                 {isLoading ? (
                   <tr>
                     <td colSpan="8" className="py-32 text-center">
-                      <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin mx-auto" />
+                      <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin mx-auto" />
                     </td>
                   </tr>
-                ) : orders.length > 0 ? (
-                  orders.map(order => (
+                ) : combinedOrders.length > 0 ? (
+                  combinedOrders.map(order => (
                     <tr
-                      key={order.id}
-                      onClick={() => router.push(`/user/orders/${order.id}`)}
+                      key={
+                        order.isPrescription
+                          ? `rx-${order.id}`
+                          : `std-${order.id}`
+                      }
+                      onClick={() =>
+                        router.push(
+                          order.isPrescription
+                            ? `/user/orders/prescription/${order.id}`
+                            : `/user/orders/${order.id}`,
+                        )
+                      }
                       className="hover:bg-gray-50/30 transition-colors group cursor-pointer"
                     >
                       <td
@@ -159,24 +176,37 @@ export default function MyOrdersPage() {
                         />
                       </td>
                       <td className="px-4 py-6 text-sm font-bold text-gray-900">
-                        #{order.id}
+                        {order.isPrescription
+                          ? `RX-${order.id}`
+                          : `#${order.id}`}
+                      </td>
+                      <td className="px-4 py-6">
+                        <div className="flex items-center gap-2">
+                          {order.isPrescription ? (
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-purple-50 text-purple-600 rounded-full text-[10px] font-black uppercase border border-purple-100">
+                              <FiFileText size={12} /> Prescription
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase border border-blue-100">
+                              <FiShoppingBag size={12} /> Standard
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-6">
                         <p className="text-sm font-bold text-gray-900 truncate max-w-[150px]">
-                          {order.user_username || 'Customer'}
+                          {order.user_username ||
+                            order.user_email?.split('@')[0] ||
+                            'Customer'}
                         </p>
                         <p className="text-[11px] text-gray-400 font-medium truncate max-w-[180px]">
-                          {order.shipping_address}
+                          {order.shipping_address ||
+                            order.shipping_address_detail ||
+                            'No Address'}
                         </p>
-                      </td>
-                      <td className="px-4 py-6 text-sm text-gray-600 font-bold">
-                        {order.phone || 'N/A'}
                       </td>
                       <td className="px-4 py-6 text-sm text-gray-500 font-medium">
                         {formatDate(order.created_at)}
-                      </td>
-                      <td className="px-4 py-6 text-[11px] font-black text-gray-400 uppercase tracking-tighter">
-                        {order.payment_method?.replace(/_/g, ' ') || 'COD'}
                       </td>
                       <td className="px-4 py-6">
                         <span
@@ -186,7 +216,13 @@ export default function MyOrdersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-6 text-sm font-black text-gray-900 text-right">
-                        {formatCurrency(order.total)}
+                        {order.total ? (
+                          formatCurrency(order.total)
+                        ) : (
+                          <span className="text-gray-300 italic text-[11px]">
+                            TBD
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))

@@ -7,46 +7,109 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiShoppingBag,
+  FiFileText,
 } from 'react-icons/fi';
 import { useAdminOrders } from '../../hooks/useAdminOrders';
+import { usePrescriptionAdmin } from '../../hooks/usePrescriptionAdmin';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 
+/**
+ * AdminOrdersPage
+ * Strictly follows the Super Admin "Sharp" design system.
+ * Features: Tabbed interface for Standard (Product) and Prescription orders.
+ */
 export default function AdminOrdersPage() {
-  const { orders, loading, fetchOrders } = useAdminOrders();
+  const [activeTab, setActiveTab] = useState('Standard'); // 'Standard' or 'Prescription'
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
 
-  useEffect(() => {
-    fetchOrders({ page, search });
-  }, [page, search, fetchOrders]);
+  // Hooks for both order types
+  const { orders, loading: ordersLoading, fetchOrders } = useAdminOrders();
+  const {
+    prescriptions,
+    loading: rxLoading,
+    fetchPrescriptions,
+  } = usePrescriptionAdmin();
 
-  const getStatusStyle = status => {
-    switch (status?.toUpperCase()) {
-      case 'DELIVERED':
-        return 'text-green-600 bg-green-50 border-green-100';
-      case 'CANCELLED':
-        return 'text-red-600 bg-red-50 border-red-100';
-      case 'PENDING':
-        return 'text-amber-600 bg-amber-50 border-amber-100';
-      case 'SHIPPED':
-        return 'text-blue-600 bg-blue-50 border-blue-100';
-      default:
-        return 'text-gray-600 bg-gray-50 border-gray-100';
+  useEffect(() => {
+    const params = { page, search };
+    if (activeTab === 'Standard') {
+      fetchOrders(params);
+    } else {
+      fetchPrescriptions(params);
+    }
+  }, [page, search, activeTab, fetchOrders, fetchPrescriptions]);
+
+  const getStatusStyle = (status, type = 'Standard') => {
+    const s = status?.toUpperCase();
+    if (type === 'Standard') {
+      switch (s) {
+        case 'DELIVERED':
+          return 'text-green-600 bg-green-50 border-green-100';
+        case 'CANCELLED':
+          return 'text-red-600 bg-red-50 border-red-100';
+        case 'PENDING':
+          return 'text-amber-600 bg-amber-50 border-amber-100';
+        case 'SHIPPED':
+          return 'text-blue-600 bg-blue-50 border-blue-100';
+        case 'PROCESSING':
+          return 'text-indigo-600 bg-indigo-50 border-indigo-100';
+        default:
+          return 'text-gray-600 bg-gray-50 border-gray-100';
+      }
+    } else {
+      // Prescription Specific Statuses
+      switch (s) {
+        case 'USED':
+          return 'text-green-600 bg-green-50 border-green-100';
+        case 'REJECTED':
+          return 'text-red-600 bg-red-50 border-red-100';
+        case 'PENDING':
+          return 'text-amber-600 bg-amber-50 border-amber-100';
+        case 'APPROVED':
+          return 'text-blue-600 bg-blue-50 border-blue-100';
+        default:
+          return 'text-gray-600 bg-gray-50 border-gray-100';
+      }
     }
   };
 
+  const currentData = activeTab === 'Standard' ? orders : prescriptions;
+  const isLoading = activeTab === 'Standard' ? ordersLoading : rxLoading;
+
   return (
-    <div className="w-full space-y-8 animate-in fade-in duration-500">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-6">
         <div>
           <h1 className="text-3xl font-black text-[#1B1B1B] tracking-tighter uppercase">
-            Customer Orders
+            Order Logistics
           </h1>
           <p className="text-[13px] text-[#6B6B5E] mt-1 font-medium">
-            View and manage all medicine orders from your customers.
+            Manage standard medicine purchases and prescription verification
+            requests.
           </p>
         </div>
+      </div>
+
+      {/* Tab Switcher - Sharp Design */}
+      <div className="flex items-center gap-1 border-b border-gray-100">
+        {['Standard', 'Prescription'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => {
+              setActiveTab(tab);
+              setPage(1);
+            }}
+            className={`px-8 py-4 font-mono text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer border-t-2 ${
+              activeTab === tab
+                ? 'bg-white border-t-[#3A5A40] border-x border-x-gray-100 -mb-px text-[#3A5A40]'
+                : 'bg-transparent border-t-transparent text-[#8A8A78] hover:text-[#1B1B1B]'
+            }`}
+          >
+            {tab} Orders
+          </button>
+        ))}
       </div>
 
       {/* Search Bar */}
@@ -58,7 +121,7 @@ export default function AdminOrdersPage() {
           />
           <input
             type="text"
-            placeholder="SEARCH BY ORDER ID OR NAME..."
+            placeholder={`SEARCH ${activeTab.toUpperCase()} ORDERS...`}
             className="w-full h-10 pl-10 pr-4 bg-transparent rounded-none text-sm font-mono focus:outline-none uppercase tracking-tight placeholder:text-gray-300"
             value={search}
             onChange={e => {
@@ -76,33 +139,34 @@ export default function AdminOrdersPage() {
             <thead>
               <tr className="bg-gray-50 text-[#1B1B1B] text-[11px] uppercase tracking-[0.2em] font-bold">
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  Order No
+                  ID No
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  Customer Name
+                  Customer
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  Order Date
+                  Date
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
                   Status
                 </th>
                 <th className="px-8 py-4 text-right border-r border-gray-100">
-                  Total Price
+                  Value
                 </th>
-                <th className="px-8 py-4 text-right">Options</th>
+                <th className="px-8 py-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {loading && orders.results.length === 0 ? (
+              {isLoading && currentData.results.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-8 py-20 text-center">
-                    <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      LOADING_ORDERS...
-                    </div>
+                  <td
+                    colSpan="6"
+                    className="px-8 py-20 text-center font-mono text-sm animate-pulse text-[#3A5A40]"
+                  >
+                    FETCHING_DATA...
                   </td>
                 </tr>
-              ) : orders.results.length === 0 ? (
+              ) : currentData.results.length === 0 ? (
                 <tr>
                   <td
                     colSpan="6"
@@ -110,47 +174,65 @@ export default function AdminOrdersPage() {
                   >
                     <FiShoppingBag size={40} />
                     <p className="font-mono text-sm font-bold uppercase">
-                      No Orders Found
+                      No {activeTab} Records Found
                     </p>
                   </td>
                 </tr>
               ) : (
-                orders.results.map(order => (
+                currentData.results.map(item => (
                   <tr
-                    key={order.id}
+                    key={item.id}
                     className="hover:bg-gray-50/50 transition-colors duration-200 group"
                   >
                     <td className="px-8 py-6 border-r border-gray-100 font-mono text-sm font-bold text-[#1B1B1B]">
-                      #{order.id}
+                      {activeTab === 'Prescription'
+                        ? `RX-${item.id}`
+                        : `#${item.id}`}
                     </td>
                     <td className="px-8 py-6 border-r border-gray-100">
                       <div className="flex flex-col">
-                        <span className="font-bold text-[#1B1B1B] text-sm uppercase">
-                          {order.user_username || 'Guest User'}
+                        <span className="font-bold text-[#1B1B1B] text-sm uppercase truncate max-w-[200px]">
+                          {item.user_username ||
+                            item.user_email?.split('@')[0] ||
+                            'Guest'}
                         </span>
-                        <span className="font-mono text-[10px] text-[#8A8A78]">
-                          {order.user_email}
+                        <span className="font-mono text-[10px] text-[#8A8A78] truncate max-w-[200px]">
+                          {item.user_email}
                         </span>
                       </div>
                     </td>
                     <td className="px-8 py-6 border-r border-gray-100 font-mono text-xs text-[#6B6B5E]">
-                      {formatDate(order.created_at)}
+                      {formatDate(item.created_at)}
                     </td>
                     <td className="px-8 py-6 border-r border-gray-100">
                       <span
-                        className={`px-3 py-1 border font-mono text-[10px] font-bold uppercase tracking-tighter ${getStatusStyle(order.status)}`}
+                        className={`px-3 py-1 border font-mono text-[10px] font-bold uppercase tracking-tighter ${getStatusStyle(item.status, activeTab)}`}
                       >
-                        {order.status}
+                        {item.status}
                       </span>
                     </td>
                     <td className="px-8 py-6 border-r border-gray-100 text-right font-mono font-bold text-[#1B1B1B]">
-                      {formatCurrency(order.total)}
+                      {item.total ? (
+                        formatCurrency(item.total)
+                      ) : (
+                        <span className="text-gray-300 italic">TBD</span>
+                      )}
                     </td>
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end">
-                        <Link href={`/admin/orders/${order.id}`}>
+                        <Link
+                          href={
+                            activeTab === 'Prescription'
+                              ? `/admin/prescriptions/${item.id}`
+                              : `/admin/orders/${item.id}`
+                          }
+                        >
                           <button className="w-10 h-10 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-[#3A5A40] hover:text-white transition-all duration-300 cursor-pointer">
-                            <FiEdit2 size={16} />
+                            {activeTab === 'Prescription' ? (
+                              <FiFileText size={16} />
+                            ) : (
+                              <FiEdit2 size={16} />
+                            )}
                           </button>
                         </Link>
                       </div>
@@ -166,21 +248,22 @@ export default function AdminOrdersPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between px-2">
         <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase">
-          Total Orders: <span className="text-[#1B1B1B]">{orders.count}</span>
+          Total {activeTab} Records:{' '}
+          <span className="text-[#1B1B1B]">{currentData.count}</span>
         </p>
         <div className="flex items-center gap-0 border border-gray-200 bg-white">
           <button
-            disabled={page === 1 || loading}
+            disabled={page === 1 || isLoading}
             onClick={() => setPage(p => p - 1)}
             className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
           >
             <FiChevronLeft size={18} />
           </button>
-          <div className="px-4 font-mono text-xs font-bold text-[#1B1B1B]">
-            PAGE {page}
+          <div className="px-6 font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest">
+            Page {page}
           </div>
           <button
-            disabled={orders.results.length < 10 || loading}
+            disabled={currentData.results.length < 10 || isLoading}
             onClick={() => setPage(p => p + 1)}
             className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
           >

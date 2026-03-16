@@ -10,6 +10,7 @@ import {
   FiPieChart,
   FiLogOut,
   FiChevronRight,
+  FiFileText,
 } from 'react-icons/fi';
 
 const PharmacySidebar = () => {
@@ -29,6 +30,11 @@ const PharmacySidebar = () => {
       icon: <FiShoppingBag />,
       href: '/pharmacy/orders',
     },
+    {
+      name: 'PRESCRIPTION ORDERS',
+      icon: <FiFileText />,
+      href: '/pharmacy/prescriptions',
+    },
     { name: 'PRODUCT MANAGEMENT', icon: <FiBox />, href: '/pharmacy/products' },
     { name: 'BRAND MANAGEMENT', icon: <FiAward />, href: '/pharmacy/brands' },
     {
@@ -39,7 +45,9 @@ const PharmacySidebar = () => {
   ];
 
   const NavItem = ({ item }) => {
-    const isActive = pathname === item.href;
+    const isActive =
+      pathname === item.href ||
+      (item.href !== '/pharmacy' && pathname.startsWith(item.href));
     return (
       <Link
         href={item.href}

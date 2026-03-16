@@ -2,8 +2,21 @@
 import React from 'react';
 import { FiCheck } from 'react-icons/fi';
 import { formatDate } from '../../../lib/formatters';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
+/**
+ * PrescriptionCard Component
+ * Updated: Intelligently handles both single-file uploads and multi-image prescription orders.
+ */
 export default function PrescriptionCard({ item, isSelected, onSelect }) {
+  // Determine the best preview image from available data sources
+  const previewImage =
+    item.file ||
+    (item.images && item.images.length > 0
+      ? item.images[0].image_url || item.images[0].image
+      : null) ||
+    item.image;
+
   return (
     <div
       onClick={onSelect}
@@ -20,12 +33,12 @@ export default function PrescriptionCard({ item, isSelected, onSelect }) {
         </div>
       )}
 
-      {/* Image Container - Now rounded on all corners */}
+      {/* Image Container */}
       <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden rounded-[11px]">
-        {item.file ? (
+        {previewImage ? (
           <img
-            src={item.file}
-            alt="Prescription"
+            src={getMediaUrl(previewImage)}
+            alt="Prescription Preview"
             className="w-full h-full object-cover"
           />
         ) : (
@@ -40,7 +53,16 @@ export default function PrescriptionCard({ item, isSelected, onSelect }) {
         <p className="text-sm font-bold text-gray-900">
           {formatDate(item.created_at)}
         </p>
-        <p className="text-gray-400 font-medium text-[11px]">Uploading Date</p>
+        <div className="flex justify-between items-center">
+          <p className="text-gray-400 font-medium text-[11px]">
+            Uploading Date
+          </p>
+          {item.images?.length > 1 && (
+            <span className="text-[10px] font-black text-primary-500 bg-primary-50 px-2 py-0.5 rounded-full">
+              +{item.images.length - 1} More
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );

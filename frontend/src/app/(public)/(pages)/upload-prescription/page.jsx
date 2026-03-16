@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   FiArrowLeft,
   FiPlus,
@@ -12,18 +12,23 @@ import {
   FiX,
   FiHome,
   FiAlertCircle,
+  FiLoader,
 } from 'react-icons/fi';
 import { useAddress } from '@/app/(user)/hooks/useAddress';
 import { useOrders } from '@/app/(user)/hooks/useOrders';
+import { getMediaUrl, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * UploadPrescription Component
  * 100% Pixel-Perfect Match to the provided design.
- * Fixed: Reverted image key to 'images' to match the official Order API documentation.
- * Note: All UI elements, including the Green Message and layout, are strictly preserved.
+ * Fixed: Updated keys and Enum mapping to match the Official Prescription Schema.
+ * Note: All UI elements and the Green Message are strictly preserved.
  */
-export default function UploadPrescriptionPage() {
+function UploadPrescriptionContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const prescriptionId = searchParams.get('prescriptionId');
+
   const { addresses } = useAddress();
   const {
     durations,
@@ -38,12 +43,58 @@ export default function UploadPrescriptionPage() {
   const [savePrescription, setSavePrescription] = useState(true);
   const [selectedDuration, setSelectedDuration] = useState(null);
   const [note, setNote] = useState('');
+  const [isFetchingRx, setIsFetchingRx] = useState(false);
   const fileInputRef = useRef(null);
 
   // Get default address
   const defaultAddress = useMemo(() => {
     return addresses.find(a => a.is_default) || addresses[0];
   }, [addresses]);
+
+  // Fetch existing prescription if ID is provided in URL
+  useEffect(() => {
+    if (prescriptionId) {
+      const fetchExistingRx = async () => {
+        setIsFetchingRx(true);
+        try {
+          const token = localStorage.getItem('access_token');
+          const res = await fetch(
+            `${API_BASE_URL}/prescriptions/${prescriptionId}/`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          );
+
+          if (!res.ok) throw new Error('Failed to fetch prescription');
+          const data = await res.json();
+
+          let existingPreviews = [];
+          if (
+            data.images &&
+            Array.isArray(data.images) &&
+            data.images.length > 0
+          ) {
+            existingPreviews = data.images.map(img =>
+              getMediaUrl(img.image_url || img.image),
+            );
+          } else if (data.image || data.file) {
+            existingPreviews = [getMediaUrl(data.image || data.file)];
+          }
+
+          setPreviews(existingPreviews);
+
+          if (data.prescription_note || data.note) {
+            setNote(data.prescription_note || data.note);
+          }
+        } catch (err) {
+          console.error('Rx Fetch Error:', err);
+        } finally {
+          setIsFetchingRx(false);
+        }
+      };
+      fetchExistingRx();
+    }
+  }, [prescriptionId]);
 
   const handleFileChange = e => {
     const files = Array.from(e.target.files);
@@ -57,6 +108,12 @@ export default function UploadPrescriptionPage() {
   };
 
   const removeImage = index => {
+    if (prescriptionId) {
+      alert(
+        'To change images, please upload a new prescription or select a different one from your library.',
+      );
+      return;
+    }
     setImages(prev => prev.filter((_, i) => i !== index));
     setPreviews(prev => {
       URL.revokeObjectURL(prev[index]);
@@ -65,21 +122,34 @@ export default function UploadPrescriptionPage() {
   };
 
   const handleOrder = async () => {
-    if (images.length === 0)
+    if (!prescriptionId && images.length === 0)
       return alert('Please upload at least one prescription image.');
     if (!selectedDuration) return alert('Please select a supply duration.');
     if (!defaultAddress) return alert('Please add a shipping address.');
 
+    // Find the duration object to get the name for Enum mapping
+    const durationObj = durations.find(d => d.id === selectedDuration);
+    // Map "7 Days" -> "7_DAYS", "1 Month" -> "1_MONTH", etc.
+    const durationEnum =
+      durationObj?.name.toUpperCase().replace(/\s+/g, '_') || '7_DAYS';
+
     const formData = new FormData();
-    // CORRECTED: Key name reverted to 'images' as per Order API documentation proof
-    images.forEach(file => formData.append('images', file));
-    formData.append('duration', selectedDuration);
-    formData.append('message', note);
+
+    if (prescriptionId) {
+      formData.append('prescription', prescriptionId);
+    } else {
+      images.forEach(file => formData.append('images', file));
+    }
+
+    // FIXED: Using Schema keys (shipping_address, medicine_supply_duration, prescription_note)
+    formData.append('medicine_supply_duration', durationEnum);
+    formData.append('prescription_note', note);
     formData.append('shipping_address', defaultAddress.id);
+    formData.append('save_prescription', savePrescription);
 
     try {
       const result = await placePrescriptionOrder(formData);
-      router.push(`/user/orders/${result.id}`);
+      router.push(`/user/orders/prescription/${result.id}`);
     } catch (err) {
       console.error('Order failed:', err);
     }
@@ -106,7 +176,7 @@ export default function UploadPrescriptionPage() {
         <div className="lg:col-span-7 w-full">
           <div className="bg-white rounded-[32px] p-6 sm:p-10 border border-gray-100 shadow-none w-full h-fit">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-8">
-              Upload Prescription
+              {prescriptionId ? 'Selected Prescription' : 'Upload Prescription'}
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
@@ -120,17 +190,20 @@ export default function UploadPrescriptionPage() {
                     alt="Rx Preview"
                     fill
                     className="object-cover"
+                    unoptimized
                   />
-                  <button
-                    onClick={() => removeImage(idx)}
-                    className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <FiX />
-                  </button>
+                  {!prescriptionId && (
+                    <button
+                      onClick={() => removeImage(idx)}
+                      className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <FiX />
+                    </button>
+                  )}
                 </div>
               ))}
 
-              {images.length < 5 && (
+              {!prescriptionId && images.length < 5 && (
                 <div
                   onClick={() => fileInputRef.current.click()}
                   className="aspect-[4/3] border-2 border-dashed border-[#10B981]/30 bg-[#F0FDF4]/50 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-[#F0FDF4] transition-all group"
@@ -154,27 +227,28 @@ export default function UploadPrescriptionPage() {
               onChange={handleFileChange}
             />
 
-            <div className="mt-10 flex items-center gap-4">
-              <input
-                type="checkbox"
-                id="saveRx"
-                checked={savePrescription}
-                onChange={e => setSavePrescription(e.target.checked)}
-                className="w-6 h-6 rounded border-gray-300 text-[#1D3583] focus:ring-[#1D3583] cursor-pointer"
-              />
-              <label
-                htmlFor="saveRx"
-                className="text-[16px] font-medium text-gray-600 cursor-pointer"
-              >
-                Save Prescription
-              </label>
-            </div>
+            {!prescriptionId && (
+              <div className="mt-10 flex items-center gap-4">
+                <input
+                  type="checkbox"
+                  id="saveRx"
+                  checked={savePrescription}
+                  onChange={e => setSavePrescription(e.target.checked)}
+                  className="w-6 h-6 rounded border-gray-300 text-[#1D3583] focus:ring-[#1D3583] cursor-pointer"
+                />
+                <label
+                  htmlFor="saveRx"
+                  className="text-[16px] font-medium text-gray-600 cursor-pointer"
+                >
+                  Save Prescription
+                </label>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Column: Address & Details */}
         <div className="lg:col-span-5 w-full space-y-8">
-          {/* Shipping Address Card */}
           <div className="bg-white rounded-[32px] p-6 sm:p-10 border border-gray-100 shadow-none w-full">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
@@ -208,7 +282,6 @@ export default function UploadPrescriptionPage() {
                     </p>
                   </div>
                 </div>
-
                 <div className="space-y-4">
                   {[
                     { label: 'PHONE NUMBER', value: defaultAddress.phone },
@@ -235,14 +308,11 @@ export default function UploadPrescriptionPage() {
               </div>
             ) : (
               <div className="py-12 text-center">
-                <p className="text-gray-400 text-base">
-                  No address found. Please add one to continue.
-                </p>
+                <p className="text-gray-400 text-base">No address found.</p>
               </div>
             )}
           </div>
 
-          {/* Duration & Note Card */}
           <div className="bg-white rounded-[32px] p-6 sm:p-10 border border-gray-100 shadow-none w-full">
             <h2 className="text-[13px] font-black text-gray-400 uppercase tracking-[0.2em] mb-5">
               Medicine Supply Duration
@@ -252,11 +322,7 @@ export default function UploadPrescriptionPage() {
                 <button
                   key={d.id}
                   onClick={() => setSelectedDuration(d.id)}
-                  className={`px-7 py-3.5 rounded-full border-2 text-[15px] font-bold transition-all cursor-pointer shadow-none ${
-                    selectedDuration === d.id
-                      ? 'bg-[#EEF2FF] border-[#1D3583] text-[#1D3583]'
-                      : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300'
-                  }`}
+                  className={`px-7 py-3.5 rounded-full border-2 text-[15px] font-bold transition-all cursor-pointer shadow-none ${selectedDuration === d.id ? 'bg-[#EEF2FF] border-[#1D3583] text-[#1D3583]' : 'bg-white border-gray-100 text-gray-600 hover:border-gray-300'}`}
                 >
                   {d.name}
                 </button>
@@ -275,7 +341,6 @@ export default function UploadPrescriptionPage() {
               />
             </div>
 
-            {/* RESTORED: Green Representative Message */}
             <div className="mt-10 p-6 bg-[#F0FDF4] border-2 border-dashed border-[#10B981]/30 rounded-[24px]">
               <p className="text-[15px] text-[#10B981] font-medium leading-relaxed">
                 One My Pharma representative will call you shortly for
@@ -284,7 +349,6 @@ export default function UploadPrescriptionPage() {
               </p>
             </div>
 
-            {/* Error Feedback */}
             {orderError && (
               <div className="mt-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 animate-in slide-in-from-top-2">
                 <FiAlertCircle className="shrink-0" />
@@ -296,13 +360,14 @@ export default function UploadPrescriptionPage() {
 
             <button
               onClick={handleOrder}
-              disabled={isPlacingOrder || images.length === 0}
+              disabled={
+                isPlacingOrder || (images.length === 0 && !prescriptionId)
+              }
               className="w-full mt-10 h-[80px] bg-[#1D3583] hover:bg-[#162a6b] text-white rounded-full text-xl font-bold flex items-center justify-center gap-3 transition-all cursor-pointer disabled:opacity-50 shadow-none active:scale-[0.98]"
             >
               {isPlacingOrder ? 'Processing...' : 'Order Prescription'}
               <FiChevronRight size={24} strokeWidth={3} />
             </button>
-
             <div className="mt-8 text-center px-4">
               <p className="text-[13px] text-gray-400 leading-relaxed">
                 By continuing you agree to our{' '}
@@ -326,5 +391,19 @@ export default function UploadPrescriptionPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function UploadPrescriptionPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <FiLoader className="animate-spin text-gray-400" size={40} />
+        </div>
+      }
+    >
+      <UploadPrescriptionContent />
+    </Suspense>
   );
 }

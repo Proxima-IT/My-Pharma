@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiArrowRight } from 'react-icons/fi';
 import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { uploadPrescriptionApi } from '../../api/prescriptionApi';
@@ -8,7 +9,12 @@ import PrescriptionCard from './components/PrescriptionCard';
 import UploadCard from './components/UploadCard';
 import UiButton from '@/app/(public)/components/UiButton';
 
+/**
+ * MyPrescriptionsPage Component
+ * Features: Prescription library management and redirection to order flow with pre-selected ID.
+ */
 export default function MyPrescriptionsPage() {
+  const router = useRouter();
   const { prescriptions, isLoading, error, refresh } = usePrescriptions();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
@@ -23,14 +29,8 @@ export default function MyPrescriptionsPage() {
       formData.append('file', file);
       formData.append('title', `Prescription_${new Date().getTime()}`);
 
-      // Use the real API function
       await uploadPrescriptionApi(token, formData);
-
-      // Refresh the list immediately without a page reload
-      // Passing false to refresh to avoid the full-page spinner if desired
       await refresh(false);
-
-      // Optional: Clear selection if a new one is uploaded
       setSelectedId(null);
     } catch (err) {
       console.error('Upload error:', err);
@@ -40,9 +40,18 @@ export default function MyPrescriptionsPage() {
     }
   };
 
-  // Toggle selection logic: Unselect if clicking the same ID
   const handleToggleSelect = id => {
     setSelectedId(prevId => (prevId === id ? null : id));
+  };
+
+  /**
+   * Redirects to the Prescription Ordering page passing the selected ID
+   * so the user doesn't have to re-upload the same file.
+   */
+  const handlePlaceOrder = () => {
+    if (selectedId) {
+      router.push(`/upload-prescription?prescriptionId=${selectedId}`);
+    }
   };
 
   return (
@@ -56,16 +65,18 @@ export default function MyPrescriptionsPage() {
       </div>
 
       {/* Main Container */}
-      <div className="bg-white rounded-[32px] p-6 md:p-10 border border-gray-100/50 min-h-[600px] flex flex-col">
+      <div className="bg-white rounded-[32px] p-6 md:p-10 border border-gray-100/50 min-h-[600px] flex flex-col shadow-none">
         <div className="mb-10 hidden lg:block">
           <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
             My Prescriptions
           </h1>
+          <p className="text-sm text-gray-400 mt-1">
+            Select an existing prescription to place a new order.
+          </p>
         </div>
 
         {/* Grid Layout */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 flex-grow">
-          {/* 1. List of existing Prescriptions */}
           {prescriptions.map(item => (
             <PrescriptionCard
               key={item.id}
@@ -75,24 +86,19 @@ export default function MyPrescriptionsPage() {
             />
           ))}
 
-          {/* 2. Loading Placeholder (Only for initial load) */}
           {isLoading && prescriptions.length === 0 && (
             <div className="col-span-1 flex items-center justify-center aspect-[4/3] bg-gray-50 rounded-2xl border-[5px] border-white">
-              <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 border-2 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
             </div>
           )}
 
-          {/* 3. Upload Card always at the end */}
           <UploadCard onUpload={handleDirectUpload} isLoading={isUploading} />
         </div>
 
-        {/* 4. Bottom Action Section */}
+        {/* Bottom Action Section */}
         <div className="mt-12 pt-8 border-t border-gray-50 flex justify-start">
           <div className="w-full max-w-[240px]">
-            <UiButton
-              disabled={!selectedId}
-              onClick={() => console.log('Placing order with Rx:', selectedId)}
-            >
+            <UiButton disabled={!selectedId} onClick={handlePlaceOrder}>
               <div className="flex items-center justify-center gap-3">
                 <span>PLACE ORDER</span>
                 <FiArrowRight size={18} strokeWidth={3} />
