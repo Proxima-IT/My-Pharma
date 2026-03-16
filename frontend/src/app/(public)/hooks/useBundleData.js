@@ -1,73 +1,42 @@
-// Bundle data hook
+'use client';
+
+import { useState, useEffect } from 'react';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+
+/**
+ * useBundleData Hook
+ * Fetches active combos from the API.
+ * Updated: Synchronized to read 'bg_color' from the backend response.
+ */
 export const useBundleData = () => {
+  const [bundles, setBundles] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const bundles = [
-    {
-      id: 1,
-      title: "Health Combo Packages",
-      description: "Designed for daily and long-term care",
-      price: "1,250",
-      oldPrice: "1,250",
-      bgColor: "bg-[#B0E5C7]",
-      image: "/assets/images/bundle1.png",
-      imageClass: "max-w-[75%] max-h-[75%]",
-    },
-    {
-      id: 2,
-      title: "Baby Care Combo Packages",
-      description: "Designed for daily and long-term care",
-      price: "5,250",
-      oldPrice: "1,790",
-      bgColor: "bg-[#B0B0FD]",
-      image: "/assets/images/bundle2.png",
-      imageClass: "max-w-[75%] max-h-[75%]",
-    },
-    {
-      id: 3,
-      title: "Handwash Combo Packages",
-      description: "Designed for daily and long-term care",
-      price: "4,250",
-      oldPrice: "1,790",
-      bgColor: "bg-[#B0E5C7]",
-      image: "/assets/images/bundle2.png",
-      imageClass: "max-w-[75%] max-h-[45%]",
-    },
-    {
-      id: 4,
-      title: "Baby Care Combo Packages",
-      description: "Designed for daily and long-term care",
-      price: "5,250",
-      oldPrice: "1,790",
-      bgColor: "bg-[#B0B0FD]",
-      image: "/assets/images/bundle2.png",
-      imageClass: "max-w-[75%] max-h-[75%]",
-    },
-    {
-      id: 5,
-      title: "Health Combo Packages",
-      description: "Designed for daily and long-term care",
-      price: "1,250",
-      oldPrice: "1,250",
-      bgColor: "bg-[#B0E5C7]",
-      image: "/assets/images/bundle1.png",
-      imageClass: "max-w-[75%] max-h-[75%]",
-    },
-  ];
+  useEffect(() => {
+    const fetchBundles = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/combos/?is_active=true`);
+        if (!response.ok) throw new Error('Failed to fetch bundles');
 
-  // Future: API call
-  // const [bundles, setBundles] = useState([]);
-  // const [loading, setLoading] = useState(true);
-  // 
-  // useEffect(() => {
-  //   fetch('/api/bundles')
-  //     .then(res => res.json())
-  //     .then(data => {
-  //       setBundles(data);
-  //       setLoading(false);
-  //     });
-  // }, []);
-  //
-  // return { bundles, loading };
+        const data = await response.json();
 
-  return { bundles };
+        // Map API results to ensure the bg_color field is passed to the UI
+        const mappedBundles = (data.results || []).map(item => ({
+          ...item,
+          // Fallback to brand green if bg_color is not defined in DB
+          bgColor: item.bg_color || '#B0E5C7',
+        }));
+
+        setBundles(mappedBundles);
+      } catch (err) {
+        console.error('Bundle Fetch Error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBundles();
+  }, []);
+
+  return { bundles, loading };
 };

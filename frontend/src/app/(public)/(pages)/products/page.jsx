@@ -15,26 +15,22 @@ const Products = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // 1. Extract URL parameters
   const categoryFilter = searchParams.get('category') || '';
   const searchQuery = searchParams.get('search') || '';
   const brandIdFromUrl = searchParams.get('brand') || '';
 
-  // 2. Initialize Hook with URL parameters
-  const { loading, products, filters, updateFilters } = useProductData({
+  const { loading, products, page, setPage, totalCount } = useProductData({
     category: categoryFilter,
     search: searchQuery,
     brand_id: brandIdFromUrl,
   });
 
-  // States for local UI filters
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
   const [brands, setBrands] = useState([]);
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [minPrice, setMinPrice] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
 
-  // 3. Fetch Brands and sync URL brandId with UI checkboxes
   useEffect(() => {
     const fetchBrands = async () => {
       try {
@@ -45,14 +41,11 @@ const Products = () => {
         const brandList = data.results || data;
         setBrands(brandList);
 
-        // If there's a brand ID in the URL, check the corresponding checkbox
         if (brandIdFromUrl) {
           const brandObj = brandList.find(
             b => b.id.toString() === brandIdFromUrl,
           );
-          if (brandObj) {
-            setSelectedBrands([brandObj.name]);
-          }
+          if (brandObj) setSelectedBrands([brandObj.name]);
         }
       } catch (err) {
         console.error('Failed to fetch brands:', err);
@@ -61,11 +54,11 @@ const Products = () => {
     fetchBrands();
   }, [brandIdFromUrl]);
 
-  // 4. Combined Filtering Logic (Client-side for Price and Multi-Brand selection)
+  // Combined Filtering Logic (Only for things NOT handled by the server hook yet)
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    // Filter by Price Range
+    // 1. Filter by Price Range (Client-side)
     if (minPrice) {
       result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
     }
@@ -73,7 +66,7 @@ const Products = () => {
       result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
     }
 
-    // Filter by Selected Brands (if multiple selected via checkboxes)
+    // 2. Filter by Selected Brands (Only if multiple checkboxes are used manually)
     if (selectedBrands.length > 0 && !brandIdFromUrl) {
       result = result.filter(p => selectedBrands.includes(p.brand_name));
     }
@@ -87,10 +80,7 @@ const Products = () => {
         ? prev.filter(b => b !== brandName)
         : [...prev, brandName],
     );
-    // Clear the URL brand ID if user starts manually toggling checkboxes
-    if (brandIdFromUrl) {
-      router.push('/products');
-    }
+    if (brandIdFromUrl) router.push('/products');
   };
 
   const clearAllFilters = () => {
@@ -242,12 +232,6 @@ const Products = () => {
               </>
             )}
           </h1>
-          <div className="flex items-center gap-4">
-            <p className="text-gray-400 text-sm font-medium">Sort by:</p>
-            <button className="bg-white border border-gray-100 rounded-full px-6 py-2.5 text-gray-900 flex gap-3 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
-              Newest First <IoIosArrowDown className="text-gray-400" />
-            </button>
-          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 xl:grid-cols-4 gap-6">

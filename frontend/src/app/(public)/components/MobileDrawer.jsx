@@ -1,133 +1,55 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { IoCloseSharp, IoSearchOutline } from 'react-icons/io5';
+import React, { useEffect, useState } from 'react';
+import { IoCloseSharp } from 'react-icons/io5';
 import { AiOutlineMenu } from 'react-icons/ai';
-import {
-  FiHome,
-  FiHeart,
-  FiActivity,
-  FiSmile,
-  FiZap,
-  FiSearch,
-  FiCommand,
-  FiPlus,
-  FiChevronDown,
-} from 'react-icons/fi';
-import {
-  GiPill,
-  GiHerbsBundle,
-  GiHealthCapsule,
-  GiDogBowl,
-} from 'react-icons/gi';
-import {
-  MdOutlineScience,
-  MdOutlineFaceRetouchingNatural,
-  MdOutlineHomeWork,
-} from 'react-icons/md';
-import { FaFacebook, FaLinkedin, FaInstagram } from 'react-icons/fa6';
-import { LuUpload } from 'react-icons/lu';
+import { FiGrid, FiCheckCircle, FiTruck } from 'react-icons/fi';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
-import Logo from './Logo';
-import { getCategories } from '@/data/categories';
-import { uploadPrescriptionApi } from '../../(user)/api/prescriptionApi';
+import Image from 'next/image';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
 const MobileDrawer = () => {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const currentCategory = searchParams.get('category');
 
-  const fileInputRef = useRef(null);
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [expandedId, setExpandedId] = useState(2);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [ads, setAds] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { logos } = useLogoAdmin();
+  const systemLogo = logos?.find(l => l.slug === 'LOGO' || l.slug === 'logo');
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : 'auto';
-    const token = localStorage.getItem('access_token');
-    setIsLoggedIn(!!token);
   }, [open]);
 
   useEffect(() => {
-    const loadCategories = async () => {
-      const data = await getCategories();
-      setCategories(data);
-
-      // Auto-expand parent if a sub-category is active in URL
-      if (currentCategory) {
-        const parent = data.find(
-          cat =>
-            cat.slug === currentCategory ||
-            cat.subCategories?.some(sub => sub.slug === currentCategory),
-        );
-        if (parent) setExpandedId(parent.id);
+    const fetchData = async () => {
+      try {
+        const [catRes, adsRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/sidebar-categories/`),
+          fetch(`${API_BASE_URL}/ads/?is_active=true`),
+        ]);
+        const catData = await catRes.json();
+        const adsData = await adsRes.json();
+        setCategories(catData.results || []);
+        setAds(adsData.results || []);
+      } catch (error) {
+        console.error('Error fetching drawer data:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-    loadCategories();
-  }, [currentCategory]);
+    if (open) fetchData();
+  }, [open]);
 
-  const getIcon = name => {
-    switch (name) {
-      case 'Home':
-        return <FiHome size={20} />;
-      case 'Medicine':
-        return <GiPill size={20} />;
-      case 'Healthcare':
-        return <FiHeart size={20} />;
-      case 'Lab Test':
-        return <MdOutlineScience size={20} />;
-      case 'Beauty':
-        return <MdOutlineFaceRetouchingNatural size={20} />;
-      case 'Sexual Wellness':
-        return <FiZap size={20} />;
-      case 'Baby Care':
-        return <FiSmile size={20} />;
-      case 'Herbal':
-        return <GiHerbsBundle size={20} />;
-      case 'Home Care':
-        return <MdOutlineHomeWork size={20} />;
-      case 'Supplement':
-        return <GiHealthCapsule size={20} />;
-      case 'Pet Care':
-        return <GiDogBowl size={20} />;
-      case 'Nutrition':
-        return <FiActivity size={20} />;
-      default:
-        return <FiHome size={20} />;
-    }
-  };
-
-  const handlePrescriptionClick = () => {
-    if (!isLoggedIn) {
-      setOpen(false);
-      router.push('/login');
-    } else {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileUpload = async e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      setIsUploading(true);
-      const token = localStorage.getItem('access_token');
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('title', `Mobile_Upload_${new Date().getTime()}`);
-      await uploadPrescriptionApi(token, formData);
-      alert('Prescription uploaded successfully!');
-      setOpen(false);
-      router.push('/user/prescriptions');
-    } catch (err) {
-      alert(err.message || 'Upload failed');
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  const isAllProductsActive = pathname === '/products' && !currentCategory;
+  const activeAd = ads.length > 0 ? ads[0] : null;
 
   return (
     <div>
@@ -137,27 +59,20 @@ const MobileDrawer = () => {
       >
         <AiOutlineMenu className="text-2xl text-gray-900" />
       </button>
-
-      {/* Overlay */}
       {open && (
         <div
           className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[60] animate-in fade-in duration-300"
           onClick={() => setOpen(false)}
         />
       )}
-
-      {/* Drawer Panel */}
       <aside
-        className={`fixed top-0 left-0 w-[85%] max-w-[360px] h-full bg-white z-[70] transform transition-transform duration-500 ease-in-out overflow-y-auto no-scrollbar ${
-          open ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 left-0 w-[85%] max-w-[320px] h-full bg-[#FAF7F2] z-[70] transform transition-transform duration-500 ease-in-out overflow-y-auto no-scrollbar ${open ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <div className="flex flex-col h-full">
-          {/* Header */}
-          <div className="p-6 flex justify-between items-center border-b border-gray-50">
-            <Link href="/" onClick={() => setOpen(false)}>
-              <Logo className="h-12 w-auto" />
-            </Link>
+          <div className="p-6 flex justify-between items-center bg-white border-b border-gray-100 sticky top-0 z-10">
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+              Menu
+            </h2>
             <button
               onClick={() => setOpen(false)}
               className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 cursor-pointer"
@@ -165,163 +80,111 @@ const MobileDrawer = () => {
               <IoCloseSharp size={24} />
             </button>
           </div>
-
           <div className="p-6 space-y-8">
-            {/* Socials & Contact */}
             <div className="space-y-4">
-              <div className="flex items-center gap-4 text-gray-400">
-                <a
-                  href="https://facebook.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-(--color-primary-500) transition-colors"
-                >
-                  <FaFacebook size={20} />
-                </a>
-                <a
-                  href="https://linkedin.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-(--color-primary-500) transition-colors"
-                >
-                  <FaLinkedin size={20} />
-                </a>
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="hover:text-(--color-primary-500) transition-colors"
-                >
-                  <FaInstagram size={20} />
-                </a>
-                <div className="h-4 w-px bg-gray-100 mx-2" />
-                <span className="text-xs font-bold text-gray-900">
-                  01755697233
-                </span>
-              </div>
-            </div>
-
-            {/* Upload Button */}
-            <button
-              onClick={handlePrescriptionClick}
-              disabled={isUploading}
-              className="w-full h-14 bg-white border border-gray-200 rounded-full flex items-center justify-center gap-3 text-[15px] font-bold text-gray-900 hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <LuUpload
-                className={`text-lg text-(--color-primary-500) ${isUploading ? 'animate-bounce' : ''}`}
-              />
-              {isUploading ? 'Uploading...' : 'Upload Prescription'}
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
-
-            {/* Search Bar */}
-            <div className="relative">
-              <FiSearch
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="Search categories..."
-                className="w-full h-12 pl-11 pr-12 bg-gray-50 border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
-              />
-              <div className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center text-gray-400 text-[10px] font-bold">
-                K
-              </div>
-            </div>
-
-            {/* Categories Tree */}
-            <div className="space-y-2">
-              <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] mb-4">
-                Categories
+              <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">
+                All Product Category
               </h3>
-              <nav className="space-y-1">
-                {categories.map(cat => {
-                  const isExpanded = expandedId === cat.id;
-                  const isActive = currentCategory === cat.slug;
-
-                  return (
-                    <div key={cat.id} className="flex flex-col">
+              <nav className="flex flex-col gap-1">
+                <Link
+                  href="/products"
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isAllProductsActive ? 'bg-[#233b8c] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-50'}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <FiGrid size={20} />
+                    <span className="text-[15px] font-bold tracking-tight">
+                      All Product
+                    </span>
+                  </div>
+                </Link>
+                {isLoading ? (
+                  <div className="py-10 flex justify-center">
+                    <div className="w-6 h-6 border-2 border-gray-200 border-t-(--color-primary-500) rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  categories.map(cat => {
+                    const isActive = currentCategory === cat.title;
+                    return (
                       <Link
-                        href={`/products?category=${cat.slug}`}
-                        onClick={() => {
-                          setExpandedId(isExpanded ? null : cat.id);
-                          if (!cat.subCategories) setOpen(false);
-                        }}
-                        className={`flex items-center justify-between px-4 py-3 rounded-full transition-all ${
-                          isActive || isExpanded
-                            ? 'bg-(--color-primary-500) text-white'
-                            : 'text-gray-500'
-                        }`}
+                        key={cat.id}
+                        href={`/products?category=${encodeURIComponent(cat.title)}`}
+                        onClick={() => setOpen(false)}
+                        className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-50'}`}
                       >
                         <div className="flex items-center gap-4">
+                          <div className="w-5 h-5 relative shrink-0">
+                            <Image
+                              src={
+                                cat.image_url ||
+                                systemLogo?.image_url ||
+                                '/assets/images/applogo.png'
+                              }
+                              alt={cat.title}
+                              fill
+                              className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
+                              unoptimized
+                            />
+                          </div>
                           <span
-                            className={
-                              isActive || isExpanded
-                                ? 'text-white'
-                                : 'text-gray-400'
-                            }
+                            className={`text-[15px] tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}
                           >
-                            {getIcon(cat.name)}
+                            {cat.title}
                           </span>
-                          <span className="text-[15px] font-bold tracking-tight">
-                            {cat.name}
-                          </span>
-                        </div>
-                        <div
-                          className={`flex items-center justify-center min-w-[24px] h-6 rounded-full text-[10px] font-bold ${
-                            isActive || isExpanded
-                              ? 'bg-white/20 text-white'
-                              : 'bg-gray-100 text-gray-400'
-                          }`}
-                        >
-                          {cat.count}
                         </div>
                       </Link>
-
-                      {isExpanded && cat.subCategories && (
-                        <div className="ml-6 mt-1 relative border-l border-gray-100">
-                          {cat.subCategories.map((sub, idx) => {
-                            const isSubActive = currentCategory === sub.slug;
-                            return (
-                              <div
-                                key={idx}
-                                className="relative flex items-center py-2 pl-6"
-                              >
-                                <div className="absolute left-0 top-0 w-5 h-1/2 border-b border-gray-100 rounded-bl-xl" />
-                                <Link
-                                  href={`/products?category=${sub.slug}`}
-                                  onClick={() => setOpen(false)}
-                                  className={`flex items-center gap-3 w-full p-2 rounded-2xl transition-all ${
-                                    isSubActive
-                                      ? 'bg-gray-100'
-                                      : 'bg-gray-50/50'
-                                  }`}
-                                >
-                                  <div className="w-7 h-7 rounded-full bg-white border border-gray-100 flex items-center justify-center text-[9px] font-bold text-primary-500">
-                                    {sub.name.charAt(0)}
-                                  </div>
-                                  <span
-                                    className={`text-sm font-medium ${isSubActive ? 'text-gray-900 font-bold' : 'text-gray-600'}`}
-                                  >
-                                    {sub.name}
-                                  </span>
-                                </Link>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </nav>
+            </div>
+            {activeAd && (
+              <div className="w-full rounded-[24px] overflow-hidden leading-[0] shadow-md">
+                <Link
+                  href={activeAd.link || '#'}
+                  onClick={() => setOpen(false)}
+                  className="block w-full"
+                >
+                  <Image
+                    src={
+                      activeAd.image_url ||
+                      systemLogo?.image_url ||
+                      '/assets/images/applogo.png'
+                    }
+                    alt="Promotional Banner"
+                    width={300}
+                    height={150}
+                    className="w-full h-auto object-cover"
+                    unoptimized
+                  />
+                </Link>
+              </div>
+            )}
+            <div className="flex flex-col gap-3 pb-6">
+              <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-[#e6f7ed] flex items-center justify-center shrink-0">
+                  <FiCheckCircle size={20} color="#00ab49" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 leading-tight">
+                    Genuine Medicine
+                  </h4>
+                  <p className="text-[10px] text-gray-500">
+                    100% authentic products
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white border border-gray-100 rounded-2xl p-4 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-full bg-[#e6f7ed] flex items-center justify-center shrink-0">
+                  <FiTruck size={20} color="#00ab49" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 leading-tight">
+                    Fast Delivery
+                  </h4>
+                  <p className="text-[10px] text-gray-500">Within Dhaka City</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

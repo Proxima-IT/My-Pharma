@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSearchParams, usePathname } from 'next/navigation';
+import { useSearchParams, usePathname, useRouter } from 'next/navigation';
 import {
   FiSearch,
   FiCommand,
@@ -14,6 +14,7 @@ import {
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 const Sidebar = () => {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const currentCategory = searchParams.get('category');
@@ -21,6 +22,7 @@ const Sidebar = () => {
   const [categories, setCategories] = useState([]);
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +46,12 @@ const Sidebar = () => {
     fetchData();
   }, []);
 
+  const handleSearch = e => {
+    if (e.key === 'Enter' && searchTerm.trim()) {
+      router.push(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
+  };
+
   const isAllProductsActive = pathname === '/products' && !currentCategory;
   const activeAd = ads.length > 0 ? ads[0] : null;
 
@@ -63,6 +71,9 @@ const Sidebar = () => {
           <input
             type="text"
             placeholder="Search"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearch}
             className="w-full h-12 pl-11 pr-16 bg-white border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
@@ -77,7 +88,7 @@ const Sidebar = () => {
 
         <nav className="flex flex-col">
           <Link
-            href="/products"
+            href="/categories"
             className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all mb-1 ${
               isAllProductsActive
                 ? 'bg-[#233b8c] text-white shadow-md'
@@ -135,7 +146,7 @@ const Sidebar = () => {
         </nav>
       </div>
 
-      {/* 2. DYNAMIC PROMOTIONAL IMAGE BANNER - Fixed to fill container perfectly */}
+      {/* 2. DYNAMIC PROMOTIONAL IMAGE BANNER */}
       <div className="w-full rounded-[32px] overflow-hidden leading-[0]">
         <Link href={activeAd?.link || '#'} className="block w-full h-full">
           <Image

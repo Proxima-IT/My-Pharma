@@ -12,29 +12,30 @@ import {
 } from 'react-icons/fa6';
 import { SlPhone } from 'react-icons/sl';
 import { CiMail, CiLocationOn } from 'react-icons/ci';
+import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
 const Footer = () => {
+  const { logos } = useLogoAdmin();
+  const systemLogo = logos?.find(l => l.slug === 'LOGO' || l.slug === 'logo');
+
   return (
     <div className="bg-(--color-primary-900) px-4 md:px-7 py-12 text-white/70">
-      {/* footer container */}
       <footer className="flex flex-col lg:flex-row gap-7">
-        {/* left content - Brand & Subscription */}
         <div className="bg-white/5 rounded-[32px] w-full lg:w-4/12 p-8 space-y-6">
           <div className="space-y-5">
             <Image
-              src="/assets/images/footer-logo.png"
+              src={systemLogo?.image_url || '/assets/images/footer-logo.png'}
               alt="My Pharma Logo"
               width={200}
               height={60}
-              className="w-40 h-auto"
+              className="w-40 h-auto object-contain"
               priority
+              unoptimized
             />
-
             <p className="text-sm leading-relaxed">
               Your trusted online pharmacy for genuine medicines and healthcare
               essentials.
             </p>
-
             <div className="space-y-4 pt-4">
               <h4 className="text-white font-bold text-sm uppercase tracking-widest">
                 Subscribe to our emails
@@ -50,7 +51,6 @@ const Footer = () => {
                 </button>
               </div>
             </div>
-
             <div className="flex gap-3 pt-2">
               {[
                 { icon: <FaFacebook />, href: 'https://facebook.com' },
@@ -72,10 +72,8 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* right content - Links & Info */}
         <div className="bg-white/5 rounded-[32px] p-6 lg:p-10 w-full lg:w-8/12 flex flex-col justify-between">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-5">
-            {/* column 1 */}
             <div>
               <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
                 Quick Links
@@ -110,8 +108,6 @@ const Footer = () => {
                 </Link>
               </div>
             </div>
-
-            {/* column 2 */}
             <div>
               <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
                 Services
@@ -149,8 +145,6 @@ const Footer = () => {
                 </Link>
               </div>
             </div>
-
-            {/* column 3 */}
             <div>
               <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
                 Compliance
@@ -188,8 +182,6 @@ const Footer = () => {
                 </Link>
               </div>
             </div>
-
-            {/* column 4 */}
             <div>
               <h3 className="text-white text-sm font-black uppercase tracking-widest mb-6">
                 Contact
@@ -238,7 +230,6 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Payment & Verification Section - ENLARGED FOR DESKTOP */}
           <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8 lg:gap-12 mt-12 pt-8 border-t border-white/10">
             <div className="space-y-4 w-full lg:flex-1">
               <p className="text-xs font-bold uppercase tracking-widest text-white/40">
@@ -254,9 +245,7 @@ const Footer = () => {
                 />
               </div>
             </div>
-
             <div className="hidden lg:block h-16 w-px bg-white/10" />
-
             <div className="space-y-4 w-full lg:w-auto">
               <p className="text-xs font-bold uppercase tracking-widest text-white/40">
                 Verified By:
@@ -274,7 +263,6 @@ const Footer = () => {
           </div>
         </div>
       </footer>
-
       <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-medium">
         <p>© 2026 My Pharma Limited. All rights reserved.</p>
         <div className="flex gap-6">

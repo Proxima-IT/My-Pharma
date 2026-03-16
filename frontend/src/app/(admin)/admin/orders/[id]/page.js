@@ -13,6 +13,11 @@ import {
 import { useAdminOrders } from '../../../hooks/useAdminOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 
+/**
+ * AdminOrderDetailsPage
+ * Strictly follows the Super Admin "Sharp" design system.
+ * Updated: Added the missing 'PROCESSING' status to the management sidebar.
+ */
 export default function AdminOrderDetailsPage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
@@ -169,8 +174,6 @@ export default function AdminOrderDetailsPage({ params }) {
                         Price: {formatCurrency(item.price_at_order)} x{' '}
                         {item.quantity}
                       </p>
-
-                      {/* DOSAGE UI: Highlighted for Admin visibility */}
                       {item.dosage && (
                         <span className="px-2 py-0.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[10px] font-bold uppercase">
                           Dosage: {item.dosage}
@@ -208,6 +211,7 @@ export default function AdminOrderDetailsPage({ params }) {
               {[
                 'PENDING',
                 'CONFIRMED',
+                'PROCESSING',
                 'SHIPPED',
                 'DELIVERED',
                 'CANCELLED',
@@ -219,7 +223,7 @@ export default function AdminOrderDetailsPage({ params }) {
                   className={`w-full py-3 text-[10px] font-bold uppercase tracking-widest border transition-all cursor-pointer ${
                     orderDetails.status === status
                       ? 'bg-gray-50 border-gray-100 text-[#B7B7A4] cursor-not-allowed'
-                      : 'bg-white border-gray-200 text-[#1B1B1B] hover:border-[#3A5A40] hover:text-[#3A5A40]'
+                      : 'bg-white border border-gray-200 text-[#1B1B1B] hover:border-[#3A5A40] hover:text-[#3A5A40]'
                   }`}
                 >
                   {status}

@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   FiUsers,
@@ -15,11 +16,19 @@ import {
   FiLayout,
   FiArchive,
   FiImage,
+  FiPackage,
 } from 'react-icons/fi';
+import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
+  const { logos } = useLogoAdmin();
+
+  // Find the specific system logo asset
+  const systemLogo = logos?.find(
+    l => l.slug === 'LOGO' || l.slug === 'logo' || l.slug === 'MAIN-LOGO',
+  );
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
@@ -70,6 +79,11 @@ const AdminSidebar = () => {
       items: [
         { name: 'Sidebar Menu', icon: <FiLayout />, href: '/admin/sidebar' },
         { name: 'Ads Management', icon: <FiImage />, href: '/admin/ads' },
+        {
+          name: 'Combo Management',
+          icon: <FiPackage />,
+          href: '/admin/combos',
+        },
       ],
     },
     {
@@ -120,17 +134,29 @@ const AdminSidebar = () => {
   };
 
   return (
-    /* Applied admin-scrollbar class here */
     <div className="w-full h-full flex flex-col bg-white border-r border-gray-100 admin-scrollbar overflow-y-auto">
       {/* Brand Header */}
       <div className="p-10 mb-4 shrink-0">
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-2">
           <span className="font-mono text-[9px] font-bold text-[#B7B7A4] uppercase tracking-[0.2em]">
             Admin Console
           </span>
-          <h2 className="text-[#1B1B1B] font-black text-2xl tracking-tight">
-            MY_PHARMA<span className="text-[#588157]">.</span>
-          </h2>
+
+          <div className="relative w-full h-10 min-h-[40px]">
+            {systemLogo?.image_url ? (
+              <Image
+                src={systemLogo.image_url}
+                alt="System Logo"
+                fill
+                className="object-contain object-left"
+                unoptimized
+              />
+            ) : (
+              <h2 className="text-[#1B1B1B] font-black text-2xl tracking-tight uppercase">
+                MY_PHARMA<span className="text-[#588157]">.</span>
+              </h2>
+            )}
+          </div>
         </div>
       </div>
 

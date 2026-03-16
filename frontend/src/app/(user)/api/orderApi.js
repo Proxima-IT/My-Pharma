@@ -1,43 +1,65 @@
-import { USER_ENDPOINTS } from '../../(shared)/lib/apiConfig';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
- * Pure API functions for Order management
+ * My Pharma - Order Management API
+ * Updated: Improved error handling to return specific backend validation messages.
  */
-export const fetchOrdersApi = async (token, filter = 'All', page = 1) => {
-  const params = new URLSearchParams();
-  if (filter !== 'All') params.append('status', filter.toUpperCase());
-  params.append('page', page);
-
-  const response = await fetch(
-    `${USER_ENDPOINTS.ORDERS}?${params.toString()}`,
-    {
+export const orderApi = {
+  getOrders: async (token, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    const response = await fetch(`${API_BASE_URL}/orders/?${query}`, {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-    },
-  );
+    });
+    if (!response.ok) throw new Error('Failed to fetch orders');
+    return response.json();
+  },
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.detail || 'Failed to fetch orders');
-  }
-  return data;
-};
+  getDeliveryDurations: async token => {
+    const response = await fetch(`${API_BASE_URL}/delivery-durations/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) throw new Error('Failed to fetch delivery durations');
+    return response.json();
+  },
 
-export const fetchOrderDetailsApi = async (token, id) => {
-  const response = await fetch(`${USER_ENDPOINTS.ORDERS}${id}/`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  });
+  /**
+   * Place an order using a prescription
+   * @param {FormData} formData - { uploaded_images, duration, message, shipping_address }
+   */
+  createPrescriptionOrder: async (token, formData) => {
+    const response = await fetch(`${API_BASE_URL}/orders/`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.detail || 'Failed to fetch order details');
-  }
-  return data;
+    const data = await response.json();
+    if (!response.ok) {
+      // Throw the actual backend error object (e.g., { uploaded_images: [...] })
+      throw data;
+    }
+    return data;
+  },
+
+  getOrderDetails: async (token, orderId) => {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    if (!response.ok) throw new Error('Order not found');
+    return response.json();
+  },
 };

@@ -1,56 +1,68 @@
 'use client';
 
-import React, { use } from 'react';
+import React, { use, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { FiChevronRight } from 'react-icons/fi';
 import ProductSummaryCard from './components/ProductSummaryCard';
 import ProductImageViewer from './components/ProductImageViewer';
 import ProductDetailsTabs from './components/ProductDetailsTabs';
 import AlternativeProductCard from './components/AlternativeProductCard';
 import BundleSlider from '../../home/components/BundleSlider';
-import PopularProduct from '../../home/components/PopularProduct';
+import PopularProductCard from '../../home/components/PopularProductCard';
 import UploadPrescriptionBanner from '../../home/components/UploadPrescriptionBanner';
 import { useProductDetails } from '../../../hooks/useProductDetails';
+import { useProductData } from '../../../hooks/useProductData';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
+/**
+ * ProductSingle Page
+ * Fixed: Memoized the useProductData parameters to prevent infinite re-render loops.
+ */
 const ProductSingle = ({ params }) => {
   const resolvedParams = use(params);
   const { slug } = resolvedParams;
   const pathname = usePathname();
 
-  const { product, isLoading, error } = useProductDetails(slug);
+  const {
+    product,
+    isLoading,
+    error,
+    refresh: refreshProduct,
+  } = useProductDetails(slug);
 
-  // 1. Generate Breadcrumbs
+  // Memoize parameters to stabilize object reference and prevent infinite loops
+  const relatedParams = useMemo(
+    () => ({
+      category: product?.category || '',
+      is_active: 'true',
+    }),
+    [product?.category],
+  );
+
+  const { products: relatedProducts } = useProductData(relatedParams);
+
+  const displayRelated = relatedProducts
+    .filter(p => p.id !== product?.id)
+    .slice(0, 8);
+
   const pathSegments = pathname.split('/').filter(segment => segment);
   const breadcrumbs = pathSegments.map((segment, index) => {
     const href = `/${pathSegments.slice(0, index + 1).join('/')}`;
     const isLast = index === pathSegments.length - 1;
-
     let name =
       isLast && product
         ? product.name
         : segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, ' ');
-
     return { name, href, isLast };
   });
 
-  // 2. Process Images
   const getProductImages = () => {
     if (!product) return [];
     const images = [];
     if (product.image) images.push(getMediaUrl(product.image));
-
     if (product.images && Array.isArray(product.images)) {
       product.images.forEach(img => images.push(getMediaUrl(img)));
-    } else if (product.images && typeof product.images === 'string') {
-      try {
-        const extraImages = JSON.parse(product.images);
-        if (Array.isArray(extraImages))
-          extraImages.forEach(img => images.push(getMediaUrl(img)));
-      } catch {
-        const extraImages = product.images.split(',').map(img => img.trim());
-        extraImages.forEach(img => images.push(getMediaUrl(img)));
-      }
     }
     return [...new Set(images)].filter(Boolean);
   };
@@ -67,9 +79,6 @@ const ProductSingle = ({ params }) => {
     return (
       <div className="w-full py-20 text-center space-y-4">
         <h2 className="text-2xl font-bold text-gray-900">Product Not Found</h2>
-        <p className="text-gray-500">
-          {error || 'The product you are looking for does not exist.'}
-        </p>
         <Link
           href="/products"
           className="inline-block text-(--color-primary-500) font-bold underline"
@@ -82,9 +91,9 @@ const ProductSingle = ({ params }) => {
 
   return (
     <div className="w-full animate-in fade-in duration-700 pb-10 overflow-hidden">
-      {/* Breadcrumb Navigation */}
-      <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2.5 w-fit mb-6 md:mb-8">
-        <ol className="flex items-center gap-2 text-[10px] sm:text-xs md:text-sm whitespace-nowrap">
+      {/* Breadcrumbs */}
+      <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5">
+        <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap">
           <li className="flex items-center gap-2">
             <Link
               href="/"
@@ -97,7 +106,7 @@ const ProductSingle = ({ params }) => {
           {breadcrumbs.map(crumb => (
             <li key={crumb.href} className="flex items-center gap-2">
               {crumb.isLast ? (
-                <span className="text-gray-900 font-bold truncate max-w-[120px] sm:max-w-none">
+                <span className="text-gray-900 font-bold truncate max-w-[100px] lg:max-w-none">
                   {crumb.name}
                 </span>
               ) : (
@@ -116,51 +125,59 @@ const ProductSingle = ({ params }) => {
         </ol>
       </nav>
 
-      {/* 
-        60/40 FLEX STRATEGY:
-        - lg:flex-row: Side-by-side on Laptop (1024px+) and Desktop (1920px).
-        - lg:w-[60%] and lg:w-[40%]: Precise width allocation.
-        - min-w-0: Prevents content from breaking the layout.
-      */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
-        {/* LEFT COLUMN: Image Viewer & Tabs (60%) */}
-        <div className="w-full lg:w-[60%] min-w-0 space-y-8">
-          <div className="w-full">
-            <ProductImageViewer images={getProductImages()} />
-          </div>
-
-          <div className="w-full">
-            <ProductDetailsTabs product={product} />
-          </div>
+      {/* Main Grid */}
+      <div className="flex flex-col lg:flex-row gap-6 xl:gap-8 items-start w-full">
+        <div className="w-full lg:w-[62%] min-w-0 space-y-6 lg:space-y-5">
+          <ProductImageViewer images={getProductImages()} />
+          <ProductDetailsTabs
+            product={product}
+            onReviewSuccess={refreshProduct}
+          />
         </div>
 
-        {/* RIGHT COLUMN: Summary, Bundles, Alternatives (40%) */}
-        <div className="w-full lg:w-[40%] min-w-0 space-y-8">
+        <div className="w-full lg:w-[38%] min-w-0 space-y-6 lg:space-y-5">
           <ProductSummaryCard product={product} />
 
-          {/* Bundle/Combo Package Section */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900 tracking-tight mb-4 px-1">
+          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[20px] p-5 lg:p-4 shadow-sm">
+            <h3 className="text-lg lg:text-base font-bold text-gray-900 tracking-tight mb-3 px-1">
               Bundle/Combo Package
             </h3>
             <BundleSlider cardsToShow={1} />
           </div>
 
-          {/* Alternative Brands Section */}
-          <div className="bg-white border border-gray-100 rounded-[32px] p-6 space-y-6 shadow-sm">
-            <h3 className="text-lg font-bold text-gray-900 tracking-tight px-1">
+          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[20px] p-5 lg:p-4 space-y-4 shadow-sm">
+            <h3 className="text-lg lg:text-base font-bold text-gray-900 tracking-tight px-1">
               Alternative Brands
             </h3>
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-3">
               <AlternativeProductCard />
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Sections */}
-      <div className="space-y-10 mt-10">
-        <PopularProduct />
+      {/* Related Products */}
+      {displayRelated.length > 0 && (
+        <div className="mt-16 lg:mt-12 space-y-6">
+          <div className="flex justify-between items-center px-2">
+            <h2 className="text-2xl lg:text-xl font-bold text-gray-900 tracking-tight">
+              You May Also Like
+            </h2>
+            <Link href={`/products?category=${product.category || ''}`}>
+              <button className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-100 rounded-full text-xs lg:text-[13px] font-bold text-(--color-primary-500) hover:bg-gray-50 transition-all cursor-pointer">
+                See More Product <FiChevronRight />
+              </button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-4">
+            {displayRelated.map(item => (
+              <PopularProductCard key={item.id} product={item} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="mt-16 lg:mt-12">
         <UploadPrescriptionBanner />
       </div>
     </div>

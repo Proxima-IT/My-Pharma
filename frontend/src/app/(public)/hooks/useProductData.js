@@ -9,31 +9,36 @@ export const useProductData = (initialFilters = {}) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Pagination and Filter State
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState({
     category: '',
     search: '',
     ordering: '',
-    brand_id: '', // Added brand_id to filters
+    brand_id: '',
     ...initialFilters,
   });
+
+  // Sync internal filters whenever the URL parameters (initialFilters) change
+  useEffect(() => {
+    setFilters(prev => ({ ...prev, ...initialFilters }));
+    setPage(1); // Reset to first page on filter change
+  }, [JSON.stringify(initialFilters)]);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Prepare query parameters for the API
       const params = {
         page,
         ...Object.fromEntries(
-          Object.entries(filters).filter(([_, value]) => value !== ''),
+          Object.entries(filters).filter(
+            ([_, value]) =>
+              value !== '' && value !== undefined && value !== null,
+          ),
         ),
       };
 
       const data = await fetchProductsApi(params);
-
-      // Handle Django Rest Framework Paginated Response
       setProducts(data.results || []);
       setTotalCount(data.count || 0);
     } catch (err) {
@@ -44,12 +49,10 @@ export const useProductData = (initialFilters = {}) => {
     }
   }, [page, filters]);
 
-  // Trigger fetch when page or filters change
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
 
-  // Helper to update filters and reset to page 1
   const updateFilters = newFilters => {
     setFilters(prev => ({ ...prev, ...newFilters }));
     setPage(1);

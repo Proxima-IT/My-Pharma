@@ -6,20 +6,22 @@ import BundleCard from './BundleCard';
 import { useBundleData } from '@/app/(public)/hooks/useBundleData';
 
 export default function BundleSlider({ cardsToShow }) {
-  const { bundles } = useBundleData();
+  const { bundles, loading } = useBundleData();
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
   const [windowWidth, setWindowWidth] = useState(0);
 
   useEffect(() => {
-    setWindowWidth(window.innerWidth);
-    const handleResize = () => {
+    if (typeof window !== 'undefined') {
       setWindowWidth(window.innerWidth);
-      checkScrollButtons();
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+      const handleResize = () => {
+        setWindowWidth(window.innerWidth);
+        checkScrollButtons();
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   const checkScrollButtons = () => {
@@ -45,28 +47,24 @@ export default function BundleSlider({ cardsToShow }) {
     }
   };
 
-  /**
-   * 4-Breakpoint Width Calculation
-   */
   const getCardWidth = () => {
-    if (windowWidth === 0) return '100%'; // SSR Fallback
-
-    // 1. If a specific override is passed (like cardsToShow={1} in Product Page), respect it
+    if (windowWidth === 0) return '100%';
     if (cardsToShow === 1) return '100%';
-
-    // 2. Standard 4-Breakpoint Logic
-    if (windowWidth < 640) {
-      return '100%'; // 4. Phone Screen: 1 Card
-    }
-    if (windowWidth < 1024) {
-      return 'calc((100% - 20px) / 2)'; // 3. Tab Screen: 2 Cards
-    }
-    if (windowWidth < 1280) {
-      return 'calc((100% - 20px) / 2)'; // 2. Laptop Screen: 2 Cards
-    }
-
-    return 'calc((100% - 40px) / 3)'; // 1. Large Screen: 3 Cards
+    if (windowWidth < 640) return '100%';
+    if (windowWidth < 1024) return 'calc((100% - 20px) / 2)';
+    if (windowWidth < 1280) return 'calc((100% - 20px) / 2)';
+    return 'calc((100% - 40px) / 3)';
   };
+
+  if (loading) {
+    return (
+      <div className="w-full py-20 flex justify-center items-center">
+        <div className="w-10 h-10 border-4 border-gray-100 border-t-(--color-primary-500) rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (bundles.length === 0) return null;
 
   return (
     <div className="relative w-full animate-in fade-in duration-700">
