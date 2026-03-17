@@ -47,6 +47,10 @@ from .serializers import (
     AddToCartSerializer,
     UpdateCartItemSerializer,
     PlaceOrderFromCartSerializer,
+    CouponSerializer,
+    CouponCreateUpdateSerializer,
+    CouponValidateRequestSerializer,
+    CouponValidateResponseSerializer,
     PrescriptionSerializer,
     PrescriptionUploadSerializer,
     PrescriptionVerifySerializer,
@@ -403,6 +407,74 @@ class DeliveryDurationViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve"):
             return [IsAuthenticated()]  # Any authenticated user can read (e.g. select when placing order)
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+
+# ---- Coupons: admin CRUD + user validate ----
+@extend_schema_view(
+    list=extend_schema(tags=["Coupons"], summary="List coupons (admin)"),
+    retrieve=extend_schema(tags=["Coupons"], summary="Get coupon by id (admin)"),
+    create=extend_schema(tags=["Coupons"], summary="Create coupon (admin)"),
+    update=extend_schema(tags=["Coupons"], summary="Update coupon (admin)"),
+    partial_update=extend_schema(tags=["Coupons"], summary="Partial update coupon (admin)"),
+    destroy=extend_schema(tags=["Coupons"], summary="Delete coupon (admin)"),
+)
+class CouponViewSet(viewsets.ModelViewSet):
+    queryset = Coupon.objects.all()
+    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
+    filterset_fields = ["discount_type", "is_active"]
+    search_fields = ["code"]
+
+    def get_serializer_class(self):
+        if self.action in ("create", "update", "partial_update"):
+            return CouponCreateUpdateSerializer
+        return CouponSerializer
+
+    @action(detail=False, methods=["post"], url_path="validate", permission_classes=[IsAuthenticated, IsRegisteredUser])
+    @extend_schema(
+        tags=["Coupons"],
+        summary="Validate/apply coupon (user)",
+        request=CouponValidateRequestSerializer,
+        responses={200: CouponValidateResponseSerializer},
+    )
+    def validate_coupon_code(self, request):
+        """Validate a coupon code and return discount amount for a subtotal."""
+        ser = CouponValidateRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        code = (ser.validated_data.get("code") or "").strip()
+        subtotal = ser.validated_data.get("subtotal")
+        if subtotal is None:
+            # If subtotal not sent, try to compute from cart
+            cart = get_or_create_cart(request.user)
+            items = cart.items.select_related("product").all()
+            subtotal = sum((i.price_at_order * i.quantity for i in items), Decimal("0"))
+        try:
+            coupon, discount = validate_coupon(code, subtotal)
+        except ValueError as e:
+            return Response(
+                {
+                    "is_valid": False,
+                    "code": (code or None),
+                    "discount_amount": Decimal("0.00"),
+                    "discount_display": None,
+                    "message": str(e),
+                },
+                status=status.HTTP_200_OK,
+            )
+        # display
+        if coupon.discount_type == Coupon.DiscountType.PERCENT:
+            display = f"-{coupon.discount_value}%"
+        else:
+            display = f"-৳{coupon.discount_value}"
+        return Response(
+            {
+                "is_valid": True,
+                "code": coupon.code,
+                "discount_amount": discount,
+                "discount_display": display,
+                "message": "Coupon applied.",
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # ---- Cart: one cart per user; add, update/remove items, summary, place order ----

@@ -394,6 +394,23 @@ When admin **approves with items**, the backend **creates an Order** for the use
 
 ---
 
+## 7a. Coupons (flat / percent)
+
+Pharmacy/Super admins can create discount coupons (flat amount or percent). Users apply coupons during checkout via `coupon_code` (cart place-order) and can validate codes via `/api/coupons/validate/`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/coupons/` | List coupons (admin). Search: `?search=CODE`. Filter: `discount_type`, `is_active`. |
+| GET | `/api/coupons/{id}/` | Retrieve one (admin). |
+| POST | `/api/coupons/` | Create coupon (admin). |
+| PUT / PATCH | `/api/coupons/{id}/` | Update coupon (admin). |
+| DELETE | `/api/coupons/{id}/` | Delete coupon (admin). |
+| POST | `/api/coupons/validate/` | Validate/apply coupon (user). Body: `code`, optional `subtotal` (if omitted, subtotal is calculated from cart). |
+
+**Coupon fields:** `code`, `discount_type` (`PERCENT` or `FIXED`), `discount_value`, `min_order_amount`, `valid_from`, `valid_until`, `max_uses`, `times_used`, `is_active`.
+
+---
+
 ## 8. Pagination
 
 List endpoints that return multiple items (products, orders, prescriptions, inventory-list) use **page number pagination**:
@@ -457,6 +474,7 @@ Default page size: **20** (configurable in backend).
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |
 | Product images | GET .../images/ | — | POST .../images/ | — | DELETE .../images/{id}/ |
 | Inventory | GET /api/products/inventory-list/ | — | — | PATCH .../inventory/ | — |
+| Coupons | GET /api/coupons/ | GET /api/coupons/{id}/ | POST | PUT/PATCH | DELETE |
 | Orders | GET /api/orders/ | GET /api/orders/{id}/ | — | PATCH (status, duration) | — |
 | Delivery durations | GET /api/delivery-durations/ | GET /api/delivery-durations/{id}/ | POST | PUT/PATCH | DELETE |
 | Prescriptions | GET /api/prescriptions/ | GET /api/prescriptions/{id}/ | POST (upload) | PATCH / PUT (verify) | DELETE |

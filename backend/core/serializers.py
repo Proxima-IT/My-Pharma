@@ -720,6 +720,78 @@ class PlaceOrderFromCartSerializer(serializers.Serializer):
     notes = serializers.CharField(required=False, allow_blank=True)
 
 
+# ---- Coupon ----
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = (
+            "id",
+            "code",
+            "discount_type",
+            "discount_value",
+            "min_order_amount",
+            "valid_from",
+            "valid_until",
+            "max_uses",
+            "times_used",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "times_used", "created_at", "updated_at")
+
+
+class CouponCreateUpdateSerializer(serializers.ModelSerializer):
+    code = serializers.CharField(max_length=50)
+
+    class Meta:
+        model = Coupon
+        fields = (
+            "code",
+            "discount_type",
+            "discount_value",
+            "min_order_amount",
+            "valid_from",
+            "valid_until",
+            "max_uses",
+            "is_active",
+        )
+
+    def validate_code(self, value):
+        v = (value or "").strip().upper()
+        if not v:
+            raise serializers.ValidationError("Code is required.")
+        return v
+
+    def validate(self, attrs):
+        dtype = attrs.get("discount_type") or getattr(self.instance, "discount_type", None)
+        dval = attrs.get("discount_value") if "discount_value" in attrs else getattr(self.instance, "discount_value", None)
+        if dtype == Coupon.DiscountType.PERCENT:
+            if dval is None or dval <= 0 or dval > 100:
+                raise serializers.ValidationError({"discount_value": "Percent discount must be between 0 and 100."})
+        if dtype == Coupon.DiscountType.FIXED:
+            if dval is None or dval <= 0:
+                raise serializers.ValidationError({"discount_value": "Fixed discount must be greater than 0."})
+        valid_from = attrs.get("valid_from") if "valid_from" in attrs else getattr(self.instance, "valid_from", None)
+        valid_until = attrs.get("valid_until") if "valid_until" in attrs else getattr(self.instance, "valid_until", None)
+        if valid_from and valid_until and valid_from > valid_until:
+            raise serializers.ValidationError({"valid_until": "valid_until must be after valid_from."})
+        return attrs
+
+
+class CouponValidateRequestSerializer(serializers.Serializer):
+    code = serializers.CharField()
+    subtotal = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+
+
+class CouponValidateResponseSerializer(serializers.Serializer):
+    is_valid = serializers.BooleanField()
+    code = serializers.CharField(allow_null=True, required=False)
+    discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    discount_display = serializers.CharField(allow_null=True, required=False)
+    message = serializers.CharField(allow_null=True, required=False)
+
+
 # ---- Prescription ----
 class PrescriptionItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
