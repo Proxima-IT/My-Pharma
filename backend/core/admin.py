@@ -158,10 +158,10 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "status", "duration", "total", "created_at")
+    list_display = ("id", "user", "status", "coupon", "discount_amount", "delivery_fee", "total", "created_at")
     list_filter = ("status",)
     search_fields = ("user__email", "user__phone", "id")
-    raw_id_fields = ("user", "prescription", "duration")
+    raw_id_fields = ("user", "prescription", "duration", "coupon")
     inlines = [OrderItemInline, OrderImageInline, OrderStatusHistoryInline]
     date_hierarchy = "created_at"
 

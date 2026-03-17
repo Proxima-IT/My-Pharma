@@ -364,7 +364,19 @@ class Order(models.Model):
         help_text="Expected delivery duration (admin can set).",
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
-    total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    # Pricing breakdown (so admin/user can see discounts and delivery)
+    subtotal_before_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    delivery_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    coupon = models.ForeignKey(
+        "Coupon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="orders",
+        db_index=True,
+    )
+    total = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Total payable (after discount + delivery fee).")
     shipping_address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     message = models.TextField(blank=True, help_text="Customer message with the order.")

@@ -329,7 +329,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Order.objects.select_related("user", "prescription", "duration")
+            Order.objects.select_related("user", "prescription", "duration", "coupon")
             .prefetch_related("items__product", "images", "status_history")
             .all()
         )
@@ -667,6 +667,10 @@ class CartViewSet(viewsets.GenericViewSet):
             user=request.user,
             status=Order.Status.PENDING,
             total=summary["total_payable"],
+            subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
+            discount_amount=summary.get("discount_amount") or Decimal("0"),
+            delivery_fee=summary.get("delivery_fee") or Decimal("0"),
+            coupon=cart.coupon,
             shipping_address=shipping_text,
             notes=notes,
         )
