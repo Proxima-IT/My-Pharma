@@ -18,8 +18,8 @@ import OrderedProductCard from './components/OrderedProductCard';
 
 /**
  * OrderDetailsPage (Order Tracking)
- * Fixed: Increased breakpoint to XL for 2-column layout to prevent 1280px breakage.
- * Fixed: Reduced label widths in Shipping Address.
+ * Updated: Implemented persistent pricing breakdown using backend-provided fields.
+ * Design: White background, 1px Borders, Black text, Thin labels, Rounded-[32px].
  */
 export default function OrderDetailsPage({ params }) {
   const resolvedParams = use(params);
@@ -91,7 +91,8 @@ export default function OrderDetailsPage({ params }) {
   const activeIndex = steps.findIndex(s => s.status === currentStatus);
   const isCancelled = currentStatus === 'CANCELLED';
 
-  const subtotal = useMemo(() => {
+  // Fallback subtotal calculation for older orders
+  const subtotalCalculated = useMemo(() => {
     return (
       orderDetails?.items?.reduce(
         (acc, item) =>
@@ -113,11 +114,11 @@ export default function OrderDetailsPage({ params }) {
       <div className="w-full px-4 sm:px-6 lg:px-10 pt-6 md:pt-10 flex items-center gap-6">
         <button
           onClick={() => router.back()}
-          className="w-fit flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-full text-sm font-bold text-black hover:bg-gray-50 cursor-pointer shadow-none"
+          className="w-fit flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-100 rounded-full text-sm font-bold text-black hover:bg-gray-50 transition-all cursor-pointer shadow-none"
         >
           <FiArrowLeft /> Back
         </button>
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight">
+        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight">
           Order Tracking
         </h1>
       </div>
@@ -125,7 +126,7 @@ export default function OrderDetailsPage({ params }) {
       <div className="w-full px-4 sm:px-6 lg:px-10 mt-6 md:mt-10 space-y-6 md:space-y-10">
         <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
           <div className="space-y-1">
-            <h2 className="text-xl md:text-2xl font-bold">
+            <h2 className="text-xl md:text-2xl lg:text-[28px] font-bold">
               Order ID: {orderDetails.id}
             </h2>
             <p className="text-sm text-black font-medium">
@@ -236,6 +237,8 @@ export default function OrderDetailsPage({ params }) {
                 ))}
               </div>
             </div>
+
+            {/* FIXED: Dynamic Order Summary with persistent discount breakdown */}
             <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6">
               <h3 className="text-xl md:text-2xl font-bold">Order Summary</h3>
               <div className="space-y-5">
@@ -244,23 +247,40 @@ export default function OrderDetailsPage({ params }) {
                     Subtotal
                   </span>
                   <span className="font-bold">
-                    ৳{subtotal.toLocaleString()}
+                    ৳
+                    {(
+                      orderDetails.subtotal_before_discount ||
+                      subtotalCalculated
+                    ).toLocaleString()}
                   </span>
                 </div>
+
+                {parseFloat(orderDetails.discount_amount) > 0 && (
+                  <div className="flex justify-between text-sm md:text-[17px] font-bold">
+                    <span className="text-black font-light uppercase tracking-widest">
+                      Discount{' '}
+                      {orderDetails.coupon?.code
+                        ? `(${orderDetails.coupon.code})`
+                        : ''}
+                    </span>
+                    <span className="text-red-500">
+                      -৳
+                      {parseFloat(
+                        orderDetails.discount_amount,
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-sm md:text-[17px] font-bold">
                   <span className="text-black font-light uppercase tracking-widest">
                     Delivery Fee
                   </span>
-                  <span className="font-bold">৳150</span>
-                </div>
-                <div className="flex justify-between text-sm md:text-[17px] font-bold">
-                  <span className="text-black font-light uppercase tracking-widest">
-                    Discount (-20%)
-                  </span>
-                  <span className="text-red-500">
-                    -৳{(subtotal * 0.2).toFixed(0)}
+                  <span className="font-bold">
+                    ৳{(orderDetails.delivery_fee || 150).toLocaleString()}
                   </span>
                 </div>
+
                 <div className="h-px bg-gray-100 w-full" />
                 <div className="flex justify-between text-xl md:text-2xl font-black">
                   <span className="uppercase font-light">Total</span>
@@ -339,9 +359,12 @@ export default function OrderDetailsPage({ params }) {
                         <div className="absolute left-[19px] md:left-[23px] top-10 md:top-12 bottom-0 w-0.5 bg-[#10B981]" />
                       )}
                       <div
-                        className={`absolute left-0 top-1.5 w-10 h-10 md:w-12 rounded-full border-4 border-white flex items-center justify-center z-10 ${isCurrent ? 'bg-[#10B981] text-white' : 'bg-gray-200 text-gray-400'}`}
+                        className={`absolute left-0 top-1.5 w-10 h-10 md:w-12 md:h-12 rounded-full border-4 border-white flex items-center justify-center z-10 ${isCurrent ? 'bg-[#10B981] text-white' : 'bg-gray-200 text-gray-400'}`}
                       >
-                        <FiCheck className="w-4 h-4 md:w-5" strokeWidth={4} />
+                        <FiCheck
+                          className="w-4 h-4 md:w-5 md:h-5"
+                          strokeWidth={4}
+                        />
                       </div>
                       <div className="space-y-3">
                         <p className="text-[11px] md:text-[14px] font-bold text-gray-400 uppercase tracking-widest">

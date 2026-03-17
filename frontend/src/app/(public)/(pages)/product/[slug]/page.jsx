@@ -17,7 +17,7 @@ import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * ProductSingle Page
- * Fixed: Memoized the useProductData parameters to prevent infinite re-render loops.
+ * Fixed: Filtered related products to strictly show items from the same category only.
  */
 const ProductSingle = ({ params }) => {
   const resolvedParams = use(params);
@@ -42,9 +42,15 @@ const ProductSingle = ({ params }) => {
 
   const { products: relatedProducts } = useProductData(relatedParams);
 
-  const displayRelated = relatedProducts
-    .filter(p => p.id !== product?.id)
-    .slice(0, 8);
+  // FIXED: Added explicit category filtering to ensure only same-category products are displayed
+  const displayRelated = useMemo(() => {
+    const productList = Array.isArray(relatedProducts)
+      ? relatedProducts
+      : relatedProducts?.results || [];
+    return productList
+      .filter(p => p.category === product?.category && p.id !== product?.id)
+      .slice(0, 8);
+  }, [relatedProducts, product?.id, product?.category]);
 
   const pathSegments = pathname.split('/').filter(segment => segment);
   const breadcrumbs = pathSegments.map((segment, index) => {

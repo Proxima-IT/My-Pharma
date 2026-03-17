@@ -17,6 +17,7 @@ import {
   FiArchive,
   FiImage,
   FiPackage,
+  FiTag,
 } from 'react-icons/fi';
 import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
 
@@ -83,6 +84,11 @@ const AdminSidebar = () => {
           name: 'Combo Management',
           icon: <FiPackage />,
           href: '/admin/combos',
+        },
+        {
+          name: 'Coupon Management',
+          icon: <FiTag />,
+          href: '/admin/coupons',
         },
       ],
     },

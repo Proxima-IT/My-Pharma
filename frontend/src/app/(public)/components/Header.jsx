@@ -25,12 +25,14 @@ import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import MobileDrawer from './MobileDrawer';
 import AddressSelectorPopup from './AddressSelectorPopup';
+import SearchSuggestions from './SearchSuggestions';
 import { uploadPrescriptionApi } from '../../(user)/api/prescriptionApi';
 import { addToCartApi } from '../api/cartApi';
 import { useAddress } from '../../(user)/hooks/useAddress';
 import { useCart } from '../hooks/useCart';
 import { useProfile } from '../../(user)/hooks/useProfile';
 import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 const TrackOrderIcon = ({ className, size = 22 }) => (
   <svg
@@ -56,10 +58,18 @@ const Header = () => {
   const pathname = usePathname();
   const fileInputRef = useRef(null);
   const dropdownRef = useRef(null);
+  const searchRef = useRef(null);
+
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // Search Suggestion States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
 
   const { addresses } = useAddress();
   const { items, refresh: refreshCart } = useCart();
@@ -68,7 +78,6 @@ const Header = () => {
 
   const systemLogo = logos?.find(l => l.slug === 'LOGO' || l.slug === 'logo');
   const cartCount = items?.length || 0;
-  const [searchQuery, setSearchQuery] = useState('');
 
   const base64ToFile = (base64String, filename) => {
     const arr = base64String.split(',');
@@ -76,20 +85,54 @@ const Header = () => {
     const bstr = atob(arr[1]);
     let n = bstr.length;
     const u8arr = new Uint8Array(n);
-    while (n--) u8arr[n] = bstr.charCodeAt(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
     return new File([u8arr], filename, { type: mime });
   };
 
+  // Click Outside logic for Profile and Search
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     if (token) setIsLoggedIn(true);
+
     const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target))
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
+      }
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSuggestions(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Real-time Search Logic with Debounce
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(async () => {
+      if (searchQuery.trim().length > 2) {
+        setIsSearching(true);
+        setShowSuggestions(true);
+        try {
+          const res = await fetch(
+            `${API_BASE_URL}/products/?search=${encodeURIComponent(searchQuery.trim())}&is_active=true`,
+          );
+          const data = await res.json();
+          setSuggestions(data.results?.slice(0, 6) || []);
+        } catch (err) {
+          console.error('Search error:', err);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSuggestions([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   useEffect(() => {
     const syncGuestData = async () => {
@@ -134,10 +177,12 @@ const Header = () => {
     syncGuestData();
   }, [isLoggedIn, refreshCart]);
 
-  const handleSearch = e => {
+  const handleSearchSubmit = e => {
     if (e) e.preventDefault();
-    if (searchQuery.trim())
+    if (searchQuery.trim()) {
+      setShowSuggestions(false);
       router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   const handleLogout = () => {
@@ -287,12 +332,20 @@ const Header = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full lg:flex-1">
-          <form onSubmit={handleSearch} className="relative flex-1 min-w-0">
+        {/* Search Bar with Suggestions */}
+        <div
+          className="flex items-center gap-2 w-full lg:flex-1 relative"
+          ref={searchRef}
+        >
+          <form
+            onSubmit={handleSearchSubmit}
+            className="relative flex-1 min-w-0"
+          >
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
+              onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
               placeholder='Search for "healthcare products"'
               className="w-full h-12 md:h-14 pl-6 pr-14 rounded-full border border-gray-100 text-sm focus:outline-none focus:ring-4 focus:ring-(--color-primary-500)/10 transition-all"
             />
@@ -303,6 +356,18 @@ const Header = () => {
               <IoSearchOutline className="text-lg md:text-xl text-white" />
             </button>
           </form>
+
+          {/* Suggestions Dropdown */}
+          <SearchSuggestions
+            suggestions={suggestions}
+            isLoading={isSearching}
+            visible={showSuggestions}
+            onSelect={() => {
+              setShowSuggestions(false);
+              setSearchQuery('');
+            }}
+          />
+
           <button
             onClick={handlePrescriptionClick}
             className="lg:hidden w-12 h-12 rounded-full border-[2px] border-gray-200/60 flex items-center justify-center cursor-pointer hover:bg-gray-50 shadow-none transition-all duration-300 shrink-0"

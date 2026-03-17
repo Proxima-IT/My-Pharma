@@ -3,76 +3,90 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { IoPricetagOutline } from 'react-icons/io5';
-import { FiChevronRight, FiCheck } from 'react-icons/fi';
+import { FiChevronRight, FiCheck, FiX } from 'react-icons/fi';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
+import { useCart } from '../../../hooks/useCart';
 
-const OrderSummaryCard = ({ summary, items = [], onPlaceOrder, refresh }) => {
+/**
+ * OrderSummaryCard Component
+ * Updated: Integrated with stateful backend coupon persistence.
+ * Features: Displays subtotal_before_discount and handles server-side coupon removal.
+ */
+const OrderSummaryCard = ({
+  summary: propSummary,
+  items = [],
+  onPlaceOrder,
+}) => {
   const router = useRouter();
+  const {
+    applyCoupon,
+    removeCoupon,
+    appliedCoupon,
+    isApplyingCoupon,
+    error: hookError,
+    summary: cartSummary,
+  } = useCart();
+
   const [couponCode, setCouponCode] = useState('');
-  const [couponError, setCouponError] = useState('');
-  const [loginError, setLoginError] = useState(''); // New state for login requirement
+  const [loginError, setLoginError] = useState('');
 
-  useEffect(() => {
-    if (summary?.coupon_code) {
-      setCouponCode(summary.coupon_code);
-    }
-  }, [summary]);
-
-  const isApplied = !!summary?.coupon_code;
-
+  // 1. Manual Calculation Fallback (Used for Guest/Initial states)
   const calculatedValues = useMemo(() => {
     const subtotal = items.reduce(
       (acc, item) =>
         acc + parseFloat(item.current_price || 0) * (item.quantity || 0),
       0,
     );
-    const deliveryFee = 150;
-    const total = subtotal + deliveryFee;
-
-    return { subtotal, deliveryFee, total };
+    return { subtotal, deliveryFee: 150 };
   }, [items]);
 
+  // Prioritize the hook's summary (which now maps subtotal_before_discount)
+  const activeSummary = cartSummary || propSummary;
+
+  useEffect(() => {
+    if (appliedCoupon) {
+      setCouponCode(appliedCoupon.code);
+    } else {
+      setCouponCode('');
+    }
+  }, [appliedCoupon]);
+
+  const isApplied = !!appliedCoupon;
+
+  // 2. Map display data using persisted backend fields
   const displayData = {
+    // sub_total in hook is mapped to backend's subtotal_before_discount
     subtotal: parseFloat(
-      summary?.subtotal || summary?.sub_total || calculatedValues.subtotal || 0,
+      activeSummary?.sub_total || calculatedValues.subtotal || 0,
     ),
+    discount: parseFloat(activeSummary?.discount_amount || 0),
     deliveryFee: parseFloat(
-      summary?.delivery_fee ||
-        summary?.shipping_charge ||
-        calculatedValues.deliveryFee ||
-        0,
+      activeSummary?.shipping_charge || calculatedValues.deliveryFee || 0,
     ),
-    discount: parseFloat(summary?.discount_amount || 0),
     total: parseFloat(
-      summary?.total_payable ||
-        summary?.total_amount ||
-        calculatedValues.total ||
-        0,
+      activeSummary?.total_amount ||
+        calculatedValues.subtotal + calculatedValues.deliveryFee,
     ),
-    discountLabel: summary?.discount_display || 'Discount',
+    discountLabel: isApplied ? `Discount (${appliedCoupon.code})` : 'Discount',
   };
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setCouponError('');
-    try {
-      await refresh(couponCode.trim());
-    } catch (err) {
-      setCouponError('Invalid or expired coupon code');
-    }
+    if (!couponCode.trim() || isApplyingCoupon) return;
+    await applyCoupon(couponCode.trim());
+  };
+
+  const handleRemoveCoupon = async () => {
+    await removeCoupon();
+    setCouponCode('');
   };
 
   const handleAction = () => {
-    // Check if user is logged in
     const token = localStorage.getItem('access_token');
-
     if (!token) {
       setLoginError('Please Login your account to order the product');
-      // Clear error after 5 seconds
       setTimeout(() => setLoginError(''), 5000);
       return;
     }
-
     if (onPlaceOrder) {
       onPlaceOrder();
     } else {
@@ -87,26 +101,31 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder, refresh }) => {
       </h2>
 
       <div className="space-y-4 mb-6">
+        {/* Row 1: Subtotal (Original Price) */}
         <SummaryRow
           label="Subtotal"
           value={formatCurrency(displayData.subtotal)}
         />
-        <SummaryRow
-          label="Delivery Fee"
-          value={formatCurrency(displayData.deliveryFee)}
-        />
 
-        {(isApplied || displayData.discount > 0) && (
+        {/* Row 2: Discount (Persisted Savings) */}
+        {displayData.discount > 0 && (
           <SummaryRow
             label={displayData.discountLabel}
             value={`-${formatCurrency(displayData.discount)}`}
             isDiscount
           />
         )}
+
+        {/* Row 3: Delivery Fee */}
+        <SummaryRow
+          label="Delivery Fee"
+          value={formatCurrency(displayData.deliveryFee)}
+        />
       </div>
 
       <div className="h-px bg-gray-100 w-full my-6" />
 
+      {/* Final Total: ((Subtotal - Discount) + Delivery) */}
       <div className="flex items-center justify-between mb-8">
         <span className="text-lg font-bold text-gray-900 uppercase tracking-wider">
           Total
@@ -116,10 +135,11 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder, refresh }) => {
         </span>
       </div>
 
+      {/* Coupon Management Section */}
       <div className="space-y-3 mb-8">
         <div className="flex items-center gap-2">
           <div
-            className={`flex items-center gap-3 flex-1 bg-gray-50 border rounded-full px-5 py-3 transition-all ${couponError ? 'border-red-200' : 'border-gray-100'}`}
+            className={`flex items-center gap-3 flex-1 bg-gray-50 border rounded-full px-5 py-3 transition-all ${hookError ? 'border-red-200' : 'border-gray-100'}`}
           >
             <IoPricetagOutline
               className={`-rotate-90 ${isApplied ? 'text-(--color-success-500)' : 'text-gray-400'}`}
@@ -129,37 +149,43 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder, refresh }) => {
               type="text"
               placeholder="Enter Coupon Code"
               value={couponCode}
-              onChange={e => {
-                setCouponCode(e.target.value);
-                setCouponError('');
-              }}
-              disabled={isApplied}
+              onChange={e => setCouponCode(e.target.value)}
+              disabled={isApplied || isApplyingCoupon}
               className="bg-transparent text-[15px] font-medium text-gray-900 placeholder-gray-400 outline-none w-full disabled:opacity-50"
             />
           </div>
-          <button
-            onClick={handleApplyCoupon}
-            disabled={!couponCode || isApplied}
-            className={`h-[52px] px-8 rounded-full text-sm font-bold uppercase tracking-widest transition-all cursor-pointer ${
-              isApplied
-                ? 'bg-(--color-success-50) text-(--color-success-500) border border-(--color-success-100)'
-                : 'bg-(--color-primary-25) text-(--color-primary-500) border border-(--color-primary-50) hover:bg-(--color-primary-500) hover:text-white'
-            }`}
-          >
-            {isApplied ? <FiCheck size={20} /> : 'Apply'}
-          </button>
+
+          {isApplied ? (
+            <button
+              onClick={handleRemoveCoupon}
+              disabled={isUpdating}
+              className="h-[52px] w-[52px] flex items-center justify-center rounded-full bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-all cursor-pointer disabled:opacity-50"
+            >
+              <FiX size={20} />
+            </button>
+          ) : (
+            <button
+              onClick={handleApplyCoupon}
+              disabled={!couponCode || isApplyingCoupon}
+              className="h-[52px] px-8 rounded-full text-sm font-bold uppercase tracking-widest transition-all cursor-pointer bg-(--color-primary-25) text-(--color-primary-500) border border-(--color-primary-50) hover:bg-(--color-primary-500) hover:text-white disabled:opacity-50"
+            >
+              {isApplyingCoupon ? '...' : 'Apply'}
+            </button>
+          )}
         </div>
-        {couponError && (
-          <p className="text-xs font-bold text-red-500 ml-5">{couponError}</p>
+
+        {hookError && (
+          <p className="text-xs font-bold text-red-500 ml-5 animate-in fade-in">
+            {hookError}
+          </p>
         )}
-        {isApplied && (
-          <p className="text-xs font-bold text-(--color-success-500) ml-5 uppercase tracking-tighter">
-            Coupon Applied!
+        {isApplied && !hookError && (
+          <p className="text-xs font-bold text-(--color-success-500) ml-5 uppercase tracking-tighter flex items-center gap-1">
+            <FiCheck /> Coupon Applied Successfully!
           </p>
         )}
       </div>
 
-      {/* Action Button Section */}
       <div className="space-y-3">
         <button
           onClick={handleAction}
@@ -168,10 +194,8 @@ const OrderSummaryCard = ({ summary, items = [], onPlaceOrder, refresh }) => {
           <span>{onPlaceOrder ? 'Confirm Order' : 'Place Order'}</span>
           <FiChevronRight size={20} strokeWidth={3} />
         </button>
-
-        {/* Login Error Message */}
         {loginError && (
-          <p className="text-[13px] font-bold text-red-500 text-center animate-in fade-in slide-in-from-top-1 duration-300">
+          <p className="text-[13px] font-bold text-red-500 text-center animate-in fade-in">
             {loginError}
           </p>
         )}

@@ -10,16 +10,16 @@ import {
 
 /**
  * usePharmacyPrescriptions Hook
- * Manages the state and logic for Pharmacy Owners to review and verify prescription orders.
- * Follows the "Sharp & Authoritative" industrial design logic.
+ * Fixed: Added strict parameter cleaning to prevent sending "status=All" to the backend.
+ * Backend Enums do not recognize "All", so it must be stripped from the query string.
  */
 export const usePharmacyPrescriptions = (
-  initialFilters = { status: 'PENDING' },
+  initialFilters = { status: 'All' },
 ) => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [prescriptionDetails, setPrescriptionDetails] = useState(null);
 
-  const [isLoading, setIsLoading] = useState(false); // FIX 1: was `true`, caused premature render with null data
+  const [isLoading, setIsLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -30,6 +30,7 @@ export const usePharmacyPrescriptions = (
 
   /**
    * Load Paginated Prescriptions List
+   * Cleans the "All" filter before sending the request to avoid 400 Bad Request.
    */
   const loadPrescriptions = useCallback(async () => {
     setIsLoading(true);
@@ -38,27 +39,30 @@ export const usePharmacyPrescriptions = (
       const token = localStorage.getItem('access_token');
       if (!token) return;
 
-      const params = {
-        page,
-        ...filters,
-      };
+      // Construct clean parameters
+      const params = { page };
+
+      // Only add status to params if it's not "All"
+      if (filters.status && filters.status !== 'All') {
+        params.status = filters.status.toUpperCase();
+      }
 
       const data = await fetchPharmacyPrescriptionsApi(token, params);
 
       setPrescriptions(data.results || []);
-      setTotalCount(data.count || 0);
-      setTotalPages(Math.ceil((data.count || 0) / 10));
+      const count = data.count || 0;
+      setTotalCount(count);
+      setTotalPages(Math.ceil(count / 10) || 1);
     } catch (err) {
       setError(err.message);
       setPrescriptions([]);
+      setTotalCount(0);
+      setTotalPages(1);
     } finally {
       setIsLoading(false);
     }
   }, [page, filters]);
 
-  /**
-   * Load specific Prescription details for verification
-   */
   const loadPrescriptionDetails = useCallback(async id => {
     setIsLoading(true);
     setError(null);
@@ -75,23 +79,15 @@ export const usePharmacyPrescriptions = (
     }
   }, []);
 
-  /**
-   * Verify (Approve/Reject) a prescription
-   * Used to assign products and quantities to the order.
-   */
   const verifyRx = async (id, payload) => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
       if (!token) throw new Error('Unauthorized');
-
       const updatedRx = await verifyPharmacyPrescriptionApi(token, id, payload);
-
-      // Update local state to reflect changes immediately
       setPrescriptionDetails(updatedRx);
       setPrescriptions(prev => prev.map(rx => (rx.id === id ? updatedRx : rx)));
-
       return true;
     } catch (err) {
       setError(err.message);
@@ -101,9 +97,6 @@ export const usePharmacyPrescriptions = (
     }
   };
 
-  /**
-   * Delete a prescription record
-   */
   const deleteRx = async id => {
     setIsUpdating(true);
     try {
@@ -121,18 +114,14 @@ export const usePharmacyPrescriptions = (
 
   const handleFilterChange = newFilters => {
     setFilters(prev => ({ ...prev, ...newFilters }));
-    setPage(1);
+    setPage(1); // Reset to first page whenever filters change
   };
 
-  // FIX 2: Guard added — only auto-load the list when NOT on a detail page
-  // (i.e. when prescriptionDetails is not being actively loaded).
-  // This prevents loadPrescriptions() from racing against loadPrescriptionDetails()
-  // and stomping on the shared isLoading flag with stale/null prescriptionDetails state.
   useEffect(() => {
     if (!prescriptionDetails) {
       loadPrescriptions();
     }
-  }, [loadPrescriptions]);
+  }, [loadPrescriptions, prescriptionDetails]);
 
   return {
     prescriptions,

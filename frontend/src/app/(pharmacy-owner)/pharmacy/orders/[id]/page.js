@@ -9,12 +9,21 @@ import {
   FiMapPin,
   FiPhone,
   FiMail,
+  FiDollarSign,
 } from 'react-icons/fi';
 import { usePharmacyOrders } from '../../../hooks/usePharmacyOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 import OrderInfoCard from './components/OrderInfoCard';
 import OrderedProductCard from './components/OrderedProductCard';
 
+/**
+ * PharmacyOrderDetailsPage
+ * Strictly follows the Pharmacy Owner "Sharp & Authoritative" design system:
+ * - border-2 border-(--color-admin-border)
+ * - rounded-none
+ * - high contrast (Navy/White)
+ * Updated: Implemented persistent pricing breakdown.
+ */
 export default function PharmacyOrderDetailsPage({ params }) {
   const resolvedParams = use(params);
   const { id } = resolvedParams;
@@ -61,7 +70,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
   if (error || !orderDetails) {
     return (
       <div className="w-full py-20 px-4 bg-(--color-admin-bg)">
-        <div className="bg-(--color-admin-card) border border-(--color-admin-error) p-10 text-center">
+        <div className="bg-(--color-admin-card) border-2 border-(--color-admin-error) p-10 text-center">
           <p className="font-mono text-(--color-admin-error) font-bold mb-6 uppercase tracking-widest">
             ERROR::RECORD_NOT_FOUND: {error || 'NULL_REFERENCE'}
           </p>
@@ -95,7 +104,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b-4 border-(--color-admin-border) pb-8">
         <div className="flex flex-col gap-4">
           <Link href="/pharmacy/orders">
-            <button className="flex items-center gap-2 px-4 py-2 bg-(--color-admin-navy) text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer">
+            <button className="flex items-center gap-2 px-4 py-2 bg-(--color-admin-navy) text-white text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer border-none rounded-none">
               <FiChevronLeft /> BACK_TO_RECORDS
             </button>
           </Link>
@@ -103,7 +112,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
             Order <span className="font-mono">#{orderDetails.id}</span>
           </h1>
         </div>
-        <div className="font-mono text-xs bg-(--color-admin-card) border border-(--color-admin-border) px-4 py-2 font-bold text-(--color-admin-navy)">
+        <div className="font-mono text-xs bg-(--color-admin-card) border-2 border-(--color-admin-border) px-4 py-2 font-bold text-(--color-admin-navy)">
           RECORD_TYPE: TRANSACTION_LOG
         </div>
       </div>
@@ -112,7 +121,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
         {/* MAIN COLUMN */}
         <div className="xl:col-span-2 space-y-10">
           {/* 1. Summary Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 border border-(--color-admin-border) bg-(--color-admin-border)">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0 border-2 border-(--color-admin-border) bg-(--color-admin-border)">
             <OrderInfoCard
               label="Order Date"
               value={formatDate(orderDetails.created_at).toUpperCase()}
@@ -126,7 +135,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
           </div>
 
           {/* 2. Items List */}
-          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-0">
+          <div className="bg-(--color-admin-card) border-2 border-(--color-admin-border) p-0">
             <div className="bg-(--color-admin-navy) text-white px-6 py-4 flex items-center gap-3">
               <FiPackage />
               <h3 className="text-sm font-bold uppercase tracking-widest">
@@ -140,9 +149,56 @@ export default function PharmacyOrderDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* 3. Shipping Address */}
-          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8">
-            <h3 className="text-sm font-black text-(--color-admin-navy) uppercase tracking-widest flex items-center gap-3 mb-6 border-b border-(--color-admin-border) pb-4">
+          {/* 3. Pricing Summary (New Industrial Breakdown) */}
+          <div className="bg-(--color-admin-card) border-2 border-(--color-admin-border) p-0">
+            <div className="bg-(--color-admin-navy) text-white px-6 py-4 flex items-center gap-3">
+              <FiDollarSign />
+              <h3 className="text-sm font-bold uppercase tracking-widest">
+                Pricing Summary
+              </h3>
+            </div>
+            <div className="p-8 space-y-5 font-mono text-sm">
+              <div className="flex justify-between items-center text-(--color-admin-navy)">
+                <span className="font-bold uppercase tracking-wider">
+                  Subtotal
+                </span>
+                <span className="font-black">
+                  {formatCurrency(
+                    orderDetails.subtotal_before_discount || orderDetails.total,
+                  )}
+                </span>
+              </div>
+
+              {parseFloat(orderDetails.discount_amount) > 0 && (
+                <div className="flex justify-between items-center text-(--color-admin-error)">
+                  <span className="font-bold uppercase tracking-wider">
+                    Discount ({orderDetails.coupon?.code || 'PROMO'})
+                  </span>
+                  <span className="font-black">
+                    -{formatCurrency(orderDetails.discount_amount)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center text-(--color-admin-navy)">
+                <span className="font-bold uppercase tracking-wider">
+                  Delivery Fee
+                </span>
+                <span className="font-black">
+                  {formatCurrency(orderDetails.delivery_fee || 150)}
+                </span>
+              </div>
+
+              <div className="pt-6 border-t-2 border-(--color-admin-border) flex justify-between items-center text-2xl font-black text-(--color-admin-navy)">
+                <span className="uppercase tracking-tighter">Total Amount</span>
+                <span>{formatCurrency(orderDetails.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Shipping Address */}
+          <div className="bg-(--color-admin-card) border-2 border-(--color-admin-border) p-8">
+            <h3 className="text-sm font-black text-(--color-admin-navy) uppercase tracking-widest flex items-center gap-3 mb-6 border-b-2 border-(--color-admin-border) pb-4">
               <FiMapPin className="text-(--color-text-secondary)" />
               Delivery_Coordinates
             </h3>
@@ -155,7 +211,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
         {/* SIDEBAR COLUMN */}
         <div className="xl:col-span-1 space-y-10">
           {/* Status Management */}
-          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-0">
+          <div className="bg-(--color-admin-card) border-2 border-(--color-admin-border) p-0">
             <div className="bg-(--color-admin-navy) text-white px-6 py-4">
               <h3 className="text-sm font-bold uppercase tracking-widest">
                 System_Status
@@ -163,7 +219,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
             </div>
             <div className="p-6 space-y-6">
               <div
-                className={`flex items-center justify-center gap-3 py-4 border font-mono font-black uppercase text-sm tracking-widest ${getStatusStyles(orderDetails.status)}`}
+                className={`flex items-center justify-center gap-3 py-4 border-2 font-mono font-black uppercase text-sm tracking-widest ${getStatusStyles(orderDetails.status)}`}
               >
                 {orderDetails.status}
               </div>
@@ -184,7 +240,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
                       key={status}
                       disabled={isUpdating || orderDetails.status === status}
                       onClick={() => handleStatusChange(status)}
-                      className={`w-full py-3 border font-mono text-[10px] font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer ${
+                      className={`w-full py-3 border-2 font-mono text-[10px] font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer ${
                         orderDetails.status === status
                           ? 'bg-(--color-admin-bg) border-(--color-admin-border) text-(--color-text-secondary) cursor-not-allowed'
                           : 'border-(--color-admin-border) text-(--color-admin-navy) hover:bg-(--color-admin-accent) hover:text-white hover:border-(--color-admin-accent)'
@@ -199,7 +255,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
           </div>
 
           {/* Customer Info */}
-          <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-0">
+          <div className="bg-(--color-admin-card) border-2 border-(--color-admin-border) p-0">
             <div className="bg-(--color-admin-navy) text-white px-6 py-4 flex items-center gap-3">
               <FiUser />
               <h3 className="text-sm font-bold uppercase tracking-widest">
@@ -208,7 +264,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
             </div>
             <div className="p-8 space-y-6 font-mono">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center bg-white">
+                <div className="w-10 h-10 border-2 border-(--color-admin-border) flex items-center justify-center bg-white">
                   <FiUser size={18} className="text-(--color-admin-primary)" />
                 </div>
                 <p className="font-bold text-(--color-admin-navy) uppercase text-sm">
@@ -216,7 +272,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center bg-white">
+                <div className="w-10 h-10 border-2 border-(--color-admin-border) flex items-center justify-center bg-white">
                   <FiMail size={18} className="text-(--color-admin-primary)" />
                 </div>
                 <p className="text-xs font-bold text-(--color-text-secondary) truncate uppercase">
@@ -224,7 +280,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 border border-(--color-admin-border) flex items-center justify-center bg-white">
+                <div className="w-10 h-10 border-2 border-(--color-admin-border) flex items-center justify-center bg-white">
                   <FiPhone size={18} className="text-(--color-admin-primary)" />
                 </div>
                 <p className="text-sm font-bold text-(--color-admin-navy)">

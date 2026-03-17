@@ -9,6 +9,7 @@ import {
   FiPhone,
   FiMail,
   FiClock,
+  FiDollarSign,
 } from 'react-icons/fi';
 import { useAdminOrders } from '../../../hooks/useAdminOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
@@ -16,7 +17,7 @@ import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 /**
  * AdminOrderDetailsPage
  * Strictly follows the Super Admin "Sharp" design system.
- * Updated: Added the missing 'PROCESSING' status to the management sidebar.
+ * Updated: Implemented persistent financial breakdown (Subtotal, Discount, Delivery, Total).
  */
 export default function AdminOrderDetailsPage({ params }) {
   const router = useRouter();
@@ -135,7 +136,7 @@ export default function AdminOrderDetailsPage({ params }) {
             </div>
             <div className="bg-white border border-gray-100 p-6">
               <span className="block font-mono text-[10px] font-bold text-[#8A8A78] uppercase mb-2">
-                Total Amount
+                Net Payable
               </span>
               <span className="text-lg font-black text-[#3A5A40]">
                 {formatCurrency(orderDetails.total)}
@@ -189,7 +190,46 @@ export default function AdminOrderDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* 3. Shipping Address */}
+          {/* 3. Financial Breakdown (New Audit Section) */}
+          <div className="bg-white border border-gray-100 p-8 space-y-6">
+            <h3 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2 border-b border-gray-50 pb-4">
+              <FiDollarSign className="text-[#3A5A40]" /> Pricing Summary
+            </h3>
+            <div className="space-y-3 font-mono text-[11px] uppercase">
+              <div className="flex justify-between items-center">
+                <span className="text-[#8A8A78]">Subtotal</span>
+                <span className="text-[#1B1B1B] font-bold">
+                  {formatCurrency(
+                    orderDetails.subtotal_before_discount ||
+                      orderDetails.total - (orderDetails.delivery_fee || 150),
+                  )}
+                </span>
+              </div>
+
+              {parseFloat(orderDetails.discount_amount) > 0 && (
+                <div className="flex justify-between items-center text-red-600">
+                  <span>Discount ({orderDetails.coupon?.code || 'PROMO'})</span>
+                  <span className="font-bold">
+                    -{formatCurrency(orderDetails.discount_amount)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center">
+                <span className="text-[#8A8A78]">Delivery Fee</span>
+                <span className="text-[#1B1B1B] font-bold">
+                  {formatCurrency(orderDetails.delivery_fee || 150)}
+                </span>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4 flex justify-between items-center text-sm font-black text-[#3A5A40]">
+                <span>Total Amount</span>
+                <span>{formatCurrency(orderDetails.total)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4. Shipping Address */}
           <div className="bg-white border border-gray-100 p-8">
             <h3 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2 mb-4">
               <FiMapPin className="text-[#3A5A40]" /> Delivery Address
@@ -223,7 +263,7 @@ export default function AdminOrderDetailsPage({ params }) {
                   className={`w-full py-3 text-[10px] font-bold uppercase tracking-widest border transition-all cursor-pointer ${
                     orderDetails.status === status
                       ? 'bg-gray-50 border-gray-100 text-[#B7B7A4] cursor-not-allowed'
-                      : 'bg-white border border-gray-200 text-[#1B1B1B] hover:border-[#3A5A40] hover:text-[#3A5A40]'
+                      : 'bg-white border-gray-200 text-[#1B1B1B] hover:border-[#3A5A40] hover:text-[#3A5A40]'
                   }`}
                 >
                   {status}

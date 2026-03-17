@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { IoCloseSharp } from 'react-icons/io5';
 import { AiOutlineMenu } from 'react-icons/ai';
 import { FiGrid, FiCheckCircle, FiTruck } from 'react-icons/fi';
@@ -10,6 +10,10 @@ import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
+/**
+ * MobileDrawer Component
+ * Updated: Implemented frontend product counting logic for category badges.
+ */
 const MobileDrawer = () => {
   const router = useRouter();
   const pathname = usePathname();
@@ -18,11 +22,24 @@ const MobileDrawer = () => {
 
   const [open, setOpen] = useState(false);
   const [categories, setCategories] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // Added for counting
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const { logos } = useLogoAdmin();
   const systemLogo = logos?.find(l => l.slug === 'LOGO' || l.slug === 'logo');
+
+  // Logic: Create a Map of { categoryName: count }
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    allProducts.forEach(product => {
+      const catName = product.category_name;
+      if (catName) {
+        counts[catName] = (counts[catName] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [allProducts]);
 
   useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : 'auto';
@@ -31,14 +48,18 @@ const MobileDrawer = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, adsRes] = await Promise.all([
+        const [catRes, adsRes, prodRes] = await Promise.all([
           fetch(`${API_BASE_URL}/sidebar-categories/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
+          fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`), // Fetch products for count
         ]);
         const catData = await catRes.json();
         const adsData = await adsRes.json();
+        const prodData = await prodRes.json();
+
         setCategories(catData.results || []);
         setAds(adsData.results || []);
+        setAllProducts(prodData.results || []);
       } catch (error) {
         console.error('Error fetching drawer data:', error);
       } finally {
@@ -87,7 +108,7 @@ const MobileDrawer = () => {
               </h3>
               <nav className="flex flex-col gap-1">
                 <Link
-                  href="/products"
+                  href="/categories"
                   onClick={() => setOpen(false)}
                   className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isAllProductsActive ? 'bg-[#233b8c] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-50'}`}
                 >
@@ -97,6 +118,11 @@ const MobileDrawer = () => {
                       All Product
                     </span>
                   </div>
+                  <span
+                    className={`text-xs font-bold ${isAllProductsActive ? 'text-white/60' : 'text-gray-300'}`}
+                  >
+                    {allProducts.length}
+                  </span>
                 </Link>
                 {isLoading ? (
                   <div className="py-10 flex justify-center">
@@ -105,6 +131,7 @@ const MobileDrawer = () => {
                 ) : (
                   categories.map(cat => {
                     const isActive = currentCategory === cat.title;
+                    const count = categoryCounts[cat.title] || 0;
                     return (
                       <Link
                         key={cat.id}
@@ -112,7 +139,7 @@ const MobileDrawer = () => {
                         onClick={() => setOpen(false)}
                         className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-50'}`}
                       >
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 overflow-hidden">
                           <div className="w-5 h-5 relative shrink-0">
                             <Image
                               src={
@@ -127,11 +154,20 @@ const MobileDrawer = () => {
                             />
                           </div>
                           <span
-                            className={`text-[15px] tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}
+                            className={`text-[15px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium'}`}
                           >
                             {cat.title}
                           </span>
                         </div>
+                        <span
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                            isActive
+                              ? 'bg-white/10 border-white/20 text-white'
+                              : 'bg-gray-50 border-gray-100 text-gray-400'
+                          }`}
+                        >
+                          {count}
+                        </span>
                       </Link>
                     );
                   })

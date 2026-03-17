@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams, usePathname, useRouter } from 'next/navigation';
@@ -13,6 +13,12 @@ import {
 } from 'react-icons/fi';
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
+/**
+ * Sidebar Component
+ * Updated: Implemented "Frontend Grouping" to show product counts per category.
+ * Performance Note: This fetches the product list to calculate counts.
+ * Scalability Warning: Will slow down if product count exceeds 500+.
+ */
 const Sidebar = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -20,6 +26,7 @@ const Sidebar = () => {
   const currentCategory = searchParams.get('category');
 
   const [categories, setCategories] = useState([]);
+  const [allProducts, setAllProducts] = useState([]); // Store products for counting
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -27,16 +34,21 @@ const Sidebar = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, adsRes] = await Promise.all([
+        // Fetching categories, ads, and ALL products (to count them)
+        // Note: We use a large limit to bypass pagination for the count logic
+        const [catRes, adsRes, prodRes] = await Promise.all([
           fetch(`${API_BASE_URL}/sidebar-categories/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
+          fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
         ]);
 
         const catData = await catRes.json();
         const adsData = await adsRes.json();
+        const prodData = await prodRes.json();
 
         setCategories(catData.results || []);
         setAds(adsData.results || []);
+        setAllProducts(prodData.results || []);
       } catch (error) {
         console.error('Error fetching sidebar data:', error);
       } finally {
@@ -45,6 +57,18 @@ const Sidebar = () => {
     };
     fetchData();
   }, []);
+
+  // Logic: Create a Map of { categoryName: count }
+  const categoryCounts = useMemo(() => {
+    const counts = {};
+    allProducts.forEach(product => {
+      const catName = product.category_name;
+      if (catName) {
+        counts[catName] = (counts[catName] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [allProducts]);
 
   const handleSearch = e => {
     if (e.key === 'Enter' && searchTerm.trim()) {
@@ -58,12 +82,12 @@ const Sidebar = () => {
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
       {/* 1. MAIN CATEGORY CARD */}
-      <div className="bg-white border border-gray-100 rounded-[32px] p-6">
+      <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
         <h2 className="text-[22px] font-bold text-gray-900 mb-6 tracking-tight">
           All Product Category
         </h2>
 
-        <div className="relative mb-1">
+        <div className="relative mb-4">
           <FiSearch
             className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
             size={18}
@@ -76,20 +100,12 @@ const Sidebar = () => {
             onKeyDown={handleSearch}
             className="w-full h-12 pl-11 pr-16 bg-white border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
           />
-          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            <div className="w-6 h-6 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400">
-              <FiCommand size={12} />
-            </div>
-            <div className="w-6 h-6 rounded-full bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-400 text-[10px] font-bold">
-              K
-            </div>
-          </div>
         </div>
 
-        <nav className="flex flex-col">
+        <nav className="flex flex-col gap-1">
           <Link
             href="/categories"
-            className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all mb-1 ${
+            className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${
               isAllProductsActive
                 ? 'bg-[#233b8c] text-white shadow-md'
                 : 'text-gray-500 hover:bg-gray-50'
@@ -101,6 +117,11 @@ const Sidebar = () => {
                 All Product
               </span>
             </div>
+            <span
+              className={`text-xs font-bold ${isAllProductsActive ? 'text-white/60' : 'text-gray-300'}`}
+            >
+              {allProducts.length}
+            </span>
           </Link>
 
           {isLoading ? (
@@ -110,17 +131,19 @@ const Sidebar = () => {
           ) : (
             categories.map((cat, index) => {
               const isActive = currentCategory === cat.title;
+              const count = categoryCounts[cat.title] || 0;
+
               return (
                 <React.Fragment key={cat.id}>
                   <Link
                     href={`/products?category=${encodeURIComponent(cat.title)}`}
-                    className={`flex items-center justify-between px-4 py-3.5 rounded-full transition-all group ${
+                    className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all group ${
                       isActive
                         ? 'bg-[#233b8c] text-white shadow-md'
                         : 'text-gray-500 hover:bg-gray-50'
                     }`}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 overflow-hidden">
                       <div className="w-5 h-5 relative shrink-0">
                         <Image
                           src={cat.image_url || '/assets/images/applogo.png'}
@@ -130,15 +153,22 @@ const Sidebar = () => {
                         />
                       </div>
                       <span
-                        className={`text-[15px] tracking-tight ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
+                        className={`text-[15px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
                       >
                         {cat.title}
                       </span>
                     </div>
+                    {/* Count Badge */}
+                    <span
+                      className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                        isActive
+                          ? 'bg-white/10 border-white/20 text-white'
+                          : 'bg-gray-50 border-gray-100 text-gray-400'
+                      }`}
+                    >
+                      {count}
+                    </span>
                   </Link>
-                  {index < categories.length - 1 && !isActive && (
-                    <div className="h-[1px] bg-gray-50 mx-4" />
-                  )}
                 </React.Fragment>
               );
             })
@@ -156,6 +186,7 @@ const Sidebar = () => {
             height={500}
             className="w-full h-auto object-cover"
             priority
+            unoptimized
           />
         </Link>
       </div>

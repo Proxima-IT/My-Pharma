@@ -19,7 +19,6 @@ import UiButton from '@/app/(public)/components/UiButton';
 
 const Checkout = () => {
   const router = useRouter();
-  // Added updateQuantity and removeItem to destructuring
   const {
     items,
     summary,
@@ -29,6 +28,7 @@ const Checkout = () => {
     refresh,
     updateQuantity,
     removeItem,
+    appliedCoupon, // Destructured appliedCoupon to access the code
   } = useCart();
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
@@ -53,8 +53,9 @@ const Checkout = () => {
       notes: '',
     };
 
-    if (summary?.coupon_code) {
-      orderPayload.coupon_code = summary.coupon_code;
+    // FIXED: Use the code from appliedCoupon state to ensure the discount is processed by the backend
+    if (appliedCoupon?.code) {
+      orderPayload.coupon_code = appliedCoupon.code;
     }
 
     const result = await placeOrder(orderPayload);
@@ -116,7 +117,6 @@ const Checkout = () => {
 
   return (
     <div className="w-full px-4 md:px-7 pt-7 pb-28 animate-in fade-in duration-700">
-      {/* Page Header */}
       <div className="flex items-center gap-5 mb-8">
         <Link href="/cart">
           <button className="border border-gray-100 bg-white rounded-full px-6 py-2 text-center text-(--color-primary-500) flex gap-2 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
@@ -129,7 +129,6 @@ const Checkout = () => {
         </h1>
       </div>
 
-      {/* Error Display Section */}
       {error && (
         <div className="mb-8 p-5 bg-red-50 border border-red-100 rounded-[24px] flex items-center gap-4 text-red-600 animate-in slide-in-from-top-2">
           <FiAlertCircle className="shrink-0" size={24} />
@@ -142,9 +141,7 @@ const Checkout = () => {
         </div>
       )}
 
-      {/* Main Checkout Grid */}
       <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
-        {/* Left Column: Shipping & Payment */}
         <div className="w-full lg:w-[42%] flex flex-col gap-8">
           <ShippingAddressCard
             onAddressSelect={id => setSelectedAddressId(id)}
@@ -155,7 +152,6 @@ const Checkout = () => {
           />
         </div>
 
-        {/* Right Column: Cart Review & Summary */}
         <div className="w-full lg:w-[58%] flex flex-col gap-8">
           <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 transition-all">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">
@@ -166,8 +162,8 @@ const Checkout = () => {
                 <CartCard
                   key={item.id}
                   item={item}
-                  onUpdate={updateQuantity} // Passed function
-                  onRemove={removeItem} // Passed function
+                  onUpdate={updateQuantity}
+                  onRemove={removeItem}
                 />
               ))}
             </div>

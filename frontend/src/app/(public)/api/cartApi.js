@@ -1,4 +1,4 @@
-import { CART_ENDPOINTS } from '@/app/(shared)/lib/apiConfig';
+import { CART_ENDPOINTS, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for Cart management
@@ -24,7 +24,7 @@ export const fetchCartApi = async (token, params = {}) => {
   return data;
 };
 
-// POST /api/cart/add/ - Updated to accept dosage
+// POST /api/cart/add/
 export const addToCartApi = async (
   token,
   productId,
@@ -53,7 +53,7 @@ export const addToCartApi = async (
   return data;
 };
 
-// PATCH /api/cart/items/{id}/ - Updated to accept dosage
+// PATCH /api/cart/items/{id}/
 export const updateCartItemApi = async (
   token,
   itemId,
@@ -111,6 +111,47 @@ export const placeOrderApi = async (token, orderData) => {
   if (!response.ok) {
     const errorMsg = data.detail || JSON.stringify(data);
     throw new Error(errorMsg);
+  }
+  return data;
+};
+
+/**
+ * POST /api/cart/apply-coupon/
+ * Persists a coupon to the user's active database cart.
+ */
+export const applyCartCouponApi = async (token, code) => {
+  const response = await fetch(`${CART_ENDPOINTS.BASE}apply-coupon/`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ coupon_code: code }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || 'Invalid or expired coupon code');
+  }
+  return data;
+};
+
+/**
+ * POST /api/cart/remove-coupon/
+ * Removes the persisted coupon and restores original prices.
+ */
+export const removeCartCouponApi = async token => {
+  const response = await fetch(`${CART_ENDPOINTS.BASE}remove-coupon/`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.detail || 'Failed to remove coupon');
   }
   return data;
 };

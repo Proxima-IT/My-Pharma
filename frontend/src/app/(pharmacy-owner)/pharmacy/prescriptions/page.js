@@ -7,6 +7,7 @@ import {
   FiChevronLeft,
   FiChevronRight,
   FiFileText,
+  FiFilter,
 } from 'react-icons/fi';
 import { usePharmacyPrescriptions } from '../../hooks/usePharmacyPrescriptions';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
@@ -14,7 +15,7 @@ import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 /**
  * PharmacyPrescriptionsPage
  * Strictly follows the Pharmacy Owner "Sharp & Authoritative" design system.
- * Features: Industrial table, high contrast borders, JetBrains Mono for technical data.
+ * Updated: Integrated industrial filter tabs and dynamic pagination logic.
  */
 export default function PharmacyPrescriptionsPage() {
   const {
@@ -25,7 +26,11 @@ export default function PharmacyPrescriptionsPage() {
     setPage,
     totalPages,
     totalCount,
-  } = usePharmacyPrescriptions();
+    filters,
+    handleFilterChange,
+  } = usePharmacyPrescriptions({ status: 'All' });
+
+  const filterOptions = ['All', 'Pending', 'Approved', 'Rejected', 'Used'];
 
   const getStatusStyles = status => {
     switch (status?.toUpperCase()) {
@@ -48,6 +53,12 @@ export default function PharmacyPrescriptionsPage() {
         <p className="text-(--color-admin-error) font-mono font-bold uppercase tracking-widest">
           SYSTEM_ERROR::FETCH_FAILED: {error}
         </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-6 py-2 bg-black text-white font-mono text-xs uppercase tracking-widest hover:bg-gray-800"
+        >
+          Retry_Connection
+        </button>
       </div>
     );
   }
@@ -64,19 +75,36 @@ export default function PharmacyPrescriptionsPage() {
             Prescription Verification
           </h1>
           <p className="font-mono text-[11px] text-(--color-text-secondary) mt-2 uppercase">
-            TOTAL_REQUESTS:{' '}
+            MATCHED_ENTRIES:{' '}
             <span className="text-(--color-admin-navy) font-bold">
               {totalCount}
             </span>{' '}
-            | BATCH_SIZE:{' '}
+            | FILTER_MODE:{' '}
             <span className="text-(--color-admin-navy) font-bold">
-              {prescriptions.length}
+              {filters.status || 'ALL_RECORDS'}
             </span>
           </p>
         </div>
       </div>
 
-      {/* Industrial Table Container */}
+      {/* Industrial Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-1 border-b-2 border-(--color-admin-border)">
+        {filterOptions.map(opt => (
+          <button
+            key={opt}
+            onClick={() => handleFilterChange({ status: opt })}
+            className={`px-8 py-4 font-mono text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer border-t-4 ${
+              (filters.status || 'All') === opt
+                ? 'bg-white border-t-(--color-admin-navy) border-x-2 border-x-(--color-admin-border) -mb-[2px] text-(--color-admin-navy)'
+                : 'bg-transparent border-t-transparent text-(--color-text-secondary) hover:text-(--color-admin-navy)'
+            }`}
+          >
+            {opt}
+          </button>
+        ))}
+      </div>
+
+      {/* Main Table Container */}
       <div className="bg-(--color-admin-card) border-2 border-(--color-admin-border) rounded-none flex flex-col shadow-none">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
@@ -162,7 +190,7 @@ export default function PharmacyPrescriptionsPage() {
                     <div className="flex flex-col items-center gap-4 text-(--color-text-secondary)">
                       <FiFileText size={48} />
                       <p className="font-mono text-sm font-bold uppercase tracking-widest">
-                        Zero_Prescription_Requests
+                        Zero_Records_In_Current_Filter
                       </p>
                     </div>
                   </td>
