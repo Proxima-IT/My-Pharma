@@ -670,6 +670,7 @@ class UpdateCartItemSerializer(serializers.Serializer):
 
 class CartSummarySerializer(serializers.Serializer):
     """Nested object for cart summary: subtotal, delivery_fee, discount_amount, total_payable."""
+    subtotal_before_discount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
     delivery_fee = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -744,7 +745,7 @@ class CartSerializer(serializers.ModelSerializer):
         from .services import get_cart_summary, validate_coupon, get_delivery_zone_for_district
         request = self.context.get("request")
         delivery_zone = None
-        coupon = None
+        coupon = obj.coupon
         if request:
             address_id = request.query_params.get("address_id") or request.data.get("address_id")
             if address_id:
@@ -758,7 +759,7 @@ class CartSerializer(serializers.ModelSerializer):
             code = request.query_params.get("coupon_code") or request.data.get("coupon_code")
             if code:
                 items = obj.items.select_related("product").all()
-                subtotal = sum((i.price_at_order * i.quantity for i in items), Decimal("0"))
+                subtotal = sum(((i.original_price_at_order or i.price_at_order) * i.quantity for i in items), Decimal("0"))
                 try:
                     coupon, _ = validate_coupon(code, subtotal)
                 except ValueError:

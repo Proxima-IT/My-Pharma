@@ -104,27 +104,41 @@ def validate_coupon(code: str, subtotal: Decimal):
 def get_cart_summary(cart, delivery_zone: str = None, coupon=None):
     """
     Return dict: subtotal, delivery_fee, discount_amount, total_payable, discount_display, coupon_code.
+    If coupon was already applied and persisted to cart item prices, discount_amount is computed as the
+    difference between original_subtotal and current subtotal.
     """
     items = cart.items.select_related("product").all()
     subtotal = sum((item.price_at_order * item.quantity for item in items), Decimal("0"))
+    original_subtotal = sum(
+        ((item.original_price_at_order or item.price_at_order) * item.quantity for item in items),
+        Decimal("0"),
+    )
     delivery_fee = get_delivery_fee(subtotal, delivery_zone)
     # Discount applies to product subtotal (not delivery fee), so product prices can be reduced in UI.
-    discount_amount = Decimal("0")
+    # If prices already discounted, this will be computed from original_subtotal.
+    discount_amount = max(Decimal("0"), (original_subtotal - subtotal).quantize(Decimal("0.01")))
     discount_display = None
     coupon_code = None
     if coupon:
         if isinstance(coupon, Coupon):
-            if coupon.discount_type == Coupon.DiscountType.PERCENT:
-                discount_amount = (subtotal * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
-                discount_display = f"-{coupon.discount_value}%"
+            # If coupon is not yet persisted, compute discount against original_subtotal
+            if discount_amount <= 0:
+                if coupon.discount_type == Coupon.DiscountType.PERCENT:
+                    discount_amount = (original_subtotal * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
+                    discount_display = f"-{coupon.discount_value}%"
+                else:
+                    discount_amount = min(coupon.discount_value, original_subtotal)
+                    discount_display = f"-৳{coupon.discount_value}"
             else:
-                discount_amount = min(coupon.discount_value, subtotal)
-                discount_display = f"-৳{coupon.discount_value}"
+                # Already applied: display based on coupon type/value
+                discount_display = f"-{coupon.discount_value}%" if coupon.discount_type == Coupon.DiscountType.PERCENT else f"-৳{coupon.discount_value}"
             coupon_code = coupon.code
         else:
             coupon_code = str(coupon)
-    total_payable = max(Decimal("0"), (subtotal - discount_amount) + delivery_fee)
+    # If discount already reflected in subtotal, do not subtract again.
+    total_payable = max(Decimal("0"), subtotal + delivery_fee) if (original_subtotal - subtotal) > 0 else max(Decimal("0"), (subtotal - discount_amount) + delivery_fee)
     return {
+        "subtotal_before_discount": original_subtotal,
         "subtotal": subtotal,
         "delivery_fee": delivery_fee,
         "discount_amount": discount_amount,

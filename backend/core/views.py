@@ -488,6 +488,81 @@ class CartViewSet(viewsets.GenericViewSet):
         serializer = self.get_serializer(cart)
         return Response(serializer.data)
 
+    @action(detail=False, methods=["post"], url_path="apply-coupon")
+    def apply_coupon(self, request):
+        """
+        Persist coupon discount on cart items by updating CartItem.price_at_order.
+        Body: { coupon_code: str }
+        """
+        cart = get_or_create_cart(request.user)
+        code = (request.data.get("coupon_code") or "").strip()
+        if not code:
+            return Response({"coupon_code": "coupon_code is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        items = cart.items.select_related("product").all()
+        if not items.exists():
+            return Response({"detail": "Cart is empty."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Ensure original_price_at_order is set
+        for it in items:
+            if it.original_price_at_order is None:
+                it.original_price_at_order = it.price_at_order
+                it.save(update_fields=["original_price_at_order"])
+
+        original_subtotal = sum(((it.original_price_at_order or it.price_at_order) * it.quantity for it in items), Decimal("0"))
+        try:
+            coupon, discount_amount = validate_coupon(code, original_subtotal)
+        except ValueError as e:
+            return Response({"coupon_code": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+        if discount_amount <= 0 or original_subtotal <= 0:
+            cart.coupon = coupon
+            cart.save(update_fields=["coupon", "updated_at"])
+            return Response(CartSerializer(cart, context={"request": request}).data)
+
+        # Allocate discount across items proportional to original line totals.
+        line_totals = []
+        for it in items:
+            lt = ((it.original_price_at_order or it.price_at_order) * it.quantity).quantize(Decimal("0.01"))
+            line_totals.append(lt)
+
+        allocated = []
+        running = Decimal("0.00")
+        for i, lt in enumerate(line_totals):
+            if i == len(line_totals) - 1:
+                d = (discount_amount - running).quantize(Decimal("0.01"))
+            else:
+                ratio = (lt / original_subtotal) if original_subtotal > 0 else Decimal("0")
+                d = (discount_amount * ratio).quantize(Decimal("0.01"))
+                running += d
+            allocated.append(max(Decimal("0.00"), d))
+
+        # Apply discounted unit price
+        for it, lt, d in zip(items, line_totals, allocated):
+            after = max(Decimal("0.00"), (lt - d).quantize(Decimal("0.01")))
+            unit_after = (after / it.quantity).quantize(Decimal("0.01")) if it.quantity else Decimal("0.00")
+            it.price_at_order = unit_after
+            it.save(update_fields=["price_at_order"])
+
+        cart.coupon = coupon
+        cart.save(update_fields=["coupon", "updated_at"])
+        cart.refresh_from_db()
+        return Response(CartSerializer(cart, context={"request": request}).data)
+
+    @action(detail=False, methods=["post"], url_path="remove-coupon")
+    def remove_coupon(self, request):
+        """Remove applied coupon and restore CartItem.price_at_order from original_price_at_order."""
+        cart = get_or_create_cart(request.user)
+        items = cart.items.all()
+        for it in items:
+            if it.original_price_at_order is not None:
+                it.price_at_order = it.original_price_at_order
+                it.save(update_fields=["price_at_order"])
+        cart.coupon = None
+        cart.save(update_fields=["coupon", "updated_at"])
+        cart.refresh_from_db()
+        return Response(CartSerializer(cart, context={"request": request}).data)
+
     @action(detail=False, methods=["post"], url_path="add")
     def add(self, request):
         """POST /api/cart/add/ – body: { product: id, quantity: int, dosage?: str }."""
@@ -501,17 +576,19 @@ class CartViewSet(viewsets.GenericViewSet):
         item, created = CartItem.objects.get_or_create(
             cart=cart,
             product=product,
-            defaults={"quantity": quantity, "price_at_order": product.price, "dosage": dosage},
+            defaults={"quantity": quantity, "original_price_at_order": product.price, "price_at_order": product.price, "dosage": dosage},
         )
         if not created:
             item.quantity += quantity
             item.dosage = dosage
+            if item.original_price_at_order is None:
+                item.original_price_at_order = item.price_at_order
             if item.quantity > product.quantity_in_stock:
                 return Response(
                     {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-            item.save(update_fields=["quantity", "dosage"])
+            item.save(update_fields=["quantity", "dosage", "original_price_at_order"])
         cart.save(update_fields=["updated_at"])
         cart.refresh_from_db()
         return Response(CartSerializer(cart, context={"request": request}).data, status=status.HTTP_201_CREATED)
@@ -536,14 +613,42 @@ class CartViewSet(viewsets.GenericViewSet):
         shipping_text = f"{address.full_name}, {address.email}, {address.phone}, {address.district}, {address.thana}, {address.address}"
 
         delivery_zone = get_delivery_zone_for_district(address.district)
-        coupon = None
+        # Coupon can be provided or already applied/persisted to cart
+        coupon = cart.coupon
         if coupon_code:
+            # If a code is sent at checkout, validate and persist it first (so prices are saved).
+            # Reuse apply_coupon logic by validating against original subtotal.
             items = cart.items.select_related("product").all()
-            subtotal = sum((i.price_at_order * i.quantity for i in items), Decimal("0"))
+            original_subtotal = sum(((i.original_price_at_order or i.price_at_order) * i.quantity for i in items), Decimal("0"))
             try:
-                coupon, _ = validate_coupon(coupon_code, subtotal)
+                coupon, discount_amount = validate_coupon(coupon_code, original_subtotal)
             except ValueError as e:
                 return Response({"coupon_code": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            cart.coupon = coupon
+            cart.save(update_fields=["coupon", "updated_at"])
+            # Apply prices if not already discounted
+            if original_subtotal > 0 and discount_amount > 0:
+                # allocate as in apply_coupon
+                line_totals = [((i.original_price_at_order or i.price_at_order) * i.quantity).quantize(Decimal("0.01")) for i in items]
+                allocated = []
+                running = Decimal("0.00")
+                for idx, lt in enumerate(line_totals):
+                    if idx == len(line_totals) - 1:
+                        d = (discount_amount - running).quantize(Decimal("0.01"))
+                    else:
+                        ratio = (lt / original_subtotal) if original_subtotal > 0 else Decimal("0")
+                        d = (discount_amount * ratio).quantize(Decimal("0.01"))
+                        running += d
+                    allocated.append(max(Decimal("0.00"), d))
+                for i, lt, d in zip(items, line_totals, allocated):
+                    after = max(Decimal("0.00"), (lt - d).quantize(Decimal("0.01")))
+                    unit_after = (after / i.quantity).quantize(Decimal("0.01")) if i.quantity else Decimal("0.00")
+                    i.price_at_order = unit_after
+                    if i.original_price_at_order is None:
+                        i.original_price_at_order = i.price_at_order
+                        i.save(update_fields=["price_at_order", "original_price_at_order"])
+                    else:
+                        i.save(update_fields=["price_at_order"])
 
         summary = get_cart_summary(cart, delivery_zone=delivery_zone, coupon=coupon)
         if not validate_min_order(summary["subtotal"]):
@@ -576,11 +681,13 @@ class CartViewSet(viewsets.GenericViewSet):
             item.product.quantity_in_stock -= item.quantity
             item.product.save(update_fields=["quantity_in_stock"])
 
-        if coupon:
+        if cart.coupon:
             coupon.times_used += 1
             coupon.save(update_fields=["times_used"])
 
         cart.items.all().delete()
+        cart.coupon = None
+        cart.save(update_fields=["coupon", "updated_at"])
         return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
 
