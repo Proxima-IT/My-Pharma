@@ -610,6 +610,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     current_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
     quantity_in_stock = serializers.IntegerField(source="product.quantity_in_stock", read_only=True)
+    original_price_at_order = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True, allow_null=True)
 
     class Meta:
         model = CartItem
@@ -626,6 +627,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             "dosage",
             "image_url",
             "quantity",
+            "original_price_at_order",
             "price_at_order",
             "current_price",
             "quantity_in_stock",
@@ -642,6 +644,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             "image_url",
             "current_price",
             "quantity_in_stock",
+            "original_price_at_order",
         )
 
     def get_image_url(self, obj):
@@ -697,9 +700,38 @@ class CartSerializer(serializers.ModelSerializer):
         summary = data.get("summary") or {}
         discount_amount = Decimal(str(summary.get("discount_amount") or "0"))
         subtotal = Decimal(str(summary.get("subtotal") or "0"))
+        subtotal_before = Decimal(str(summary.get("subtotal_before_discount") or "0"))
         items = data.get("items") or []
-        if not items or discount_amount <= 0 or subtotal <= 0:
+        if not items or subtotal <= 0:
             # still add line totals for consistency
+            for it in items:
+                qty = Decimal(str(it.get("quantity") or 0))
+                unit = Decimal(str(it.get("price_at_order") or "0"))
+                line_total = (unit * qty).quantize(Decimal("0.01"))
+                it["line_total"] = line_total
+                it["discount_amount"] = Decimal("0.00")
+                it["line_total_after_discount"] = line_total
+                it["unit_price_after_discount"] = unit.quantize(Decimal("0.01")) if qty else unit
+            return data
+
+        # If discount is already persisted (we have original subtotal > current subtotal),
+        # compute per-item discount directly from stored prices (no allocation/double-apply).
+        if subtotal_before > subtotal:
+            for it in items:
+                qty = Decimal(str(it.get("quantity") or 0))
+                unit = Decimal(str(it.get("price_at_order") or "0"))
+                orig_unit = Decimal(str(it.get("original_price_at_order") or it.get("price_at_order") or "0"))
+                line_total_before = (orig_unit * qty).quantize(Decimal("0.01"))
+                line_total_after = (unit * qty).quantize(Decimal("0.01"))
+                d = max(Decimal("0.00"), (line_total_before - line_total_after).quantize(Decimal("0.01")))
+                it["line_total"] = line_total_before
+                it["discount_amount"] = d
+                it["line_total_after_discount"] = line_total_after
+                it["unit_price_after_discount"] = unit.quantize(Decimal("0.01")) if qty else unit
+            data["items"] = items
+            return data
+
+        if discount_amount <= 0:
             for it in items:
                 qty = Decimal(str(it.get("quantity") or 0))
                 unit = Decimal(str(it.get("price_at_order") or "0"))
