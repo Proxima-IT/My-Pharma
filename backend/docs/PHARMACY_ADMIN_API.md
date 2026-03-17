@@ -396,7 +396,7 @@ When admin **approves with items**, the backend **creates an Order** for the use
 
 ## 7a. Coupons (flat / percent)
 
-Pharmacy/Super admins can create discount coupons (flat amount or percent). Users apply coupons during checkout via `coupon_code` (cart place-order) and can validate codes via `/api/coupons/validate/`.
+Pharmacy/Super admins can create discount coupons (flat amount or percent). Users can validate codes via `/api/coupons/validate/` and can persist discounts on the cart via `POST /api/cart/apply-coupon/` (then checkout as usual).
 
 | Method | Path | Description |
 |--------|------|-------------|

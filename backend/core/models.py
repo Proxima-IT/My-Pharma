@@ -494,6 +494,15 @@ class Cart(models.Model):
         related_name="cart",
         db_index=True,
     )
+    coupon = models.ForeignKey(
+        "Coupon",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="carts",
+        db_index=True,
+        help_text="Applied coupon for this cart (optional).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -520,6 +529,13 @@ class CartItem(models.Model):
         db_index=True,
     )
     quantity = models.PositiveIntegerField(default=1)
+    original_price_at_order = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Locked unit price at add-to-cart before any coupon discount is applied.",
+    )
     price_at_order = models.DecimalField(max_digits=12, decimal_places=2)
     dosage = models.CharField(
         max_length=50,

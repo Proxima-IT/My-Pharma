@@ -182,6 +182,10 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 - `POST /api/cart/place-order/` supports `coupon_code` and will reject invalid/expired coupons.  
 - When order is placed successfully with a coupon, `times_used` is incremented.
 
+**Persist discounted prices in cart:**  
+- `POST /api/cart/apply-coupon/` body: `{ "coupon_code": "SAVE10" }` → validates and **updates cart item unit prices** (`price_at_order`) to the discounted price, and stores the applied coupon on the cart.  
+- `POST /api/cart/remove-coupon/` → restores cart item prices from `original_price_at_order` and clears the applied coupon.
+
 ---
 
 **Product reviews (rating + comment + images):**  
