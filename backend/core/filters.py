@@ -9,8 +9,10 @@ from .models import Product
 
 
 class ProductFilter(FilterSet):
-    """Search & filter for product list. Query params: search, brand_id, ingredient_id, price_min, price_max, requires_prescription, ordering."""
+    """Search & filter for product list. Query params: search, category, brand_id, ingredient_id, price_min, price_max, requires_prescription, ordering."""
     search = CharFilter(method="filter_search", label="Name search (fuzzy Levenshtein <= 2)")
+    # category: accept id (int), slug (e.g. healthcare), or name (e.g. Healthcare)
+    category = CharFilter(method="filter_category", label="Category (id, slug, or name)")
     brand_id = NumberFilter(field_name="brand_id", lookup_expr="exact")
     ingredient_id = NumberFilter(field_name="ingredient_id", lookup_expr="exact")
     price_min = NumberFilter(field_name="price", lookup_expr="gte")
@@ -23,7 +25,18 @@ class ProductFilter(FilterSet):
 
     class Meta:
         model = Product
-        fields = ["category", "is_active", "brand_id", "ingredient_id", "requires_prescription"]
+        fields = ["is_active", "brand_id", "ingredient_id", "requires_prescription"]
+
+    def filter_category(self, queryset, name, value):
+        if not value or not str(value).strip():
+            return queryset
+        value = str(value).strip()
+        if value.isdigit():
+            return queryset.filter(category_id=int(value))
+        # Match by slug (case-insensitive) or name (case-insensitive)
+        return queryset.filter(
+            Q(category__slug__iexact=value) | Q(category__name__iexact=value)
+        )
 
     def filter_search(self, queryset, name, value):
         if not value or not value.strip():
