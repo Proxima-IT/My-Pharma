@@ -808,6 +808,15 @@ class PrescriptionSerializer(serializers.ModelSerializer):
 class PrescriptionUploadSerializer(serializers.ModelSerializer):
     """Upload prescription order: multipart with images (or file), shipping_address, duration, note, save_prescription."""
 
+    # For Swagger/docs: accept single or multiple files under the same key "images".
+    # Implementation uses request.FILES.getlist("images") in the view.
+    images = serializers.ListField(
+        child=serializers.ImageField(),
+        required=False,
+        write_only=True,
+        help_text="Upload one or more prescription images (multipart). Field name: images.",
+    )
+
     shipping_address = serializers.PrimaryKeyRelatedField(
         queryset=UserAddress.objects.none(),
         required=False,
@@ -818,7 +827,7 @@ class PrescriptionUploadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Prescription
         fields = (
-            "file", "issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number",
+            "images", "file", "issue_date", "patient_name_on_rx", "doctor_name", "doctor_reg_number",
             "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note", "additional_products_note",
             "shipping_address",
         )

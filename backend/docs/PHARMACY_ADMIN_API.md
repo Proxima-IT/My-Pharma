@@ -363,7 +363,7 @@ Prescription ordering: user uploads prescription (multiple images), selects ship
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| images | files | Yes* | Multiple prescription images. *Or single `file` (JPG/PNG/PDF, max 10MB). |
+| images | files | Yes* | Upload **single or multiple** prescription images (repeat field `images`). *Or single `file` (JPG/PNG/PDF, max 10MB). |
 | file | file | No | Legacy single file (if not using `images`). |
 | shipping_address | int | No | UserAddress id (from `/api/auth/addresses/`). |
 | save_prescription | boolean | No | Save for future reference. Default false. |

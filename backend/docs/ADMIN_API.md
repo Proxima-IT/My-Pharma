@@ -38,7 +38,7 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 **Dedicated prescription ordering endpoint (preferred from frontend):**  
 | Method | Path                          | Description |
 |--------|-------------------------------|-------------|
-| POST   | `/api/prescription-orders/`   | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (multiple files) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, **additional_products_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
+| POST   | `/api/prescription-orders/`   | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (single or multiple files; repeat `images`) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, **additional_products_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
 
 ---
 
