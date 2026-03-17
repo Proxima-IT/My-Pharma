@@ -687,6 +687,59 @@ class CartSerializer(serializers.ModelSerializer):
         fields = ("id", "items", "summary", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
 
+    def to_representation(self, instance):
+        """
+        Add per-item discounted pricing when a coupon is applied.
+        This does not mutate DB; it only affects the response shape.
+        """
+        data = super().to_representation(instance)
+        summary = data.get("summary") or {}
+        discount_amount = Decimal(str(summary.get("discount_amount") or "0"))
+        subtotal = Decimal(str(summary.get("subtotal") or "0"))
+        items = data.get("items") or []
+        if not items or discount_amount <= 0 or subtotal <= 0:
+            # still add line totals for consistency
+            for it in items:
+                qty = Decimal(str(it.get("quantity") or 0))
+                unit = Decimal(str(it.get("price_at_order") or "0"))
+                line_total = (unit * qty).quantize(Decimal("0.01"))
+                it["line_total"] = line_total
+                it["discount_amount"] = Decimal("0.00")
+                it["line_total_after_discount"] = line_total
+                it["unit_price_after_discount"] = unit.quantize(Decimal("0.01")) if qty else unit
+            return data
+
+        # Allocate discount across items proportional to each line_total.
+        line_totals = []
+        for it in items:
+            qty = Decimal(str(it.get("quantity") or 0))
+            unit = Decimal(str(it.get("price_at_order") or "0"))
+            line_total = (unit * qty).quantize(Decimal("0.01"))
+            line_totals.append(line_total)
+
+        allocated = []
+        running = Decimal("0.00")
+        for i, lt in enumerate(line_totals):
+            if i == len(line_totals) - 1:
+                d = (discount_amount - running).quantize(Decimal("0.01"))
+            else:
+                ratio = (lt / subtotal) if subtotal > 0 else Decimal("0")
+                d = (discount_amount * ratio).quantize(Decimal("0.01"))
+                running += d
+            allocated.append(max(Decimal("0.00"), d))
+
+        for it, lt, d in zip(items, line_totals, allocated):
+            qty = Decimal(str(it.get("quantity") or 0))
+            after = max(Decimal("0.00"), (lt - d).quantize(Decimal("0.01")))
+            unit_after = (after / qty).quantize(Decimal("0.01")) if qty else Decimal("0.00")
+            it["line_total"] = lt
+            it["discount_amount"] = d
+            it["line_total_after_discount"] = after
+            it["unit_price_after_discount"] = unit_after
+
+        data["items"] = items
+        return data
+
     def get_summary(self, obj):
         from .services import get_cart_summary, validate_coupon, get_delivery_zone_for_district
         request = self.context.get("request")

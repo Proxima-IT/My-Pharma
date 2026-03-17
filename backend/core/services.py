@@ -108,22 +108,22 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None):
     items = cart.items.select_related("product").all()
     subtotal = sum((item.price_at_order * item.quantity for item in items), Decimal("0"))
     delivery_fee = get_delivery_fee(subtotal, delivery_zone)
-    before_discount = subtotal + delivery_fee
+    # Discount applies to product subtotal (not delivery fee), so product prices can be reduced in UI.
     discount_amount = Decimal("0")
     discount_display = None
     coupon_code = None
     if coupon:
         if isinstance(coupon, Coupon):
             if coupon.discount_type == Coupon.DiscountType.PERCENT:
-                discount_amount = (before_discount * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
+                discount_amount = (subtotal * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
                 discount_display = f"-{coupon.discount_value}%"
             else:
-                discount_amount = min(coupon.discount_value, before_discount)
+                discount_amount = min(coupon.discount_value, subtotal)
                 discount_display = f"-৳{coupon.discount_value}"
             coupon_code = coupon.code
         else:
             coupon_code = str(coupon)
-    total_payable = max(Decimal("0"), before_discount - discount_amount)
+    total_payable = max(Decimal("0"), (subtotal - discount_amount) + delivery_fee)
     return {
         "subtotal": subtotal,
         "delivery_fee": delivery_fee,
