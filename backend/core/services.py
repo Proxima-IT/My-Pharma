@@ -114,7 +114,7 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None):
         Decimal("0"),
     )
     delivery_fee = get_delivery_fee(subtotal, delivery_zone)
-    # Discount applies to product subtotal (not delivery fee), so product prices can be reduced in UI.
+    # Discount applies to product subtotal (not delivery fee).
     # If prices already discounted, this will be computed from original_subtotal.
     discount_amount = max(Decimal("0"), (original_subtotal - subtotal).quantize(Decimal("0.01")))
     discount_display = None
@@ -136,7 +136,9 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None):
         else:
             coupon_code = str(coupon)
     # If discount already reflected in subtotal, do not subtract again.
-    total_payable = max(Decimal("0"), subtotal + delivery_fee) if (original_subtotal - subtotal) > 0 else max(Decimal("0"), (subtotal - discount_amount) + delivery_fee)
+    discount_persisted = (original_subtotal - subtotal) > 0
+    total_payable = (subtotal + delivery_fee) if discount_persisted else ((subtotal - discount_amount) + delivery_fee)
+    total_payable = max(Decimal("0"), total_payable).quantize(Decimal("0.01"))
     return {
         "subtotal_before_discount": original_subtotal,
         "subtotal": subtotal,
