@@ -363,7 +363,7 @@ Prescription ordering: user uploads prescription (multiple images), selects ship
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| images | files | Yes* | Multiple prescription images. *Or single `file` (JPG/PNG/PDF, max 10MB). |
+| images | files | Yes* | Upload **single or multiple** prescription images (repeat field `images`). *Or single `file` (JPG/PNG/PDF, max 10MB). |
 | file | file | No | Legacy single file (if not using `images`). |
 | shipping_address | int | No | UserAddress id (from `/api/auth/addresses/`). |
 | save_prescription | boolean | No | Save for future reference. Default false. |
@@ -391,6 +391,23 @@ Prescription ordering: user uploads prescription (multiple images), selects ship
 When admin **approves with items**, the backend **creates an Order** for the user (linked to this prescription), deducts stock, and sets prescription to USED. The user sees the order in their orders list.
 
 **PATCH** `/api/prescriptions/{id}/verify/` is an alias for the same update. Status changes are recorded in **status_history** with date/time in **Bangladesh time (Asia/Dhaka)**.
+
+---
+
+## 7a. Coupons (flat / percent)
+
+Pharmacy/Super admins can create discount coupons (flat amount or percent). Users apply coupons during checkout via `coupon_code` (cart place-order) and can validate codes via `/api/coupons/validate/`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/coupons/` | List coupons (admin). Search: `?search=CODE`. Filter: `discount_type`, `is_active`. |
+| GET | `/api/coupons/{id}/` | Retrieve one (admin). |
+| POST | `/api/coupons/` | Create coupon (admin). |
+| PUT / PATCH | `/api/coupons/{id}/` | Update coupon (admin). |
+| DELETE | `/api/coupons/{id}/` | Delete coupon (admin). |
+| POST | `/api/coupons/validate/` | Validate/apply coupon (user). Body: `code`, optional `subtotal` (if omitted, subtotal is calculated from cart). |
+
+**Coupon fields:** `code`, `discount_type` (`PERCENT` or `FIXED`), `discount_value`, `min_order_amount`, `valid_from`, `valid_until`, `max_uses`, `times_used`, `is_active`.
 
 ---
 
@@ -457,6 +474,7 @@ Default page size: **20** (configurable in backend).
 | Products | GET /api/products/ | GET /api/products/{slug}/ | POST | PUT/PATCH | DELETE |
 | Product images | GET .../images/ | — | POST .../images/ | — | DELETE .../images/{id}/ |
 | Inventory | GET /api/products/inventory-list/ | — | — | PATCH .../inventory/ | — |
+| Coupons | GET /api/coupons/ | GET /api/coupons/{id}/ | POST | PUT/PATCH | DELETE |
 | Orders | GET /api/orders/ | GET /api/orders/{id}/ | — | PATCH (status, duration) | — |
 | Delivery durations | GET /api/delivery-durations/ | GET /api/delivery-durations/{id}/ | POST | PUT/PATCH | DELETE |
 | Prescriptions | GET /api/prescriptions/ | GET /api/prescriptions/{id}/ | POST (upload) | PATCH / PUT (verify) | DELETE |

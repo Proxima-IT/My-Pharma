@@ -38,7 +38,7 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 **Dedicated prescription ordering endpoint (preferred from frontend):**  
 | Method | Path                          | Description |
 |--------|-------------------------------|-------------|
-| POST   | `/api/prescription-orders/`   | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (multiple files) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, **additional_products_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
+| POST   | `/api/prescription-orders/`   | **Upload prescription order** (REGISTERED_USER only). **Multipart:** **images** (single or multiple files; repeat `images`) or single **file** (JPG/PNG/PDF, max 10MB); optional **shipping_address** (UserAddress id), **save_prescription**, **medicine_supply_duration** (7_DAYS, 15_DAYS, 1_MONTH, 2_MONTHS, CUSTOM), **custom_supply_days** (when CUSTOM), **prescription_note**, **additional_products_note**, issue_date, patient_name_on_rx, doctor_name, doctor_reg_number. Creates PENDING; status_history recorded. |
 
 ---
 
@@ -160,6 +160,27 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | DELETE | `/api/delivery-durations/{id}/` | Delete (Pharmacy/Super) |
 
 **Fields:** `name`, `days` (optional), `order` (display order). List/retrieve: any authenticated user; create/update/delete: Pharmacy/Super only.
+
+---
+
+## 4a. Coupons (flat / percent)
+
+Admins can create discount coupons (flat amount or percent). Users can validate/apply coupons before checkout and then place orders with `coupon_code`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/coupons/` | List coupons (admin only). Search: `?search=CODE`. Filter: `discount_type`, `is_active`. |
+| GET | `/api/coupons/{id}/` | Retrieve coupon (admin only). |
+| POST | `/api/coupons/` | Create coupon (Pharmacy/Super only). |
+| PUT / PATCH | `/api/coupons/{id}/` | Update coupon (Pharmacy/Super only). |
+| DELETE | `/api/coupons/{id}/` | Delete coupon (Pharmacy/Super only). |
+| POST | `/api/coupons/validate/` | Validate/apply coupon (REGISTERED_USER). Body: `code`, optional `subtotal` (if omitted, subtotal is calculated from cart). |
+
+**Coupon fields:** `code` (unique), `discount_type` (`PERCENT` or `FIXED`), `discount_value` (percent 0–100 or flat amount), `min_order_amount`, `valid_from`, `valid_until`, `max_uses` (null=unlimited), `times_used`, `is_active`.
+
+**Order/cart integration:**  
+- `POST /api/cart/place-order/` supports `coupon_code` and will reject invalid/expired coupons.  
+- When order is placed successfully with a coupon, `times_used` is incremented.
 
 ---
 
