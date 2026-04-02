@@ -97,6 +97,7 @@ The backend exposes REST APIs for the admin panel (and for customers: place orde
 | `/api/orders/`                       | View/Manage Orders (Pharmacy/Super all; User own); Place order (User only) |
 | `/api/prescriptions/`                | List/retrieve: User (own only), Pharmacy/Super (all); Upload (User only); Verify PATCH (Pharmacy/Super only) |
 | `/api/consultations/`                | Doctor Consultations (Doctor/Super respond; User request)                  |
+| `/api/notifications/`                | User inbox (own notifications); admin broadcast to all active non-guest users |
 | `/api/pages/`                        | CMS (Super full; Pharmacy limited)                                         |
 | `/api/blog-categories/`, `/api/blog-posts/` | Blog CRUD (Pharmacy/Super); public read published/active only          |
 

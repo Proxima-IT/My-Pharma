@@ -1,6 +1,8 @@
 """
-Core models: Category, Product (with inventory), Order, OrderItem, Prescription, Consultation, Blog, Page (CMS).
-Aligned with RBAC: Products/Inventory/Orders/Prescriptions (Pharmacy Admin), Consultations (Doctor), CMS (Super/Pharmacy).
+Core models: Category, Product (with inventory), Order, OrderItem, Prescription,
+Consultation, Notifications, Blog, Page (CMS).
+Aligned with RBAC: Products/Inventory/Orders/Prescriptions (Pharmacy Admin),
+Consultations (Doctor), CMS/Notifications (Super/Pharmacy).
 """
 from django.conf import settings
 from django.db import models
@@ -773,6 +775,41 @@ class Consultation(models.Model):
 
     def __str__(self):
         return f"Consultation #{self.id} - {self.subject}"
+
+
+class UserNotification(models.Model):
+    """Per-user notification row; admins can broadcast to all non-guest users."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        db_index=True,
+    )
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sent_notifications",
+        help_text="Admin user who sent this notification.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_user_notification"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "is_read"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Notification #{self.id} -> user {self.user_id}"
 
 
 class BlogCategory(models.Model):

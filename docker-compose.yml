@@ -45,7 +45,7 @@ services:
       - NODE_ENV=production
       - BACKEND_URL_INTERNAL=http://backend:8000
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     depends_on:
       - backend
     networks:

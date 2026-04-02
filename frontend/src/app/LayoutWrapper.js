@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Header from './(public)/components/Header';
 import Footer from './(public)/components/Footer';
 import Sidebar from './(public)/components/Sidebar';
+import NotificationPermissionPrompt from './(public)/components/NotificationPermissionPrompt';
 
 export default function LayoutWrapper({ children }) {
   const pathname = usePathname();
@@ -47,6 +48,7 @@ export default function LayoutWrapper({ children }) {
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      <NotificationPermissionPrompt />
       <Header />
 
       <main className="flex-grow w-full">

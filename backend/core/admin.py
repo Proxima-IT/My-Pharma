@@ -1,6 +1,6 @@
 """
 Admin for core models: Category, Brand, Ingredient, Product, Order, OrderItem,
-Prescription, PrescriptionItem, Consultation, Blog, Page.
+Prescription, PrescriptionItem, Consultation, Notifications, Blog, Page.
 """
 from django.contrib import admin
 
@@ -8,6 +8,7 @@ from .models import (
     Brand,
     Category,
     Consultation,
+    UserNotification,
     BlogCategory,
     BlogPost,
     DeliveryDuration,
@@ -211,6 +212,15 @@ class ConsultationAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("user__email", "subject", "message")
     raw_id_fields = ("user", "doctor")
+    date_hierarchy = "created_at"
+
+
+@admin.register(UserNotification)
+class UserNotificationAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "title", "is_read", "created_by", "created_at", "read_at")
+    list_filter = ("is_read",)
+    search_fields = ("user__email", "user__phone", "title", "message")
+    raw_id_fields = ("user", "created_by")
     date_hierarchy = "created_at"
 
 

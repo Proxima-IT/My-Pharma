@@ -1,5 +1,6 @@
 """
-Serializers for core API: Category, Product, Order, Prescription, Consultation, Blog, Page.
+Serializers for core API: Category, Product, Order, Prescription, Consultation,
+Notifications, Blog, Page.
 """
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -29,6 +30,7 @@ from .models import (
     PrescriptionItem,
     PrescriptionStatusHistory,
     Consultation,
+    UserNotification,
     BlogCategory,
     BlogPost,
     Page,
@@ -1115,6 +1117,36 @@ class ConsultationResponseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Consultation
         fields = ("response", "status")
+
+
+class UserNotificationSerializer(serializers.ModelSerializer):
+    created_by_email = serializers.EmailField(source="created_by.email", read_only=True, allow_null=True)
+
+    class Meta:
+        model = UserNotification
+        fields = (
+            "id",
+            "title",
+            "message",
+            "is_read",
+            "read_at",
+            "created_at",
+            "created_by",
+            "created_by_email",
+        )
+        read_only_fields = (
+            "id",
+            "is_read",
+            "read_at",
+            "created_at",
+            "created_by",
+            "created_by_email",
+        )
+
+
+class AdminBroadcastNotificationSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    message = serializers.CharField()
 
 
 # ---- Page (CMS) ----

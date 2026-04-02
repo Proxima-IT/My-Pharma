@@ -215,7 +215,23 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 
 ---
 
-## 6. CMS Management (SUPER_ADMIN full; PHARMACY_ADMIN limited)
+## 6. Notifications (admin broadcast + user inbox)
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/notifications/` | List current user's notifications. Filter: `is_read`. |
+| GET | `/api/notifications/{id}/` | Retrieve current user's notification by id. |
+| PATCH | `/api/notifications/{id}/read/` | Mark one notification as read (current user only). |
+| PATCH | `/api/notifications/read-all/` | Mark all current user's unread notifications as read. |
+| POST | `/api/notifications/broadcast/` | Broadcast notification to **all non-guest active users** (SUPER_ADMIN / PHARMACY_ADMIN). Body: `title`, `message`. |
+
+**Permission:**  
+- Inbox endpoints (`list`, `retrieve`, `read`, `read-all`): `IsRegisteredUser` (authenticated non-guest users; queryset always own only).  
+- Broadcast endpoint: `IsPharmacyAdminOrSuper`.
+
+---
+
+## 7. CMS Management (SUPER_ADMIN full; PHARMACY_ADMIN limited)
 
 | Method      | Path                 | Description                                    |
 | ----------- | -------------------- | ---------------------------------------------- |
@@ -245,19 +261,19 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 
 ---
 
-## 7. Summary by role
+## 8. Summary by role
 
 | Role                | Endpoints                                                                                                                                                                                     |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **SUPER_ADMIN**     | All: users, categories, products, orders, prescriptions, consultations, pages (full CRUD + inventory, verify, respond, CMS create/delete), blog (full CRUD)                                                     |
-| **PHARMACY_ADMIN**  | Categories, products, orders, prescriptions, pages (no user management; no consultation respond; no CMS create/delete), blog (full CRUD)                                                                        |
+| **SUPER_ADMIN**     | All: users, categories, products, orders, prescriptions, consultations, notifications (broadcast + own inbox), pages (full CRUD + inventory, verify, respond, CMS create/delete), blog (full CRUD)                                                     |
+| **PHARMACY_ADMIN**  | Categories, products, orders, prescriptions, notifications (broadcast + own inbox), pages (no user management; no consultation respond; no CMS create/delete), blog (full CRUD)                                                                        |
 | **DOCTOR**          | Consultations list/retrieve/respond; own profile (me)                                                                                                                                         |
-| **REGISTERED_USER** | Own orders (list, retrieve, create/place order); own prescriptions (list, retrieve, upload); own consultations (list, retrieve, create); product reviews (list, retrieve, create for purchased products, update/delete own); products list/retrieve (browse); pages list/retrieve; blog categories/posts list/retrieve (published + active only, same as guest) |
+| **REGISTERED_USER** | Own orders (list, retrieve, create/place order); own prescriptions (list, retrieve, upload); own consultations (list, retrieve, create); own notifications (list/retrieve/mark-read); product reviews (list, retrieve, create for purchased products, update/delete own); products list/retrieve (browse); pages list/retrieve; blog categories/posts list/retrieve (published + active only, same as guest) |
 | **GUEST**           | Products list/retrieve (active only); pages list/retrieve (published only); blog categories (active) and posts (published); reviews list/retrieve                                                                                                                              |
 
 ---
 
-## 8. References
+## 9. References
 
 - [RBAC.md](RBAC.md) – User hierarchy and permissions matrix
 - [API_REFERENCE.md](API_REFERENCE.md) – Auth endpoints (login, register, me, etc.)

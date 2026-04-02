@@ -3,9 +3,10 @@ Core API views with RBAC.
 """
 import json
 from decimal import Decimal
+from django.contrib.auth import get_user_model
 from django.db.models.deletion import ProtectedError
 from django.utils import timezone
-from rest_framework import status, viewsets
+from rest_framework import status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
@@ -24,7 +25,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -57,6 +58,8 @@ from .serializers import (
     ConsultationSerializer,
     ConsultationRequestSerializer,
     ConsultationResponseSerializer,
+    UserNotificationSerializer,
+    AdminBroadcastNotificationSerializer,
     PageSerializer,
     BlogCategorySerializer,
     BlogPostSerializer,
@@ -991,6 +994,88 @@ class ConsultationViewSet(viewsets.ModelViewSet):
     def respond(self, request, pk=None):
         """Alias for PATCH consultation (doctor response)."""
         return self.partial_update(request)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Notifications"], summary="List my notifications"),
+    retrieve=extend_schema(tags=["Notifications"], summary="Get notification by id"),
+    mark_read=extend_schema(tags=["Notifications"], summary="Mark one notification as read"),
+    mark_all_read=extend_schema(tags=["Notifications"], summary="Mark all my notifications as read"),
+    broadcast=extend_schema(
+        tags=["Notifications"],
+        summary="Broadcast notification to all users (admin)",
+        request=AdminBroadcastNotificationSerializer,
+    ),
+)
+class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    queryset = UserNotification.objects.select_related("created_by", "user").all()
+    serializer_class = UserNotificationSerializer
+    filterset_fields = ["is_read"]
+    http_method_names = ["get", "post", "patch", "head", "options"]
+
+    def get_permissions(self):
+        if self.action == "broadcast":
+            return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+        return [IsAuthenticated(), IsRegisteredUser()]
+
+    def get_queryset(self):
+        return super().get_queryset().filter(user=self.request.user)
+
+    @action(detail=True, methods=["patch"], url_path="read")
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        if not notification.is_read:
+            notification.is_read = True
+            notification.read_at = timezone.now()
+            notification.save(update_fields=["is_read", "read_at"])
+        return Response(UserNotificationSerializer(notification, context={"request": request}).data)
+
+    @action(detail=False, methods=["patch"], url_path="read-all")
+    def mark_all_read(self, request):
+        now = timezone.now()
+        updated = UserNotification.objects.filter(user=request.user, is_read=False).update(is_read=True, read_at=now)
+        return Response({"marked_count": updated}, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="broadcast")
+    def broadcast(self, request):
+        serializer = AdminBroadcastNotificationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        User = get_user_model()
+        recipients = (
+            User.objects.filter(is_active=True, deleted_at__isnull=True)
+            .exclude(role=UserRole.GUEST_USER)
+            .values_list("id", flat=True)
+        )
+
+        rows = []
+        count = 0
+        for user_id in recipients.iterator(chunk_size=1000):
+            rows.append(
+                UserNotification(
+                    user_id=user_id,
+                    title=serializer.validated_data["title"],
+                    message=serializer.validated_data["message"],
+                    created_by=request.user,
+                )
+            )
+            if len(rows) >= 1000:
+                UserNotification.objects.bulk_create(rows, batch_size=1000)
+                count += len(rows)
+                rows = []
+
+        if rows:
+            UserNotification.objects.bulk_create(rows, batch_size=1000)
+            count += len(rows)
+
+        return Response(
+            {
+                "detail": "Notification broadcast sent.",
+                "sent_count": count,
+                "title": serializer.validated_data["title"],
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # ---- Page (CMS): Super full; Pharmacy limited (e.g. list + update certain slugs) ----
