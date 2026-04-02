@@ -21,6 +21,8 @@ router.register(r"prescriptions", views.PrescriptionViewSet, basename="prescript
 router.register(r"prescription-orders", views.PrescriptionOrderViewSet, basename="prescription-order")
 router.register(r"consultations", views.ConsultationViewSet, basename="consultation")
 router.register(r"pages", views.PageViewSet, basename="page")
+router.register(r"blog-categories", views.BlogCategoryViewSet, basename="blog-category")
+router.register(r"blog-posts", views.BlogPostViewSet, basename="blog-post")
 router.register(r"cart", views.CartViewSet, basename="cart")
 
 urlpatterns = [

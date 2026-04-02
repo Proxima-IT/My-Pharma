@@ -227,17 +227,33 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 
 **Permission:** List/retrieve: any (guests see published only). Create/delete: `IsSuperAdmin`. Update: `IsPharmacyAdminOrSuper`.
 
+**Blog (categories + posts: title, category, full article text):**  
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/blog-categories/` | List blog categories (public: **is_active** only; Pharmacy/Super: all). Filter: `is_active`. Search: `name`, `slug`. |
+| GET | `/api/blog-categories/{slug}/` | Retrieve category by slug |
+| POST | `/api/blog-categories/` | Create category: **name**, **slug** (optional; auto from name), **is_active**, **order** (Pharmacy/Super) |
+| PUT / PATCH | `/api/blog-categories/{slug}/` | Update category (admin) |
+| DELETE | `/api/blog-categories/{slug}/` | Delete category (admin). **Note:** cannot delete if posts still reference it (`PROTECT`). |
+| GET | `/api/blog-posts/` | List posts (public: **is_published** only; Pharmacy/Super: all). Filter: `is_published`, `category` (id). Search: **title**, **content**, **slug**. |
+| GET | `/api/blog-posts/{slug}/` | Retrieve post by slug |
+| POST | `/api/blog-posts/` | Create post: **title**, **slug** (optional; auto from title), **category** (BlogCategory id), **content** (detailed body), **is_published** (Pharmacy/Super) |
+| PUT / PATCH | `/api/blog-posts/{slug}/` | Update post (admin) |
+| DELETE | `/api/blog-posts/{slug}/` | Delete post (admin) |
+
+**Permission:** List/retrieve: any (guests see active categories + published posts only). Create/update/delete categories and posts: `IsPharmacyAdminOrSuper`. Blog is also manageable in Django admin.
+
 ---
 
 ## 7. Summary by role
 
 | Role                | Endpoints                                                                                                                                                                                     |
 | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **SUPER_ADMIN**     | All: users, categories, products, orders, prescriptions, consultations, pages (full CRUD + inventory, verify, respond, CMS create/delete)                                                     |
-| **PHARMACY_ADMIN**  | Categories, products, orders, prescriptions, pages (no user management; no consultation respond; no CMS create/delete)                                                                        |
+| **SUPER_ADMIN**     | All: users, categories, products, orders, prescriptions, consultations, pages (full CRUD + inventory, verify, respond, CMS create/delete), blog (full CRUD)                                                     |
+| **PHARMACY_ADMIN**  | Categories, products, orders, prescriptions, pages (no user management; no consultation respond; no CMS create/delete), blog (full CRUD)                                                                        |
 | **DOCTOR**          | Consultations list/retrieve/respond; own profile (me)                                                                                                                                         |
-| **REGISTERED_USER** | Own orders (list, retrieve, create/place order); own prescriptions (list, retrieve, upload); own consultations (list, retrieve, create); product reviews (list, retrieve, create for purchased products, update/delete own); products list/retrieve (browse); pages list/retrieve |
-| **GUEST**           | Products list/retrieve (active only); pages list/retrieve (published only); reviews list/retrieve                                                                                                                              |
+| **REGISTERED_USER** | Own orders (list, retrieve, create/place order); own prescriptions (list, retrieve, upload); own consultations (list, retrieve, create); product reviews (list, retrieve, create for purchased products, update/delete own); products list/retrieve (browse); pages list/retrieve; blog categories/posts list/retrieve (published + active only, same as guest) |
+| **GUEST**           | Products list/retrieve (active only); pages list/retrieve (published only); blog categories (active) and posts (published); reviews list/retrieve                                                                                                                              |
 
 ---
 

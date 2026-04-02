@@ -24,7 +24,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -58,6 +58,8 @@ from .serializers import (
     ConsultationRequestSerializer,
     ConsultationResponseSerializer,
     PageSerializer,
+    BlogCategorySerializer,
+    BlogPostSerializer,
     SidebarCategorySerializer,
     AdSerializer,
     ComboSerializer,
@@ -1012,6 +1014,71 @@ class PageViewSet(viewsets.ModelViewSet):
         if self.action in ("list", "retrieve") and not (getattr(self.request, "user", None) and self.request.user.is_authenticated):
             return qs.filter(is_published=True)
         return qs
+
+
+# ---- Blog: categories + posts. Public: active categories + published posts; write: Pharmacy Admin / Super ----
+@extend_schema_view(
+    list=extend_schema(tags=["Blog"], summary="List blog categories"),
+    retrieve=extend_schema(tags=["Blog"], summary="Get blog category by slug"),
+    create=extend_schema(tags=["Blog"], summary="Create blog category (admin)"),
+    update=extend_schema(tags=["Blog"], summary="Update blog category (admin)"),
+    partial_update=extend_schema(tags=["Blog"], summary="Partial update blog category (admin)"),
+    destroy=extend_schema(tags=["Blog"], summary="Delete blog category (admin)"),
+)
+class BlogCategoryViewSet(viewsets.ModelViewSet):
+    queryset = BlogCategory.objects.all()
+    serializer_class = BlogCategorySerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "slug"]
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        if user and user.is_authenticated:
+            role = getattr(user, "role", None)
+            if role in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
+                return qs
+        return qs.filter(is_active=True)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Blog"], summary="List blog posts"),
+    retrieve=extend_schema(tags=["Blog"], summary="Get blog post by slug"),
+    create=extend_schema(tags=["Blog"], summary="Create blog post (admin)"),
+    update=extend_schema(tags=["Blog"], summary="Update blog post (admin)"),
+    partial_update=extend_schema(tags=["Blog"], summary="Partial update blog post (admin)"),
+    destroy=extend_schema(tags=["Blog"], summary="Delete blog post (admin)"),
+)
+class BlogPostViewSet(viewsets.ModelViewSet):
+    queryset = BlogPost.objects.select_related("category").all()
+    serializer_class = BlogPostSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["is_published", "category"]
+    search_fields = ["title", "content", "slug"]
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        user = getattr(self.request, "user", None)
+        if user and user.is_authenticated:
+            role = getattr(user, "role", None)
+            if role in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
+                return qs
+        return qs.filter(is_published=True)
 
 
 # ---- Sidebar category (left sidebar: image + title). List/retrieve: anyone; write: Pharmacy Admin / Super ----

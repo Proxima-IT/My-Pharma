@@ -88,7 +88,7 @@ Public registration (request-otp → verify-otp → register/complete, or regist
 
 The backend exposes REST APIs for the admin panel (and for customers: place order, upload prescription, request consultation). All endpoints are protected by the permissions above.
 
-- **Full endpoint list:** [ADMIN_API.md](ADMIN_API.md) – Users, Categories, Products, Orders, Prescriptions, Consultations, CMS Pages.
+- **Full endpoint list:** [ADMIN_API.md](ADMIN_API.md) – Users, Categories, Products, Orders, Prescriptions, Consultations, CMS Pages, Blog.
 
 | API prefix                           | Purpose                                                                    |
 | ------------------------------------ | -------------------------------------------------------------------------- |
@@ -98,6 +98,7 @@ The backend exposes REST APIs for the admin panel (and for customers: place orde
 | `/api/prescriptions/`                | List/retrieve: User (own only), Pharmacy/Super (all); Upload (User only); Verify PATCH (Pharmacy/Super only) |
 | `/api/consultations/`                | Doctor Consultations (Doctor/Super respond; User request)                  |
 | `/api/pages/`                        | CMS (Super full; Pharmacy limited)                                         |
+| `/api/blog-categories/`, `/api/blog-posts/` | Blog CRUD (Pharmacy/Super); public read published/active only          |
 
 ---
 

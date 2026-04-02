@@ -1,5 +1,5 @@
 """
-Serializers for core API: Category, Product, Order, Prescription, Consultation, Page.
+Serializers for core API: Category, Product, Order, Prescription, Consultation, Blog, Page.
 """
 from decimal import Decimal
 from zoneinfo import ZoneInfo
@@ -29,6 +29,8 @@ from .models import (
     PrescriptionItem,
     PrescriptionStatusHistory,
     Consultation,
+    BlogCategory,
+    BlogPost,
     Page,
     SidebarCategory,
     Ad,
@@ -1121,3 +1123,32 @@ class PageSerializer(serializers.ModelSerializer):
         model = Page
         fields = ("id", "slug", "title", "content", "is_published", "created_at", "updated_at")
         read_only_fields = ("id", "created_at", "updated_at")
+
+
+# ---- Blog ----
+class BlogCategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BlogCategory
+        fields = ("id", "name", "slug", "is_active", "order", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+class BlogPostSerializer(serializers.ModelSerializer):
+    category_name = serializers.CharField(source="category.name", read_only=True)
+    category_slug = serializers.CharField(source="category.slug", read_only=True)
+
+    class Meta:
+        model = BlogPost
+        fields = (
+            "id",
+            "title",
+            "slug",
+            "category",
+            "category_name",
+            "category_slug",
+            "content",
+            "is_published",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "category_name", "category_slug", "created_at", "updated_at")

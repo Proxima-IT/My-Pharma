@@ -1,5 +1,5 @@
 """
-Core models: Category, Product (with inventory), Order, OrderItem, Prescription, Consultation, Page (CMS).
+Core models: Category, Product (with inventory), Order, OrderItem, Prescription, Consultation, Blog, Page (CMS).
 Aligned with RBAC: Products/Inventory/Orders/Prescriptions (Pharmacy Admin), Consultations (Doctor), CMS (Super/Pharmacy).
 """
 from django.conf import settings
@@ -773,6 +773,66 @@ class Consultation(models.Model):
 
     def __str__(self):
         return f"Consultation #{self.id} - {self.subject}"
+
+
+class BlogCategory(models.Model):
+    """Blog taxonomy (separate from product Category)."""
+
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=100, unique=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+    order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_blog_category"
+        verbose_name_plural = "Blog categories"
+        ordering = ["order", "name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
+class BlogPost(models.Model):
+    """Blog article: title, category, rich text body. Admins publish via API or Django admin."""
+
+    title = models.CharField(max_length=255)
+    slug = models.SlugField(max_length=255, unique=True, db_index=True)
+    category = models.ForeignKey(
+        BlogCategory,
+        on_delete=models.PROTECT,
+        related_name="posts",
+        db_index=True,
+    )
+    content = models.TextField(help_text="Article body (plain text or HTML).")
+    is_published = models.BooleanField(default=False, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_blog_post"
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["category", "created_at"])]
+
+    def __str__(self):
+        return self.title
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title) or "post"
+            slug = base
+            n = 1
+            while BlogPost.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{n}"
+                n += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
 
 
 class Page(models.Model):

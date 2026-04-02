@@ -1,6 +1,6 @@
 """
 Admin for core models: Category, Brand, Ingredient, Product, Order, OrderItem,
-Prescription, PrescriptionItem, Consultation, Page.
+Prescription, PrescriptionItem, Consultation, Blog, Page.
 """
 from django.contrib import admin
 
@@ -8,6 +8,8 @@ from .models import (
     Brand,
     Category,
     Consultation,
+    BlogCategory,
+    BlogPost,
     DeliveryDuration,
     Ingredient,
     Order,
@@ -209,6 +211,25 @@ class ConsultationAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("user__email", "subject", "message")
     raw_id_fields = ("user", "doctor")
+    date_hierarchy = "created_at"
+
+
+@admin.register(BlogCategory)
+class BlogCategoryAdmin(admin.ModelAdmin):
+    list_display = ("name", "slug", "is_active", "order", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "slug")
+    prepopulated_fields = {"slug": ("name",)}
+    ordering = ("order", "name")
+
+
+@admin.register(BlogPost)
+class BlogPostAdmin(admin.ModelAdmin):
+    list_display = ("title", "slug", "category", "is_published", "created_at")
+    list_filter = ("is_published", "category")
+    search_fields = ("title", "slug", "content")
+    prepopulated_fields = {"slug": ("title",)}
+    raw_id_fields = ("category",)
     date_hierarchy = "created_at"
 
 
