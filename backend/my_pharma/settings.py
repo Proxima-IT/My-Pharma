@@ -46,12 +46,16 @@ CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://46.202.194.251:3000",
+    "http://localhost:3200",
+    "http://127.0.0.1:3200",
     "https://app.mypharma.com",
     "http://bluepillc.com",
     "http://www.bluepillc.com",
     "https://bluepillc.com",
     "https://www.bluepillc.com",
     "http://46.202.194.251",
+    "https://mypharma.com.bd",
+    "https://www.mypharma.com.bd",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -60,12 +64,16 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://46.202.194.251:3000",
+    "http://localhost:3200",
+    "http://127.0.0.1:3200",
     "https://app.mypharma.com",
     "http://bluepillc.com",
     "http://www.bluepillc.com",
     "https://bluepillc.com",
     "https://www.bluepillc.com",
     "http://46.202.194.251",
+    "https://mypharma.com.bd",
+    "https://www.mypharma.com.bd",
 ]
 
 CSRF_COOKIE_SECURE = False
@@ -101,6 +109,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -173,6 +182,10 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Production-ready static files (admin CSS, etc.)
+# Requires running `python manage.py collectstatic` in deploy/build.
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
