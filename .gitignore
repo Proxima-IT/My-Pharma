@@ -1,9 +1,4 @@
-.env
-.env.local
-.env.*
-*.env
-
-!.env.docker.example
+.env.dev
 
 docker-compose.dev.yml
 docker-compose.override.yml
