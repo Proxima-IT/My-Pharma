@@ -45,9 +45,8 @@ ALLOWED_HOSTS = _allowed
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://46.202.194.251:3000",
-    "http://localhost:3200",
-    "http://127.0.0.1:3200",
     "https://app.mypharma.com",
     "http://bluepillc.com",
     "http://www.bluepillc.com",
@@ -63,9 +62,8 @@ CORS_ALLOW_PRIVATE_NETWORK = True
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
+    "http://127.0.0.1:3000",
     "http://46.202.194.251:3000",
-    "http://localhost:3200",
-    "http://127.0.0.1:3200",
     "https://app.mypharma.com",
     "http://bluepillc.com",
     "http://www.bluepillc.com",
