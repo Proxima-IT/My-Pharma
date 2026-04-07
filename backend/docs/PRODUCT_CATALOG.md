@@ -58,8 +58,12 @@ Catalog search and filters are applied when listing products: `GET /api/products
 | `search`                | string  | Name search: `name` / `description` contains term; then fuzzy match (Levenshtein ≤ 2) on `name`. |
 | `brand_id`              | integer | Exact match on product’s `brand_id`. |
 | `ingredient_id`         | integer | Exact match on product’s `ingredient_id` (generic → all branded products with that ingredient). |
-| `price_min`             | number  | Minimum price (>=). |
-| `price_max`             | number  | Maximum price (<=). |
+| `price_min`             | number  | Minimum price (>=). (Legacy; prefer `min_price`.) |
+| `price_max`             | number  | Maximum price (<=). (Legacy; prefer `max_price`.) |
+| `min_price`             | number  | Minimum price (>=). |
+| `max_price`             | number  | Maximum price (<=). |
+| `available`             | boolean | Stock filter. `true` => `quantity_in_stock > 0`; `false` => `quantity_in_stock <= 0`. |
+| `in_stock`              | boolean | Alias of `available`. |
 | `requires_prescription` | boolean | `true` / `false`. |
 | `ordering`              | string  | Sort: `price`, `-price`, `name`, `-name`, `created_at`, `-created_at`. |
 | `category`              | integer | Category ID. |
@@ -75,7 +79,8 @@ Catalog search and filters are applied when listing products: `GET /api/products
 - **Name Search:** Uses `icontains` on name/description, then refines with Levenshtein distance ≤ 2 on product name (requires `Levenshtein` package).
 - **Brand Search:** Filter by `brand_id`; autocomplete via `/api/brands/?search=...`.
 - **Generic Search:** Resolve generic/ingredient to `ingredient_id`, then filter products by that `ingredient_id` (branded equivalents).
-- **Price Filter:** Use `price_min` / `price_max`; sort with `ordering=price` or `ordering=-price`.
+- **Price Filter:** Use `min_price` / `max_price` (or legacy `price_min` / `price_max`); sort with `ordering=price` or `ordering=-price`.
+- **Availability Filter:** Use `available=true` (in stock) or `available=false` (out of stock). `in_stock` is an alias.
 - **Prescription Filter:** Use query param `requires_prescription=true` or `requires_prescription=false`.
 
 ---

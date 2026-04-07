@@ -12,7 +12,8 @@ from rest_framework.filters import SearchFilter
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema_view, extend_schema
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 
 from authentication.permissions import (
     IsSuperAdmin,
@@ -148,6 +149,29 @@ class IngredientViewSet(viewsets.ModelViewSet):
 
 
 # ---- Product (catalog search & filter per PRODUCT_CATALOG.md). Inventory = quantity_in_stock ----
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Products"],
+        summary="List products (search & filters)",
+        parameters=[
+            OpenApiParameter(name="search", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="category", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="Category id OR slug OR name"),
+            OpenApiParameter(name="brand_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="ingredient_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False),
+            # Price range (legacy + aliases)
+            OpenApiParameter(name="price_min", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Legacy: min price (>=)"),
+            OpenApiParameter(name="price_max", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Legacy: max price (<=)"),
+            OpenApiParameter(name="min_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Alias: min price (>=)"),
+            OpenApiParameter(name="max_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Alias: max price (<=)"),
+            # Availability
+            OpenApiParameter(name="available", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="true => quantity_in_stock > 0"),
+            OpenApiParameter(name="in_stock", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Alias of available"),
+            OpenApiParameter(name="requires_prescription", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="price,-price,name,-name,created_at,-created_at"),
+            OpenApiParameter(name="include_inactive", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Admins only: include is_active=false products"),
+        ],
+    ),
+)
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related("category", "brand", "ingredient").prefetch_related("images", "dosage_options").all()
     filterset_class = ProductFilter

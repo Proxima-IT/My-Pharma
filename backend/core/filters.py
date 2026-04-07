@@ -9,7 +9,15 @@ from .models import Product
 
 
 class ProductFilter(FilterSet):
-    """Search & filter for product list. Query params: search, category, brand_id, ingredient_id, price_min, price_max, requires_prescription, ordering."""
+    """
+    Search & filter for product list.
+
+    Supported query params:
+    - search, category, brand_id, ingredient_id
+    - price_min / price_max (legacy) OR min_price / max_price (alias)
+    - available / in_stock: boolean (true/false). Both mean quantity_in_stock > 0.
+    - requires_prescription, ordering
+    """
     search = CharFilter(method="filter_search", label="Name search (fuzzy Levenshtein <= 2)")
     # category: accept id (int), slug (e.g. healthcare), or name (e.g. Healthcare)
     category = CharFilter(method="filter_category", label="Category (id, slug, or name)")
@@ -17,7 +25,13 @@ class ProductFilter(FilterSet):
     ingredient_id = NumberFilter(field_name="ingredient_id", lookup_expr="exact")
     price_min = NumberFilter(field_name="price", lookup_expr="gte")
     price_max = NumberFilter(field_name="price", lookup_expr="lte")
+    # Friendlier aliases (frontend can use min_price/max_price)
+    min_price = NumberFilter(field_name="price", lookup_expr="gte")
+    max_price = NumberFilter(field_name="price", lookup_expr="lte")
     requires_prescription = BooleanFilter(field_name="requires_prescription")
+    # Availability (stock)
+    available = BooleanFilter(method="filter_in_stock")
+    in_stock = BooleanFilter(method="filter_in_stock")
     ordering = OrderingFilter(
         fields=(("price", "price"), ("name", "name"), ("created_at", "created_at")),
         field_labels={"price": "Price", "name": "Name", "created_at": "Created"},
@@ -60,3 +74,13 @@ class ProductFilter(FilterSet):
             if Levenshtein.distance(value.lower(), p.name.lower()) <= 2:
                 pks.append(p.pk)
         return queryset.filter(pk__in=pks) if pks else queryset.none()
+
+    def filter_in_stock(self, queryset, name, value):
+        """
+        Boolean stock filter.
+        - true  -> quantity_in_stock > 0
+        - false -> quantity_in_stock <= 0
+        """
+        if value is None:
+            return queryset
+        return queryset.filter(quantity_in_stock__gt=0) if value else queryset.filter(quantity_in_stock__lte=0)
