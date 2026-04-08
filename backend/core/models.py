@@ -447,6 +447,142 @@ class OrderStatusHistory(models.Model):
         return f"Order #{self.order_id} – {self.status} at {self.created_at}"
 
 
+# ------------------------------------------------------------------------------
+# Payment settlements (commission + payout) + B2B commissions
+# ------------------------------------------------------------------------------
+
+
+class OrderSettlement(models.Model):
+    """
+    Payment settlement record for an order.
+
+    Flow (aligned with Payment Settlements screenshot):
+    - Payment confirmation: ONLINE => PAID, COD => PENDING_CASH
+    - Delivery complete => compute net payable (gross - commission)
+    - COD cash handling => rider deposits cash (mark CASH_DEPOSITED)
+    - Payout to pharmacy => mark SETTLED (optionally record payout ref)
+    - Refunds/cancellations can mark REFUNDED/CANCELLED
+    """
+
+    class PaymentMethod(models.TextChoices):
+        COD = "COD", "Cash on Delivery"
+        ONLINE = "ONLINE", "Online"
+
+    class PaymentStatus(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        PAID = "PAID", "Paid"
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending Settlement"
+        CASH_DEPOSITED = "CASH_DEPOSITED", "Cash Deposited"
+        SETTLED = "SETTLED", "Settled"
+        REFUNDED = "REFUNDED", "Refunded"
+        CANCELLED = "CANCELLED", "Cancelled"
+
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name="settlement", db_index=True)
+    payment_method = models.CharField(max_length=10, choices=PaymentMethod.choices, default=PaymentMethod.COD, db_index=True)
+    payment_status = models.CharField(max_length=10, choices=PaymentStatus.choices, default=PaymentStatus.PENDING, db_index=True)
+
+    # Commission settings (platform commission deducted from gross).
+    commission_rate = models.DecimalField(max_digits=6, decimal_places=4, default=0, help_text="Commission rate as fraction (e.g. 0.0500 = 5%).")
+    commission_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    gross_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="Order total amount used for settlement.")
+    net_payable = models.DecimalField(max_digits=12, decimal_places=2, default=0, help_text="gross_amount - commission_amount")
+
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+
+    # COD cash handling
+    cash_collected_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    cash_deposit_reference = models.CharField(max_length=255, blank=True)
+    cash_deposited_at = models.DateTimeField(null=True, blank=True)
+
+    # Pharmacy payout
+    payout_reference = models.CharField(max_length=255, blank=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+
+    # Audit
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_settlements",
+    )
+    updated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="updated_settlements",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_order_settlement"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["payment_method", "payment_status"]),
+        ]
+
+    def __str__(self):
+        return f"Settlement for Order #{self.order_id} ({self.status})"
+
+
+class B2BCustomerProfile(models.Model):
+    """Marks a user as a B2B customer with a commission rate for bulk orders."""
+
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="b2b_profile", db_index=True)
+    company_name = models.CharField(max_length=255, blank=True)
+    commission_rate = models.DecimalField(
+        max_digits=6,
+        decimal_places=4,
+        default=0,
+        help_text="Commission rate as fraction (e.g. 0.0200 = 2%).",
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_b2b_customer_profile"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.company_name or f"B2B #{self.user_id}"
+
+
+class B2BCommissionEntry(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "Pending"
+        SETTLED = "SETTLED", "Settled"
+
+    customer = models.ForeignKey(B2BCustomerProfile, on_delete=models.CASCADE, related_name="commissions", db_index=True)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="b2b_commissions", db_index=True)
+    commission_rate = models.DecimalField(max_digits=6, decimal_places=4, default=0)
+    commission_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
+    note = models.CharField(max_length=255, blank=True)
+    settled_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_b2b_commission_entry"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["customer", "status", "created_at"]),
+            models.Index(fields=["order"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=["customer", "order"], name="unique_b2b_commission_per_order"),
+        ]
+
+    def __str__(self):
+        return f"B2B commission #{self.id} ({self.status})"
+
+
 class ProductReview(models.Model):
     """User review and rating for a product. One review per user per product; user must have purchased the product."""
     user = models.ForeignKey(

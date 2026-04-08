@@ -719,6 +719,243 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/b2b/commissions/:
+    get:
+      operationId: b2b_commissions_list
+      summary: List B2B commission entries (admin)
+      parameters:
+      - in: query
+        name: customer
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - PENDING
+          - SETTLED
+        description: |-
+          * `PENDING` - Pending
+          * `SETTLED` - Settled
+      tags:
+      - B2B
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedB2BCommissionEntryList'
+          description: ''
+  /api/b2b/commissions/{id}/:
+    get:
+      operationId: b2b_commissions_retrieve
+      summary: Get a B2B commission entry (admin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this b2b commission entry.
+        required: true
+      tags:
+      - B2B
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B2BCommissionEntry'
+          description: ''
+  /api/b2b/commissions/{id}/settle/:
+    post:
+      operationId: b2b_commissions_settle_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this b2b commission entry.
+        required: true
+      tags:
+      - b2b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/B2BCommissionEntry'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/B2BCommissionEntry'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/B2BCommissionEntry'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B2BCommissionEntry'
+          description: ''
+  /api/b2b/customers/:
+    get:
+      operationId: b2b_customers_list
+      summary: List/create B2B customers (admin)
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - B2B
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedB2BCustomerProfileList'
+          description: ''
+    post:
+      operationId: b2b_customers_create
+      tags:
+      - b2b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/B2BCustomerProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/B2BCustomerProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/B2BCustomerProfile'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B2BCustomerProfile'
+          description: ''
+  /api/b2b/customers/{id}/:
+    get:
+      operationId: b2b_customers_retrieve
+      summary: Get/update B2B customer profile (admin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this b2b customer profile.
+        required: true
+      tags:
+      - B2B
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B2BCustomerProfile'
+          description: ''
+    put:
+      operationId: b2b_customers_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this b2b customer profile.
+        required: true
+      tags:
+      - b2b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/B2BCustomerProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/B2BCustomerProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/B2BCustomerProfile'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B2BCustomerProfile'
+          description: ''
+    patch:
+      operationId: b2b_customers_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this b2b customer profile.
+        required: true
+      tags:
+      - b2b
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedB2BCustomerProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedB2BCustomerProfile'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedB2BCustomerProfile'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/B2BCustomerProfile'
+          description: ''
+    delete:
+      operationId: b2b_customers_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this b2b customer profile.
+        required: true
+      tags:
+      - b2b
+      responses:
+        '204':
+          description: No response body
   /api/blog-categories/:
     get:
       operationId: blog_categories_list
@@ -3417,6 +3654,181 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/settlements/:
+    get:
+      operationId: settlements_list
+      summary: List order settlements (admin)
+      parameters:
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: payment_method
+        schema:
+          type: string
+          enum:
+          - COD
+          - ONLINE
+        description: |-
+          * `COD` - Cash on Delivery
+          * `ONLINE` - Online
+      - in: query
+        name: payment_status
+        schema:
+          type: string
+          enum:
+          - PAID
+          - PENDING
+        description: |-
+          * `PENDING` - Pending
+          * `PAID` - Paid
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - CANCELLED
+          - CASH_DEPOSITED
+          - PENDING
+          - REFUNDED
+          - SETTLED
+        description: |-
+          * `PENDING` - Pending Settlement
+          * `CASH_DEPOSITED` - Cash Deposited
+          * `SETTLED` - Settled
+          * `REFUNDED` - Refunded
+          * `CANCELLED` - Cancelled
+      tags:
+      - Settlements
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderSettlementList'
+          description: ''
+  /api/settlements/{id}/:
+    get:
+      operationId: settlements_retrieve
+      summary: Get an order settlement (admin)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order settlement.
+        required: true
+      tags:
+      - Settlements
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSettlement'
+          description: ''
+  /api/settlements/{id}/cash-deposit/:
+    post:
+      operationId: settlements_cash_deposit_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order settlement.
+        required: true
+      tags:
+      - settlements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSettlement'
+          description: ''
+  /api/settlements/{id}/payout/:
+    post:
+      operationId: settlements_payout_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order settlement.
+        required: true
+      tags:
+      - settlements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSettlement'
+          description: ''
+  /api/settlements/{id}/refund/:
+    post:
+      operationId: settlements_refund_create
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this order settlement.
+        required: true
+      tags:
+      - settlements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderSettlement'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderSettlement'
+          description: ''
   /api/sidebar-categories/:
     get:
       operationId: sidebar_categories_list
@@ -3650,6 +4062,93 @@ components:
       - image_url
       - slug
       - updated_at
+    B2BCommissionEntry:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        customer:
+          type: integer
+        order:
+          type: integer
+        order_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        order_status:
+          type: string
+          readOnly: true
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,4})?$
+        commission_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/B2BCommissionEntryStatusEnum'
+        note:
+          type: string
+          maxLength: 255
+        settled_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - commission_amount
+      - created_at
+      - customer
+      - id
+      - order
+      - order_status
+      - order_total
+    B2BCommissionEntryStatusEnum:
+      enum:
+      - PENDING
+      - SETTLED
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `SETTLED` - Settled
+    B2BCustomerProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+        company_name:
+          type: string
+          maxLength: 255
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,4})?$
+          description: Commission rate as fraction (e.g. 0.0200 = 2%).
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - updated_at
+      - user
     BlankEnum:
       enum:
       - ''
@@ -4551,6 +5050,105 @@ components:
       - product
       - product_name
       - quantity
+    OrderSettlement:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        order:
+          type: integer
+        order_total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        order_status:
+          type: string
+          readOnly: true
+        order_created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethodEnum'
+        payment_status:
+          $ref: '#/components/schemas/PaymentStatusEnum'
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,4})?$
+          description: Commission rate as fraction (e.g. 0.0500 = 5%).
+        commission_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+        gross_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Order total amount used for settlement.
+        net_payable:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: gross_amount - commission_amount
+        status:
+          $ref: '#/components/schemas/OrderSettlementStatusEnum'
+        cash_collected_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        cash_deposit_reference:
+          type: string
+          maxLength: 255
+        cash_deposited_at:
+          type: string
+          format: date-time
+          nullable: true
+        payout_reference:
+          type: string
+          maxLength: 255
+        settled_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - commission_amount
+      - created_at
+      - gross_amount
+      - id
+      - net_payable
+      - order
+      - order_created_at
+      - order_status
+      - order_total
+      - updated_at
+    OrderSettlementStatusEnum:
+      enum:
+      - PENDING
+      - CASH_DEPOSITED
+      - SETTLED
+      - REFUNDED
+      - CANCELLED
+      type: string
+      description: |-
+        * `PENDING` - Pending Settlement
+        * `CASH_DEPOSITED` - Cash Deposited
+        * `SETTLED` - Settled
+        * `REFUNDED` - Refunded
+        * `CANCELLED` - Cancelled
     OrderStatus:
       type: object
       description: 'Admin PATCH: status and/or duration.'
@@ -4660,6 +5258,46 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AppLogo'
+    PaginatedB2BCommissionEntryList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/B2BCommissionEntry'
+    PaginatedB2BCustomerProfileList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/B2BCustomerProfile'
     PaginatedBlogCategoryList:
       type: object
       properties:
@@ -4880,6 +5518,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Order'
+    PaginatedOrderSettlementList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderSettlement'
     PaginatedPageList:
       type: object
       properties:
@@ -5089,6 +5747,32 @@ components:
         image_url:
           type: string
           readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PatchedB2BCustomerProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+        company_name:
+          type: string
+          maxLength: 255
+        commission_rate:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,2}(?:\.\d{0,4})?$
+          description: Commission rate as fraction (e.g. 0.0200 = 2%).
+        is_active:
+          type: boolean
         created_at:
           type: string
           format: date-time
@@ -5849,6 +6533,22 @@ components:
           format: email
           readOnly: true
           nullable: true
+    PaymentMethodEnum:
+      enum:
+      - COD
+      - ONLINE
+      type: string
+      description: |-
+        * `COD` - Cash on Delivery
+        * `ONLINE` - Online
+    PaymentStatusEnum:
+      enum:
+      - PENDING
+      - PAID
+      type: string
+      description: |-
+        * `PENDING` - Pending
+        * `PAID` - Paid
     Prescription:
       type: object
       properties:

@@ -261,6 +261,34 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 
 ---
 
+## 8. Payment Settlements (SUPER_ADMIN, PHARMACY_ADMIN)
+
+Settlement tracking for orders (commission + cash deposit + payout).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/settlements/` | List settlements. Filter: `status`, `payment_method`, `payment_status`. |
+| GET | `/api/settlements/{id}/` | Get a settlement row. |
+| POST | `/api/settlements/{id}/cash-deposit/` | Mark COD cash deposited. Body: `cash_collected_amount`, optional `cash_deposit_reference`. |
+| POST | `/api/settlements/{id}/payout/` | Mark payout as settled. Body: optional `payout_reference`. |
+| POST | `/api/settlements/{id}/refund/` | Mark settlement as refunded. |
+
+**Auto-create:** When an order is updated to `DELIVERED`, a settlement row is created automatically (idempotent).
+
+---
+
+## 9. B2B Customer Commissions (SUPER_ADMIN, PHARMACY_ADMIN)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET/POST | `/api/b2b/customers/` | List/create B2B customers (commission rate). |
+| GET/PUT/PATCH/DELETE | `/api/b2b/customers/{id}/` | Manage a B2B customer profile. |
+| GET | `/api/b2b/commissions/` | List B2B commission ledger entries. Filter: `status`, `customer`. |
+| GET | `/api/b2b/commissions/{id}/` | Get a commission entry. |
+| POST | `/api/b2b/commissions/{id}/settle/` | Mark a commission entry as settled. |
+
+---
+
 ## 8. Summary by role
 
 | Role                | Endpoints                                                                                                                                                                                     |

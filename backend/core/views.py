@@ -71,6 +71,11 @@ from .serializers import (
     ProductReviewSerializer,
     ProductReviewCreateSerializer,
     ProductReviewImageSerializer,
+    OrderSettlementSerializer,
+    SettlementCashDepositSerializer,
+    SettlementPayoutSerializer,
+    B2BCustomerProfileSerializer,
+    B2BCommissionEntrySerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -81,6 +86,7 @@ from .services import (
     update_product_review_aggregates,
 )
 from .filters import ProductFilter
+from .models import OrderSettlement, B2BCustomerProfile, B2BCommissionEntry
 
 
 # ---- Category (hierarchy: parent / children). List/tree: anyone; CRUD: Pharmacy Admin / Super ----
@@ -413,6 +419,34 @@ class OrderViewSet(viewsets.ModelViewSet):
         serializer.save()
         if "status" in request.data:
             OrderStatusHistory.objects.create(order=order, status=order.status)
+            # When delivered, create a settlement record (idempotent) and optionally B2B commission entry.
+            if order.status == Order.Status.DELIVERED:
+                settlement, created = OrderSettlement.objects.get_or_create(
+                    order=order,
+                    defaults={
+                        "gross_amount": order.total,
+                        "net_payable": order.total,
+                        "created_by": request.user,
+                        "updated_by": request.user,
+                    },
+                )
+                if not created:
+                    OrderSettlement.objects.filter(pk=settlement.pk).update(updated_by=request.user)
+                # B2B commission ledger (if user has active B2B profile)
+                profile = B2BCustomerProfile.objects.filter(user=order.user, is_active=True).first()
+                if profile:
+                    # Commission calculated on product revenue (exclude delivery_fee when present)
+                    base = max(Decimal("0"), (order.total or Decimal("0")) - (order.delivery_fee or Decimal("0")))
+                    commission_amount = (base * (profile.commission_rate or Decimal("0"))).quantize(Decimal("0.01"))
+                    B2BCommissionEntry.objects.get_or_create(
+                        customer=profile,
+                        order=order,
+                        defaults={
+                            "commission_rate": profile.commission_rate,
+                            "commission_amount": commission_amount,
+                            "status": B2BCommissionEntry.Status.PENDING,
+                        },
+                    )
         order.refresh_from_db()
         qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "duration")
         order = qs.get()
@@ -1192,6 +1226,106 @@ class BlogPostViewSet(viewsets.ModelViewSet):
             if role in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
                 return qs
         return qs.filter(is_published=True)
+
+
+# ---- Settlements (admin-only) ----
+@extend_schema_view(
+    list=extend_schema(tags=["Settlements"], summary="List order settlements (admin)"),
+    retrieve=extend_schema(tags=["Settlements"], summary="Get an order settlement (admin)"),
+)
+class OrderSettlementViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = OrderSettlement.objects.select_related("order").all()
+    serializer_class = OrderSettlementSerializer
+    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["status", "payment_method", "payment_status"]
+    search_fields = ["order__id", "cash_deposit_reference", "payout_reference"]
+
+    def _recompute(self, settlement: OrderSettlement):
+        # Default commission is 0 unless explicitly set.
+        from decimal import Decimal as D
+
+        gross = settlement.order.total or D("0")
+        rate = settlement.commission_rate or D("0")
+        commission = (gross * rate).quantize(D("0.01"))
+        net = (gross - commission).quantize(D("0.01"))
+        settlement.gross_amount = gross
+        settlement.commission_amount = commission
+        settlement.net_payable = net
+
+    @action(detail=True, methods=["post"], url_path="cash-deposit")
+    @extend_schema(tags=["Settlements"], summary="Mark COD cash deposited (admin)", request=SettlementCashDepositSerializer)
+    def cash_deposit(self, request, pk=None):
+        settlement = self.get_object()
+        serializer = SettlementCashDepositSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        settlement.cash_collected_amount = serializer.validated_data["cash_collected_amount"]
+        settlement.cash_deposit_reference = serializer.validated_data.get("cash_deposit_reference", "") or ""
+        settlement.cash_deposited_at = timezone.now()
+        settlement.status = OrderSettlement.Status.CASH_DEPOSITED
+        settlement.updated_by = request.user
+        self._recompute(settlement)
+        settlement.save()
+        return Response(OrderSettlementSerializer(settlement, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="payout")
+    @extend_schema(tags=["Settlements"], summary="Mark payout as settled (admin)", request=SettlementPayoutSerializer)
+    def payout(self, request, pk=None):
+        settlement = self.get_object()
+        serializer = SettlementPayoutSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        settlement.payout_reference = serializer.validated_data.get("payout_reference", "") or ""
+        settlement.settled_at = timezone.now()
+        settlement.status = OrderSettlement.Status.SETTLED
+        settlement.updated_by = request.user
+        self._recompute(settlement)
+        settlement.save()
+        return Response(OrderSettlementSerializer(settlement, context={"request": request}).data)
+
+    @action(detail=True, methods=["post"], url_path="refund")
+    @extend_schema(tags=["Settlements"], summary="Mark settlement as refunded (admin)")
+    def refund(self, request, pk=None):
+        settlement = self.get_object()
+        settlement.status = OrderSettlement.Status.REFUNDED
+        settlement.updated_by = request.user
+        settlement.save(update_fields=["status", "updated_by", "updated_at"])
+        return Response(OrderSettlementSerializer(settlement, context={"request": request}).data)
+
+
+# ---- B2B commissions (admin-only) ----
+@extend_schema_view(
+    list=extend_schema(tags=["B2B"], summary="List B2B commission entries (admin)"),
+    retrieve=extend_schema(tags=["B2B"], summary="Get a B2B commission entry (admin)"),
+)
+class B2BCommissionEntryViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = B2BCommissionEntry.objects.select_related("customer", "order").all()
+    serializer_class = B2BCommissionEntrySerializer
+    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["status", "customer"]
+    search_fields = ["order__id", "customer__company_name", "customer__user__email", "customer__user__phone"]
+
+    @action(detail=True, methods=["post"], url_path="settle")
+    @extend_schema(tags=["B2B"], summary="Mark B2B commission as settled (admin)")
+    def settle(self, request, pk=None):
+        entry = self.get_object()
+        entry.status = B2BCommissionEntry.Status.SETTLED
+        entry.settled_at = timezone.now()
+        entry.save(update_fields=["status", "settled_at"])
+        return Response(B2BCommissionEntrySerializer(entry, context={"request": request}).data)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["B2B"], summary="List/create B2B customers (admin)"),
+    retrieve=extend_schema(tags=["B2B"], summary="Get/update B2B customer profile (admin)"),
+)
+class B2BCustomerProfileViewSet(viewsets.ModelViewSet):
+    queryset = B2BCustomerProfile.objects.select_related("user").all()
+    serializer_class = B2BCustomerProfileSerializer
+    permission_classes = [IsAuthenticated, IsPharmacyAdminOrSuper]
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["is_active"]
+    search_fields = ["company_name", "user__email", "user__phone", "user__username"]
 
 
 # ---- Sidebar category (left sidebar: image + title). List/retrieve: anyone; write: Pharmacy Admin / Super ----
