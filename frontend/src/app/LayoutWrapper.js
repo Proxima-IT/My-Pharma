@@ -28,6 +28,7 @@ export default function LayoutWrapper({ children }) {
   const isCartPage = pathname.startsWith('/cart');
   const isCheckoutPage = pathname.startsWith('/checkout');
   const isUploadPrescriptionPage = pathname.startsWith('/upload-prescription');
+  const isBlogsPage = pathname.startsWith('/blogs');
 
   // 3. Logic: Show Sidebar only on Home and Product Details
   const showSidebar =
@@ -38,7 +39,8 @@ export default function LayoutWrapper({ children }) {
     !isProductsListPage &&
     !isCartPage &&
     !isUploadPrescriptionPage &&
-    !isCheckoutPage;
+    !isCheckoutPage &&
+    !isBlogsPage;
 
   // If it's an Auth page, Pharmacy Panel, or Admin Panel, return children directly
   // This removes the universal Header, Footer, and Sidebar

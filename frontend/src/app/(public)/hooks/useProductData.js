@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { fetchProductsApi } from '../api/productApi';
 
 export const useProductData = (initialFilters = {}) => {
@@ -15,14 +15,22 @@ export const useProductData = (initialFilters = {}) => {
     search: '',
     ordering: '',
     brand_id: '',
+    ingredient_id: '',
+    has_discount: '',
+    available: '',
     ...initialFilters,
   });
 
   // Sync internal filters whenever the URL parameters (initialFilters) change
+  const initialFiltersString = useMemo(
+    () => JSON.stringify(initialFilters),
+    [initialFilters],
+  );
+
   useEffect(() => {
     setFilters(prev => ({ ...prev, ...initialFilters }));
     setPage(1); // Reset to first page on filter change
-  }, [JSON.stringify(initialFilters)]);
+  }, [initialFiltersString, setFilters]);
 
   const loadProducts = useCallback(async () => {
     setIsLoading(true);

@@ -62,12 +62,20 @@ export const INGREDIENT_ENDPOINTS = {
   BASE: `${API_BASE_URL}/ingredients/`,
 };
 
+export const BLOG_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/blog-posts/`,
+  CATEGORIES: `${API_BASE_URL}/blog-categories/`,
+};
+
 /**
  * Safely parse a fetch response as JSON. When the server returns HTML (e.g. 500
  * error page) instead of JSON, avoids "Unexpected token '<'" and returns a
  * fallback object so callers can show a friendly error.
  */
-export async function parseJsonResponse(response, fallback = { detail: 'Something went wrong. Please try again.' }) {
+export async function parseJsonResponse(
+  response,
+  fallback = { detail: 'Something went wrong. Please try again.' },
+) {
   const text = await response.text();
   if (!text || text.trim().startsWith('<')) {
     return fallback;
@@ -98,7 +106,11 @@ export function getMediaUrl(url) {
     return s.slice(i);
   }
   // Relative path without /media/ (e.g. profile_pics/2026/03/x.jpeg)
-  if (s.startsWith('profile_pics/') || s.startsWith('products/') || s.startsWith('media/')) {
+  if (
+    s.startsWith('profile_pics/') ||
+    s.startsWith('products/') ||
+    s.startsWith('media/')
+  ) {
     const path = s.startsWith('media/') ? s : `media/${s}`;
     return path.startsWith('/') ? path : `/${path}`;
   }

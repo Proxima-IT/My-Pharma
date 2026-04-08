@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { addressApi } from '../api/addressApi';
+import { USER_ENDPOINTS } from '../../(shared)/lib/apiConfig';
 
 export const useAddress = () => {
   const [addresses, setAddresses] = useState([]);
@@ -91,6 +92,45 @@ export const useAddress = () => {
     }
   };
 
+  const getAddress = useCallback(async id => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(`${USER_ENDPOINTS.ADDRESSES}${id}/`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.detail || 'Failed to fetch address');
+      return data;
+    } catch (err) {
+      throw new Error(err.message);
+    }
+  }, []);
+
+  const updateAddress = async (id, formData) => {
+    setIsUpdating(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      await addressApi.updateAddress(token, id, formData);
+      setShowSuccess(true);
+      await loadData();
+      return true;
+    } catch (err) {
+      // Parse field-specific errors if they exist
+      try {
+        const parsedError = JSON.parse(err.message);
+        const firstKey = Object.keys(parsedError)[0];
+        setError(`${firstKey}: ${parsedError[firstKey][0]}`);
+      } catch {
+        setError(err.message);
+      }
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return {
     addresses,
     districts,
@@ -102,6 +142,8 @@ export const useAddress = () => {
     addAddress,
     removeAddress,
     setDefaultAddress,
+    getAddress,
+    updateAddress,
     refresh: loadData,
   };
 };

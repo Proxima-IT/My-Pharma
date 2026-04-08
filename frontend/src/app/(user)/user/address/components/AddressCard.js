@@ -8,6 +8,7 @@ import {
   FiBriefcase,
   FiMapPin,
 } from 'react-icons/fi';
+import Link from 'next/link';
 
 export default function AddressCard({
   data,
@@ -66,9 +67,12 @@ export default function AddressCard({
             </button>
           )}
 
-          <button className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-100 flex items-center justify-center text-(--color-primary-500) hover:bg-(--color-primary-50) transition-colors cursor-pointer">
+          <Link
+            href={`/user/address/${data.id}/edit`}
+            className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-gray-100 flex items-center justify-center text-(--color-primary-500) hover:bg-(--color-primary-50) transition-colors cursor-pointer"
+          >
             <FiEdit2 size={16} />
-          </button>
+          </Link>
 
           <div className="relative">
             <button

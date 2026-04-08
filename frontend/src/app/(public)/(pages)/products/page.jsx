@@ -11,34 +11,52 @@ import PopularProductCard from '../home/components/PopularProductCard';
 import { useProductData } from '../../hooks/useProductData';
 import Sidebar from '../../components/Sidebar';
 
+/**
+ * Products Page Component
+ * Fixed: Updated Ingredient filter logic to store and transmit IDs (integers) instead of Names (strings)
+ * to resolve the 400 Bad Request error from the backend.
+ */
 const Products = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // 1. URL Params
   const categoryFilter = searchParams.get('category') || '';
   const searchQuery = searchParams.get('search') || '';
   const brandIdFromUrl = searchParams.get('brand') || '';
 
+  // 2. State Declarations
+  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [brands, setBrands] = useState([]);
+  const [selectedBrands, setSelectedBrands] = useState([]);
+  const [ingredients, setIngredients] = useState([]);
+  const [selectedIngredients, setSelectedIngredients] = useState([]); // Now stores IDs
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [hasDiscount, setHasDiscount] = useState('');
+  const [isAvailable, setIsAvailable] = useState('');
+
+  // 3. Data Hook
   const { loading, products, page, setPage, totalCount } = useProductData({
     category: categoryFilter,
     search: searchQuery,
     brand_id: brandIdFromUrl,
+    // FIXED: Passing the ID (integer) instead of the Name (string)
+    ingredient_id: selectedIngredients.length > 0 ? selectedIngredients[0] : '',
+    has_discount: hasDiscount,
+    available: isAvailable,
   });
 
-  const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
-  const [brands, setBrands] = useState([]);
-  const [selectedBrands, setSelectedBrands] = useState([]);
-  const [minPrice, setMinPrice] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-
+  // 4. Effects
   useEffect(() => {
-    const fetchBrands = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(
+        // Fetch brands
+        const brandsResponse = await fetch(
           'http://localhost:8000/api/brands/?is_active=true',
         );
-        const data = await response.json();
-        const brandList = data.results || data;
+        const brandsData = await brandsResponse.json();
+        const brandList = brandsData.results || brandsData;
         setBrands(brandList);
 
         if (brandIdFromUrl) {
@@ -47,18 +65,25 @@ const Products = () => {
           );
           if (brandObj) setSelectedBrands([brandObj.name]);
         }
+
+        // Fetch ingredients
+        const ingredientsResponse = await fetch(
+          'http://localhost:8000/api/ingredients/',
+        );
+        const ingredientsData = await ingredientsResponse.json();
+        const ingredientList = ingredientsData.results || ingredientsData;
+        setIngredients(ingredientList);
       } catch (err) {
-        console.error('Failed to fetch brands:', err);
+        console.error('Failed to fetch data:', err);
       }
     };
-    fetchBrands();
+    fetchData();
   }, [brandIdFromUrl]);
 
-  // Combined Filtering Logic (Only for things NOT handled by the server hook yet)
+  // 5. Memoized Filtering Logic
   const filteredProducts = useMemo(() => {
     let result = products;
 
-    // 1. Filter by Price Range (Client-side)
     if (minPrice) {
       result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
     }
@@ -66,7 +91,6 @@ const Products = () => {
       result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
     }
 
-    // 2. Filter by Selected Brands (Only if multiple checkboxes are used manually)
     if (selectedBrands.length > 0 && !brandIdFromUrl) {
       result = result.filter(p => selectedBrands.includes(p.brand_name));
     }
@@ -74,6 +98,7 @@ const Products = () => {
     return result;
   }, [products, minPrice, maxPrice, selectedBrands, brandIdFromUrl]);
 
+  // 6. Handlers
   const toggleBrand = brandName => {
     setSelectedBrands(prev =>
       prev.includes(brandName)
@@ -83,10 +108,22 @@ const Products = () => {
     if (brandIdFromUrl) router.push('/products');
   };
 
+  // FIXED: Logic updated to handle Ingredient IDs
+  const toggleIngredient = ingredientId => {
+    setSelectedIngredients(prev =>
+      prev.includes(ingredientId)
+        ? prev.filter(i => i !== ingredientId)
+        : [...prev, ingredientId],
+    );
+  };
+
   const clearAllFilters = () => {
     setSelectedBrands([]);
+    setSelectedIngredients([]);
     setMinPrice('');
     setMaxPrice('');
+    setHasDiscount('');
+    setIsAvailable('');
     router.push('/products');
   };
 
@@ -186,7 +223,7 @@ const Products = () => {
                 <IoReloadOutline size={18} />
               </button>
             </div>
-            <div className="space-y-1 max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-gray-100)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full">
+            <div className="space-y-1 max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-gray-100)_transparent] [&::-webkit-scrollbar]:w-1 [scrollbar-color:var(--color-gray-100)_transparent] [&::-webkit-scrollbar-thumb]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full">
               {brands.map(brand => (
                 <label
                   key={brand.id}
@@ -209,6 +246,125 @@ const Products = () => {
               ))}
             </div>
           </div>
+
+          <div className="bg-white rounded-[32px] border border-gray-100 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
+                Generic
+              </h3>
+              <button
+                onClick={() => setSelectedIngredients([])}
+                className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer"
+              >
+                <IoReloadOutline size={18} />
+              </button>
+            </div>
+            <div className="space-y-1 max-h-[300px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:var(--color-gray-100)_transparent] [&::-webkit-scrollbar]:w-1 [scrollbar-color:var(--color-gray-100)_transparent] [&::-webkit-scrollbar-thumb]:bg-gray-100 [&::-webkit-scrollbar-thumb]:rounded-full">
+              {ingredients.map(ingredient => (
+                <label
+                  key={ingredient.id}
+                  className="flex items-center justify-between cursor-pointer hover:bg-gray-50 p-3 rounded-2xl transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      // FIXED: Checking by ID
+                      checked={selectedIngredients.includes(ingredient.id)}
+                      // FIXED: Toggling by ID
+                      onChange={() => toggleIngredient(ingredient.id)}
+                      className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
+                    />
+                    <span
+                      className={`text-sm font-medium transition-colors ${selectedIngredients.includes(ingredient.id) ? 'text-gray-900 font-bold' : 'text-gray-600 group-hover:text-gray-900'}`}
+                    >
+                      {ingredient.name}
+                    </span>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[32px] border border-gray-100 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
+                Discount
+              </h3>
+              <button
+                onClick={() => setHasDiscount('')}
+                className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer"
+              >
+                <IoReloadOutline size={18} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded-2xl transition-all group">
+                <input
+                  type="radio"
+                  name="discount"
+                  checked={hasDiscount === ''}
+                  onChange={() => setHasDiscount('')}
+                  className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
+                />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">
+                  All Products
+                </span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded-2xl transition-all group">
+                <input
+                  type="radio"
+                  name="discount"
+                  checked={hasDiscount === 'true'}
+                  onChange={() => setHasDiscount('true')}
+                  className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
+                />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">
+                  On Discount
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-[32px] border border-gray-100 p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-[15px] font-bold text-gray-900 uppercase tracking-wider">
+                Availability
+              </h3>
+              <button
+                onClick={() => setIsAvailable('')}
+                className="text-gray-400 hover:text-(--color-primary-500) transition-colors cursor-pointer"
+              >
+                <IoReloadOutline size={18} />
+              </button>
+            </div>
+            <div className="space-y-3">
+              <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded-2xl transition-all group">
+                <input
+                  type="radio"
+                  name="availability"
+                  checked={isAvailable === ''}
+                  onChange={() => setIsAvailable('')}
+                  className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
+                />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">
+                  All Products
+                </span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 p-3 rounded-2xl transition-all group">
+                <input
+                  type="radio"
+                  name="availability"
+                  checked={isAvailable === 'true'}
+                  onChange={() => setIsAvailable('true')}
+                  className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
+                />
+                <span className="text-sm font-medium text-gray-600 group-hover:text-gray-900">
+                  In Stock
+                </span>
+              </label>
+            </div>
+          </div>
+
           <Sidebar />
         </div>
       </aside>
@@ -225,7 +381,7 @@ const Products = () => {
               </>
             ) : (
               <>
-                {filteredProducts.length} items found{' '}
+                {totalCount} items found{' '}
                 {categoryFilter
                   ? `in ${categoryFilter.replace(/-/g, ' ')}`
                   : ''}
@@ -234,7 +390,7 @@ const Products = () => {
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {filteredProducts.map(product => (
             <PopularProductCard key={product.id} product={product} />
           ))}
