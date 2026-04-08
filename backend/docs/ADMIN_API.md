@@ -46,7 +46,7 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 | Method      | Path                              | Description                                                                                                                                 |
 | ----------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET         | `/api/products/`                  | List products. Filter: `category`, `is_active`, `brand_id`, `ingredient_id`, `price_min`, `price_max`, `requires_prescription`. Search: `search` (name, fuzzy). Order: `ordering=price`, `-price`, etc. Public/guest: only active. |
+| GET         | `/api/products/`                  | List products. Filter: `category`, `is_active`, `brand_id`, `ingredient_id`, `min_price`/`max_price` (legacy `price_min`/`price_max`), `available`/`in_stock`, `discounted`, `discount_min`/`discount_max`, `requires_prescription`. Search: `search` (name, fuzzy). Order: `ordering=price`, `-price`, etc. Public/guest: only active. |
 | GET         | `/api/products/{slug}/`           | Retrieve product by slug                                                                                                                     |
 | POST        | `/api/products/`                  | Create product (category, brand, ingredient, requires_prescription, name, price, etc.)                                                       |
 | PUT / PATCH | `/api/products/{slug}/`           | Update product                                                                                                                               |
@@ -253,7 +253,7 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 | DELETE | `/api/blog-categories/{slug}/` | Delete category (admin). **Note:** cannot delete if posts still reference it (`PROTECT`). |
 | GET | `/api/blog-posts/` | List posts (public: **is_published** only; Pharmacy/Super: all). Filter: `is_published`, `category` (id). Search: **title**, **content**, **slug**. |
 | GET | `/api/blog-posts/{slug}/` | Retrieve post by slug |
-| POST | `/api/blog-posts/` | Create post: **title**, **slug** (optional; auto from title), **category** (BlogCategory id), **content** (detailed body), **is_published** (Pharmacy/Super) |
+| POST | `/api/blog-posts/` | Create post: **title**, **slug** (optional; auto from title), **category** (BlogCategory id), **short_description** (optional), **article_image** (optional file), **content** (detailed body), **is_published** (Pharmacy/Super). Use **multipart/form-data** when uploading `article_image`. |
 | PUT / PATCH | `/api/blog-posts/{slug}/` | Update post (admin) |
 | DELETE | `/api/blog-posts/{slug}/` | Delete post (admin) |
 

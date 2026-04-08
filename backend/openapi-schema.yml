@@ -2892,6 +2892,21 @@ paths:
           type: string
         description: Category id OR slug OR name
       - in: query
+        name: discount_max
+        schema:
+          type: number
+        description: Maximum discount percent (<=). Requires discounted product.
+      - in: query
+        name: discount_min
+        schema:
+          type: number
+        description: Minimum discount percent (>=). Requires discounted product.
+      - in: query
+        name: discounted
+        schema:
+          type: boolean
+        description: true => original_price > price
+      - in: query
         name: in_stock
         schema:
           type: boolean
@@ -3693,6 +3708,17 @@ components:
         category_slug:
           type: string
           readOnly: true
+        short_description:
+          type: string
+          description: Short summary for listing cards and SEO.
+        article_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Hero image for the article.
+        article_image_url:
+          type: string
+          readOnly: true
         content:
           type: string
           description: Article body (plain text or HTML).
@@ -3707,6 +3733,7 @@ components:
           format: date-time
           readOnly: true
       required:
+      - article_image_url
       - category
       - category_name
       - category_slug
@@ -5117,6 +5144,17 @@ components:
           type: string
           readOnly: true
         category_slug:
+          type: string
+          readOnly: true
+        short_description:
+          type: string
+          description: Short summary for listing cards and SEO.
+        article_image:
+          type: string
+          format: uri
+          nullable: true
+          description: Hero image for the article.
+        article_image_url:
           type: string
           readOnly: true
         content:

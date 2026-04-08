@@ -166,6 +166,10 @@ class IngredientViewSet(viewsets.ModelViewSet):
             # Availability
             OpenApiParameter(name="available", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="true => quantity_in_stock > 0"),
             OpenApiParameter(name="in_stock", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Alias of available"),
+            # Discount
+            OpenApiParameter(name="discounted", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="true => original_price > price"),
+            OpenApiParameter(name="discount_min", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Minimum discount percent (>=). Requires discounted product."),
+            OpenApiParameter(name="discount_max", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Maximum discount percent (<=). Requires discounted product."),
             OpenApiParameter(name="requires_prescription", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False),
             OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="price,-price,name,-name,created_at,-created_at"),
             OpenApiParameter(name="include_inactive", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Admins only: include is_active=false products"),

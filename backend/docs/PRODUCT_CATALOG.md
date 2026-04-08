@@ -64,6 +64,9 @@ Catalog search and filters are applied when listing products: `GET /api/products
 | `max_price`             | number  | Maximum price (<=). |
 | `available`             | boolean | Stock filter. `true` => `quantity_in_stock > 0`; `false` => `quantity_in_stock <= 0`. |
 | `in_stock`              | boolean | Alias of `available`. |
+| `discounted`            | boolean | Discount filter. `true` => `original_price > price`. |
+| `discount_min`          | number  | Minimum discount percent (>=). Applies to discounted products only. |
+| `discount_max`          | number  | Maximum discount percent (<=). Applies to discounted products only. |
 | `requires_prescription` | boolean | `true` / `false`. |
 | `ordering`              | string  | Sort: `price`, `-price`, `name`, `-name`, `created_at`, `-created_at`. |
 | `category`              | integer | Category ID. |
@@ -81,6 +84,7 @@ Catalog search and filters are applied when listing products: `GET /api/products
 - **Generic Search:** Resolve generic/ingredient to `ingredient_id`, then filter products by that `ingredient_id` (branded equivalents).
 - **Price Filter:** Use `min_price` / `max_price` (or legacy `price_min` / `price_max`); sort with `ordering=price` or `ordering=-price`.
 - **Availability Filter:** Use `available=true` (in stock) or `available=false` (out of stock). `in_stock` is an alias.
+- **Discount Filter:** Use `discounted=true` to show discounted products. Optionally constrain by percent with `discount_min`/`discount_max`.
 - **Prescription Filter:** Use query param `requires_prescription=true` or `requires_prescription=false`.
 
 ---

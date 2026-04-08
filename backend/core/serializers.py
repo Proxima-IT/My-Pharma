@@ -1168,6 +1168,7 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     category_slug = serializers.CharField(source="category.slug", read_only=True)
+    article_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -1178,9 +1179,17 @@ class BlogPostSerializer(serializers.ModelSerializer):
             "category",
             "category_name",
             "category_slug",
+            "short_description",
+            "article_image",
+            "article_image_url",
             "content",
             "is_published",
             "created_at",
             "updated_at",
         )
         read_only_fields = ("id", "category_name", "category_slug", "created_at", "updated_at")
+
+    def get_article_image_url(self, obj):
+        if obj.article_image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.article_image.url)
+        return obj.article_image.url if obj.article_image else None

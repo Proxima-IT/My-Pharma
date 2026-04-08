@@ -847,6 +847,16 @@ class BlogPost(models.Model):
         related_name="posts",
         db_index=True,
     )
+    short_description = models.TextField(
+        blank=True,
+        help_text="Short summary for listing cards and SEO.",
+    )
+    article_image = models.ImageField(
+        upload_to="blog/%Y/%m/",
+        blank=True,
+        null=True,
+        help_text="Hero image for the article.",
+    )
     content = models.TextField(help_text="Article body (plain text or HTML).")
     is_published = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
