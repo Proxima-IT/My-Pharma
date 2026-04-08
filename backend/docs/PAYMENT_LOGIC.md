@@ -35,6 +35,32 @@ Payment methods (MVP – Bangladesh) and processing flow. Aligned with [ADMIN_AP
 
 ---
 
+## Payment Settlements (Admin API)
+
+Settlement flow (as implemented):
+
+- When an order is marked **DELIVERED**, the system auto-creates an `OrderSettlement` row (idempotent).
+- Admin can then:
+  - mark COD cash deposited
+  - mark payout settled
+  - mark refunded/cancelled if needed
+
+### Endpoints (admin only)
+
+- `GET /api/settlements/` – list settlements (filters: `status`, `payment_method`, `payment_status`)
+- `GET /api/settlements/{id}/` – settlement details
+- `POST /api/settlements/{id}/cash-deposit/` – mark cash deposited (COD)
+- `POST /api/settlements/{id}/payout/` – mark payout settled
+- `POST /api/settlements/{id}/refund/` – mark refunded
+
+### Net payable calculation
+
+- `gross_amount` = `order.total`
+- `commission_amount` = `gross_amount * commission_rate`
+- `net_payable` = `gross_amount - commission_amount`
+
+---
+
 ## References
 
 - [ADMIN_API.md](ADMIN_API.md) – Orders and payment webhook

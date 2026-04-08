@@ -25,6 +25,9 @@ router.register(r"pages", views.PageViewSet, basename="page")
 router.register(r"blog-categories", views.BlogCategoryViewSet, basename="blog-category")
 router.register(r"blog-posts", views.BlogPostViewSet, basename="blog-post")
 router.register(r"cart", views.CartViewSet, basename="cart")
+router.register(r"settlements", views.OrderSettlementViewSet, basename="settlement")
+router.register(r"b2b/customers", views.B2BCustomerProfileViewSet, basename="b2b-customer")
+router.register(r"b2b/commissions", views.B2BCommissionEntryViewSet, basename="b2b-commission")
 
 urlpatterns = [
     path(

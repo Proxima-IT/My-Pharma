@@ -3,6 +3,8 @@ Product catalog filters: name (fuzzy), brand, ingredient (generic), price range,
 Aligned with PRODUCT_CATALOG.md search & filter logic.
 """
 from django.db.models import Q
+from django.db.models import F, FloatField, ExpressionWrapper
+from django.db.models.functions import Cast
 from django_filters import BooleanFilter, CharFilter, FilterSet, NumberFilter, OrderingFilter
 
 from .models import Product
@@ -32,6 +34,10 @@ class ProductFilter(FilterSet):
     # Availability (stock)
     available = BooleanFilter(method="filter_in_stock")
     in_stock = BooleanFilter(method="filter_in_stock")
+    # Discount
+    discounted = BooleanFilter(method="filter_discounted")
+    discount_min = NumberFilter(method="filter_discount_percent_min", label="Minimum discount percent (>=)")
+    discount_max = NumberFilter(method="filter_discount_percent_max", label="Maximum discount percent (<=)")
     ordering = OrderingFilter(
         fields=(("price", "price"), ("name", "name"), ("created_at", "created_at")),
         field_labels={"price": "Price", "name": "Name", "created_at": "Created"},
@@ -84,3 +90,38 @@ class ProductFilter(FilterSet):
         if value is None:
             return queryset
         return queryset.filter(quantity_in_stock__gt=0) if value else queryset.filter(quantity_in_stock__lte=0)
+
+    def filter_discounted(self, queryset, name, value):
+        """
+        Boolean discount filter.
+        - true  -> original_price > price
+        - false -> original_price is null OR original_price <= price
+        """
+        if value is None:
+            return queryset
+        discounted_q = Q(original_price__isnull=False) & Q(original_price__gt=0) & Q(original_price__gt=F("price"))
+        return queryset.filter(discounted_q) if value else queryset.exclude(discounted_q)
+
+    def _with_discount_percent(self, queryset):
+        """
+        Annotate discount_percent as a float number in range [0..100].
+        Only meaningful when original_price > 0.
+        """
+        return queryset.annotate(
+            discount_percent=ExpressionWrapper(
+                (1.0 - (Cast(F("price"), FloatField()) / Cast(F("original_price"), FloatField()))) * 100.0,
+                output_field=FloatField(),
+            )
+        )
+
+    def filter_discount_percent_min(self, queryset, name, value):
+        if value is None:
+            return queryset
+        qs = self.filter_discounted(queryset, "discounted", True)
+        return self._with_discount_percent(qs).filter(discount_percent__gte=float(value))
+
+    def filter_discount_percent_max(self, queryset, name, value):
+        if value is None:
+            return queryset
+        qs = self.filter_discounted(queryset, "discounted", True)
+        return self._with_discount_percent(qs).filter(discount_percent__lte=float(value))

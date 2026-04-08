@@ -46,7 +46,7 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 
 | Method      | Path                              | Description                                                                                                                                 |
 | ----------- | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET         | `/api/products/`                  | List products. Filter: `category`, `is_active`, `brand_id`, `ingredient_id`, `price_min`, `price_max`, `requires_prescription`. Search: `search` (name, fuzzy). Order: `ordering=price`, `-price`, etc. Public/guest: only active. |
+| GET         | `/api/products/`                  | List products. Filter: `category`, `is_active`, `brand_id`, `ingredient_id`, `min_price`/`max_price` (legacy `price_min`/`price_max`), `available`/`in_stock`, `discounted`, `discount_min`/`discount_max`, `requires_prescription`. Search: `search` (name, fuzzy). Order: `ordering=price`, `-price`, etc. Public/guest: only active. |
 | GET         | `/api/products/{slug}/`           | Retrieve product by slug                                                                                                                     |
 | POST        | `/api/products/`                  | Create product (category, brand, ingredient, requires_prescription, name, price, etc.)                                                       |
 | PUT / PATCH | `/api/products/{slug}/`           | Update product                                                                                                                               |
@@ -253,11 +253,39 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 | DELETE | `/api/blog-categories/{slug}/` | Delete category (admin). **Note:** cannot delete if posts still reference it (`PROTECT`). |
 | GET | `/api/blog-posts/` | List posts (public: **is_published** only; Pharmacy/Super: all). Filter: `is_published`, `category` (id). Search: **title**, **content**, **slug**. |
 | GET | `/api/blog-posts/{slug}/` | Retrieve post by slug |
-| POST | `/api/blog-posts/` | Create post: **title**, **slug** (optional; auto from title), **category** (BlogCategory id), **content** (detailed body), **is_published** (Pharmacy/Super) |
+| POST | `/api/blog-posts/` | Create post: **title**, **slug** (optional; auto from title), **category** (BlogCategory id), **short_description** (optional), **article_image** (optional file), **content** (detailed body), **is_published** (Pharmacy/Super). Use **multipart/form-data** when uploading `article_image`. |
 | PUT / PATCH | `/api/blog-posts/{slug}/` | Update post (admin) |
 | DELETE | `/api/blog-posts/{slug}/` | Delete post (admin) |
 
 **Permission:** List/retrieve: any (guests see active categories + published posts only). Create/update/delete categories and posts: `IsPharmacyAdminOrSuper`. Blog is also manageable in Django admin.
+
+---
+
+## 8. Payment Settlements (SUPER_ADMIN, PHARMACY_ADMIN)
+
+Settlement tracking for orders (commission + cash deposit + payout).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/settlements/` | List settlements. Filter: `status`, `payment_method`, `payment_status`. |
+| GET | `/api/settlements/{id}/` | Get a settlement row. |
+| POST | `/api/settlements/{id}/cash-deposit/` | Mark COD cash deposited. Body: `cash_collected_amount`, optional `cash_deposit_reference`. |
+| POST | `/api/settlements/{id}/payout/` | Mark payout as settled. Body: optional `payout_reference`. |
+| POST | `/api/settlements/{id}/refund/` | Mark settlement as refunded. |
+
+**Auto-create:** When an order is updated to `DELIVERED`, a settlement row is created automatically (idempotent).
+
+---
+
+## 9. B2B Customer Commissions (SUPER_ADMIN, PHARMACY_ADMIN)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET/POST | `/api/b2b/customers/` | List/create B2B customers (commission rate). |
+| GET/PUT/PATCH/DELETE | `/api/b2b/customers/{id}/` | Manage a B2B customer profile. |
+| GET | `/api/b2b/commissions/` | List B2B commission ledger entries. Filter: `status`, `customer`. |
+| GET | `/api/b2b/commissions/{id}/` | Get a commission entry. |
+| POST | `/api/b2b/commissions/{id}/settle/` | Mark a commission entry as settled. |
 
 ---
 

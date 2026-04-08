@@ -33,6 +33,9 @@ from .models import (
     UserNotification,
     BlogCategory,
     BlogPost,
+    OrderSettlement,
+    B2BCustomerProfile,
+    B2BCommissionEntry,
     Page,
     SidebarCategory,
     Ad,
@@ -1168,6 +1171,7 @@ class BlogCategorySerializer(serializers.ModelSerializer):
 class BlogPostSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     category_slug = serializers.CharField(source="category.slug", read_only=True)
+    article_image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
@@ -1178,9 +1182,87 @@ class BlogPostSerializer(serializers.ModelSerializer):
             "category",
             "category_name",
             "category_slug",
+            "short_description",
+            "article_image",
+            "article_image_url",
             "content",
             "is_published",
             "created_at",
             "updated_at",
         )
         read_only_fields = ("id", "category_name", "category_slug", "created_at", "updated_at")
+
+    def get_article_image_url(self, obj):
+        if obj.article_image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.article_image.url)
+        return obj.article_image.url if obj.article_image else None
+
+
+# ---- Settlements ----
+class OrderSettlementSerializer(serializers.ModelSerializer):
+    order_total = serializers.DecimalField(source="order.total", max_digits=12, decimal_places=2, read_only=True)
+    order_status = serializers.CharField(source="order.status", read_only=True)
+    order_created_at = serializers.DateTimeField(source="order.created_at", read_only=True)
+
+    class Meta:
+        model = OrderSettlement
+        fields = (
+            "id",
+            "order",
+            "order_total",
+            "order_status",
+            "order_created_at",
+            "payment_method",
+            "payment_status",
+            "commission_rate",
+            "commission_amount",
+            "gross_amount",
+            "net_payable",
+            "status",
+            "cash_collected_amount",
+            "cash_deposit_reference",
+            "cash_deposited_at",
+            "payout_reference",
+            "settled_at",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "commission_amount", "gross_amount", "net_payable", "created_at", "updated_at")
+
+
+class SettlementCashDepositSerializer(serializers.Serializer):
+    cash_collected_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    cash_deposit_reference = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class SettlementPayoutSerializer(serializers.Serializer):
+    payout_reference = serializers.CharField(max_length=255, required=False, allow_blank=True)
+
+
+class B2BCustomerProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = B2BCustomerProfile
+        fields = ("id", "user", "company_name", "commission_rate", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+
+class B2BCommissionEntrySerializer(serializers.ModelSerializer):
+    order_total = serializers.DecimalField(source="order.total", max_digits=12, decimal_places=2, read_only=True)
+    order_status = serializers.CharField(source="order.status", read_only=True)
+
+    class Meta:
+        model = B2BCommissionEntry
+        fields = (
+            "id",
+            "customer",
+            "order",
+            "order_total",
+            "order_status",
+            "commission_rate",
+            "commission_amount",
+            "status",
+            "note",
+            "settled_at",
+            "created_at",
+        )
+        read_only_fields = ("id", "commission_amount", "created_at")
