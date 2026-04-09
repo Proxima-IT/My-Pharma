@@ -177,6 +177,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
             OpenApiParameter(name="discount_min", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Minimum discount percent (>=). Requires discounted product."),
             OpenApiParameter(name="discount_max", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Maximum discount percent (<=). Requires discounted product."),
             OpenApiParameter(name="requires_prescription", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="is_generic", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="true => generic/unbranded product row"),
             OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="price,-price,name,-name,created_at,-created_at"),
             OpenApiParameter(name="include_inactive", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Admins only: include is_active=false products"),
         ],

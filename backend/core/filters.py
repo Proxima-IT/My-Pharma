@@ -31,6 +31,7 @@ class ProductFilter(FilterSet):
     min_price = NumberFilter(field_name="price", lookup_expr="gte")
     max_price = NumberFilter(field_name="price", lookup_expr="lte")
     requires_prescription = BooleanFilter(field_name="requires_prescription")
+    is_generic = BooleanFilter(field_name="is_generic")
     # Availability (stock)
     available = BooleanFilter(method="filter_in_stock")
     in_stock = BooleanFilter(method="filter_in_stock")
@@ -45,7 +46,7 @@ class ProductFilter(FilterSet):
 
     class Meta:
         model = Product
-        fields = ["is_active", "brand_id", "ingredient_id", "requires_prescription"]
+        fields = ["is_active", "brand_id", "ingredient_id", "requires_prescription", "is_generic"]
 
     def filter_category(self, queryset, name, value):
         if not value or not str(value).strip():

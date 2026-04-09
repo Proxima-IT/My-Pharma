@@ -189,6 +189,11 @@ class Product(models.Model):
         db_index=True,
     )
     requires_prescription = models.BooleanField(default=False, db_index=True)
+    is_generic = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True for generic/unbranded equivalents; used to suggest lower-cost alternatives for the same active ingredient.",
+    )
     name = models.CharField(max_length=200)
     slug = models.SlugField(max_length=200, unique=True, db_index=True)
     description = models.TextField(blank=True)

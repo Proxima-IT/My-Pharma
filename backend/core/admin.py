@@ -76,17 +76,18 @@ class ProductAdmin(admin.ModelAdmin):
         "slug",
         "category",
         "brand",
+        "is_generic",
         "price",
         "quantity_in_stock",
         "requires_prescription",
         "is_active",
         "created_at",
     )
-    list_filter = ("is_active", "requires_prescription", "category", "brand")
+    list_filter = ("is_active", "is_generic", "requires_prescription", "category", "brand")
     search_fields = ("name", "slug", "description")
     prepopulated_fields = {"slug": ("name",)}
     list_select_related = ("category", "brand", "ingredient")
-    list_editable = ("is_active", "quantity_in_stock")
+    list_editable = ("is_active", "is_generic", "quantity_in_stock")
     inlines = [ProductImageInline, ProductDosageInline]
 
 
