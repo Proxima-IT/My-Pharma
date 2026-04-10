@@ -198,7 +198,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         model = Product
         fields = (
             "id", "name", "slug", "category", "category_name", "brand", "brand_name",
-            "ingredient", "ingredient_name", "requires_prescription",
+            "ingredient", "ingredient_name", "requires_prescription", "is_generic",
             "price", "original_price", "discount_percentage", "image",
             "images",
             "unit_label", "dosage", "dosages",
@@ -224,18 +224,20 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
     dosages = serializers.SerializerMethodField()
+    generic_alternatives = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
         fields = (
             "id", "name", "slug", "category", "category_name", "brand", "brand_name",
-            "ingredient", "ingredient_name", "requires_prescription",
+            "ingredient", "ingredient_name", "requires_prescription", "is_generic",
             "description", "price", "original_price", "discount_percentage", "image",
             "images",
             "unit_label", "dosage", "dosages",
             "rating_avg", "review_count",
             "key_benefits", "specifications",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
+            "generic_alternatives",
             "created_at", "updated_at",
         )
 
@@ -246,6 +248,29 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         if hasattr(obj, "dosage_options"):
             return [d.dosage_label for d in obj.dosage_options.all()]
         return []
+
+    def get_generic_alternatives(self, obj):
+        """Other in-catalog generic products with the same active ingredient (and strength when possible)."""
+        if not obj.ingredient_id:
+            return []
+        base = (
+            Product.objects.filter(
+                ingredient_id=obj.ingredient_id,
+                is_generic=True,
+                is_active=True,
+            )
+            .exclude(pk=obj.pk)
+            .select_related("category", "brand", "ingredient")
+            .prefetch_related("images", "dosage_options")
+        )
+        dosage = (obj.dosage or "").strip()
+        if dosage:
+            matched = base.filter(dosage__iexact=dosage)
+            qs = matched if matched.exists() else base
+        else:
+            qs = base
+        qs = qs.order_by("price", "name")[:12]
+        return ProductListSerializer(qs, many=True, context=self.context).data
 
 
 class ProductWriteSerializer(serializers.ModelSerializer):
@@ -260,7 +285,7 @@ class ProductWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = (
-            "name", "slug", "category", "brand", "ingredient", "requires_prescription",
+            "name", "slug", "category", "brand", "ingredient", "requires_prescription", "is_generic",
             "description", "price", "original_price", "image",
             "unit_label", "dosage",
             "rating_avg", "review_count",

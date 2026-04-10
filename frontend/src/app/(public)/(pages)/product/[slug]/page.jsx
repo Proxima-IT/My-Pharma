@@ -153,11 +153,12 @@ const ProductSingle = ({ params }) => {
 
           <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[20px] p-5 lg:p-4 space-y-4 shadow-sm">
             <h3 className="text-lg lg:text-base font-bold text-gray-900 tracking-tight px-1">
-              Alternative Brands
+              Generic alternatives
             </h3>
-            <div className="flex flex-col gap-3">
-              <AlternativeProductCard />
-            </div>
+            <p className="text-xs text-gray-500 px-1 -mt-2">
+              Same active ingredient as this product, where marked generic in catalog.
+            </p>
+            <AlternativeProductCard alternatives={product.generic_alternatives} />
           </div>
         </div>
       </div>
