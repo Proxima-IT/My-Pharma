@@ -17,7 +17,8 @@ import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * ProductSingle Page
- * Fixed: Filtered related products to strictly show items from the same category only.
+ * Features: Dynamic Generic Suggestions based on chemical ingredient matching.
+ * Design: Public Zone (Premium, rounded-[32px]).
  */
 const ProductSingle = ({ params }) => {
   const resolvedParams = use(params);
@@ -31,7 +32,7 @@ const ProductSingle = ({ params }) => {
     refresh: refreshProduct,
   } = useProductDetails(slug);
 
-  // Memoize parameters to stabilize object reference and prevent infinite loops
+  // Memoize parameters for related products query
   const relatedParams = useMemo(
     () => ({
       category: product?.category || '',
@@ -42,7 +43,7 @@ const ProductSingle = ({ params }) => {
 
   const { products: relatedProducts } = useProductData(relatedParams);
 
-  // FIXED: Added explicit category filtering to ensure only same-category products are displayed
+  // Filter related products to strictly show items from the same category only
   const displayRelated = useMemo(() => {
     const productList = Array.isArray(relatedProducts)
       ? relatedProducts
@@ -84,10 +85,12 @@ const ProductSingle = ({ params }) => {
   if (error || !product) {
     return (
       <div className="w-full py-20 text-center space-y-4">
-        <h2 className="text-2xl font-bold text-gray-900">Product Not Found</h2>
+        <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tighter">
+          Product Not Found
+        </h2>
         <Link
           href="/products"
-          className="inline-block text-(--color-primary-500) font-bold underline"
+          className="inline-block text-(--color-primary-500) font-bold underline decoration-2 underline-offset-4"
         >
           Back to Shop
         </Link>
@@ -99,11 +102,11 @@ const ProductSingle = ({ params }) => {
     <div className="w-full animate-in fade-in duration-700 pb-10 overflow-hidden">
       {/* Breadcrumbs */}
       <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5">
-        <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap">
+        <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap uppercase tracking-wider">
           <li className="flex items-center gap-2">
             <Link
               href="/"
-              className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-medium"
+              className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
             >
               Home
             </Link>
@@ -112,14 +115,14 @@ const ProductSingle = ({ params }) => {
           {breadcrumbs.map(crumb => (
             <li key={crumb.href} className="flex items-center gap-2">
               {crumb.isLast ? (
-                <span className="text-gray-900 font-bold truncate max-w-[100px] lg:max-w-none">
+                <span className="text-gray-900 font-black truncate max-w-[150px] lg:max-w-none">
                   {crumb.name}
                 </span>
               ) : (
                 <>
                   <Link
                     href={crumb.href}
-                    className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-medium"
+                    className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
                   >
                     {crumb.name}
                   </Link>
@@ -133,6 +136,7 @@ const ProductSingle = ({ params }) => {
 
       {/* Main Grid */}
       <div className="flex flex-col lg:flex-row gap-6 xl:gap-8 items-start w-full">
+        {/* Gallery & Descriptions */}
         <div className="w-full lg:w-[62%] min-w-0 space-y-6 lg:space-y-5">
           <ProductImageViewer images={getProductImages()} />
           <ProductDetailsTabs
@@ -141,38 +145,48 @@ const ProductSingle = ({ params }) => {
           />
         </div>
 
+        {/* Purchase Info & Generic Suggestions */}
         <div className="w-full lg:w-[38%] min-w-0 space-y-6 lg:space-y-5">
           <ProductSummaryCard product={product} />
 
-          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[20px] p-5 lg:p-4 shadow-sm">
-            <h3 className="text-lg lg:text-base font-bold text-gray-900 tracking-tight mb-3 px-1">
-              Bundle/Combo Package
+          {/* Bundle/Combo Offerings */}
+          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[24px] p-6 lg:p-5">
+            <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight mb-3 px-1 uppercase">
+              Bundle Packages
             </h3>
             <BundleSlider cardsToShow={1} />
           </div>
 
-          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[20px] p-5 lg:p-4 space-y-4 shadow-sm">
-            <h3 className="text-lg lg:text-base font-bold text-gray-900 tracking-tight px-1">
-              Generic alternatives
-            </h3>
-            <p className="text-xs text-gray-500 px-1 -mt-2">
-              Same active ingredient as this product, where marked generic in catalog.
-            </p>
-            <AlternativeProductCard alternatives={product.generic_alternatives} />
+          {/* Generic Alternatives Engine - Integrated Fetch-on-Load */}
+          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[24px] p-6 lg:p-5 space-y-4">
+            <div>
+              <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight px-1 uppercase">
+                Generic Alternatives
+              </h3>
+              <p className="text-[11px] font-medium text-gray-500 px-1 mt-1 leading-relaxed">
+                Medically equivalent versions with the same active ingredient{' '}
+                <span className="font-bold text-black">
+                  ({product.ingredient_name || 'Generic Component'})
+                </span>{' '}
+                but at a lower cost.
+              </p>
+            </div>
+            {/* Component now handles its own fetching based on product.ingredient ID */}
+            <AlternativeProductCard currentProduct={product} />
           </div>
         </div>
       </div>
 
-      {/* Related Products */}
+      {/* Related Products Section */}
       {displayRelated.length > 0 && (
-        <div className="mt-16 lg:mt-12 space-y-6">
-          <div className="flex justify-between items-center px-2">
-            <h2 className="text-2xl lg:text-xl font-bold text-gray-900 tracking-tight">
+        <div className="mt-16 lg:mt-12 space-y-8">
+          <div className="flex justify-between items-center px-4">
+            <h2 className="text-2xl lg:text-xl font-black text-gray-900 tracking-tighter uppercase">
               You May Also Like
             </h2>
             <Link href={`/products?category=${product.category || ''}`}>
-              <button className="flex items-center gap-2 px-5 py-2 bg-white border border-gray-100 rounded-full text-xs lg:text-[13px] font-bold text-(--color-primary-500) hover:bg-gray-50 transition-all cursor-pointer">
-                See More Product <FiChevronRight />
+              <button className="flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 rounded-full text-xs font-black text-(--color-primary-500) hover:bg-gray-50 hover:shadow-md transition-all cursor-pointer uppercase tracking-widest">
+                Explore More <FiChevronRight />
               </button>
             </Link>
           </div>
@@ -184,7 +198,8 @@ const ProductSingle = ({ params }) => {
         </div>
       )}
 
-      <div className="mt-16 lg:mt-12">
+      {/* Marketing / Prescription Banner */}
+      <div className="mt-20 lg:mt-16">
         <UploadPrescriptionBanner />
       </div>
     </div>

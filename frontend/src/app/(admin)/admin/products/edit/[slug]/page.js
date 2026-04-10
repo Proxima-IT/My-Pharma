@@ -8,6 +8,7 @@ import {
   FiX,
   FiBox,
   FiPlus,
+  FiAlertCircle,
 } from 'react-icons/fi';
 import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
 import { useBrands } from '@/app/(pharmacy-owner)/hooks/useBrands';
@@ -16,6 +17,10 @@ import { useIngredientAdmin } from '@/app/(admin)/hooks/useIngredientAdmin';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 
+/**
+ * AdminEditProductPage
+ * Updated to support 'is_generic' flag and DNA matching (ingredient) for price suggestions.
+ */
 export default function AdminEditProductPage({ params }) {
   const router = useRouter();
   const resolvedParams = use(params);
@@ -27,7 +32,6 @@ export default function AdminEditProductPage({ params }) {
     updateProduct,
     isUpdating,
     loading: productLoading,
-    error,
   } = useProductAdmin();
   const { brands, getBrands } = useBrands();
   const { categories, getCategories } = useCategories();
@@ -45,7 +49,7 @@ export default function AdminEditProductPage({ params }) {
     category: '',
     brand: '',
     ingredient: '',
-    dosages: '', // New Field: Comma separated string for UI
+    dosages: '',
     price: '',
     original_price: '',
     quantity_in_stock: '',
@@ -53,6 +57,7 @@ export default function AdminEditProductPage({ params }) {
     description: '',
     requires_prescription: false,
     is_active: true,
+    is_generic: false, // NEW FIELD
   });
 
   useEffect(() => {
@@ -70,7 +75,6 @@ export default function AdminEditProductPage({ params }) {
         category: productDetails.category || '',
         brand: productDetails.brand || '',
         ingredient: productDetails.ingredient || '',
-        // Convert Array ["6mg", "12mg"] -> String "6mg, 12mg"
         dosages: Array.isArray(productDetails.dosages)
           ? productDetails.dosages.join(', ')
           : productDetails.dosages || '',
@@ -81,6 +85,7 @@ export default function AdminEditProductPage({ params }) {
         description: productDetails.description || '',
         requires_prescription: productDetails.requires_prescription || false,
         is_active: productDetails.is_active || true,
+        is_generic: productDetails.is_generic || false, // NEW FIELD MAP
       });
       setExistingGallery(productDetails.images_data || []);
     }
@@ -119,12 +124,10 @@ export default function AdminEditProductPage({ params }) {
 
     Object.keys(formData).forEach(key => {
       if (key === 'dosages') {
-        // Convert "6mg, 12mg" -> ["6mg", "12mg"] for API
         const dosageArray = formData.dosages
           .split(',')
           .map(d => d.trim())
           .filter(d => d !== '');
-
         dosageArray.forEach(val => data.append('dosages', val));
       } else if (formData[key] !== '' && formData[key] !== null) {
         data.append(key, formData[key]);
@@ -147,8 +150,8 @@ export default function AdminEditProductPage({ params }) {
 
   if (productLoading && !productDetails) {
     return (
-      <div className="py-40 text-center font-mono animate-pulse">
-        LOADING_DATA...
+      <div className="py-40 text-center font-mono animate-pulse uppercase tracking-widest">
+        Syncing_Registry_Data...
       </div>
     );
   }
@@ -165,13 +168,13 @@ export default function AdminEditProductPage({ params }) {
           onClick={() => router.back()}
           className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer border border-transparent"
         >
-          <FiArrowLeft size={16} />{' '}
+          <FiArrowLeft size={16} />
           <span className="font-mono text-[11px] font-bold uppercase">
             Go Back
           </span>
         </button>
         <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
-          Edit Medicine
+          Edit Medicine Registry
         </h1>
       </div>
 
@@ -182,7 +185,7 @@ export default function AdminEditProductPage({ params }) {
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white border border-gray-100 p-8">
             <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6">
-              General Info
+              General Info & DNA Matching
             </h3>
             <div className="space-y-6">
               <div>
@@ -198,15 +201,18 @@ export default function AdminEditProductPage({ params }) {
               </div>
 
               <div>
-                <label className={labelClass}>Generic Name (Ingredient)</label>
+                <label className={labelClass}>
+                  Active Ingredient (DNA Match)
+                </label>
                 <select
                   className={inputClass}
                   value={formData.ingredient}
                   onChange={e =>
                     setFormData({ ...formData, ingredient: e.target.value })
                   }
+                  required
                 >
-                  <option value="">Select Generic</option>
+                  <option value="">Select Generic Ingredient</option>
                   {(Array.isArray(ingredients)
                     ? ingredients
                     : ingredients?.results || []
@@ -216,9 +222,18 @@ export default function AdminEditProductPage({ params }) {
                     </option>
                   ))}
                 </select>
+                <div className="mt-3 p-3 bg-amber-50 border-l-2 border-amber-400 flex items-start gap-2">
+                  <FiAlertCircle
+                    className="text-amber-500 mt-0.5 shrink-0"
+                    size={14}
+                  />
+                  <p className="text-[10px] text-amber-700 uppercase font-bold leading-relaxed">
+                    Update this carefully. It links this product to cheaper
+                    generic alternatives in the user shop.
+                  </p>
+                </div>
               </div>
 
-              {/* Dosages Field */}
               <div>
                 <label className={labelClass}>
                   Available Dosages (Comma Separated)
@@ -231,9 +246,6 @@ export default function AdminEditProductPage({ params }) {
                     setFormData({ ...formData, dosages: e.target.value })
                   }
                 />
-                <p className="text-[10px] text-[#8A8A78] mt-2 uppercase">
-                  Separate multiple dosages with a comma (,)
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -302,6 +314,7 @@ export default function AdminEditProductPage({ params }) {
                 <label className={labelClass}>Price (৳)</label>
                 <input
                   type="number"
+                  step="0.01"
                   className={inputClass}
                   value={formData.price}
                   onChange={e =>
@@ -314,6 +327,7 @@ export default function AdminEditProductPage({ params }) {
                 <label className={labelClass}>MRP (৳)</label>
                 <input
                   type="number"
+                  step="0.01"
                   className={inputClass}
                   value={formData.original_price}
                   onChange={e =>
@@ -441,35 +455,50 @@ export default function AdminEditProductPage({ params }) {
 
           <div className="bg-white border border-gray-100 p-8 space-y-4">
             <h3 className={labelClass}>Settings</h3>
-            <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-              <span className="text-[11px] font-bold text-[#1B1B1B] uppercase">
-                Need Prescription?
-              </span>
-              <input
-                type="checkbox"
-                className="w-6 h-6 accent-[#3A5A40]"
-                checked={formData.requires_prescription}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    requires_prescription: e.target.checked,
-                  })
-                }
-              />
-            </label>
-            <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-              <span className="text-[11px] font-bold text-[#1B1B1B] uppercase">
-                Active Status
-              </span>
-              <input
-                type="checkbox"
-                className="w-6 h-6 accent-[#3A5A40]"
-                checked={formData.is_active}
-                onChange={e =>
-                  setFormData({ ...formData, is_active: e.target.checked })
-                }
-              />
-            </label>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
+                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
+                  Is Generic Product?
+                </span>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6 accent-[#3A5A40]"
+                  checked={formData.is_generic}
+                  onChange={e =>
+                    setFormData({ ...formData, is_generic: e.target.checked })
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
+                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
+                  Need Prescription?
+                </span>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6 accent-[#3A5A40]"
+                  checked={formData.requires_prescription}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      requires_prescription: e.target.checked,
+                    })
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
+                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
+                  Active Status
+                </span>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6 accent-[#3A5A40]"
+                  checked={formData.is_active}
+                  onChange={e =>
+                    setFormData({ ...formData, is_active: e.target.checked })
+                  }
+                />
+              </label>
+            </div>
           </div>
 
           <button

@@ -18,6 +18,8 @@ import {
   FiImage,
   FiPackage,
   FiTag,
+  FiFileText,
+  FiCreditCard,
 } from 'react-icons/fi';
 import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
 
@@ -59,6 +61,16 @@ const AdminSidebar = () => {
       ],
     },
     {
+      title: 'Financials',
+      items: [
+        {
+          name: 'Settlements',
+          icon: <FiCreditCard />,
+          href: '/admin/settlements',
+        },
+      ],
+    },
+    {
       title: 'Product Catalog',
       items: [
         { name: 'Medicine List', icon: <FiBox />, href: '/admin/products' },
@@ -89,6 +101,11 @@ const AdminSidebar = () => {
           name: 'Coupon Management',
           icon: <FiTag />,
           href: '/admin/coupons',
+        },
+        {
+          name: 'Blog Management',
+          icon: <FiFileText />,
+          href: '/admin/blogs',
         },
       ],
     },

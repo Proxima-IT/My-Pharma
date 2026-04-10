@@ -1,15 +1,26 @@
 'use client';
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiPlus, FiImage, FiCheck, FiX } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiPlus,
+  FiImage,
+  FiCheck,
+  FiX,
+  FiAlertCircle,
+} from 'react-icons/fi';
 import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
 import { useBrands } from '@/app/(pharmacy-owner)/hooks/useBrands';
 import { useCategories } from '@/app/(pharmacy-owner)/hooks/useCategories';
 import { useIngredientAdmin } from '@/app/(admin)/hooks/useIngredientAdmin';
 
+/**
+ * AdminNewProductPage
+ * Updated to support 'is_generic' flag for the price suggestion engine.
+ */
 export default function AdminNewProductPage() {
   const router = useRouter();
-  const { createProductWithImages, isUpdating, error } = useProductAdmin();
+  const { createProductWithImages, isUpdating } = useProductAdmin();
   const { brands, getBrands } = useBrands();
   const { categories, getCategories } = useCategories();
   const { ingredients, fetchIngredients } = useIngredientAdmin();
@@ -25,7 +36,7 @@ export default function AdminNewProductPage() {
     category: '',
     brand: '',
     ingredient: '',
-    dosages: '', // New Field: Stored as comma-separated string for UI
+    dosages: '',
     price: '',
     original_price: '',
     quantity_in_stock: '',
@@ -33,6 +44,7 @@ export default function AdminNewProductPage() {
     description: '',
     requires_prescription: false,
     is_active: true,
+    is_generic: false, // NEW FIELD: Crucial for cheaper suggestion engine
   });
 
   useEffect(() => {
@@ -66,12 +78,10 @@ export default function AdminNewProductPage() {
 
     Object.keys(formData).forEach(key => {
       if (key === 'dosages') {
-        // Convert "6mg, 12mg" -> ["6mg", "12mg"] for the API
         const dosageArray = formData.dosages
           .split(',')
           .map(d => d.trim())
           .filter(d => d !== '');
-
         dosageArray.forEach(val => data.append('dosages', val));
       } else {
         data.append(key, formData[key]);
@@ -97,7 +107,7 @@ export default function AdminNewProductPage() {
           onClick={() => router.back()}
           className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer border border-transparent"
         >
-          <FiArrowLeft size={16} />{' '}
+          <FiArrowLeft size={16} />
           <span className="font-mono text-[11px] font-bold uppercase">
             Go Back
           </span>
@@ -112,9 +122,10 @@ export default function AdminNewProductPage() {
         className="grid grid-cols-1 lg:grid-cols-3 gap-10"
       >
         <div className="lg:col-span-2 space-y-8">
+          {/* General Information */}
           <div className="bg-white border border-gray-100 p-8">
             <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6">
-              General Info
+              General Info & DNA Matching
             </h3>
             <div className="space-y-6">
               <div>
@@ -131,15 +142,18 @@ export default function AdminNewProductPage() {
               </div>
 
               <div>
-                <label className={labelClass}>Generic Name (Ingredient)</label>
+                <label className={labelClass}>
+                  Active Ingredient (Required for Price Suggestions)
+                </label>
                 <select
                   className={inputClass}
                   value={formData.ingredient}
                   onChange={e =>
                     setFormData({ ...formData, ingredient: e.target.value })
                   }
+                  required
                 >
-                  <option value="">Select Generic</option>
+                  <option value="">Select Generic Ingredient</option>
                   {(Array.isArray(ingredients)
                     ? ingredients
                     : ingredients?.results || []
@@ -149,9 +163,18 @@ export default function AdminNewProductPage() {
                     </option>
                   ))}
                 </select>
+                <div className="mt-3 p-3 bg-amber-50 border-l-2 border-amber-400 flex items-start gap-2">
+                  <FiAlertCircle
+                    className="text-amber-500 mt-0.5 shrink-0"
+                    size={14}
+                  />
+                  <p className="text-[10px] text-amber-700 uppercase font-bold leading-relaxed">
+                    Products with the same ingredient will be suggested as
+                    cheaper alternatives in the frontend.
+                  </p>
+                </div>
               </div>
 
-              {/* New Dosages Field */}
               <div>
                 <label className={labelClass}>
                   Available Dosages (Comma Separated)
@@ -164,9 +187,6 @@ export default function AdminNewProductPage() {
                     setFormData({ ...formData, dosages: e.target.value })
                   }
                 />
-                <p className="text-[10px] text-[#8A8A78] mt-2 uppercase">
-                  Separate multiple dosages with a comma (,)
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -192,7 +212,7 @@ export default function AdminNewProductPage() {
                   </select>
                 </div>
                 <div>
-                  <label className={labelClass}>Company</label>
+                  <label className={labelClass}>Manufacturing Company</label>
                   <select
                     className={inputClass}
                     value={formData.brand}
@@ -213,6 +233,7 @@ export default function AdminNewProductPage() {
                   </select>
                 </div>
               </div>
+
               <div>
                 <label className={labelClass}>Description</label>
                 <textarea
@@ -226,15 +247,17 @@ export default function AdminNewProductPage() {
             </div>
           </div>
 
+          {/* Pricing & Stock */}
           <div className="bg-white border border-gray-100 p-8">
             <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6">
               Price & Stock
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={labelClass}>Price (৳)</label>
+                <label className={labelClass}>Selling Price (৳)</label>
                 <input
                   type="number"
+                  step="0.01"
                   className={inputClass}
                   value={formData.price}
                   onChange={e =>
@@ -244,9 +267,10 @@ export default function AdminNewProductPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>MRP (৳)</label>
+                <label className={labelClass}>MRP / Original Price (৳)</label>
                 <input
                   type="number"
+                  step="0.01"
                   className={inputClass}
                   value={formData.original_price}
                   onChange={e =>
@@ -255,7 +279,7 @@ export default function AdminNewProductPage() {
                 />
               </div>
               <div>
-                <label className={labelClass}>Stock</label>
+                <label className={labelClass}>Current Stock</label>
                 <input
                   type="number"
                   className={inputClass}
@@ -287,6 +311,7 @@ export default function AdminNewProductPage() {
           </div>
         </div>
 
+        {/* Assets & Meta */}
         <div className="space-y-8">
           <div className="bg-white border border-gray-100 p-8">
             <h3 className={labelClass}>Main Photo</h3>
@@ -312,74 +337,51 @@ export default function AdminNewProductPage() {
           </div>
 
           <div className="bg-white border border-gray-100 p-8">
-            <h3 className={labelClass}>More Photos (Gallery)</h3>
-            <div className="grid grid-cols-3 gap-2">
-              {galleryImages.map((img, i) => (
-                <div
-                  key={i}
-                  className="relative aspect-square border border-gray-200 bg-white"
-                >
-                  <img
-                    src={img.preview}
-                    className="w-full h-full object-contain p-1"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeGalleryImage(i)}
-                    className="absolute -top-1 -right-1 bg-red-500 text-white p-0.5"
-                  >
-                    <FiX size={12} />
-                  </button>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={() => galleryRef.current.click()}
-                className="aspect-square border-2 border-dashed border-gray-200 flex items-center justify-center text-gray-300 hover:text-[#3A5A40] hover:border-[#3A5A40] transition-all"
-              >
-                <FiPlus size={20} />
-              </button>
-            </div>
-            <input
-              ref={galleryRef}
-              type="file"
-              className="hidden"
-              multiple
-              onChange={handleGalleryImages}
-            />
-          </div>
-
-          <div className="bg-white border border-gray-100 p-8 space-y-4">
             <h3 className={labelClass}>Settings</h3>
-            <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-              <span className="text-[11px] font-bold text-[#1B1B1B] uppercase">
-                Need Prescription?
-              </span>
-              <input
-                type="checkbox"
-                className="w-6 h-6 accent-[#3A5A40]"
-                checked={formData.requires_prescription}
-                onChange={e =>
-                  setFormData({
-                    ...formData,
-                    requires_prescription: e.target.checked,
-                  })
-                }
-              />
-            </label>
-            <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-              <span className="text-[11px] font-bold text-[#1B1B1B] uppercase">
-                Active Status
-              </span>
-              <input
-                type="checkbox"
-                className="w-6 h-6 accent-[#3A5A40]"
-                checked={formData.is_active}
-                onChange={e =>
-                  setFormData({ ...formData, is_active: e.target.checked })
-                }
-              />
-            </label>
+            <div className="space-y-4">
+              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
+                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
+                  Is Generic Product?
+                </span>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6 accent-[#3A5A40]"
+                  checked={formData.is_generic}
+                  onChange={e =>
+                    setFormData({ ...formData, is_generic: e.target.checked })
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
+                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
+                  Needs Prescription
+                </span>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6 accent-[#3A5A40]"
+                  checked={formData.requires_prescription}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      requires_prescription: e.target.checked,
+                    })
+                  }
+                />
+              </label>
+              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
+                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
+                  Active in Store
+                </span>
+                <input
+                  type="checkbox"
+                  className="w-6 h-6 accent-[#3A5A40]"
+                  checked={formData.is_active}
+                  onChange={e =>
+                    setFormData({ ...formData, is_active: e.target.checked })
+                  }
+                />
+              </label>
+            </div>
           </div>
 
           <button
