@@ -60,6 +60,10 @@ const Checkout = () => {
 
     const result = await placeOrder(orderPayload);
     if (result) {
+      if (result.payment_required && result.gateway_url) {
+        window.location.href = result.gateway_url;
+        return;
+      }
       setOrderSuccess(result);
     }
   };

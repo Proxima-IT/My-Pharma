@@ -9,7 +9,7 @@ const PaymentMethodCard = ({ selected, onSelect }) => {
     { id: 'BKASH', name: 'Bkash', img: '/assets/images/bkash.png' },
     { id: 'ROCKET', name: 'Rocket', img: '/assets/images/rocket.png' },
     { id: 'UPAY', name: 'Upay', img: '/assets/images/upay.png' },
-    { id: 'SSL', name: 'SSL Commerz', img: '/assets/images/ssl.png' },
+    { id: 'ONLINE', name: 'SSL Commerz', img: '/assets/images/ssl.png' },
     { id: 'CARD', name: 'Card', img: '/assets/images/card.png' },
     { id: 'COD', name: 'COD', img: '/assets/images/cod.png' },
   ];

@@ -30,6 +30,10 @@ router.register(r"b2b/customers", views.B2BCustomerProfileViewSet, basename="b2b
 router.register(r"b2b/commissions", views.B2BCommissionEntryViewSet, basename="b2b-commission")
 
 urlpatterns = [
+    path("payments/sslcommerz/success/", views.SSLCommerzSuccessView.as_view(), name="sslcommerz-success"),
+    path("payments/sslcommerz/fail/", views.SSLCommerzFailView.as_view(), name="sslcommerz-fail"),
+    path("payments/sslcommerz/cancel/", views.SSLCommerzCancelView.as_view(), name="sslcommerz-cancel"),
+    path("payments/sslcommerz/ipn/", views.SSLCommerzIpnView.as_view(), name="sslcommerz-ipn"),
     path(
         "cart/items/<int:pk>/",
         views.CartItemViewSet.as_view({"patch": "partial_update", "delete": "destroy"}),

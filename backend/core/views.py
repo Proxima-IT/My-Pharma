@@ -2,15 +2,21 @@
 Core API views with RBAC.
 """
 import json
+import uuid
 from decimal import Decimal
+from urllib.parse import urlencode
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models.deletion import ProtectedError
+from django.http import HttpResponseRedirect
 from django.utils import timezone
 from rest_framework import status, viewsets, mixins
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter
-from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
@@ -26,7 +32,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -87,6 +93,116 @@ from .services import (
 )
 from .filters import ProductFilter
 from .models import OrderSettlement, B2BCustomerProfile, B2BCommissionEntry
+
+
+ONLINE_PAYMENT_METHODS = {
+    PaymentTransaction.Method.BKASH,
+    PaymentTransaction.Method.NAGAD,
+    PaymentTransaction.Method.ROCKET,
+    PaymentTransaction.Method.UPAY,
+    PaymentTransaction.Method.CARD,
+    PaymentTransaction.Method.ONLINE,
+}
+
+
+def _normalize_payment_method(raw_method: str) -> str:
+    method = (raw_method or PaymentTransaction.Method.COD).strip().upper()
+    valid = {choice for choice, _ in PaymentTransaction.Method.choices}
+    return method if method in valid else PaymentTransaction.Method.COD
+
+
+def _is_online_payment_method(method: str) -> bool:
+    return method in ONLINE_PAYMENT_METHODS
+
+
+def _get_sslcommerz_client():
+    if not settings.SSLCOMMERZ_STORE_ID or not settings.SSLCOMMERZ_STORE_PASS:
+        raise ValueError("SSLCommerz credentials are missing in environment variables.")
+    try:
+        from sslcommerz_lib import SSLCOMMERZ
+    except Exception as exc:
+        raise ValueError(f"sslcommerz-lib is not installed or failed to import: {exc}") from exc
+    ssl_settings = {
+        "store_id": settings.SSLCOMMERZ_STORE_ID,
+        "store_pass": settings.SSLCOMMERZ_STORE_PASS,
+        "issandbox": settings.SSLCOMMERZ_IS_SANDBOX,
+    }
+    return SSLCOMMERZ(ssl_settings)
+
+
+def _build_ssl_backend_url(path_suffix: str) -> str:
+    base_url = (settings.SSLCOMMERZ_CALLBACK_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        raise ValueError("SSLCOMMERZ_CALLBACK_BASE_URL is not configured.")
+    return f"{base_url}/api/payments/sslcommerz/{path_suffix.strip('/')}/"
+
+
+def _build_frontend_redirect(status_value: str, order_id: int = None) -> str:
+    base_url = (settings.SSLCOMMERZ_FRONTEND_BASE_URL or "").strip().rstrip("/")
+    if not base_url:
+        return ""
+    params = {"payment_status": status_value}
+    if order_id:
+        params["order_id"] = str(order_id)
+    return f"{base_url}/checkout?{urlencode(params)}"
+
+
+def _mark_payment_result(payment_txn: PaymentTransaction, status_value: str, payload: dict, verification_response=None):
+    payment_txn.status = status_value
+    payment_txn.gateway_response = payload or {}
+    if payload.get("val_id"):
+        payment_txn.val_id = str(payload.get("val_id"))
+    if payload.get("bank_tran_id"):
+        payment_txn.bank_tran_id = str(payload.get("bank_tran_id"))
+    if payload.get("card_type"):
+        payment_txn.card_type = str(payload.get("card_type"))
+    if verification_response is not None:
+        payment_txn.verified_response = verification_response
+        payment_txn.verified_at = timezone.now()
+    payment_txn.save()
+
+    settlement = OrderSettlement.objects.filter(order=payment_txn.order).first()
+    if not settlement:
+        return
+    if status_value in (PaymentTransaction.Status.SUCCESS, PaymentTransaction.Status.IPN_VERIFIED):
+        settlement.payment_method = OrderSettlement.PaymentMethod.ONLINE
+        settlement.payment_status = OrderSettlement.PaymentStatus.PAID
+    elif status_value == PaymentTransaction.Status.CANCELLED:
+        settlement.payment_status = OrderSettlement.PaymentStatus.PENDING
+        settlement.status = OrderSettlement.Status.CANCELLED
+    elif status_value == PaymentTransaction.Status.FAILED:
+        settlement.payment_status = OrderSettlement.PaymentStatus.PENDING
+    settlement.updated_at = timezone.now()
+    settlement.save()
+
+
+def _extract_payload(request):
+    payload = {}
+    if hasattr(request, "data"):
+        try:
+            payload = dict(request.data)
+        except Exception:
+            payload = {}
+    if not payload:
+        payload = request.query_params.dict()
+    # QueryDict values can come as list wrappers.
+    normalized = {}
+    for key, value in payload.items():
+        if isinstance(value, (list, tuple)):
+            normalized[key] = value[0] if value else ""
+        else:
+            normalized[key] = value
+    return normalized
+
+
+def _extract_validation_status(verification_response):
+    if isinstance(verification_response, list) and verification_response:
+        item = verification_response[0]
+        if isinstance(item, dict):
+            return (item.get("status") or "").upper()
+    if isinstance(verification_response, dict):
+        return (verification_response.get("status") or "").upper()
+    return ""
 
 
 # ---- Category (hierarchy: parent / children). List/tree: anyone; CRUD: Pharmacy Admin / Super ----
@@ -670,6 +786,7 @@ class CartViewSet(viewsets.GenericViewSet):
         address_id = serializer.validated_data["shipping_address_id"]
         coupon_code = (serializer.validated_data.get("coupon_code") or "").strip()
         notes = (serializer.validated_data.get("notes") or "").strip()
+        payment_method = _normalize_payment_method(serializer.validated_data.get("payment_method"))
 
         from authentication.models import UserAddress
         address = UserAddress.objects.filter(user=request.user, pk=address_id).first()
@@ -731,36 +848,137 @@ class CartViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        order = Order.objects.create(
-            user=request.user,
-            status=Order.Status.PENDING,
-            total=summary["total_payable"],
-            subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
-            discount_amount=summary.get("discount_amount") or Decimal("0"),
-            delivery_fee=summary.get("delivery_fee") or Decimal("0"),
-            coupon=cart.coupon,
-            shipping_address=shipping_text,
-            notes=notes,
-        )
-        for item in cart.items.select_related("product").all():
-            OrderItem.objects.create(
-                order=order,
-                product=item.product,
-                quantity=item.quantity,
-                price_at_order=item.price_at_order,
-                dosage=(item.dosage or "").strip()[:50],
+        with transaction.atomic():
+            order = Order.objects.create(
+                user=request.user,
+                status=Order.Status.PENDING,
+                total=summary["total_payable"],
+                subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
+                discount_amount=summary.get("discount_amount") or Decimal("0"),
+                delivery_fee=summary.get("delivery_fee") or Decimal("0"),
+                coupon=cart.coupon,
+                shipping_address=shipping_text,
+                notes=notes,
             )
-            item.product.quantity_in_stock -= item.quantity
-            item.product.save(update_fields=["quantity_in_stock"])
+            for item in cart.items.select_related("product").all():
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price_at_order=item.price_at_order,
+                    dosage=(item.dosage or "").strip()[:50],
+                )
+                item.product.quantity_in_stock -= item.quantity
+                item.product.save(update_fields=["quantity_in_stock"])
 
-        if cart.coupon:
-            coupon.times_used += 1
-            coupon.save(update_fields=["times_used"])
+            settlement_payment_method = (
+                OrderSettlement.PaymentMethod.ONLINE
+                if _is_online_payment_method(payment_method)
+                else OrderSettlement.PaymentMethod.COD
+            )
+            OrderSettlement.objects.get_or_create(
+                order=order,
+                defaults={
+                    "payment_method": settlement_payment_method,
+                    "payment_status": OrderSettlement.PaymentStatus.PENDING,
+                    "gross_amount": order.total,
+                    "net_payable": order.total,
+                    "status": OrderSettlement.Status.PENDING,
+                },
+            )
 
-        cart.items.all().delete()
-        cart.coupon = None
-        cart.save(update_fields=["coupon", "updated_at"])
-        return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+            if cart.coupon:
+                coupon.times_used += 1
+                coupon.save(update_fields=["times_used"])
+
+            cart.items.all().delete()
+            cart.coupon = None
+            cart.save(update_fields=["coupon", "updated_at"])
+
+            # COD: return placed order immediately.
+            if not _is_online_payment_method(payment_method):
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": False,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+            try:
+                sslcz = _get_sslcommerz_client()
+                tran_id = f"ORD{order.id}-{uuid.uuid4().hex[:12].upper()}"
+                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+                customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
+                customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
+                product_names = ", ".join(
+                    [oi.product.name for oi in order.items.select_related("product").all()[:3]]
+                ) or f"Order #{order.id}"
+
+                post_body = {
+                    "total_amount": float(order.total),
+                    "currency": "BDT",
+                    "tran_id": tran_id,
+                    "success_url": _build_ssl_backend_url("success"),
+                    "fail_url": _build_ssl_backend_url("fail"),
+                    "cancel_url": _build_ssl_backend_url("cancel"),
+                    "ipn_url": _build_ssl_backend_url("ipn"),
+                    "emi_option": 0,
+                    "cus_name": customer_name,
+                    "cus_email": customer_email,
+                    "cus_phone": customer_phone,
+                    "cus_add1": (address.address or "")[:255],
+                    "cus_city": (address.district or "Dhaka")[:50],
+                    "cus_country": "Bangladesh",
+                    "shipping_method": "NO",
+                    "multi_card_name": payment_method if payment_method != PaymentTransaction.Method.ONLINE else "",
+                    "num_of_item": order.items.count() or 1,
+                    "product_name": product_names[:255],
+                    "product_category": "Pharmacy",
+                    "product_profile": "general",
+                    "value_a": str(order.id),  # internal correlation id
+                    "value_b": str(request.user.id),
+                }
+                session_response = sslcz.createSession(post_body)
+                gateway_url = (session_response or {}).get("GatewayPageURL")
+                if not gateway_url:
+                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
+
+                PaymentTransaction.objects.create(
+                    order=order,
+                    method=payment_method,
+                    amount=order.total,
+                    currency="BDT",
+                    tran_id=tran_id,
+                    session_key=(session_response or {}).get("sessionkey", ""),
+                    gateway_url=gateway_url,
+                    status=PaymentTransaction.Status.INITIATED,
+                    request_payload=post_body,
+                    gateway_response=session_response or {},
+                )
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_method": payment_method,
+                        "payment_provider": "SSLCOMMERZ",
+                        "gateway_url": gateway_url,
+                        "tran_id": tran_id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as exc:
+                # If SSL session creation fails, keep order for manual/admin follow-up.
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_method": payment_method,
+                        "payment_provider": "SSLCOMMERZ",
+                        "detail": f"Order created but SSLCommerz session failed: {exc}",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
 
 
 class CartItemViewSet(viewsets.GenericViewSet):
@@ -1480,3 +1698,117 @@ class ProductReviewViewSet(viewsets.ModelViewSet):
         product = instance.product
         instance.delete()
         update_product_review_aggregates(product)
+
+
+class SSLCommerzSuccessView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAnyIncludingGuest]
+
+    def get(self, request, *args, **kwargs):
+        return self._handle(request)
+
+    def post(self, request, *args, **kwargs):
+        return self._handle(request)
+
+    def _handle(self, request):
+        payload = _extract_payload(request)
+        tran_id = (payload.get("tran_id") or "").strip()
+        payment_txn = PaymentTransaction.objects.select_related("order").filter(tran_id=tran_id).first()
+        if not payment_txn:
+            frontend_url = _build_frontend_redirect("failed")
+            if frontend_url:
+                return HttpResponseRedirect(frontend_url)
+            return Response({"detail": "Transaction not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            sslcz = _get_sslcommerz_client()
+            verification = {}
+            if payload.get("val_id"):
+                verification = sslcz.validationTransactionOrder(payload.get("val_id"))
+            status_value = _extract_validation_status(verification)
+            if status_value in ("VALID", "VALIDATED"):
+                _mark_payment_result(payment_txn, PaymentTransaction.Status.SUCCESS, payload, verification_response=verification)
+                frontend_url = _build_frontend_redirect("success", order_id=payment_txn.order_id)
+            else:
+                _mark_payment_result(payment_txn, PaymentTransaction.Status.FAILED, payload, verification_response=verification)
+                frontend_url = _build_frontend_redirect("failed", order_id=payment_txn.order_id)
+        except Exception:
+            _mark_payment_result(payment_txn, PaymentTransaction.Status.FAILED, payload)
+            frontend_url = _build_frontend_redirect("failed", order_id=payment_txn.order_id)
+
+        if frontend_url:
+            return HttpResponseRedirect(frontend_url)
+        return Response({"detail": "Payment callback processed."}, status=status.HTTP_200_OK)
+
+
+class SSLCommerzFailView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAnyIncludingGuest]
+
+    def get(self, request, *args, **kwargs):
+        return self._handle(request)
+
+    def post(self, request, *args, **kwargs):
+        return self._handle(request)
+
+    def _handle(self, request):
+        payload = _extract_payload(request)
+        tran_id = (payload.get("tran_id") or "").strip()
+        payment_txn = PaymentTransaction.objects.select_related("order").filter(tran_id=tran_id).first()
+        if payment_txn:
+            _mark_payment_result(payment_txn, PaymentTransaction.Status.FAILED, payload)
+        frontend_url = _build_frontend_redirect("failed", order_id=getattr(payment_txn, "order_id", None))
+        if frontend_url:
+            return HttpResponseRedirect(frontend_url)
+        return Response({"detail": "Payment marked as failed."}, status=status.HTTP_200_OK)
+
+
+class SSLCommerzCancelView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAnyIncludingGuest]
+
+    def get(self, request, *args, **kwargs):
+        return self._handle(request)
+
+    def post(self, request, *args, **kwargs):
+        return self._handle(request)
+
+    def _handle(self, request):
+        payload = _extract_payload(request)
+        tran_id = (payload.get("tran_id") or "").strip()
+        payment_txn = PaymentTransaction.objects.select_related("order").filter(tran_id=tran_id).first()
+        if payment_txn:
+            _mark_payment_result(payment_txn, PaymentTransaction.Status.CANCELLED, payload)
+        frontend_url = _build_frontend_redirect("cancelled", order_id=getattr(payment_txn, "order_id", None))
+        if frontend_url:
+            return HttpResponseRedirect(frontend_url)
+        return Response({"detail": "Payment marked as cancelled."}, status=status.HTTP_200_OK)
+
+
+class SSLCommerzIpnView(APIView):
+    authentication_classes = []
+    permission_classes = [AllowAnyIncludingGuest]
+
+    def post(self, request, *args, **kwargs):
+        payload = _extract_payload(request)
+        tran_id = (payload.get("tran_id") or "").strip()
+        payment_txn = PaymentTransaction.objects.select_related("order").filter(tran_id=tran_id).first()
+        if not payment_txn:
+            return Response({"detail": "Transaction not found."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            sslcz = _get_sslcommerz_client()
+            if not sslcz.hash_validate_ipn(payload):
+                _mark_payment_result(payment_txn, PaymentTransaction.Status.FAILED, payload)
+                return Response({"detail": "IPN hash validation failed."}, status=status.HTTP_400_BAD_REQUEST)
+            verification = {}
+            if payload.get("val_id"):
+                verification = sslcz.validationTransactionOrder(payload.get("val_id"))
+            status_value = _extract_validation_status(verification)
+            if status_value in ("VALID", "VALIDATED"):
+                _mark_payment_result(payment_txn, PaymentTransaction.Status.IPN_VERIFIED, payload, verification_response=verification)
+            else:
+                _mark_payment_result(payment_txn, PaymentTransaction.Status.FAILED, payload, verification_response=verification)
+                return Response({"detail": "Payment validation failed."}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            return Response({"detail": f"IPN processing error: {exc}"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"detail": "IPN verified."}, status=status.HTTP_200_OK)

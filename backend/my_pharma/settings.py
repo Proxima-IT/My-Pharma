@@ -299,6 +299,21 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ------------------------------------------------------------------------------
+# SSLCOMMERZ (Bangladesh payment gateway)
+# ------------------------------------------------------------------------------
+SSLCOMMERZ_STORE_ID = os.environ.get("SSLCOMMERZ_STORE_ID", "").strip()
+SSLCOMMERZ_STORE_PASS = os.environ.get("SSLCOMMERZ_STORE_PASS", "").strip()
+SSLCOMMERZ_IS_SANDBOX = os.environ.get("SSLCOMMERZ_IS_SANDBOX", "true").lower() in ("true", "1", "yes")
+
+# Public backend URL where SSLCommerz can call success/fail/cancel/ipn.
+# Example: https://api.mypharma.com
+SSLCOMMERZ_CALLBACK_BASE_URL = os.environ.get("SSLCOMMERZ_CALLBACK_BASE_URL", "").strip().rstrip("/")
+
+# Frontend redirect base after backend callback processing.
+# Example: https://mypharma.com.bd
+SSLCOMMERZ_FRONTEND_BASE_URL = os.environ.get("SSLCOMMERZ_FRONTEND_BASE_URL", "").strip().rstrip("/")
+
+# ------------------------------------------------------------------------------
 # LOGGING
 # ------------------------------------------------------------------------------
 

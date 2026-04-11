@@ -1,7 +1,11 @@
 # My Pharma – Django API (production-ready)
 # Multi-stage not strictly needed for Python; single stage with slim image.
+#
+# Base image is overridable (see docker-compose) so builds can avoid Docker Hub
+# when registry-1.docker.io is slow or TLS-handshake times out.
 
-FROM python:3.12-slim
+ARG PYTHON_BASE_IMAGE=python:3.12-slim
+FROM ${PYTHON_BASE_IMAGE}
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \

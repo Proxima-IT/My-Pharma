@@ -536,6 +536,64 @@ class OrderSettlement(models.Model):
         return f"Settlement for Order #{self.order_id} ({self.status})"
 
 
+class PaymentTransaction(models.Model):
+    """Tracks SSLCommerz transaction lifecycle for an order."""
+
+    class Method(models.TextChoices):
+        COD = "COD", "Cash on Delivery"
+        BKASH = "BKASH", "bKash"
+        NAGAD = "NAGAD", "Nagad"
+        ROCKET = "ROCKET", "Rocket"
+        UPAY = "UPAY", "Upay"
+        CARD = "CARD", "Card"
+        ONLINE = "ONLINE", "Online"
+
+    class Status(models.TextChoices):
+        INITIATED = "INITIATED", "Initiated"
+        PENDING = "PENDING", "Pending"
+        SUCCESS = "SUCCESS", "Success"
+        FAILED = "FAILED", "Failed"
+        CANCELLED = "CANCELLED", "Cancelled"
+        IPN_VERIFIED = "IPN_VERIFIED", "IPN Verified"
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="payment_transactions",
+        db_index=True,
+    )
+    method = models.CharField(max_length=20, choices=Method.choices, default=Method.COD, db_index=True)
+    provider = models.CharField(max_length=30, default="SSLCOMMERZ")
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=10, default="BDT")
+
+    tran_id = models.CharField(max_length=64, unique=True, db_index=True)
+    val_id = models.CharField(max_length=128, blank=True, db_index=True)
+    session_key = models.CharField(max_length=128, blank=True, db_index=True)
+    gateway_url = models.URLField(max_length=500, blank=True)
+    bank_tran_id = models.CharField(max_length=128, blank=True, db_index=True)
+    card_type = models.CharField(max_length=120, blank=True)
+
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.INITIATED, db_index=True)
+    request_payload = models.JSONField(default=dict, blank=True)
+    gateway_response = models.JSONField(default=dict, blank=True)
+    verified_response = models.JSONField(default=dict, blank=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_payment_transaction"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["order", "status"]),
+            models.Index(fields=["method", "status"]),
+        ]
+
+    def __str__(self):
+        return f"Payment {self.tran_id} ({self.status})"
+
+
 class B2BCustomerProfile(models.Model):
     """Marks a user as a B2B customer with a commission rate for bulk orders."""
 

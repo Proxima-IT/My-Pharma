@@ -34,6 +34,7 @@ from .models import (
     BlogCategory,
     BlogPost,
     OrderSettlement,
+    PaymentTransaction,
     B2BCustomerProfile,
     B2BCommissionEntry,
     Page,
@@ -847,6 +848,12 @@ class PlaceOrderFromCartSerializer(serializers.Serializer):
     shipping_address_id = serializers.IntegerField(required=True, help_text="UserAddress id for shipping")
     coupon_code = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+    payment_method = serializers.ChoiceField(
+        choices=PaymentTransaction.Method.choices,
+        required=False,
+        default=PaymentTransaction.Method.COD,
+        help_text="COD or online channel (BKASH/NAGAD/ROCKET/UPAY/CARD/ONLINE).",
+    )
 
 
 # ---- Coupon ----
