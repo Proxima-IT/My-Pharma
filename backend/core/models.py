@@ -321,12 +321,30 @@ class ProductDosage(models.Model):
 
 class DeliveryDuration(models.Model):
     """Delivery duration options (e.g. 2–3 days, 1 week). Admin CRUD; order can reference one."""
+    class DeliveryType(models.TextChoices):
+        STANDARD = "STANDARD", "Standard Delivery"
+        SAME_DAY = "SAME_DAY", "Same Day Delivery"
+        EXPRESS = "EXPRESS", "Express Delivery"
+
     name = models.CharField(max_length=100, help_text="e.g. Standard 3–5 days")
+    delivery_type = models.CharField(
+        max_length=20,
+        choices=DeliveryType.choices,
+        default=DeliveryType.STANDARD,
+        db_index=True,
+    )
     days = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
         help_text="Optional number of days for display.",
     )
+    extra_charge = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Additional charge (BDT) over the base delivery fee for this option.",
+    )
+    is_active = models.BooleanField(default=True, db_index=True)
     order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
 
     class Meta:
@@ -591,6 +609,7 @@ class PaymentTransaction(models.Model):
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     delivery_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     coupon_id_ref = models.PositiveIntegerField(null=True, blank=True)
+    delivery_duration_id_ref = models.PositiveIntegerField(null=True, blank=True)
     cart_snapshot = models.JSONField(default=list, blank=True)
     request_payload = models.JSONField(default=dict, blank=True)
     gateway_response = models.JSONField(default=dict, blank=True)

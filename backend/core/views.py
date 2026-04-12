@@ -209,6 +209,12 @@ def _create_order_from_payment_transaction(payment_txn: PaymentTransaction):
         if not snapshot:
             raise ValueError("Cart snapshot missing for this payment transaction.")
 
+        selected_duration = None
+        if payment_txn.delivery_duration_id_ref:
+            selected_duration = DeliveryDuration.objects.filter(
+                pk=payment_txn.delivery_duration_id_ref
+            ).first()
+
         order = Order.objects.create(
             user=payment_txn.user,
             status=Order.Status.PENDING,
@@ -217,6 +223,7 @@ def _create_order_from_payment_transaction(payment_txn: PaymentTransaction):
             discount_amount=payment_txn.discount_amount or Decimal("0"),
             delivery_fee=payment_txn.delivery_fee or Decimal("0"),
             coupon_id=payment_txn.coupon_id_ref,
+            duration=selected_duration,
             shipping_address=payment_txn.shipping_address or "",
             notes=payment_txn.notes or "",
         )
@@ -730,6 +737,15 @@ class DeliveryDurationViewSet(viewsets.ModelViewSet):
             return [IsAuthenticated()]  # Any authenticated user can read (e.g. select when placing order)
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if self.action in ("list", "retrieve"):
+            user = getattr(self.request, "user", None)
+            role = getattr(user, "role", None) if user and user.is_authenticated else None
+            if role not in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
+                return qs.filter(is_active=True)
+        return qs
+
 
 # ---- Coupons: admin CRUD + user validate ----
 @extend_schema_view(
@@ -924,6 +940,7 @@ class CartViewSet(viewsets.GenericViewSet):
         address_id = serializer.validated_data["shipping_address_id"]
         coupon_code = (serializer.validated_data.get("coupon_code") or "").strip()
         notes = (serializer.validated_data.get("notes") or "").strip()
+        delivery_duration_id = serializer.validated_data.get("delivery_duration_id")
         payment_method = _normalize_payment_method(serializer.validated_data.get("payment_method"))
 
         from authentication.models import UserAddress
@@ -934,6 +951,17 @@ class CartViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         shipping_text = f"{address.full_name}, {address.email}, {address.phone}, {address.district}, {address.thana}, {address.address}"
+        delivery_duration = None
+        if delivery_duration_id:
+            delivery_duration = DeliveryDuration.objects.filter(
+                pk=delivery_duration_id,
+                is_active=True,
+            ).first()
+            if not delivery_duration:
+                return Response(
+                    {"delivery_duration_id": "Invalid or inactive delivery option."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
         delivery_zone = get_delivery_zone_for_district(address.district)
         # Coupon can be provided or already applied/persisted to cart
@@ -973,7 +1001,12 @@ class CartViewSet(viewsets.GenericViewSet):
                     else:
                         i.save(update_fields=["price_at_order"])
 
-        summary = get_cart_summary(cart, delivery_zone=delivery_zone, coupon=coupon)
+        summary = get_cart_summary(
+            cart,
+            delivery_zone=delivery_zone,
+            coupon=coupon,
+            delivery_duration=delivery_duration,
+        )
         min_order_subtotal = summary.get("subtotal_before_discount") or summary["subtotal"]
         if not validate_min_order(min_order_subtotal):
             return Response(
@@ -1062,6 +1095,7 @@ class CartViewSet(viewsets.GenericViewSet):
                     discount_amount=summary.get("discount_amount") or Decimal("0"),
                     delivery_fee=summary.get("delivery_fee") or Decimal("0"),
                     coupon_id_ref=getattr(cart.coupon, "id", None),
+                    delivery_duration_id_ref=getattr(delivery_duration, "id", None),
                     cart_snapshot=cart_snapshot,
                     request_payload=post_body,
                     gateway_response=session_response or {},
@@ -1088,6 +1122,7 @@ class CartViewSet(viewsets.GenericViewSet):
             order = Order.objects.create(
                 user=request.user,
                 status=Order.Status.PENDING,
+                duration=delivery_duration,
                 total=summary["total_payable"],
                 subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
                 discount_amount=summary.get("discount_amount") or Decimal("0"),

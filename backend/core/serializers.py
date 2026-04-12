@@ -623,8 +623,21 @@ class OrderStatusSerializer(serializers.ModelSerializer):
 class DeliveryDurationSerializer(serializers.ModelSerializer):
     class Meta:
         model = DeliveryDuration
-        fields = ("id", "name", "days", "order")
+        fields = (
+            "id",
+            "name",
+            "delivery_type",
+            "days",
+            "extra_charge",
+            "is_active",
+            "order",
+        )
         read_only_fields = ("id",)
+
+    def validate_extra_charge(self, value):
+        if value < 0:
+            raise serializers.ValidationError("extra_charge cannot be negative.")
+        return value
 
 
 # ---- Cart ----
@@ -720,6 +733,11 @@ class CartSummarySerializer(serializers.Serializer):
     """Nested object for cart summary: subtotal, delivery_fee, discount_amount, total_payable."""
     subtotal_before_discount = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     subtotal = serializers.DecimalField(max_digits=12, decimal_places=2)
+    base_delivery_fee = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
+    delivery_option_id = serializers.IntegerField(required=False, allow_null=True)
+    delivery_option_name = serializers.CharField(required=False, allow_null=True)
+    delivery_option_type = serializers.CharField(required=False, allow_null=True)
+    delivery_option_charge = serializers.DecimalField(max_digits=12, decimal_places=2, required=False)
     delivery_fee = serializers.DecimalField(max_digits=12, decimal_places=2)
     discount_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
     total_payable = serializers.DecimalField(max_digits=12, decimal_places=2)
@@ -822,6 +840,7 @@ class CartSerializer(serializers.ModelSerializer):
         from .services import get_cart_summary, validate_coupon, get_delivery_zone_for_district
         request = self.context.get("request")
         delivery_zone = None
+        delivery_duration = None
         coupon = obj.coupon
         if request:
             address_id = request.query_params.get("address_id") or request.data.get("address_id")
@@ -833,6 +852,15 @@ class CartSerializer(serializers.ModelSerializer):
                         delivery_zone = get_delivery_zone_for_district(addr.district)
                 except Exception:
                     pass
+            duration_id = request.query_params.get("delivery_duration_id") or request.data.get("delivery_duration_id")
+            if duration_id:
+                try:
+                    delivery_duration = DeliveryDuration.objects.filter(
+                        pk=duration_id,
+                        is_active=True,
+                    ).first()
+                except Exception:
+                    delivery_duration = None
             code = request.query_params.get("coupon_code") or request.data.get("coupon_code")
             if code:
                 items = obj.items.select_related("product").all()
@@ -841,7 +869,12 @@ class CartSerializer(serializers.ModelSerializer):
                     coupon, _ = validate_coupon(code, subtotal)
                 except ValueError:
                     pass
-        data = get_cart_summary(obj, delivery_zone=delivery_zone, coupon=coupon)
+        data = get_cart_summary(
+            obj,
+            delivery_zone=delivery_zone,
+            coupon=coupon,
+            delivery_duration=delivery_duration,
+        )
         return data
 
 
@@ -849,6 +882,11 @@ class PlaceOrderFromCartSerializer(serializers.Serializer):
     shipping_address_id = serializers.IntegerField(required=True, help_text="UserAddress id for shipping")
     coupon_code = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
+    delivery_duration_id = serializers.IntegerField(
+        required=False,
+        allow_null=True,
+        help_text="Optional delivery option id (STANDARD/SAME_DAY/EXPRESS) managed by admin.",
+    )
     payment_method = serializers.ChoiceField(
         choices=PaymentTransaction.Method.choices,
         required=False,
