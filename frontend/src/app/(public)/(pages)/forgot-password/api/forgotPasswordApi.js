@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 export const requestPasswordResetApi = async email => {
   const response = await fetch(`${API_BASE_URL}/auth/password-reset/`, {
@@ -7,7 +7,7 @@ export const requestPasswordResetApi = async email => {
     body: JSON.stringify({ email }),
   });
 
-  const data = await response.json();
+  const data = await parseJsonResponse(response);
   if (!response.ok) {
     throw new Error(data.detail || 'Failed to process request.');
   }
