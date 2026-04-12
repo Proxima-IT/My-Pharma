@@ -12,17 +12,18 @@ const isLocalhost =
   (window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1');
 
+const browserApiBase = isBrowser ? `${window.location.origin}/api` : '';
+
 /**
  * API_BASE_URL Logic:
- * 1. Uses NEXT_PUBLIC_API_URL if defined in .env
- * 2. Falls back to localhost:8000 if on a local machine
- * 3. Falls back to the VPS IP if running in production
+ * - Browser on localhost => talk to local backend directly.
+ * - Browser on non-localhost => use same-origin /api to avoid hardcoded-domain
+ *   TLS/certificate mismatch (e.g. www vs apex).
+ * - Server-side fallback => use env-configured absolute API URL.
  */
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (isLocalhost
-    ? 'http://localhost:8000/api'
-    : 'https://mypharma.com/api');
+export const API_BASE_URL = isBrowser
+  ? (isLocalhost ? 'http://localhost:8000/api' : browserApiBase)
+  : (process.env.NEXT_PUBLIC_API_URL || 'https://mypharma.com/api');
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
