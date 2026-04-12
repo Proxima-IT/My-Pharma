@@ -14,9 +14,8 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# Install system deps for MySQL client, Pillow, and C extensions (e.g. Levenshtein)
+# Install system deps for C extensions (e.g. Levenshtein)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    default-libmysqlclient-dev \
     build-essential \
     pkg-config \
     python3-dev \

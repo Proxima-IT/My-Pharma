@@ -32,6 +32,7 @@ from .models import (
     Consultation,
     UserNotification,
     UserNotificationPreference,
+    UserPushSubscription,
     BlogCategory,
     BlogPost,
     OrderSettlement,
@@ -1221,6 +1222,7 @@ class UserNotificationSerializer(serializers.ModelSerializer):
 class AdminBroadcastNotificationSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     message = serializers.CharField()
+    target_url = serializers.URLField(required=False, allow_blank=True)
     send_to_opted_in_only = serializers.BooleanField(
         required=False,
         default=False,
@@ -1240,6 +1242,38 @@ class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
             "updated_at",
         )
         read_only_fields = ("updated_at",)
+
+
+class UserPushSubscriptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserPushSubscription
+        fields = (
+            "id",
+            "endpoint",
+            "p256dh",
+            "auth",
+            "is_active",
+            "last_seen_at",
+            "user_agent",
+            "platform",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "last_seen_at", "user_agent", "created_at", "updated_at")
+
+
+class UserPushSubscriptionUpsertSerializer(serializers.Serializer):
+    endpoint = serializers.URLField(max_length=1000)
+    keys = serializers.DictField(required=True)
+    platform = serializers.CharField(max_length=100, required=False, allow_blank=True)
+    is_active = serializers.BooleanField(required=False, default=True)
+
+    def validate_keys(self, value):
+        p256dh = (value or {}).get("p256dh")
+        auth = (value or {}).get("auth")
+        if not p256dh or not auth:
+            raise serializers.ValidationError("keys must contain p256dh and auth.")
+        return value
 
 
 # ---- Page (CMS) ----

@@ -314,6 +314,13 @@ SSLCOMMERZ_CALLBACK_BASE_URL = os.environ.get("SSLCOMMERZ_CALLBACK_BASE_URL", ""
 SSLCOMMERZ_FRONTEND_BASE_URL = os.environ.get("SSLCOMMERZ_FRONTEND_BASE_URL", "").strip().rstrip("/")
 
 # ------------------------------------------------------------------------------
+# WEB PUSH (VAPID)
+# ------------------------------------------------------------------------------
+WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
+WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
+WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "").strip()
+
+# ------------------------------------------------------------------------------
 # LOGGING
 # ------------------------------------------------------------------------------
 

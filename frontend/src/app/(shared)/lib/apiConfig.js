@@ -75,8 +75,12 @@ export const BLOG_ENDPOINTS = {
 export const NOTIFICATION_ENDPOINTS = {
   BASE: `${API_BASE_URL}/notifications/`,
   PERMISSION: `${API_BASE_URL}/notifications/permission/`,
+  SUBSCRIPTIONS: `${API_BASE_URL}/notifications/subscriptions/`,
   BROADCAST: `${API_BASE_URL}/notifications/broadcast/`,
 };
+
+export const WEB_PUSH_VAPID_PUBLIC_KEY =
+  process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || '';
 
 /**
  * Safely parse a fetch response as JSON. When the server returns HTML (e.g. 500

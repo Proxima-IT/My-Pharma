@@ -7,6 +7,7 @@ import { broadcastNotificationApi } from '@/app/(admin)/api/notificationAdminApi
 export default function AdminNotificationsPage() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
+  const [targetUrl, setTargetUrl] = useState('');
   const [sendToOptedInOnly, setSendToOptedInOnly] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -27,6 +28,7 @@ export default function AdminNotificationsPage() {
       const data = await broadcastNotificationApi(token, {
         title: title.trim(),
         message: message.trim(),
+        target_url: targetUrl.trim(),
         send_to_opted_in_only: sendToOptedInOnly,
       });
       setResult(data);
@@ -67,6 +69,9 @@ export default function AdminNotificationsPage() {
       {result ? (
         <div className="p-4 bg-green-50 border border-green-100 text-green-700 font-mono text-xs uppercase">
           {result.detail} Sent: {result.sent_count}
+          {' | '}Push Attempted: {result.push_attempted}
+          {' | '}Push Succeeded: {result.push_succeeded}
+          {' | '}Push Failed: {result.push_failed}
         </div>
       ) : null}
 
@@ -94,6 +99,16 @@ export default function AdminNotificationsPage() {
             onChange={e => setMessage(e.target.value)}
             required
             placeholder="Write your broadcast message..."
+          />
+        </div>
+
+        <div>
+          <label className={labelClass}>Target URL (optional)</label>
+          <input
+            className={inputClass}
+            value={targetUrl}
+            onChange={e => setTargetUrl(e.target.value)}
+            placeholder="https://mypharma.com/orders"
           />
         </div>
 

@@ -32,7 +32,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -67,6 +67,8 @@ from .serializers import (
     ConsultationResponseSerializer,
     UserNotificationSerializer,
     UserNotificationPreferenceSerializer,
+    UserPushSubscriptionSerializer,
+    UserPushSubscriptionUpsertSerializer,
     AdminBroadcastNotificationSerializer,
     PageSerializer,
     BlogCategorySerializer,
@@ -92,6 +94,7 @@ from .services import (
     validate_min_order,
     update_product_review_aggregates,
 )
+from .tasks import dispatch_web_push_notifications
 from .filters import ProductFilter
 from .models import OrderSettlement, B2BCustomerProfile, B2BCommissionEntry
 
@@ -626,7 +629,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [IsAuthenticated]
     filterset_fields = ["status"]
-    http_method_names = ["get", "post", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_queryset(self):
         qs = (
@@ -1475,6 +1478,7 @@ class ConsultationViewSet(viewsets.ModelViewSet):
     retrieve=extend_schema(tags=["Notifications"], summary="Get notification by id"),
     mark_read=extend_schema(tags=["Notifications"], summary="Mark one notification as read"),
     mark_all_read=extend_schema(tags=["Notifications"], summary="Mark all my notifications as read"),
+    subscriptions=extend_schema(tags=["Notifications"], summary="List/create/delete my browser push subscriptions"),
     broadcast=extend_schema(
         tags=["Notifications"],
         summary="Broadcast notification to all users (admin)",
@@ -1534,6 +1538,60 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         pref.save()
         return Response(UserNotificationPreferenceSerializer(pref).data, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=["get", "post", "delete"], url_path="subscriptions")
+    def subscriptions(self, request):
+        method = request.method.lower()
+        if method == "get":
+            qs = UserPushSubscription.objects.filter(user=request.user).order_by("-updated_at")
+            return Response(
+                UserPushSubscriptionSerializer(qs, many=True).data,
+                status=status.HTTP_200_OK,
+            )
+
+        if method == "post":
+            serializer = UserPushSubscriptionUpsertSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            endpoint = serializer.validated_data["endpoint"]
+            keys = serializer.validated_data["keys"]
+            subscription, _ = UserPushSubscription.objects.get_or_create(
+                endpoint=endpoint,
+                defaults={
+                    "user": request.user,
+                    "p256dh": keys["p256dh"],
+                    "auth": keys["auth"],
+                    "is_active": serializer.validated_data.get("is_active", True),
+                    "user_agent": (request.META.get("HTTP_USER_AGENT", "") or "")[:500],
+                    "platform": (serializer.validated_data.get("platform") or "")[:100],
+                },
+            )
+            subscription.user = request.user
+            subscription.p256dh = keys["p256dh"]
+            subscription.auth = keys["auth"]
+            subscription.is_active = serializer.validated_data.get("is_active", True)
+            subscription.user_agent = (request.META.get("HTTP_USER_AGENT", "") or "")[:500]
+            if serializer.validated_data.get("platform") is not None:
+                subscription.platform = (serializer.validated_data.get("platform") or "")[:100]
+            subscription.save()
+            return Response(
+                UserPushSubscriptionSerializer(subscription).data,
+                status=status.HTTP_200_OK,
+            )
+
+        endpoint = (request.data.get("endpoint") or "").strip()
+        if not endpoint:
+            return Response(
+                {"endpoint": "endpoint is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        updated = UserPushSubscription.objects.filter(
+            user=request.user,
+            endpoint=endpoint,
+        ).update(is_active=False)
+        return Response(
+            {"removed_count": updated},
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=False, methods=["post"], url_path="broadcast")
     def broadcast(self, request):
         serializer = AdminBroadcastNotificationSerializer(data=request.data)
@@ -1552,9 +1610,10 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
             ).values_list("user_id", flat=True)
             recipients = recipients.filter(id__in=opted_in_user_ids)
 
+        recipient_ids = list(recipients)
         rows = []
         count = 0
-        for user_id in recipients.iterator(chunk_size=1000):
+        for user_id in recipient_ids:
             rows.append(
                 UserNotification(
                     user_id=user_id,
@@ -1572,12 +1631,48 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
             UserNotification.objects.bulk_create(rows, batch_size=1000)
             count += len(rows)
 
+        push_queryset = UserPushSubscription.objects.filter(
+            user_id__in=recipient_ids,
+            is_active=True,
+            user__is_active=True,
+        )
+        if serializer.validated_data.get("send_to_opted_in_only"):
+            push_queryset = push_queryset.filter(
+                user__notification_preference__is_enabled=True,
+                user__notification_preference__browser_permission=UserNotificationPreference.BrowserPermission.GRANTED,
+            )
+        push_attempted = push_queryset.count()
+        push_succeeded = 0
+        push_failed = 0
+        push_deactivated = 0
+
+        if recipient_ids and push_attempted > 0:
+            task_result = dispatch_web_push_notifications.delay(
+                user_ids=recipient_ids,
+                title=serializer.validated_data["title"],
+                message=serializer.validated_data["message"],
+                target_url=serializer.validated_data.get("target_url", ""),
+                opted_in_only=serializer.validated_data.get("send_to_opted_in_only", False),
+            )
+            if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+                stats = task_result.get(timeout=30) or {}
+                push_attempted = stats.get("push_attempted", push_attempted)
+                push_succeeded = stats.get("push_succeeded", 0)
+                push_failed = stats.get("push_failed", 0)
+                push_deactivated = stats.get("push_deactivated", 0)
+
         return Response(
             {
                 "detail": "Notification broadcast sent.",
                 "sent_count": count,
                 "title": serializer.validated_data["title"],
                 "send_to_opted_in_only": serializer.validated_data.get("send_to_opted_in_only", False),
+                "target_url": serializer.validated_data.get("target_url", ""),
+                "push_attempted": push_attempted,
+                "push_succeeded": push_succeeded,
+                "push_failed": push_failed,
+                "push_deactivated": push_deactivated,
+                "push_async": not getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False),
             },
             status=status.HTTP_201_CREATED,
         )

@@ -1086,6 +1086,37 @@ class UserNotificationPreference(models.Model):
         return f"NotificationPreference(user={self.user_id}, enabled={self.is_enabled}, permission={self.browser_permission})"
 
 
+class UserPushSubscription(models.Model):
+    """Stores browser push subscription details per user/device."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="push_subscriptions",
+        db_index=True,
+    )
+    endpoint = models.URLField(max_length=1000, unique=True)
+    p256dh = models.CharField(max_length=255)
+    auth = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=True, db_index=True)
+    last_seen_at = models.DateTimeField(auto_now=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    platform = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_user_push_subscription"
+        ordering = ["-updated_at"]
+        indexes = [
+            models.Index(fields=["user", "is_active"]),
+            models.Index(fields=["user", "updated_at"]),
+        ]
+
+    def __str__(self):
+        return f"PushSubscription(user={self.user_id}, active={self.is_active})"
+
+
 class BlogCategory(models.Model):
     """Blog taxonomy (separate from product Category)."""
 

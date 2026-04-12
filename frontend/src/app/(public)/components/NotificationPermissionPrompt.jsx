@@ -1,7 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { updateNotificationPermissionApi } from '../api/notificationApi';
+import {
+  removePushSubscriptionApi,
+  updateNotificationPermissionApi,
+  upsertPushSubscriptionApi,
+} from '../api/notificationApi';
+import { registerPushSubscription, unsubscribePushEndpoint } from '../lib/webPush';
+import { WEB_PUSH_VAPID_PUBLIC_KEY } from '@/app/(shared)/lib/apiConfig';
 
 const ASKED_KEY = 'mypharma_notification_permission_asked';
 
@@ -25,9 +31,46 @@ export default function NotificationPermissionPrompt() {
       }
     };
 
+    const syncPushSubscription = async permission => {
+      if (!token) return;
+      if (permission !== 'granted') return;
+      try {
+        const { subscription, platform } = await registerPushSubscription(
+          WEB_PUSH_VAPID_PUBLIC_KEY,
+        );
+        await upsertPushSubscriptionApi(token, {
+          endpoint: subscription.endpoint,
+          keys: subscription.keys,
+          platform,
+          is_active: true,
+        });
+      } catch (_error) {
+        // Keep prompt UX non-blocking if push registration fails.
+      }
+    };
+
+    const deactivateSubscription = async () => {
+      if (!token) return;
+      if (!('serviceWorker' in navigator)) return;
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const existing = await registration.pushManager.getSubscription();
+        if (!existing) return;
+        await removePushSubscriptionApi(token, existing.endpoint);
+        await unsubscribePushEndpoint(existing.endpoint);
+      } catch (_error) {
+        // Ignore unsubscribe sync failures.
+      }
+    };
+
     // Keep backend in sync even if browser permission was already decided earlier.
     if (Notification.permission !== 'default') {
       syncPermission(Notification.permission);
+      if (Notification.permission === 'granted') {
+        syncPushSubscription('granted');
+      } else {
+        deactivateSubscription();
+      }
       return;
     }
 
@@ -40,6 +83,11 @@ export default function NotificationPermissionPrompt() {
         const result = await Notification.requestPermission();
         window.localStorage.setItem(ASKED_KEY, '1');
         await syncPermission(result);
+        if (result === 'granted') {
+          await syncPushSubscription(result);
+        } else {
+          await deactivateSubscription();
+        }
 
         if (result === 'granted') {
           new Notification('My Pharma', {
