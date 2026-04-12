@@ -1013,6 +1013,7 @@ class CartViewSet(viewsets.GenericViewSet):
                 product_names = ", ".join([item.product.name for item in items_qs[:3]]) or "Pharmacy Order"
 
                 total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
+                multi_card_name = _ssl_multi_card_name(payment_method)
                 post_body = {
                     "total_amount": str(total_payable),
                     "currency": "BDT",
@@ -1029,7 +1030,6 @@ class CartViewSet(viewsets.GenericViewSet):
                     "cus_city": (address.district or "Dhaka")[:50],
                     "cus_country": "Bangladesh",
                     "shipping_method": "NO",
-                    "multi_card_name": _ssl_multi_card_name(payment_method),
                     "num_of_item": len(cart_snapshot) or 1,
                     "product_name": product_names[:255],
                     "product_category": "Pharmacy",
@@ -1037,6 +1037,10 @@ class CartViewSet(viewsets.GenericViewSet):
                     "value_a": str(request.user.id),
                     "value_b": str(address_id),
                 }
+                # ONLINE means default SSLCommerz gateway page with all enabled channels.
+                # For specific selections (bKash/Nagad/Rocket/Upay/Card), pass a filtered channel hint.
+                if multi_card_name:
+                    post_body["multi_card_name"] = multi_card_name
                 session_response = sslcz.createSession(post_body)
                 gateway_url = (session_response or {}).get("GatewayPageURL")
                 if not gateway_url:

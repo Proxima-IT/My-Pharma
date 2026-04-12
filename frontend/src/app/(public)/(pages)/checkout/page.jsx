@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { MdKeyboardArrowLeft } from 'react-icons/md';
 import {
   FiCheckCircle,
@@ -19,6 +19,7 @@ import UiButton from '@/app/(public)/components/UiButton';
 
 const Checkout = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const {
     items,
     summary,
@@ -34,6 +35,25 @@ const Checkout = () => {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('BKASH');
   const [orderSuccess, setOrderSuccess] = useState(null);
+  const [callbackMessage, setCallbackMessage] = useState('');
+
+  useEffect(() => {
+    const paymentStatus = (searchParams.get('payment_status') || '').toLowerCase();
+    if (!paymentStatus) {
+      setCallbackMessage('');
+      return;
+    }
+
+    if (paymentStatus === 'failed') {
+      setCallbackMessage('Payment failed. Please try again or choose another payment method.');
+      return;
+    }
+    if (paymentStatus === 'cancelled') {
+      setCallbackMessage('Payment was cancelled. You can review your order and try again.');
+      return;
+    }
+    setCallbackMessage('');
+  }, [searchParams]);
 
   useEffect(() => {
     if (!isLoading && items.length === 0 && !orderSuccess) {
@@ -133,14 +153,14 @@ const Checkout = () => {
         </h1>
       </div>
 
-      {error && (
+      {(error || callbackMessage) && (
         <div className="mb-8 p-5 bg-red-50 border border-red-100 rounded-[24px] flex items-center gap-4 text-red-600 animate-in slide-in-from-top-2">
           <FiAlertCircle className="shrink-0" size={24} />
           <div>
             <p className="text-sm font-bold uppercase tracking-wider">
               Order Failed
             </p>
-            <p className="text-sm font-medium opacity-90">{error}</p>
+            <p className="text-sm font-medium opacity-90">{callbackMessage || error}</p>
           </div>
         </div>
       )}
