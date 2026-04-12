@@ -1028,6 +1028,45 @@ class UserNotification(models.Model):
         return f"Notification #{self.id} -> user {self.user_id}"
 
 
+class UserNotificationPreference(models.Model):
+    """Per-user browser notification permission and opt-in state."""
+
+    class BrowserPermission(models.TextChoices):
+        DEFAULT = "default", "Default"
+        GRANTED = "granted", "Granted"
+        DENIED = "denied", "Denied"
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notification_preference",
+        db_index=True,
+    )
+    browser_permission = models.CharField(
+        max_length=20,
+        choices=BrowserPermission.choices,
+        default=BrowserPermission.DEFAULT,
+        db_index=True,
+    )
+    is_enabled = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True when user granted permission and wants push/browser notifications.",
+    )
+    last_prompted_at = models.DateTimeField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    platform = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_user_notification_preference"
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"NotificationPreference(user={self.user_id}, enabled={self.is_enabled}, permission={self.browser_permission})"
+
+
 class BlogCategory(models.Model):
     """Blog taxonomy (separate from product Category)."""
 

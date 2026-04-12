@@ -20,6 +20,7 @@ import {
   FiTag,
   FiFileText,
   FiCreditCard,
+  FiBell,
 } from 'react-icons/fi';
 import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
 
@@ -106,6 +107,11 @@ const AdminSidebar = () => {
           name: 'Blog Management',
           icon: <FiFileText />,
           href: '/admin/blogs',
+        },
+        {
+          name: 'Notifications',
+          icon: <FiBell />,
+          href: '/admin/notifications',
         },
       ],
     },

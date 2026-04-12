@@ -31,6 +31,7 @@ from .models import (
     PrescriptionStatusHistory,
     Consultation,
     UserNotification,
+    UserNotificationPreference,
     BlogCategory,
     BlogPost,
     OrderSettlement,
@@ -1182,6 +1183,25 @@ class UserNotificationSerializer(serializers.ModelSerializer):
 class AdminBroadcastNotificationSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
     message = serializers.CharField()
+    send_to_opted_in_only = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="When true, send only to users who enabled notification permission.",
+    )
+
+
+class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserNotificationPreference
+        fields = (
+            "browser_permission",
+            "is_enabled",
+            "last_prompted_at",
+            "user_agent",
+            "platform",
+            "updated_at",
+        )
+        read_only_fields = ("updated_at",)
 
 
 # ---- Page (CMS) ----

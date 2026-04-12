@@ -32,7 +32,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -66,6 +66,7 @@ from .serializers import (
     ConsultationRequestSerializer,
     ConsultationResponseSerializer,
     UserNotificationSerializer,
+    UserNotificationPreferenceSerializer,
     AdminBroadcastNotificationSerializer,
     PageSerializer,
     BlogCategorySerializer,
@@ -1474,6 +1475,30 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         updated = UserNotification.objects.filter(user=request.user, is_read=False).update(is_read=True, read_at=now)
         return Response({"marked_count": updated}, status=status.HTTP_200_OK)
 
+    @action(detail=False, methods=["get", "post"], url_path="permission")
+    def permission(self, request):
+        pref, _ = UserNotificationPreference.objects.get_or_create(user=request.user)
+        if request.method.lower() == "get":
+            return Response(UserNotificationPreferenceSerializer(pref).data, status=status.HTTP_200_OK)
+
+        incoming_permission = (request.data.get("browser_permission") or "").strip().lower()
+        incoming_enabled = request.data.get("is_enabled")
+        if incoming_permission in (
+            UserNotificationPreference.BrowserPermission.DEFAULT,
+            UserNotificationPreference.BrowserPermission.GRANTED,
+            UserNotificationPreference.BrowserPermission.DENIED,
+        ):
+            pref.browser_permission = incoming_permission
+        if incoming_enabled is not None:
+            pref.is_enabled = bool(incoming_enabled)
+        else:
+            pref.is_enabled = pref.browser_permission == UserNotificationPreference.BrowserPermission.GRANTED
+        pref.last_prompted_at = timezone.now()
+        pref.user_agent = (request.META.get("HTTP_USER_AGENT", "") or "")[:500]
+        pref.platform = (request.data.get("platform") or "")[:100]
+        pref.save()
+        return Response(UserNotificationPreferenceSerializer(pref).data, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=["post"], url_path="broadcast")
     def broadcast(self, request):
         serializer = AdminBroadcastNotificationSerializer(data=request.data)
@@ -1485,6 +1510,12 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
             .exclude(role=UserRole.GUEST_USER)
             .values_list("id", flat=True)
         )
+        if serializer.validated_data.get("send_to_opted_in_only"):
+            opted_in_user_ids = UserNotificationPreference.objects.filter(
+                is_enabled=True,
+                browser_permission=UserNotificationPreference.BrowserPermission.GRANTED,
+            ).values_list("user_id", flat=True)
+            recipients = recipients.filter(id__in=opted_in_user_ids)
 
         rows = []
         count = 0
@@ -1511,6 +1542,7 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
                 "detail": "Notification broadcast sent.",
                 "sent_count": count,
                 "title": serializer.validated_data["title"],
+                "send_to_opted_in_only": serializer.validated_data.get("send_to_opted_in_only", False),
             },
             status=status.HTTP_201_CREATED,
         )

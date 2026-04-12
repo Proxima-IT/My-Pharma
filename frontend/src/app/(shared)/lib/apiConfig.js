@@ -72,6 +72,12 @@ export const BLOG_ENDPOINTS = {
   CATEGORIES: `${API_BASE_URL}/blog-categories/`,
 };
 
+export const NOTIFICATION_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/notifications/`,
+  PERMISSION: `${API_BASE_URL}/notifications/permission/`,
+  BROADCAST: `${API_BASE_URL}/notifications/broadcast/`,
+};
+
 /**
  * Safely parse a fetch response as JSON. When the server returns HTML (e.g. 500
  * error page) instead of JSON, avoids "Unexpected token '<'" and returns a
