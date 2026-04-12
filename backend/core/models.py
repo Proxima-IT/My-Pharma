@@ -556,10 +556,20 @@ class PaymentTransaction(models.Model):
         CANCELLED = "CANCELLED", "Cancelled"
         IPN_VERIFIED = "IPN_VERIFIED", "IPN Verified"
 
-    order = models.ForeignKey(
-        Order,
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="payment_transactions",
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        related_name="payment_transactions",
+        null=True,
+        blank=True,
         db_index=True,
     )
     method = models.CharField(max_length=20, choices=Method.choices, default=Method.COD, db_index=True)
@@ -575,6 +585,13 @@ class PaymentTransaction(models.Model):
     card_type = models.CharField(max_length=120, blank=True)
 
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.INITIATED, db_index=True)
+    shipping_address = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
+    subtotal_before_discount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    delivery_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    coupon_id_ref = models.PositiveIntegerField(null=True, blank=True)
+    cart_snapshot = models.JSONField(default=list, blank=True)
     request_payload = models.JSONField(default=dict, blank=True)
     gateway_response = models.JSONField(default=dict, blank=True)
     verified_response = models.JSONField(default=dict, blank=True)

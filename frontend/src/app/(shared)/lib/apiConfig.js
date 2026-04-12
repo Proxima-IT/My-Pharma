@@ -22,7 +22,7 @@ export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (isLocalhost
     ? 'http://localhost:8000/api'
-    : 'http://46.202.194.251:8000/api');
+    : 'https://mypharma.com/api');
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,

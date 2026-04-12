@@ -4,6 +4,22 @@ import { CART_ENDPOINTS, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
  * Pure API functions for Cart management
  */
 
+const getApiErrorMessage = (data, fallback) => {
+  if (!data || typeof data !== 'object') return fallback;
+  if (typeof data.detail === 'string' && data.detail.trim()) return data.detail;
+
+  // DRF field-level errors often come as { field: ["msg"] } or { field: "msg" }.
+  for (const value of Object.values(data)) {
+    if (typeof value === 'string' && value.trim()) return value;
+    if (Array.isArray(value) && value.length > 0) {
+      const first = value[0];
+      if (typeof first === 'string' && first.trim()) return first;
+    }
+  }
+
+  return fallback;
+};
+
 // GET /api/cart/
 export const fetchCartApi = async (token, params = {}) => {
   const queryString = new URLSearchParams(params).toString();
@@ -48,7 +64,7 @@ export const addToCartApi = async (
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Failed to add item to cart');
+    throw new Error(getApiErrorMessage(data, 'Failed to add item to cart'));
   }
   return data;
 };
@@ -74,7 +90,7 @@ export const updateCartItemApi = async (
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Failed to update cart quantity');
+    throw new Error(getApiErrorMessage(data, 'Failed to update cart quantity'));
   }
   return data;
 };
@@ -91,7 +107,7 @@ export const removeFromCartApi = async (token, itemId) => {
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.detail || 'Failed to remove item from cart');
+    throw new Error(getApiErrorMessage(data, 'Failed to remove item from cart'));
   }
   return true;
 };
@@ -109,8 +125,7 @@ export const placeOrderApi = async (token, orderData) => {
 
   const data = await response.json();
   if (!response.ok) {
-    const errorMsg = data.detail || JSON.stringify(data);
-    throw new Error(errorMsg);
+    throw new Error(getApiErrorMessage(data, 'Failed to place order'));
   }
   return data;
 };
@@ -131,7 +146,7 @@ export const applyCartCouponApi = async (token, code) => {
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Invalid or expired coupon code');
+    throw new Error(getApiErrorMessage(data, 'Invalid or expired coupon code'));
   }
   return data;
 };
@@ -151,7 +166,7 @@ export const removeCartCouponApi = async token => {
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(data.detail || 'Failed to remove coupon');
+    throw new Error(getApiErrorMessage(data, 'Failed to remove coupon'));
   }
   return data;
 };
