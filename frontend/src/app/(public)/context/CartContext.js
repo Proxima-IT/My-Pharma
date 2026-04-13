@@ -14,6 +14,13 @@ const CartContext = createContext();
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState(null);
+
+  // Initialize selectedDeliveryId from localStorage
+  useEffect(() => {
+    const savedId = localStorage.getItem('selected_delivery_id');
+    if (savedId) setSelectedDeliveryId(savedId);
+  }, []);
 
   const processCartResponse = data => {
     if (!data) return null;
@@ -24,7 +31,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const refreshCart = useCallback(
-    async (couponCode = null, showLoading = true) => {
+    async (couponCode = null, showLoading = true, deliveryId = null) => {
       if (showLoading) setIsLoading(true);
       try {
         const token = localStorage.getItem('access_token');
@@ -39,7 +46,16 @@ export const CartProvider = ({ children }) => {
           return;
         }
 
-        const params = couponCode ? { coupon_code: couponCode } : {};
+        // Priority: Passed deliveryId > State selectedDeliveryId
+        const activeDeliveryId =
+          deliveryId ||
+          selectedDeliveryId ||
+          localStorage.getItem('selected_delivery_id');
+
+        const params = {};
+        if (couponCode) params.coupon_code = couponCode;
+        if (activeDeliveryId) params.delivery_duration_id = activeDeliveryId;
+
         const data = await fetchCartApi(token, params);
         setCart(processCartResponse(data));
       } catch (err) {
@@ -48,8 +64,19 @@ export const CartProvider = ({ children }) => {
         setIsLoading(false);
       }
     },
-    [],
+    [selectedDeliveryId],
   );
+
+  /**
+   * Updates the selected delivery option and triggers a cart refresh
+   * to get updated delivery fees and total payable.
+   */
+  const updateDeliveryOption = async id => {
+    setSelectedDeliveryId(id);
+    localStorage.setItem('selected_delivery_id', id);
+    // Immediately refresh with the new ID to ensure summary updates
+    await refreshCart(null, true, id);
+  };
 
   useEffect(() => {
     refreshCart();
@@ -57,7 +84,15 @@ export const CartProvider = ({ children }) => {
 
   return (
     <CartContext.Provider
-      value={{ cart, setCart, refreshCart, isLoading, processCartResponse }}
+      value={{
+        cart,
+        setCart,
+        refreshCart,
+        isLoading,
+        processCartResponse,
+        selectedDeliveryId,
+        updateDeliveryOption,
+      }}
     >
       {children}
     </CartContext.Provider>

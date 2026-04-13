@@ -9,8 +9,8 @@ import { useCart } from '../../../hooks/useCart';
 
 /**
  * OrderSummaryCard Component
- * Updated: Integrated with stateful backend coupon persistence.
- * Features: Displays subtotal_before_discount and handles server-side coupon removal.
+ * Updated: Integrated with dynamic delivery fee breakdown (Base + Option Charge).
+ * Features: Displays subtotal_before_discount and detailed shipping components.
  */
 const OrderSummaryCard = ({
   summary: propSummary,
@@ -53,16 +53,18 @@ const OrderSummaryCard = ({
 
   const isApplied = !!appliedCoupon;
 
-  // 2. Map display data using persisted backend fields
+  // 2. Map display data using persisted backend fields including delivery breakdown
   const displayData = {
-    // sub_total in hook is mapped to backend's subtotal_before_discount
     subtotal: parseFloat(
       activeSummary?.sub_total || calculatedValues.subtotal || 0,
     ),
     discount: parseFloat(activeSummary?.discount_amount || 0),
-    deliveryFee: parseFloat(
-      activeSummary?.shipping_charge || calculatedValues.deliveryFee || 0,
+    // Breakdown fields for shipping
+    baseDelivery: parseFloat(
+      activeSummary?.base_delivery_fee || calculatedValues.deliveryFee || 0,
     ),
+    optionCharge: parseFloat(activeSummary?.delivery_option_charge || 0),
+    optionName: activeSummary?.delivery_option_name || '',
     total: parseFloat(
       activeSummary?.total_amount ||
         calculatedValues.subtotal + calculatedValues.deliveryFee,
@@ -95,7 +97,7 @@ const OrderSummaryCard = ({
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 w-full transition-all shadow-sm">
+    <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 w-full transition-all">
       <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">
         Order Summary
       </h2>
@@ -116,16 +118,26 @@ const OrderSummaryCard = ({
           />
         )}
 
-        {/* Row 3: Delivery Fee */}
+        {/* Row 3: Base Delivery Fee */}
         <SummaryRow
-          label="Delivery Fee"
-          value={formatCurrency(displayData.deliveryFee)}
+          label={
+            displayData.optionCharge > 0 ? 'Base Shipping' : 'Delivery Fee'
+          }
+          value={formatCurrency(displayData.baseDelivery)}
         />
+
+        {/* Row 4: Delivery Option Extra Charge (If Selected) */}
+        {displayData.optionCharge > 0 && (
+          <SummaryRow
+            label={displayData.optionName || 'Express Handling'}
+            value={formatCurrency(displayData.optionCharge)}
+          />
+        )}
       </div>
 
       <div className="h-px bg-gray-100 w-full my-6" />
 
-      {/* Final Total: ((Subtotal - Discount) + Delivery) */}
+      {/* Final Total: ((Subtotal - Discount) + Base Delivery + Option Charge) */}
       <div className="flex items-center justify-between mb-8">
         <span className="text-lg font-bold text-gray-900 uppercase tracking-wider">
           Total
@@ -158,7 +170,7 @@ const OrderSummaryCard = ({
           {isApplied ? (
             <button
               onClick={handleRemoveCoupon}
-              disabled={isUpdating}
+              disabled={isApplyingCoupon}
               className="h-[52px] w-[52px] flex items-center justify-center rounded-full bg-red-50 text-red-500 border border-red-100 hover:bg-red-100 transition-all cursor-pointer disabled:opacity-50"
             >
               <FiX size={20} />

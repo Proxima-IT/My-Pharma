@@ -18,7 +18,7 @@ import OrderedProductCard from './components/OrderedProductCard';
 
 /**
  * OrderDetailsPage (Order Tracking)
- * Updated: Implemented persistent pricing breakdown using backend-provided fields.
+ * Updated: Implemented detailed delivery fee breakdown (Base + Option Charge) in Summary.
  * Design: White background, 1px Borders, Black text, Thin labels, Rounded-[32px].
  */
 export default function OrderDetailsPage({ params }) {
@@ -149,7 +149,7 @@ export default function OrderDetailsPage({ params }) {
             </div>
             <div className="text-left sm:text-center md:text-right">
               <span className="px-4 py-1.5 bg-gray-50 text-black text-[11px] md:text-[13px] font-bold rounded-full uppercase">
-                Bkash
+                {orderDetails.payment_method || 'ONLINE'}
               </span>
               <p className="text-[10px] md:text-[12px] font-light uppercase tracking-widest mt-2">
                 Payment Type
@@ -157,7 +157,7 @@ export default function OrderDetailsPage({ params }) {
             </div>
             <div className="col-span-2 sm:col-span-1 text-left sm:text-center md:text-right">
               <span className="text-lg md:text-xl lg:text-2xl font-bold">
-                ৳{parseFloat(orderDetails.total || 0).toLocaleString()}
+                {formatCurrency(orderDetails.total)}
               </span>
               <p className="text-[10px] md:text-[12px] font-light uppercase tracking-widest mt-1">
                 Total Amount
@@ -167,7 +167,7 @@ export default function OrderDetailsPage({ params }) {
         </div>
 
         {!isCancelled && (
-          <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-12 space-y-8 overflow-hidden">
+          <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-12 space-y-8 overflow-hidden shadow-none">
             <h3 className="text-xs md:text-sm font-bold uppercase tracking-[0.2em]">
               Timeline
             </h3>
@@ -225,7 +225,7 @@ export default function OrderDetailsPage({ params }) {
 
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-10">
           <div className="space-y-6 md:space-y-10">
-            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6">
+            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 shadow-none">
               <h3 className="text-xl md:text-2xl font-bold">Cart Product</h3>
               <div className="space-y-4">
                 {orderDetails.items?.map(item => (
@@ -238,8 +238,7 @@ export default function OrderDetailsPage({ params }) {
               </div>
             </div>
 
-            {/* FIXED: Dynamic Order Summary with persistent discount breakdown */}
-            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6">
+            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 shadow-none">
               <h3 className="text-xl md:text-2xl font-bold">Order Summary</h3>
               <div className="space-y-5">
                 <div className="flex justify-between text-sm md:text-[17px] font-bold">
@@ -247,11 +246,10 @@ export default function OrderDetailsPage({ params }) {
                     Subtotal
                   </span>
                   <span className="font-bold">
-                    ৳
-                    {(
+                    {formatCurrency(
                       orderDetails.subtotal_before_discount ||
-                      subtotalCalculated
-                    ).toLocaleString()}
+                        subtotalCalculated,
+                    )}
                   </span>
                 </div>
 
@@ -264,28 +262,44 @@ export default function OrderDetailsPage({ params }) {
                         : ''}
                     </span>
                     <span className="text-red-500">
-                      -৳
-                      {parseFloat(
-                        orderDetails.discount_amount,
-                      ).toLocaleString()}
+                      -{formatCurrency(orderDetails.discount_amount)}
                     </span>
                   </div>
                 )}
 
+                {/* Base Shipping Fee */}
                 <div className="flex justify-between text-sm md:text-[17px] font-bold">
                   <span className="text-black font-light uppercase tracking-widest">
-                    Delivery Fee
+                    {parseFloat(orderDetails.delivery_option_charge) > 0
+                      ? 'Base Shipping'
+                      : 'Delivery Fee'}
                   </span>
                   <span className="font-bold">
-                    ৳{(orderDetails.delivery_fee || 150).toLocaleString()}
+                    {formatCurrency(
+                      orderDetails.base_delivery_fee ||
+                        orderDetails.delivery_fee ||
+                        0,
+                    )}
                   </span>
                 </div>
+
+                {/* Optional Delivery Upgrade Charge */}
+                {parseFloat(orderDetails.delivery_option_charge) > 0 && (
+                  <div className="flex justify-between text-sm md:text-[17px] font-bold">
+                    <span className="text-black font-light uppercase tracking-widest">
+                      {orderDetails.delivery_option_name || 'Express Upgrade'}
+                    </span>
+                    <span className="font-bold">
+                      +{formatCurrency(orderDetails.delivery_option_charge)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="h-px bg-gray-100 w-full" />
                 <div className="flex justify-between text-xl md:text-2xl font-black">
                   <span className="uppercase font-light">Total</span>
                   <span className="font-bold">
-                    ৳{parseFloat(orderDetails.total || 0).toLocaleString()}
+                    {formatCurrency(orderDetails.total)}
                   </span>
                 </div>
               </div>
@@ -293,14 +307,14 @@ export default function OrderDetailsPage({ params }) {
           </div>
 
           <div className="space-y-6 md:space-y-10">
-            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-8">
+            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-8 shadow-none">
               <div className="flex justify-between items-center">
                 <h3 className="text-xl md:text-2xl font-bold">
                   Shipping Address
                 </h3>
                 <Link
                   href="/user/address"
-                  className="px-4 py-2 bg-gray-50 rounded-full text-[12px] md:text-[14px] font-bold text-black border border-gray-100"
+                  className="px-4 py-2 bg-gray-50 rounded-full text-[12px] md:text-[14px] font-bold text-black border border-gray-100 shadow-none"
                 >
                   Change
                 </Link>
@@ -322,9 +336,14 @@ export default function OrderDetailsPage({ params }) {
                 {[
                   { label: 'Phone Number', value: addressDetails.phone },
                   { label: 'Gender', value: addressDetails.gender },
-                  { label: 'Deistic', value: addressDetails.district },
+                  { label: 'District', value: addressDetails.district },
                   { label: 'Thana', value: addressDetails.thana },
                   { label: 'Full Address', value: addressDetails.cleanAddress },
+                  {
+                    label: 'Delivery Type',
+                    value:
+                      orderDetails.delivery_option_name || 'Standard Delivery',
+                  },
                 ].map((item, i) => (
                   <div
                     key={i}
@@ -344,7 +363,7 @@ export default function OrderDetailsPage({ params }) {
               </div>
             </div>
 
-            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-8">
+            <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-8 shadow-none">
               <h3 className="text-xl md:text-2xl font-bold">Order Timeline</h3>
               <div className="space-y-0">
                 {orderDetails.status_history?.map((history, idx) => {
@@ -370,7 +389,7 @@ export default function OrderDetailsPage({ params }) {
                         <p className="text-[11px] md:text-[14px] font-bold text-gray-400 uppercase tracking-widest">
                           {history.date_bd}, {history.time_bd}
                         </p>
-                        <div className="bg-white border border-gray-100 p-5 md:p-8 rounded-[20px] md:rounded-[24px] space-y-2">
+                        <div className="bg-white border border-gray-100 p-5 md:p-8 rounded-[20px] md:rounded-[24px] space-y-2 shadow-none">
                           <div className="flex flex-wrap items-center gap-3 md:gap-4">
                             <h4 className="font-bold text-base md:text-xl uppercase">
                               Order {history.status}

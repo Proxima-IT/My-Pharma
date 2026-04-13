@@ -10,6 +10,7 @@ import {
   FiMail,
   FiClock,
   FiDollarSign,
+  FiTruck,
 } from 'react-icons/fi';
 import { useAdminOrders } from '../../../hooks/useAdminOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
@@ -17,7 +18,7 @@ import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 /**
  * AdminOrderDetailsPage
  * Strictly follows the Super Admin "Sharp" design system.
- * Updated: Implemented persistent financial breakdown (Subtotal, Discount, Delivery, Total).
+ * Updated: Included Delivery Type and Extra Charge breakdown in the financial ledger.
  */
 export default function AdminOrderDetailsPage({ params }) {
   const router = useRouter();
@@ -96,7 +97,7 @@ export default function AdminOrderDetailsPage({ params }) {
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer group border border-transparent"
+          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer group border border-transparent rounded-none"
         >
           <FiArrowLeft
             size={16}
@@ -144,11 +145,16 @@ export default function AdminOrderDetailsPage({ params }) {
             </div>
             <div className="bg-white border border-gray-100 p-6">
               <span className="block font-mono text-[10px] font-bold text-[#8A8A78] uppercase mb-2">
-                Current Status
+                Logistics Status
               </span>
-              <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 text-[10px] font-bold uppercase">
-                {orderDetails.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-block px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-100 text-[10px] font-bold uppercase">
+                  {orderDetails.status}
+                </span>
+                <span className="inline-block px-2 py-0.5 bg-gray-50 text-gray-700 border border-gray-100 text-[10px] font-bold uppercase">
+                  {orderDetails.delivery_option_type || 'STANDARD'}
+                </span>
+              </div>
             </div>
           </div>
 
@@ -190,25 +196,24 @@ export default function AdminOrderDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* 3. Financial Breakdown (New Audit Section) */}
+          {/* 3. Financial Breakdown */}
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2 border-b border-gray-50 pb-4">
-              <FiDollarSign className="text-[#3A5A40]" /> Pricing Summary
+              <FiDollarSign className="text-[#3A5A40]" /> Financial Ledger
             </h3>
             <div className="space-y-3 font-mono text-[11px] uppercase">
               <div className="flex justify-between items-center">
-                <span className="text-[#8A8A78]">Subtotal</span>
+                <span className="text-[#8A8A78]">Subtotal (Pre-Discount)</span>
                 <span className="text-[#1B1B1B] font-bold">
-                  {formatCurrency(
-                    orderDetails.subtotal_before_discount ||
-                      orderDetails.total - (orderDetails.delivery_fee || 150),
-                  )}
+                  {formatCurrency(orderDetails.subtotal_before_discount || 0)}
                 </span>
               </div>
 
               {parseFloat(orderDetails.discount_amount) > 0 && (
                 <div className="flex justify-between items-center text-red-600">
-                  <span>Discount ({orderDetails.coupon?.code || 'PROMO'})</span>
+                  <span>
+                    Discount ({orderDetails.coupon?.code || 'COUPON'})
+                  </span>
                   <span className="font-bold">
                     -{formatCurrency(orderDetails.discount_amount)}
                   </span>
@@ -216,11 +221,22 @@ export default function AdminOrderDetailsPage({ params }) {
               )}
 
               <div className="flex justify-between items-center">
-                <span className="text-[#8A8A78]">Delivery Fee</span>
+                <span className="text-[#8A8A78]">Base Shipping Charge</span>
                 <span className="text-[#1B1B1B] font-bold">
-                  {formatCurrency(orderDetails.delivery_fee || 150)}
+                  {formatCurrency(orderDetails.base_delivery_fee || 0)}
                 </span>
               </div>
+
+              {parseFloat(orderDetails.delivery_option_charge) > 0 && (
+                <div className="flex justify-between items-center text-[#3A5A40]">
+                  <span>
+                    {orderDetails.delivery_option_name || 'Delivery Upgrade'}
+                  </span>
+                  <span className="font-bold">
+                    +{formatCurrency(orderDetails.delivery_option_charge)}
+                  </span>
+                </div>
+              )}
 
               <div className="border-t border-gray-100 pt-4 flex justify-between items-center text-sm font-black text-[#3A5A40]">
                 <span>Total Amount</span>
@@ -260,7 +276,7 @@ export default function AdminOrderDetailsPage({ params }) {
                   key={status}
                   disabled={isUpdating || orderDetails.status === status}
                   onClick={() => handleStatusChange(status)}
-                  className={`w-full py-3 text-[10px] font-bold uppercase tracking-widest border transition-all cursor-pointer ${
+                  className={`w-full py-3 text-[10px] font-bold uppercase tracking-widest border transition-all cursor-pointer rounded-none ${
                     orderDetails.status === status
                       ? 'bg-gray-50 border-gray-100 text-[#B7B7A4] cursor-not-allowed'
                       : 'bg-white border-gray-200 text-[#1B1B1B] hover:border-[#3A5A40] hover:text-[#3A5A40]'
