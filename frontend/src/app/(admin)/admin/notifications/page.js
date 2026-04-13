@@ -1,136 +1,234 @@
 'use client';
 
-import React, { useState } from 'react';
-import { FiBell, FiSend } from 'react-icons/fi';
-import { broadcastNotificationApi } from '@/app/(admin)/api/notificationAdminApi';
+import React, { useState, useEffect } from 'react';
+import {
+  FiSend,
+  FiAlertCircle,
+  FiCheckCircle,
+  FiInfo,
+  FiExternalLink,
+} from 'react-icons/fi';
+import AuthGuard from '@/app/(shared)/components/AuthGuard';
+import { useNotificationAdmin } from '../../hooks/useNotificationAdmin';
 
-export default function AdminNotificationsPage() {
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [targetUrl, setTargetUrl] = useState('');
-  const [sendToOptedInOnly, setSendToOptedInOnly] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [result, setResult] = useState(null);
+/**
+ * Super Admin Notification Broadcast Page
+ * Refactored: Uses useNotificationAdmin hook for centralized state and API logic.
+ * Design: Sharp Minimalist (rounded-none, thin borders, industrial data feel).
+ */
+export default function AdminNotificationPage() {
+  return (
+    <AuthGuard allowedRoles={['SUPER_ADMIN']}>
+      <NotificationBroadcastContent />
+    </AuthGuard>
+  );
+}
+
+function NotificationBroadcastContent() {
+  const { broadcast, loading, error, success, clearStatus } =
+    useNotificationAdmin();
+
+  const [formData, setFormData] = useState({
+    title: '',
+    message: '',
+    target_url: '',
+    send_to_opted_in_only: false,
+  });
+
+  // Clear success message when user starts typing again
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        clearStatus();
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [success, clearStatus]);
 
   const handleSubmit = async e => {
     e.preventDefault();
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setError('Please login again.');
-      return;
-    }
+    const ok = await broadcast(formData);
 
-    setLoading(true);
-    setError('');
-    setResult(null);
-    try {
-      const data = await broadcastNotificationApi(token, {
-        title: title.trim(),
-        message: message.trim(),
-        target_url: targetUrl.trim(),
-        send_to_opted_in_only: sendToOptedInOnly,
+    if (ok) {
+      setFormData({
+        title: '',
+        message: '',
+        target_url: '',
+        send_to_opted_in_only: false,
       });
-      setResult(data);
-    } catch (err) {
-      setError(err.message || 'Failed to send notifications.');
-    } finally {
-      setLoading(false);
     }
   };
 
-  const labelClass =
-    'font-mono text-[10px] font-bold text-[#8A8A78] uppercase mb-2 block tracking-widest';
   const inputClass =
-    'w-full px-4 py-3 bg-white border border-gray-100 rounded-none text-sm focus:outline-none focus:border-[#3A5A40] transition-all';
+    'w-full border border-gray-100 p-4 font-mono text-sm focus:outline-none focus:border-black transition-colors rounded-none bg-white shadow-none';
+  const labelClass =
+    'block text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2';
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex items-center gap-4 border-b border-gray-100 pb-6">
-        <div className="w-10 h-10 border border-gray-100 bg-white flex items-center justify-center">
-          <FiBell className="text-[#3A5A40]" />
-        </div>
+    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-8">
         <div>
-          <h1 className="text-3xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
-            Notifications
+          <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
+            System Broadcast
           </h1>
-          <p className="text-[11px] font-mono text-[#8A8A78] mt-1 uppercase tracking-widest">
-            Broadcast updates to users
+          <p className="text-[13px] text-[#6B6B5E] mt-3 font-medium max-w-xl">
+            Dispatch global notifications to all users or target specific
+            segments based on browser push permissions.
           </p>
+        </div>
+        <div className="flex items-center gap-2 border border-gray-100 p-3 bg-gray-50/50">
+          <FiInfo className="text-gray-400" />
+          <span className="font-mono text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
+            Protocol: VAPID_SUBSCRIPTION_ACTIVE
+          </span>
         </div>
       </div>
 
-      {error ? (
-        <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-xs uppercase">
-          {error}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* Main Compose Form */}
+        <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-8">
+          <div className="border border-gray-100 p-8 space-y-6 bg-white shadow-none">
+            <div>
+              <label className={labelClass}>Notification Title</label>
+              <input
+                type="text"
+                required
+                maxLength={200}
+                placeholder="E.G. SYSTEM_MAINTENANCE_NOTICE"
+                className={inputClass}
+                value={formData.title}
+                onChange={e => {
+                  if (success || error) clearStatus();
+                  setFormData({ ...formData, title: e.target.value });
+                }}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Broadcast Message</label>
+              <textarea
+                required
+                rows={5}
+                placeholder="ENTER SYSTEM MESSAGE CONTENT..."
+                className={`${inputClass} resize-none`}
+                value={formData.message}
+                onChange={e => {
+                  if (success || error) clearStatus();
+                  setFormData({ ...formData, message: e.target.value });
+                }}
+              />
+            </div>
+
+            <div>
+              <label className={labelClass}>Action URL (Optional)</label>
+              <div className="relative">
+                <FiExternalLink className="absolute right-4 top-4 text-gray-300" />
+                <input
+                  type="url"
+                  placeholder="HTTPS://MYPHARMA.COM/ORDERS"
+                  className={inputClass}
+                  value={formData.target_url}
+                  onChange={e =>
+                    setFormData({ ...formData, target_url: e.target.value })
+                  }
+                />
+              </div>
+              <p className="text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
+                Users will be redirected to this link when they click the
+                notification.
+              </p>
+            </div>
+          </div>
+
+          {/* Action Footer */}
+          <div className="flex flex-col sm:flex-row items-center gap-6">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full sm:w-auto h-16 px-12 bg-black text-white font-black uppercase tracking-[0.3em] text-xs flex items-center justify-center gap-4 hover:bg-gray-800 transition-all disabled:opacity-20 cursor-pointer rounded-none shadow-none border-none"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <FiSend size={18} /> Execute Broadcast
+                </>
+              )}
+            </button>
+
+            {success && (
+              <div className="flex items-center gap-3 font-mono text-[11px] font-bold uppercase text-green-600">
+                <FiCheckCircle /> BROADCAST_QUEUED_SUCCESSFULLY
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-center gap-3 font-mono text-[11px] font-bold uppercase text-red-600">
+                <FiAlertCircle /> ERROR: {error}
+              </div>
+            )}
+          </div>
+        </form>
+
+        {/* Configuration Sidebar */}
+        <div className="space-y-6">
+          <div className="border border-gray-100 p-6 space-y-6 bg-gray-50/30">
+            <h3 className={labelClass}>Segmentation Control</h3>
+
+            <label className="flex items-start gap-4 cursor-pointer group">
+              <div className="relative flex items-center mt-1">
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={formData.send_to_opted_in_only}
+                  onChange={e =>
+                    setFormData({
+                      ...formData,
+                      send_to_opted_in_only: e.target.checked,
+                    })
+                  }
+                />
+                <div
+                  className={`w-10 h-5 border border-gray-200 transition-colors ${formData.send_to_opted_in_only ? 'bg-black' : 'bg-white'}`}
+                >
+                  <div
+                    className={`absolute top-1 w-3 h-3 transition-all ${formData.send_to_opted_in_only ? 'left-6 bg-white' : 'left-1 bg-gray-200'}`}
+                  />
+                </div>
+              </div>
+              <div className="flex-1">
+                <span className="text-[11px] font-black text-black uppercase tracking-widest block">
+                  Opt-in Only
+                </span>
+                <span className="text-[10px] text-gray-500 uppercase leading-tight block mt-1">
+                  Send only to users who have explicitly granted browser
+                  notification permissions.
+                </span>
+              </div>
+            </label>
+
+            <div className="pt-6 border-t border-gray-100">
+              <h4 className={labelClass}>Transmission Mode</h4>
+              <div className="p-4 bg-white border border-gray-100 font-mono text-[10px] text-gray-400 uppercase space-y-2">
+                <p>• Persistent DB Record</p>
+                <p>• OS Level Push (SW)</p>
+                <p>• Action Link Injection</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 border border-amber-100 bg-amber-50/50 shadow-none">
+            <div className="flex gap-3">
+              <FiAlertCircle className="text-amber-500 shrink-0" size={18} />
+              <p className="text-[10px] font-bold text-amber-700 uppercase leading-relaxed tracking-tight">
+                Warning: System broadcasts are dispatched in real-time. Verify
+                payload integrity before execution.
+              </p>
+            </div>
+          </div>
         </div>
-      ) : null}
-
-      {result ? (
-        <div className="p-4 bg-green-50 border border-green-100 text-green-700 font-mono text-xs uppercase">
-          {result.detail} Sent: {result.sent_count}
-          {' | '}Push Attempted: {result.push_attempted}
-          {' | '}Push Succeeded: {result.push_succeeded}
-          {' | '}Push Failed: {result.push_failed}
-        </div>
-      ) : null}
-
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white border border-gray-100 p-8 space-y-6"
-      >
-        <div>
-          <label className={labelClass}>Notification Title</label>
-          <input
-            className={inputClass}
-            value={title}
-            onChange={e => setTitle(e.target.value)}
-            maxLength={200}
-            required
-            placeholder="System Update"
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Message</label>
-          <textarea
-            className={inputClass + ' min-h-[140px]'}
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            required
-            placeholder="Write your broadcast message..."
-          />
-        </div>
-
-        <div>
-          <label className={labelClass}>Target URL (optional)</label>
-          <input
-            className={inputClass}
-            value={targetUrl}
-            onChange={e => setTargetUrl(e.target.value)}
-            placeholder="https://mypharma.com/orders"
-          />
-        </div>
-
-        <label className="flex items-center gap-3 text-sm text-[#1B1B1B]">
-          <input
-            type="checkbox"
-            checked={sendToOptedInOnly}
-            onChange={e => setSendToOptedInOnly(e.target.checked)}
-            className="w-4 h-4"
-          />
-          Send only to users who enabled notification permission
-        </label>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-5 py-3 bg-[#3A5A40] text-white text-xs font-mono uppercase tracking-widest hover:bg-[#2d4732] disabled:opacity-60 transition-all"
-        >
-          <FiSend />
-          {loading ? 'Sending...' : 'Send Broadcast'}
-        </button>
-      </form>
+      </div>
     </div>
   );
 }
