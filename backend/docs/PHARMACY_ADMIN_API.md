@@ -38,12 +38,16 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 |--------|------|-------------|
 | GET | `/api/categories/` | List categories. Query: `is_active`, `parent`, `search`. |
 | GET | `/api/categories/tree/` | Category hierarchy (roots with nested children). |
+| GET | `/api/categories/sidebar/` | Public sidebar categories selected from existing categories. |
+| PUT | `/api/categories/sidebar/` | Replace sidebar selection (ordered `category_ids`) as admin. |
+| GET | `/api/categories/featured/` | Public featured categories for home page. |
+| PUT | `/api/categories/featured/` | Replace featured selection (ordered `category_ids`) as admin. |
 | GET | `/api/categories/{slug}/` | Retrieve one category. |
 | POST | `/api/categories/` | Create category. |
 | PUT / PATCH | `/api/categories/{slug}/` | Update category. |
 | DELETE | `/api/categories/{slug}/` | Delete category. |
 
-**Response fields:** `id`, `parent`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `created_at`, `updated_at`.
+**Response fields:** `id`, `parent`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only), `created_at`, `updated_at`.
 
 **Create/Update:** Use **multipart/form-data** when sending `image`; otherwise **application/json** is fine.
 
@@ -71,6 +75,8 @@ Left sidebar items: image + title. List and retrieve are public; create/update/d
 | DELETE | `/api/sidebar-categories/{id}/` | Delete sidebar category (admin). |
 
 **Response fields:** `id`, `image`, `image_url` (absolute URL), `title`.
+
+For sidebar built from existing category rows, prefer `/api/categories/sidebar/`.
 
 **Create/Update (multipart for image):** `image` (file, optional), `title` (string, required on create).
 

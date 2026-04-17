@@ -9,6 +9,7 @@ from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
 from django.http import HttpResponseRedirect
 from django.utils import timezone
@@ -38,6 +39,8 @@ from .serializers import (
     BrandSerializer,
     CategorySerializer,
     CategoryTreeSerializer,
+    CategoryMenuSerializer,
+    CategorySelectionUpdateSerializer,
     IngredientSerializer,
     ProductListSerializer,
     ProductDetailSerializer,
@@ -371,9 +374,11 @@ def _verify_payment_amount_matches(payment_txn: PaymentTransaction, verification
     destroy=extend_schema(tags=["Categories"], summary="Delete category"),
 )
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.select_related("parent").prefetch_related("children").all()
+    queryset = Category.objects.select_related("parent").prefetch_related("children").annotate(
+        product_count=Count("products", filter=Q(products__is_active=True), distinct=True)
+    ).all()
     serializer_class = CategorySerializer
-    filterset_fields = ["is_active", "parent"]
+    filterset_fields = ["is_active", "parent", "show_in_sidebar", "is_featured_home"]
     search_fields = ["name", "slug"]
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
@@ -381,11 +386,15 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve", "tree"):
             return [AllowAnyIncludingGuest()]
+        if self.action in ("sidebar", "featured") and self.request.method == "GET":
+            return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
     def get_serializer_class(self):
         if self.action == "tree":
             return CategoryTreeSerializer
+        if self.action in ("sidebar", "featured"):
+            return CategorySelectionUpdateSerializer if self.request.method in ("PUT", "PATCH") else CategoryMenuSerializer
         return CategorySerializer
 
     @action(detail=False, methods=["get"], url_path="tree")
@@ -393,6 +402,104 @@ class CategoryViewSet(viewsets.ModelViewSet):
         """Return category hierarchy (root categories with nested children). ?parent__isnull=true for roots."""
         roots = Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related("children").order_by("name")
         return Response(CategoryTreeSerializer(roots, many=True, context={"request": request}).data)
+
+    @extend_schema(
+        methods=["GET"],
+        tags=["Categories"],
+        summary="List sidebar categories",
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        tags=["Categories"],
+        summary="Replace sidebar categories (admin)",
+        request=CategorySelectionUpdateSerializer,
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get", "put"],
+        url_path="sidebar",
+        pagination_class=None,
+        filter_backends=[],
+    )
+    def sidebar(self, request):
+        """
+        GET: public sidebar category list from existing Category rows.
+        PUT: admin replaces sidebar selection with ordered category_ids.
+        """
+        if request.method == "GET":
+            sidebar_categories = (
+                Category.objects.filter(is_active=True, show_in_sidebar=True)
+                .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+                .order_by("sidebar_order", "name")
+            )
+            return Response(CategoryMenuSerializer(sidebar_categories, many=True, context={"request": request}).data)
+
+        serializer = CategorySelectionUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_ids = serializer.validated_data["category_ids"]
+
+        with transaction.atomic():
+            Category.objects.filter(show_in_sidebar=True).update(show_in_sidebar=False, sidebar_order=0)
+            for order, category_id in enumerate(category_ids):
+                Category.objects.filter(id=category_id).update(show_in_sidebar=True, sidebar_order=order)
+
+        sidebar_categories = (
+            Category.objects.filter(id__in=category_ids, show_in_sidebar=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("sidebar_order", "name")
+        )
+        return Response(CategoryMenuSerializer(sidebar_categories, many=True, context={"request": request}).data)
+
+    @extend_schema(
+        methods=["GET"],
+        tags=["Categories"],
+        summary="List featured home categories",
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        tags=["Categories"],
+        summary="Replace featured home categories (admin)",
+        request=CategorySelectionUpdateSerializer,
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get", "put"],
+        url_path="featured",
+        pagination_class=None,
+        filter_backends=[],
+    )
+    def featured(self, request):
+        """
+        GET: public featured category list for home page.
+        PUT: admin replaces featured selection with ordered category_ids.
+        """
+        if request.method == "GET":
+            featured_categories = (
+                Category.objects.filter(is_active=True, is_featured_home=True)
+                .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+                .order_by("featured_order", "name")
+            )
+            return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
+
+        serializer = CategorySelectionUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_ids = serializer.validated_data["category_ids"]
+
+        with transaction.atomic():
+            Category.objects.filter(is_featured_home=True).update(is_featured_home=False, featured_order=0)
+            for order, category_id in enumerate(category_ids):
+                Category.objects.filter(id=category_id).update(is_featured_home=True, featured_order=order)
+
+        featured_categories = (
+            Category.objects.filter(id__in=category_ids, is_featured_home=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("featured_order", "name")
+        )
+        return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
 
 
 # ---- Brand (autocomplete for product search). List: any; write: Pharmacy Admin / Super ----

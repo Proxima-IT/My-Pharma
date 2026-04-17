@@ -1613,6 +1613,10 @@ paths:
         name: is_active
         schema:
           type: boolean
+      - in: query
+        name: is_featured_home
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -1623,6 +1627,10 @@ paths:
         name: parent
         schema:
           type: integer
+      - in: query
+        name: show_in_sidebar
+        schema:
+          type: boolean
       tags:
       - Categories
       responses:
@@ -1748,6 +1756,100 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/categories/featured/:
+    get:
+      operationId: categories_featured_list
+      description: |-
+        GET: public featured category list for home page.
+        PUT: admin replaces featured selection with ordered category_ids.
+      summary: List featured home categories
+      tags:
+      - Categories
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+    put:
+      operationId: categories_featured_update
+      description: |-
+        GET: public featured category list for home page.
+        PUT: admin replaces featured selection with ordered category_ids.
+      summary: Replace featured home categories (admin)
+      tags:
+      - Categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+  /api/categories/sidebar/:
+    get:
+      operationId: categories_sidebar_list
+      description: |-
+        GET: public sidebar category list from existing Category rows.
+        PUT: admin replaces sidebar selection with ordered category_ids.
+      summary: List sidebar categories
+      tags:
+      - Categories
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+    put:
+      operationId: categories_sidebar_update
+      description: |-
+        GET: public sidebar category list from existing Category rows.
+        PUT: admin replaces sidebar selection with ordered category_ids.
+      summary: Replace sidebar categories (admin)
+      tags:
+      - Categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
   /api/categories/tree/:
     get:
       operationId: categories_tree_retrieve
@@ -4617,6 +4719,25 @@ components:
           readOnly: true
         is_active:
           type: boolean
+        show_in_sidebar:
+          type: boolean
+          description: When true, this category is shown in the public sidebar menu.
+        sidebar_order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Sidebar display order; lower values appear first.
+        is_featured_home:
+          type: boolean
+          description: When true, this category is shown in home featured categories.
+        featured_order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Home featured display order; lower values appear first.
+        product_count:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -4630,8 +4751,68 @@ components:
       - id
       - image_url
       - name
+      - product_count
       - slug
       - updated_at
+    CategoryMenu:
+      type: object
+      description: Compact category payload for sidebar and featured home sections.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        image:
+          type: string
+          format: uri
+          readOnly: true
+          nullable: true
+        image_url:
+          type: string
+          readOnly: true
+        quantity:
+          type: string
+          readOnly: true
+        sidebar_order:
+          type: integer
+          readOnly: true
+          description: Sidebar display order; lower values appear first.
+        featured_order:
+          type: integer
+          readOnly: true
+          description: Home featured display order; lower values appear first.
+      required:
+      - featured_order
+      - id
+      - image
+      - image_url
+      - name
+      - quantity
+      - sidebar_order
+      - slug
+      - title
+    CategorySelectionUpdate:
+      type: object
+      description: Exact selection list for sidebar/featured category menus.
+      properties:
+        category_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+          description: Ordered category ids. Existing selections not included here
+            will be unset.
+      required:
+      - category_ids
     CategoryTree:
       type: object
       description: Category with nested children for hierarchy (PRODUCT CATALOG >
@@ -4659,6 +4840,25 @@ components:
           readOnly: true
         is_active:
           type: boolean
+        show_in_sidebar:
+          type: boolean
+          description: When true, this category is shown in the public sidebar menu.
+        sidebar_order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Sidebar display order; lower values appear first.
+        is_featured_home:
+          type: boolean
+          description: When true, this category is shown in home featured categories.
+        featured_order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Home featured display order; lower values appear first.
+        product_count:
+          type: string
+          readOnly: true
         children:
           type: string
           readOnly: true
@@ -4676,6 +4876,7 @@ components:
       - id
       - image_url
       - name
+      - product_count
       - slug
       - updated_at
     Combo:
@@ -6296,6 +6497,25 @@ components:
           readOnly: true
         is_active:
           type: boolean
+        show_in_sidebar:
+          type: boolean
+          description: When true, this category is shown in the public sidebar menu.
+        sidebar_order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Sidebar display order; lower values appear first.
+        is_featured_home:
+          type: boolean
+          description: When true, this category is shown in home featured categories.
+        featured_order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Home featured display order; lower values appear first.
+        product_count:
+          type: string
+          readOnly: true
         created_at:
           type: string
           format: date-time

@@ -23,6 +23,24 @@ class Category(models.Model):
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     image = models.ImageField(upload_to="categories/%Y/%m/", blank=True, null=True)
     is_active = models.BooleanField(default=True)
+    show_in_sidebar = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="When true, this category is shown in the public sidebar menu.",
+    )
+    sidebar_order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Sidebar display order; lower values appear first.",
+    )
+    is_featured_home = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="When true, this category is shown in home featured categories.",
+    )
+    featured_order = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Home featured display order; lower values appear first.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

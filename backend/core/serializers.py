@@ -54,35 +54,134 @@ from authentication.models import UserAddress
 # ---- Category (hierarchy: parent / children) ----
 class CategorySerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
+    product_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ("id", "parent", "name", "slug", "image", "image_url", "is_active", "created_at", "updated_at")
-        read_only_fields = ("id", "slug", "image_url", "created_at", "updated_at")
+        fields = (
+            "id",
+            "parent",
+            "name",
+            "slug",
+            "image",
+            "image_url",
+            "is_active",
+            "show_in_sidebar",
+            "sidebar_order",
+            "is_featured_home",
+            "featured_order",
+            "product_count",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "slug", "image_url", "product_count", "created_at", "updated_at")
 
     def get_image_url(self, obj):
         if obj.image and self.context.get("request"):
             return self.context["request"].build_absolute_uri(obj.image.url)
         return obj.image.url if obj.image else None
+
+    def get_product_count(self, obj):
+        if hasattr(obj, "product_count") and obj.product_count is not None:
+            return obj.product_count
+        return obj.products.filter(is_active=True).count()
 
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
     """Category with nested children for hierarchy (PRODUCT CATALOG > MEDICINES, SUPPLEMENTS, DEVICES)."""
     children = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
+    product_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Category
-        fields = ("id", "parent", "name", "slug", "image", "image_url", "is_active", "children", "created_at", "updated_at")
+        fields = (
+            "id",
+            "parent",
+            "name",
+            "slug",
+            "image",
+            "image_url",
+            "is_active",
+            "show_in_sidebar",
+            "sidebar_order",
+            "is_featured_home",
+            "featured_order",
+            "product_count",
+            "children",
+            "created_at",
+            "updated_at",
+        )
 
     def get_image_url(self, obj):
         if obj.image and self.context.get("request"):
             return self.context["request"].build_absolute_uri(obj.image.url)
         return obj.image.url if obj.image else None
 
+    def get_product_count(self, obj):
+        if hasattr(obj, "product_count") and obj.product_count is not None:
+            return obj.product_count
+        return obj.products.filter(is_active=True).count()
+
     def get_children(self, obj):
         children = obj.children.filter(is_active=True).order_by("name")
         return CategoryTreeSerializer(children, many=True, context=self.context).data
+
+
+class CategoryMenuSerializer(serializers.ModelSerializer):
+    """Compact category payload for sidebar and featured home sections."""
+    image_url = serializers.SerializerMethodField()
+    title = serializers.CharField(source="name", read_only=True)
+    quantity = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = (
+            "id",
+            "name",
+            "title",
+            "slug",
+            "image",
+            "image_url",
+            "quantity",
+            "sidebar_order",
+            "featured_order",
+        )
+        read_only_fields = fields
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+    def get_quantity(self, obj):
+        if hasattr(obj, "product_count") and obj.product_count is not None:
+            return obj.product_count
+        return obj.products.filter(is_active=True).count()
+
+
+class CategorySelectionUpdateSerializer(serializers.Serializer):
+    """Exact selection list for sidebar/featured category menus."""
+    category_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=True,
+        help_text="Ordered category ids. Existing selections not included here will be unset.",
+    )
+
+    def validate_category_ids(self, value):
+        deduped = []
+        seen = set()
+        for category_id in value:
+            if category_id not in seen:
+                seen.add(category_id)
+                deduped.append(category_id)
+        existing_ids = set(
+            Category.objects.filter(id__in=deduped).values_list("id", flat=True)
+        )
+        missing_ids = [cid for cid in deduped if cid not in existing_ids]
+        if missing_ids:
+            raise serializers.ValidationError(f"Category not found for ids: {missing_ids}")
+        return deduped
 
 
 # ---- Sidebar category (left sidebar: image + title) ----
