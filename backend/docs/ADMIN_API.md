@@ -60,16 +60,26 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 |--------|------|-------------|
 | GET | `/api/categories/` | List categories (filter: `parent`, `is_active`; search: name, slug) |
 | GET | `/api/categories/tree/` | Category hierarchy (roots with nested children) |
-| GET | `/api/categories/sidebar/` | Public sidebar menu categories selected from existing categories |
-| PUT | `/api/categories/sidebar/` | Admin replace sidebar menu selection (ordered `category_ids`) |
-| GET | `/api/categories/featured/` | Public featured categories for home section |
-| PUT | `/api/categories/featured/` | Admin replace featured home selection (ordered `category_ids`) |
+| GET | `/api/categories/sidebar-category/` | Public sidebar menu categories selected from existing categories |
+| PUT | `/api/categories/sidebar-category/` | Admin replace sidebar menu selection (ordered `category_ids`) |
+| GET | `/api/categories/featured-category/` | Public featured categories for home section |
+| PUT | `/api/categories/featured-category/` | Admin replace featured home selection (ordered `category_ids`) |
 | POST | `/api/categories/` | Create category |
 | GET | `/api/categories/{slug}/` | Retrieve category |
 | PUT / PATCH | `/api/categories/{slug}/` | Update category |
 | DELETE | `/api/categories/{slug}/` | Delete category |
 
 **Fields:** `name`, `parent`, `image` (optional), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only). Use multipart/form-data when uploading `image`.
+
+**Bulk selection body (`PUT /sidebar-category/` and `PUT /featured-category/`):**
+
+```json
+{
+  "category_ids": [3, 7, 12]
+}
+```
+
+Categories are saved in the given order (`sidebar_order` / `featured_order`).
 
 **Permission:** `IsPharmacyAdminOrSuper`.
 
@@ -82,7 +92,11 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | PUT / PATCH | `/api/sidebar-categories/{id}/` | Update (Pharmacy/Super only) |
 | DELETE | `/api/sidebar-categories/{id}/` | Delete (Pharmacy/Super only) |
 
-Preferred for category-based sidebar menus: use `/api/categories/sidebar/` so admins can select existing product categories directly.
+Preferred for category-based sidebar menus: use `/api/categories/sidebar-category/` so admins can select existing product categories directly.
+
+Backward-compatible aliases are still available:
+- `/api/categories/sidebar/`
+- `/api/categories/featured/`
 
 **Permission:** List/retrieve: any (including guest). Create/update/delete: `IsPharmacyAdminOrSuper`.
 

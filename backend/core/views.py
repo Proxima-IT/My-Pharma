@@ -386,14 +386,14 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ("list", "retrieve", "tree"):
             return [AllowAnyIncludingGuest()]
-        if self.action in ("sidebar", "featured") and self.request.method == "GET":
+        if self.action in ("sidebar", "featured", "sidebar_category", "featured_category") and self.request.method == "GET":
             return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
     def get_serializer_class(self):
         if self.action == "tree":
             return CategoryTreeSerializer
-        if self.action in ("sidebar", "featured"):
+        if self.action in ("sidebar", "featured", "sidebar_category", "featured_category"):
             return CategorySelectionUpdateSerializer if self.request.method in ("PUT", "PATCH") else CategoryMenuSerializer
         return CategorySerializer
 
@@ -402,6 +402,56 @@ class CategoryViewSet(viewsets.ModelViewSet):
         """Return category hierarchy (root categories with nested children). ?parent__isnull=true for roots."""
         roots = Category.objects.filter(parent__isnull=True, is_active=True).prefetch_related("children").order_by("name")
         return Response(CategoryTreeSerializer(roots, many=True, context={"request": request}).data)
+
+    def _list_sidebar_categories(self, request):
+        sidebar_categories = (
+            Category.objects.filter(is_active=True, show_in_sidebar=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("sidebar_order", "name")
+        )
+        return Response(CategoryMenuSerializer(sidebar_categories, many=True, context={"request": request}).data)
+
+    def _replace_sidebar_categories(self, request):
+        serializer = CategorySelectionUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_ids = serializer.validated_data["category_ids"]
+
+        with transaction.atomic():
+            Category.objects.filter(show_in_sidebar=True).update(show_in_sidebar=False, sidebar_order=0)
+            for order, category_id in enumerate(category_ids):
+                Category.objects.filter(id=category_id).update(show_in_sidebar=True, sidebar_order=order)
+
+        sidebar_categories = (
+            Category.objects.filter(id__in=category_ids, show_in_sidebar=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("sidebar_order", "name")
+        )
+        return Response(CategoryMenuSerializer(sidebar_categories, many=True, context={"request": request}).data)
+
+    def _list_featured_categories(self, request):
+        featured_categories = (
+            Category.objects.filter(is_active=True, is_featured_home=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("featured_order", "name")
+        )
+        return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
+
+    def _replace_featured_categories(self, request):
+        serializer = CategorySelectionUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_ids = serializer.validated_data["category_ids"]
+
+        with transaction.atomic():
+            Category.objects.filter(is_featured_home=True).update(is_featured_home=False, featured_order=0)
+            for order, category_id in enumerate(category_ids):
+                Category.objects.filter(id=category_id).update(is_featured_home=True, featured_order=order)
+
+        featured_categories = (
+            Category.objects.filter(id__in=category_ids, is_featured_home=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("featured_order", "name")
+        )
+        return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
 
     @extend_schema(
         methods=["GET"],
@@ -429,28 +479,38 @@ class CategoryViewSet(viewsets.ModelViewSet):
         PUT: admin replaces sidebar selection with ordered category_ids.
         """
         if request.method == "GET":
-            sidebar_categories = (
-                Category.objects.filter(is_active=True, show_in_sidebar=True)
-                .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
-                .order_by("sidebar_order", "name")
-            )
-            return Response(CategoryMenuSerializer(sidebar_categories, many=True, context={"request": request}).data)
+            return self._list_sidebar_categories(request)
+        return self._replace_sidebar_categories(request)
 
-        serializer = CategorySelectionUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        category_ids = serializer.validated_data["category_ids"]
-
-        with transaction.atomic():
-            Category.objects.filter(show_in_sidebar=True).update(show_in_sidebar=False, sidebar_order=0)
-            for order, category_id in enumerate(category_ids):
-                Category.objects.filter(id=category_id).update(show_in_sidebar=True, sidebar_order=order)
-
-        sidebar_categories = (
-            Category.objects.filter(id__in=category_ids, show_in_sidebar=True)
-            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
-            .order_by("sidebar_order", "name")
-        )
-        return Response(CategoryMenuSerializer(sidebar_categories, many=True, context={"request": request}).data)
+    @extend_schema(
+        methods=["GET"],
+        tags=["Categories"],
+        summary="List sidebar-category categories",
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        tags=["Categories"],
+        summary="Replace sidebar-category categories (admin)",
+        request=CategorySelectionUpdateSerializer,
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get", "put"],
+        url_path="sidebar-category",
+        pagination_class=None,
+        filter_backends=[],
+    )
+    def sidebar_category(self, request):
+        """
+        Primary endpoint for sidebar-related existing category selection.
+        GET: public list
+        PUT: admin replace ordered selection
+        """
+        if request.method == "GET":
+            return self._list_sidebar_categories(request)
+        return self._replace_sidebar_categories(request)
 
     @extend_schema(
         methods=["GET"],
@@ -478,28 +538,38 @@ class CategoryViewSet(viewsets.ModelViewSet):
         PUT: admin replaces featured selection with ordered category_ids.
         """
         if request.method == "GET":
-            featured_categories = (
-                Category.objects.filter(is_active=True, is_featured_home=True)
-                .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
-                .order_by("featured_order", "name")
-            )
-            return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
+            return self._list_featured_categories(request)
+        return self._replace_featured_categories(request)
 
-        serializer = CategorySelectionUpdateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        category_ids = serializer.validated_data["category_ids"]
-
-        with transaction.atomic():
-            Category.objects.filter(is_featured_home=True).update(is_featured_home=False, featured_order=0)
-            for order, category_id in enumerate(category_ids):
-                Category.objects.filter(id=category_id).update(is_featured_home=True, featured_order=order)
-
-        featured_categories = (
-            Category.objects.filter(id__in=category_ids, is_featured_home=True)
-            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
-            .order_by("featured_order", "name")
-        )
-        return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
+    @extend_schema(
+        methods=["GET"],
+        tags=["Categories"],
+        summary="List featured-category categories",
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        tags=["Categories"],
+        summary="Replace featured-category categories (admin)",
+        request=CategorySelectionUpdateSerializer,
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get", "put"],
+        url_path="featured-category",
+        pagination_class=None,
+        filter_backends=[],
+    )
+    def featured_category(self, request):
+        """
+        Primary endpoint for home featured existing category selection.
+        GET: public list
+        PUT: admin replace ordered selection
+        """
+        if request.method == "GET":
+            return self._list_featured_categories(request)
+        return self._replace_featured_categories(request)
 
 
 # ---- Brand (autocomplete for product search). List: any; write: Pharmacy Admin / Super ----
