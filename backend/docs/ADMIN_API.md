@@ -215,19 +215,41 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 
 ---
 
-## 6. Notifications (admin broadcast + user inbox)
+## 6. Notifications (admin broadcast + user inbox + FCM subscriptions)
 
 | Method | Path | Description |
 | ------ | ---- | ----------- |
 | GET | `/api/notifications/` | List current user's notifications. Filter: `is_read`. |
 | GET | `/api/notifications/{id}/` | Retrieve current user's notification by id. |
 | PATCH | `/api/notifications/{id}/read/` | Mark one notification as read (current user only). |
-| PATCH | `/api/notifications/read-all/` | Mark all current user's unread notifications as read. |
-| POST | `/api/notifications/broadcast/` | Broadcast notification to **all non-guest active users** (SUPER_ADMIN / PHARMACY_ADMIN). Body: `title`, `message`. |
+| PATCH | `/api/notifications/read-all/` | Mark all current user's unread notifications as read. Response: `{"marked_count": <int>}`. |
+| GET | `/api/notifications/permission/` | Get current browser push permission state (`browser_permission`, `is_enabled`, `platform`). |
+| POST | `/api/notifications/permission/` | Update browser permission state. |
+| GET | `/api/notifications/subscriptions/` | List current user's FCM subscriptions. |
+| POST | `/api/notifications/subscriptions/` | Upsert one FCM token. Body: `fcm_token`, optional `platform`, optional `is_active`. |
+| DELETE | `/api/notifications/subscriptions/` | Deactivate token. Body: `fcm_token`; response: `{"removed_count": <int>}`. |
+| POST | `/api/notifications/broadcast/` | Broadcast notification to **all non-guest active users** (SUPER_ADMIN / PHARMACY_ADMIN). Body: `title`, `message`, optional absolute `target_url` (`https://...`), optional `send_to_opted_in_only`. |
 
 **Permission:**  
 - Inbox endpoints (`list`, `retrieve`, `read`, `read-all`): `IsRegisteredUser` (authenticated non-guest users; queryset always own only).  
 - Broadcast endpoint: `IsPharmacyAdminOrSuper`.
+
+**Broadcast response (`201 Created`):**
+
+```json
+{
+  "detail": "Notification broadcast sent.",
+  "sent_count": 25,
+  "title": "Offer",
+  "send_to_opted_in_only": true,
+  "target_url": "https://mypharma.com.bd/offers",
+  "push_attempted": 20,
+  "push_succeeded": 19,
+  "push_failed": 1,
+  "push_deactivated": 1,
+  "push_async": true
+}
+```
 
 ---
 

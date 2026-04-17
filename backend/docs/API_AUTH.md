@@ -228,7 +228,7 @@ Then use **Verify OTP** (§2) with the same identifier + `otp`, and **Complete R
 
 **Response – 200 OK**
 
-Same structure as Verify OTP: `access`, `refresh`, `user`.
+Token response: `access`, `refresh`, `user`.
 
 **Error – 400 (validation)**
 
@@ -367,7 +367,7 @@ Missing or invalid access token.
 
 **Endpoint:** `POST /api/auth/password-reset/`
 
-**Description:** Request a password reset for the given email. If an account exists, an email is sent (via Celery). Same response whether or not the email exists (security).
+**Description:** Request a password reset for the given email. A reset link is sent to the registered email address.
 
 **Request body:**
 
@@ -381,7 +381,52 @@ Missing or invalid access token.
 
 ```json
 {
-  "message": "If an account exists with this email, you will receive reset instructions."
+  "message": "Password reset link sent to your email."
+}
+```
+
+**Error – 404 Not Found**
+
+```json
+{
+  "detail": "Email does not exist.",
+  "code": "email_not_found"
+}
+```
+
+---
+
+## 8.1 Password Reset Confirm
+
+**Endpoint:** `POST /api/auth/password-reset/confirm/`
+
+**Description:** Reset password using the token from the email reset link.
+
+**Request body:**
+
+```json
+{
+  "token": "<token-from-reset-link>",
+  "new_password": "NewSecurePass1!"
+}
+```
+
+(`registration_token` is also accepted for backward compatibility.)
+
+**Response – 200 OK**
+
+```json
+{
+  "message": "Password reset successful. You can now log in."
+}
+```
+
+**Error – 400 Bad Request (invalid/expired token)**
+
+```json
+{
+  "detail": "Invalid or expired password reset token.",
+  "code": "invalid_password_reset_token"
 }
 ```
 

@@ -1,6 +1,7 @@
 """
 Core API views with RBAC.
 """
+import logging
 import json
 import uuid
 from decimal import Decimal, InvalidOperation
@@ -67,9 +68,14 @@ from .serializers import (
     ConsultationResponseSerializer,
     UserNotificationSerializer,
     UserNotificationPreferenceSerializer,
+    UserNotificationPreferenceUpdateSerializer,
     UserPushSubscriptionSerializer,
     UserPushSubscriptionUpsertSerializer,
+    UserPushSubscriptionDeleteSerializer,
     AdminBroadcastNotificationSerializer,
+    NotificationMarkedCountSerializer,
+    NotificationRemovedCountSerializer,
+    NotificationBroadcastResultSerializer,
     PageSerializer,
     BlogCategorySerializer,
     BlogPostSerializer,
@@ -97,6 +103,8 @@ from .services import (
 from .tasks import dispatch_web_push_notifications
 from .filters import ProductFilter
 from .models import OrderSettlement, B2BCustomerProfile, B2BCommissionEntry
+
+logger = logging.getLogger(__name__)
 
 
 ONLINE_PAYMENT_METHODS = {
@@ -1489,7 +1497,7 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     queryset = UserNotification.objects.select_related("created_by", "user").all()
     serializer_class = UserNotificationSerializer
     filterset_fields = ["is_read"]
-    http_method_names = ["get", "post", "patch", "head", "options"]
+    http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
         if self.action == "broadcast":
@@ -1508,16 +1516,36 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
             notification.save(update_fields=["is_read", "read_at"])
         return Response(UserNotificationSerializer(notification, context={"request": request}).data)
 
+    @extend_schema(
+        request=None,
+        responses={200: NotificationMarkedCountSerializer},
+    )
     @action(detail=False, methods=["patch"], url_path="read-all")
     def mark_all_read(self, request):
         now = timezone.now()
         updated = UserNotification.objects.filter(user=request.user, is_read=False).update(is_read=True, read_at=now)
         return Response({"marked_count": updated}, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        methods=["GET"],
+        request=None,
+        responses={200: UserNotificationPreferenceSerializer},
+    )
+    @extend_schema(
+        methods=["POST"],
+        request=UserNotificationPreferenceUpdateSerializer,
+        responses={200: UserNotificationPreferenceSerializer},
+    )
     @action(detail=False, methods=["get", "post"], url_path="permission")
     def permission(self, request):
         pref, _ = UserNotificationPreference.objects.get_or_create(user=request.user)
         if request.method.lower() == "get":
+            logger.info(
+                "Notification permission fetched user_id=%s permission=%s enabled=%s",
+                request.user.id,
+                pref.browser_permission,
+                pref.is_enabled,
+            )
             return Response(UserNotificationPreferenceSerializer(pref).data, status=status.HTTP_200_OK)
 
         incoming_permission = (request.data.get("browser_permission") or "").strip().lower()
@@ -1536,13 +1564,40 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         pref.user_agent = (request.META.get("HTTP_USER_AGENT", "") or "")[:500]
         pref.platform = (request.data.get("platform") or "")[:100]
         pref.save()
+        logger.info(
+            "Notification permission updated user_id=%s permission=%s enabled=%s platform=%s",
+            request.user.id,
+            pref.browser_permission,
+            pref.is_enabled,
+            pref.platform,
+        )
         return Response(UserNotificationPreferenceSerializer(pref).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        methods=["GET"],
+        request=None,
+        responses={200: UserPushSubscriptionSerializer(many=True)},
+    )
+    @extend_schema(
+        methods=["POST"],
+        request=UserPushSubscriptionUpsertSerializer,
+        responses={200: UserPushSubscriptionSerializer},
+    )
+    @extend_schema(
+        methods=["DELETE"],
+        request=UserPushSubscriptionDeleteSerializer,
+        responses={200: NotificationRemovedCountSerializer},
+    )
     @action(detail=False, methods=["get", "post", "delete"], url_path="subscriptions")
     def subscriptions(self, request):
         method = request.method.lower()
         if method == "get":
             qs = UserPushSubscription.objects.filter(user=request.user).order_by("-updated_at")
+            logger.info(
+                "Push subscriptions listed user_id=%s count=%s",
+                request.user.id,
+                qs.count(),
+            )
             return Response(
                 UserPushSubscriptionSerializer(qs, many=True).data,
                 status=status.HTTP_200_OK,
@@ -1551,51 +1606,65 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         if method == "post":
             serializer = UserPushSubscriptionUpsertSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            endpoint = serializer.validated_data["endpoint"]
-            keys = serializer.validated_data["keys"]
-            subscription, _ = UserPushSubscription.objects.get_or_create(
-                endpoint=endpoint,
+            fcm_token = serializer.validated_data["fcm_token"]
+            # Upsert by fcm_token (unique at DB level)
+            subscription, created = UserPushSubscription.objects.update_or_create(
+                fcm_token=fcm_token,
                 defaults={
                     "user": request.user,
-                    "p256dh": keys["p256dh"],
-                    "auth": keys["auth"],
                     "is_active": serializer.validated_data.get("is_active", True),
                     "user_agent": (request.META.get("HTTP_USER_AGENT", "") or "")[:500],
                     "platform": (serializer.validated_data.get("platform") or "")[:100],
                 },
             )
-            subscription.user = request.user
-            subscription.p256dh = keys["p256dh"]
-            subscription.auth = keys["auth"]
-            subscription.is_active = serializer.validated_data.get("is_active", True)
-            subscription.user_agent = (request.META.get("HTTP_USER_AGENT", "") or "")[:500]
-            if serializer.validated_data.get("platform") is not None:
-                subscription.platform = (serializer.validated_data.get("platform") or "")[:100]
-            subscription.save()
+            logger.info(
+                "Push subscription upsert user_id=%s created=%s active=%s platform=%s token_prefix=%s",
+                request.user.id,
+                created,
+                subscription.is_active,
+                subscription.platform,
+                fcm_token[:20],
+            )
             return Response(
                 UserPushSubscriptionSerializer(subscription).data,
                 status=status.HTTP_200_OK,
             )
 
-        endpoint = (request.data.get("endpoint") or "").strip()
-        if not endpoint:
+        fcm_token = (request.data.get("fcm_token") or "").strip()
+        if not fcm_token:
             return Response(
-                {"endpoint": "endpoint is required."},
+                {"fcm_token": "fcm_token is required."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         updated = UserPushSubscription.objects.filter(
             user=request.user,
-            endpoint=endpoint,
+            fcm_token=fcm_token,
         ).update(is_active=False)
+        logger.info(
+            "Push subscription deactivated user_id=%s removed_count=%s token_prefix=%s",
+            request.user.id,
+            updated,
+            fcm_token[:20],
+        )
         return Response(
             {"removed_count": updated},
             status=status.HTTP_200_OK,
         )
 
+    @extend_schema(
+        request=AdminBroadcastNotificationSerializer,
+        responses={201: NotificationBroadcastResultSerializer},
+    )
     @action(detail=False, methods=["post"], url_path="broadcast")
     def broadcast(self, request):
         serializer = AdminBroadcastNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        logger.info(
+            "Notification broadcast requested by_user_id=%s opted_in_only=%s title=%s",
+            request.user.id,
+            serializer.validated_data.get("send_to_opted_in_only", False),
+            serializer.validated_data.get("title", "")[:80],
+        )
 
         User = get_user_model()
         recipients = (
@@ -1660,6 +1729,24 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
                 push_succeeded = stats.get("push_succeeded", 0)
                 push_failed = stats.get("push_failed", 0)
                 push_deactivated = stats.get("push_deactivated", 0)
+                logger.info(
+                    "Notification broadcast push completed eagerly task_id=%s stats=%s",
+                    getattr(task_result, "id", None),
+                    stats,
+                )
+            else:
+                logger.info(
+                    "Notification broadcast push enqueued task_id=%s recipients=%s attempted=%s",
+                    getattr(task_result, "id", None),
+                    len(recipient_ids),
+                    push_attempted,
+                )
+        else:
+            logger.info(
+                "Notification broadcast skipped push recipients=%s attempted=%s",
+                len(recipient_ids),
+                push_attempted,
+            )
 
         return Response(
             {

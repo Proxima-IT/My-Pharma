@@ -1,181 +1,305 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FiBell, FiX, FiCheck, FiAlertTriangle } from 'react-icons/fi';
+import { FiBell, FiX, FiCheck, FiAlertTriangle, FiWifi } from 'react-icons/fi';
 import { notificationApi } from '../api/notificationApi';
+import { registerPushSubscription } from '../lib/webPush';
 
 /**
  * NotificationPermissionPrompt
- * Refined: Added strict null checks for VAPID key and descriptive logging to debug environment issues.
- * Design: Public Zone (rounded-[32px], soft shadows).
+ * Firebase Cloud Messaging version.
+ * Same UI design — uses FCM getToken() instead of VAPID PushManager.subscribe()
  */
 export default function NotificationPermissionPrompt() {
   const [isVisible, setIsVisible] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  // 'idle' | 'success' | 'push_unavailable' | 'error'
+  const [resultState, setResultState] = useState('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
-  // Environment Variable Access
-  const VAPID_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-
-  // Helper: Convert VAPID key to Uint8Array safely
-  const urlBase64ToUint8Array = base64String => {
-    // CRITICAL FIX: Guard against undefined/null strings
-    if (!base64String || typeof base64String !== 'string') {
-      console.error(
-        'VAPID_CONVERSION_ERROR: Received invalid key string:',
-        base64String,
-      );
-      return null;
-    }
-
+  const syncGrantedPermissionSilently = async authToken => {
     try {
-      const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-      const base64 = (base64String + padding)
-        .replace(/-/g, '+')
-        .replace(/_/g, '/');
-      const rawData = window.atob(base64);
-      const outputArray = new Uint8Array(rawData.length);
-      for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i);
-      }
-      return outputArray;
+      console.log('[NotificationPrompt] Permission already granted. Running silent FCM sync.');
+      const fcmResult = await registerPushSubscription();
+      const tokenPreview = (fcmResult?.fcmToken || '').slice(0, 20);
+      console.log('[NotificationPrompt] Silent FCM token obtained:', `${tokenPreview}...`);
+      await notificationApi.saveSubscription(authToken, {
+        fcm_token: fcmResult.fcmToken,
+        platform: fcmResult.platform,
+      });
+      await notificationApi.updatePermissionState(authToken, {
+        browser_permission: 'granted',
+        is_enabled: true,
+        platform: navigator.platform,
+      });
+      console.log('[NotificationPrompt] Silent FCM sync completed successfully.');
     } catch (err) {
-      console.error('VAPID_CONVERSION_FAILED: Invalid base64 format.', err);
-      return null;
+      console.warn(
+        '[NotificationPrompt] Silent FCM sync failed:',
+        err?.message || err,
+      );
     }
   };
 
+  // ─── Mount check ──────────────────────────────────────────────────────────
+
   useEffect(() => {
     const checkStatus = async () => {
-      // 1. Browser Support Check
       if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        console.warn(
-          'PUSH_NOT_SUPPORTED: Browser does not support Push Notifications.',
-        );
+        console.warn('[NotificationPrompt] Push not supported in this browser.');
         return;
       }
 
-      // 2. Already decided?
-      if (
-        Notification.permission === 'granted' ||
-        Notification.permission === 'denied'
-      ) {
-        return;
-      }
+      const currentPermission = Notification.permission;
+      console.log('[NotificationPrompt] Notification.permission =', currentPermission);
 
-      // 3. User Auth Check
       const token = localStorage.getItem('access_token');
-      if (!token) return;
+      if (!token) {
+        console.log('[NotificationPrompt] No auth token, skipping prompt.');
+        return;
+      }
 
-      // Show after delay
-      const timer = setTimeout(() => setIsVisible(true), 4000);
+      if (currentPermission === 'granted') {
+        await syncGrantedPermissionSilently(token);
+        console.log('[NotificationPrompt] Permission already granted, skipping prompt UI.');
+        return;
+      }
+
+      if (currentPermission === 'denied') {
+        console.log('[NotificationPrompt] Permission denied previously, skipping prompt UI.');
+        return;
+      }
+
+      if (localStorage.getItem('push_prompt_dismissed') === 'true') {
+        console.log('[NotificationPrompt] Previously dismissed, not showing again.');
+        return;
+      }
+
+      if (window.isSecureContext === false) {
+        console.warn('[NotificationPrompt] Not a secure context (HTTPS required). Skipping.');
+        return;
+      }
+
+      console.log('[NotificationPrompt] All checks passed — showing prompt in 3s.');
+      const timer = setTimeout(() => {
+        console.log('[NotificationPrompt] Showing prompt.');
+        setIsVisible(true);
+      }, 3000);
       return () => clearTimeout(timer);
     };
 
     checkStatus();
   }, []);
 
-  const handleAllow = async () => {
-    // DEBUG LOG: See if the key is actually visible during click
-    console.log('INTERNAL_CHECK: VAPID_KEY is', VAPID_KEY);
+  // ─── Dismiss ──────────────────────────────────────────────────────────────
 
-    if (!VAPID_KEY) {
-      alert(
-        'Configuration Error: Notification Key (VAPID) is missing in environment files (.env.local).',
-      );
+  const handleDismiss = () => {
+    localStorage.setItem('push_prompt_dismissed', 'true');
+    setIsVisible(false);
+    setResultState('idle');
+    setErrorMessage('');
+  };
+
+  // ─── Allow ────────────────────────────────────────────────────────────────
+
+  const handleAllow = async () => {
+    setIsProcessing(true);
+    setResultState('idle');
+    setErrorMessage('');
+
+    const authToken = localStorage.getItem('access_token');
+    if (!authToken) {
+      setIsProcessing(false);
+      setIsVisible(false);
       return;
     }
 
-    setIsProcessing(true);
-    const token = localStorage.getItem('access_token');
-
     try {
-      // Step 1: Request Browser UI Permission
+      // Step 1: Ask browser permission
       const permission = await Notification.requestPermission();
-
-      // Step 2: Inform Backend about current state
-      await notificationApi.updatePermissionState(token, {
-        browser_permission: permission,
-        is_enabled: permission === 'granted',
-        platform: navigator.platform,
-      });
+      console.log('[NotificationPrompt] Browser permission result:', permission);
 
       if (permission === 'granted') {
-        // Step 3: Service Worker Registration
-        const registration = await navigator.serviceWorker.register('/sw.js');
-        await navigator.serviceWorker.ready;
+        // Step 2: Get FCM token via Firebase
+        let fcmResult = null;
+        let pushAvailable = true;
 
-        // Step 4: Subscription Generation
-        const convertedKey = urlBase64ToUint8Array(VAPID_KEY);
-        if (!convertedKey)
-          throw new Error('Could not convert VAPID Key to valid Uint8Array');
+        try {
+          fcmResult = await registerPushSubscription();
+          console.log('[NotificationPrompt] FCM token obtained:', fcmResult.fcmToken.substring(0, 20) + '...');
+        } catch (subscribeError) {
+          console.error('[NotificationPrompt] FCM registration failed:', subscribeError?.message);
+          pushAvailable = false;
 
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: convertedKey,
-        });
+          const msg = String(subscribeError?.message || '').toLowerCase();
+          if (
+            msg.includes('messaging is not supported') ||
+            msg.includes('push service') ||
+            msg.includes('failed to get fcm') ||
+            msg.includes('permission')
+          ) {
+            console.warn('[NotificationPrompt] Push service unreachable.');
+            setResultState('push_unavailable');
+          } else if (
+            msg.includes('missing next_public_firebase_vapid_key') ||
+            msg.includes('missing firebase config keys') ||
+            msg.includes('token-subscribe-failed') ||
+            msg.includes('authentication credential')
+          ) {
+            setResultState('error');
+            setErrorMessage(
+              'Firebase Web Push config is invalid. Set correct NEXT_PUBLIC_FIREBASE_* values ' +
+              'and Firebase Web Push certificate key, then rebuild frontend.',
+            );
+          } else {
+            setResultState('error');
+            setErrorMessage(subscribeError?.message || 'Registration failed. Try again later.');
+          }
+        }
 
-        // Step 5: Save to Backend
-        await notificationApi.saveSubscription(token, subscription);
-        console.log('PUSH_FLOW_COMPLETED: Successfully subscribed.');
+        // Step 3: Save FCM token to backend
+        if (fcmResult) {
+          try {
+            await notificationApi.saveSubscription(authToken, {
+              fcm_token: fcmResult.fcmToken,
+              platform: fcmResult.platform,
+            });
+          } catch (saveError) {
+            console.warn('[NotificationPrompt] Token save failed (non-fatal):', saveError?.message);
+          }
+        }
+
+        // Step 4: Sync permission state to backend
+        try {
+          await notificationApi.updatePermissionState(authToken, {
+            browser_permission: permission,
+            is_enabled: pushAvailable,
+            platform: navigator.platform,
+          });
+        } catch (syncError) {
+          console.warn('[NotificationPrompt] Permission sync failed:', syncError?.message);
+        }
+
+        if (pushAvailable) {
+          setResultState('success');
+          localStorage.removeItem('push_prompt_dismissed');
+          setTimeout(() => setIsVisible(false), 1800);
+        }
+      } else {
+        // User denied
+        localStorage.setItem('push_prompt_dismissed', 'true');
+        try {
+          await notificationApi.updatePermissionState(authToken, {
+            browser_permission: permission,
+            is_enabled: false,
+            platform: navigator.platform,
+          });
+        } catch {
+          // Non-fatal
+        }
+        setIsVisible(false);
       }
     } catch (err) {
-      console.error('NOTIFICATION_SETUP_FAILED:', err);
-      alert('Technical error enabling notifications. Please try again later.');
+      console.error('[NotificationPrompt] Unhandled error:', err);
+      setResultState('error');
+      setErrorMessage(err?.message || 'Something went wrong. Please try again.');
     } finally {
       setIsProcessing(false);
-      setIsVisible(false);
     }
   };
 
   if (!isVisible) return null;
 
+  // ─── UI ───────────────────────────────────────────────────────────────────
+
+  const isSuccess = resultState === 'success';
+  const isPushUnavailable = resultState === 'push_unavailable';
+  const isError = resultState === 'error';
+  const showButtons = resultState === 'idle';
+
   return (
-    <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-10 duration-1000">
+    <div className="fixed bottom-8 right-8 z-[9999] animate-in slide-in-from-bottom-10 duration-700">
       <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-[0_30px_60px_-12px_rgba(0,0,0,0.15)] max-w-[360px] w-full relative">
-        <button
-          onClick={() => setIsVisible(false)}
-          className="absolute top-5 right-5 p-2 text-gray-300 hover:text-gray-900 transition-colors cursor-pointer"
-        >
-          <FiX size={20} />
-        </button>
+
+        {!isProcessing && !isSuccess && (
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="absolute top-5 right-5 p-2 text-gray-300 hover:text-gray-900 transition-colors cursor-pointer"
+          >
+            <FiX size={20} />
+          </button>
+        )}
 
         <div className="flex flex-col items-center text-center space-y-5">
-          <div className="w-16 h-16 bg-(--color-primary-500) text-white rounded-[24px] flex items-center justify-center shadow-lg shadow-primary-100">
-            <FiBell size={32} className="animate-bounce" />
+
+          <div className={`w-16 h-16 text-white rounded-[24px] flex items-center justify-center shadow-lg transition-colors duration-300 ${
+            isSuccess ? 'bg-green-500 shadow-green-100' :
+            isPushUnavailable ? 'bg-amber-400 shadow-amber-100' :
+            isError ? 'bg-red-500 shadow-red-100' :
+            'bg-(--color-primary-500) shadow-primary-100'
+          }`}>
+            {isSuccess ? <FiCheck size={32} /> :
+             isPushUnavailable ? <FiWifi size={32} /> :
+             isError ? <FiAlertTriangle size={32} /> :
+             <FiBell size={32} className="animate-bounce" />}
           </div>
 
           <div className="space-y-2">
             <h3 className="text-xl font-black text-gray-900 tracking-tight uppercase">
-              Notifications
+              {isSuccess ? 'Notifications On!' :
+               isPushUnavailable ? 'Permission Saved' :
+               isError ? 'Something went wrong' :
+               'Notifications'}
             </h3>
             <p className="text-[13px] text-gray-500 font-medium leading-relaxed px-2">
-              Enable real-time tracking for your prescriptions, order updates,
-              and exclusive pharma offers.
+              {isSuccess
+                ? "You'll receive real-time updates on your orders and prescriptions."
+                : isPushUnavailable
+                ? "Push delivery isn't available on this network right now. Your preference has been saved — we'll retry automatically."
+                : isError
+                ? (errorMessage || 'Could not enable notifications. Please try again later.')
+                : 'Enable real-time tracking for your prescriptions, order updates, and exclusive pharma offers.'}
             </p>
           </div>
 
-          <div className="flex flex-col w-full gap-2 pt-2">
-            <button
-              onClick={handleAllow}
-              disabled={isProcessing}
-              className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) text-white font-bold rounded-full flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs cursor-pointer"
-            >
-              {isProcessing ? (
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <>
-                  <FiCheck size={18} /> Enable Now
-                </>
-              )}
-            </button>
+          {showButtons && (
+            <div className="flex flex-col w-full gap-2 pt-2">
+              <button
+                type="button"
+                onClick={handleAllow}
+                disabled={isProcessing}
+                className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) text-white font-bold rounded-full flex items-center justify-center gap-2 transition-all shadow-md active:scale-95 disabled:opacity-50 uppercase tracking-widest text-xs cursor-pointer"
+              >
+                {isProcessing ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <><FiCheck size={18} /> Enable Now</>
+                )}
+              </button>
 
+              {!isProcessing && (
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="w-full h-10 text-gray-400 hover:text-gray-600 font-bold text-[10px] uppercase tracking-[0.2em] transition-colors cursor-pointer"
+                >
+                  Maybe Later
+                </button>
+              )}
+            </div>
+          )}
+
+          {(isPushUnavailable || isError) && (
             <button
-              onClick={() => setIsVisible(false)}
+              type="button"
+              onClick={handleDismiss}
               className="w-full h-10 text-gray-400 hover:text-gray-600 font-bold text-[10px] uppercase tracking-[0.2em] transition-colors cursor-pointer"
             >
-              Maybe Later
+              Got it
             </button>
-          </div>
+          )}
+
         </div>
       </div>
     </div>

@@ -3,6 +3,7 @@ Redis-backed utilities: OTP storage, resend count, account lockout keys.
 Used by services and throttling; keys are namespaced for My Pharma.
 """
 import logging
+import json
 from django.conf import settings
 from django.core.cache import cache
 
@@ -16,6 +17,7 @@ BLACKLIST_PREFIX = f"{KEY_PREFIX}:blacklist"
 REGISTRATION_TOKEN_PREFIX = f"{KEY_PREFIX}:reg_token"
 CHANGE_EMAIL_PENDING_PREFIX = f"{KEY_PREFIX}:change_email_pending"
 CHANGE_PHONE_PENDING_PREFIX = f"{KEY_PREFIX}:change_phone_pending"
+PASSWORD_RESET_TOKEN_PREFIX = f"{KEY_PREFIX}:password_reset"
 
 
 def _otp_key(identifier: str) -> str:
@@ -161,3 +163,32 @@ def change_phone_pending_get(user_id: int) -> str | None:
 
 def change_phone_pending_delete(user_id: int) -> None:
     cache.delete(f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}")
+
+
+def get_password_reset_token_ttl_seconds() -> int:
+    minutes = getattr(settings, "AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES", 30)
+    return int(minutes) * 60
+
+
+def password_reset_token_set(token: str, user_id: int) -> None:
+    key = f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}"
+    cache.set(
+        key,
+        json.dumps({"user_id": int(user_id)}),
+        timeout=get_password_reset_token_ttl_seconds(),
+    )
+
+
+def password_reset_token_get(token: str) -> dict | None:
+    key = f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}"
+    raw = cache.get(key)
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def password_reset_token_delete(token: str) -> None:
+    cache.delete(f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}")

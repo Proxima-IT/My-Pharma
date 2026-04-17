@@ -22,7 +22,7 @@ JWT_SIGNING_KEY = hashlib.sha256(
     SECRET_KEY.encode()
 ).hexdigest()
    
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "true").lower() in ("true", "1", "yes")
 
 # -----------------------------
 # Allowed Hosts
@@ -59,6 +59,12 @@ CORS_ALLOWED_ORIGINS = [
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_PRIVATE_NETWORK = True
+# Allow localhost/127.0.0.1 from any port/scheme in development tooling.
+# This prevents fragile CORS failures when frontend runs on 3000/3001 or HTTPS localhost.
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https?://localhost(:\d+)?$",
+    r"^https?://127\.0\.0\.1(:\d+)?$",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
@@ -283,7 +289,11 @@ if not USE_REDIS:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_RESULT_BACKEND = None
 else:
-    CELERY_TASK_ALWAYS_EAGER = DEBUG
+    CELERY_TASK_ALWAYS_EAGER = os.environ.get("CELERY_TASK_ALWAYS_EAGER", "false").lower() in (
+        "true",
+        "1",
+        "yes",
+    )
     if DEBUG:
         CELERY_RESULT_BACKEND = None
 
@@ -297,6 +307,29 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
+
+# ------------------------------------------------------------------------------
+# EMAIL (OTP + PASSWORD RESET)
+# ------------------------------------------------------------------------------
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "smtp.gmail.com").strip()
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "true").lower() in ("true", "1", "yes")
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "").strip()
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "").strip()
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    EMAIL_HOST_USER or "noreply@mypharma.com",
+).strip()
+AUTH_PASSWORD_RESET_FRONTEND_URL = os.environ.get(
+    "AUTH_PASSWORD_RESET_FRONTEND_URL",
+    os.environ.get("NEXT_PUBLIC_BACKEND_URL", "http://localhost:3000"),
+).strip()
+AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = int(
+    os.environ.get("AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES", "30")
+)
 
 # ------------------------------------------------------------------------------
 # SSLCOMMERZ (Bangladesh payment gateway)
@@ -314,11 +347,37 @@ SSLCOMMERZ_CALLBACK_BASE_URL = os.environ.get("SSLCOMMERZ_CALLBACK_BASE_URL", ""
 SSLCOMMERZ_FRONTEND_BASE_URL = os.environ.get("SSLCOMMERZ_FRONTEND_BASE_URL", "").strip().rstrip("/")
 
 # ------------------------------------------------------------------------------
-# WEB PUSH (VAPID)
+# FIREBASE CLOUD MESSAGING (FCM)
 # ------------------------------------------------------------------------------
-WEB_PUSH_VAPID_PUBLIC_KEY = os.environ.get("WEB_PUSH_VAPID_PUBLIC_KEY", "").strip()
-WEB_PUSH_VAPID_PRIVATE_KEY = os.environ.get("WEB_PUSH_VAPID_PRIVATE_KEY", "").strip()
-WEB_PUSH_VAPID_CLAIMS_SUB = os.environ.get("WEB_PUSH_VAPID_CLAIMS_SUB", "").strip()
+# Initialize Firebase Admin SDK for sending push notifications.
+# Provide service account credentials via FIREBASE_SERVICE_ACCOUNT_JSON env var
+# (the raw JSON string) or GOOGLE_APPLICATION_CREDENTIALS env var (file path).
+import json as _json
+
+FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
+
+def _init_firebase():
+    """Lazy-initialize Firebase Admin SDK (safe to call multiple times)."""
+    try:
+        import firebase_admin
+        from firebase_admin import credentials
+        if firebase_admin._apps:
+            return True  # Already initialized
+        if FIREBASE_SERVICE_ACCOUNT_JSON:
+            cred_dict = _json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+            return True
+        elif os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+            firebase_admin.initialize_app()
+            return True
+        return False
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning("Firebase init failed: %s", exc)
+        return False
+
+FIREBASE_INITIALIZED = _init_firebase()
 
 # ------------------------------------------------------------------------------
 # LOGGING

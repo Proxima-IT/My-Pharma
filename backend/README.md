@@ -8,8 +8,9 @@ Production-oriented Django 4+ API for the My Pharma online pharmacy platform. Au
 - **Django REST Framework** – REST API
 - **MySQL** – Primary database
 - **Redis** – OTP storage, rate-limit, cache, Celery broker
-- **Celery** – Async tasks (OTP SMS, password reset email)
+- **Celery** – Async tasks (OTP SMS, password reset email, push fanout)
 - **JWT** – Access + refresh tokens (SimpleJWT, blacklist)
+- **Firebase Admin SDK** – FCM web push delivery
 
 ## Setup
 
@@ -17,7 +18,16 @@ Production-oriented Django 4+ API for the My Pharma online pharmacy platform. Au
 
    ```bash
    cp .env.example .env
-   # Edit .env: DJANGO_SECRET_KEY, MYSQL_*, REDIS_URL, CORS, etc.
+   # Edit .env: DJANGO_SECRET_KEY, MYSQL_*, REDIS_URL, CORS, EMAIL_*, etc.
+   # For FCM push (choose one credential mode):
+   # FIREBASE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
+   # or GOOGLE_APPLICATION_CREDENTIALS=/run/secrets/firebase-service-account.json
+   # Frontend build vars (web push):
+   # NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+   # NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+   # NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID, NEXT_PUBLIC_FIREBASE_APP_ID,
+   # NEXT_PUBLIC_FIREBASE_VAPID_KEY
+   # Legacy NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY is still accepted as fallback.
    ```
 
 2. **Dependencies**
@@ -39,12 +49,15 @@ Production-oriented Django 4+ API for the My Pharma online pharmacy platform. Au
 
    Ensure Redis is running (OTP, cache, Celery).
 
-5. **Celery** (optional for local)
+5. **Celery** (required for production push/email/otp)
 
    ```bash
    celery -A my_pharma worker -l info
    celery -A my_pharma beat -l info   # if using periodic tasks
    ```
+
+   Push broadcasts (`/api/notifications/broadcast/`) enqueue fanout through Celery when Redis is enabled.
+   In production, keep `CELERY_TASK_ALWAYS_EAGER=false` and run at least one worker process.
 
 ## Run
 

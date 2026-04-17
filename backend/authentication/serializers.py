@@ -192,7 +192,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    token = serializers.CharField()
+    token = serializers.CharField(required=False, allow_blank=True)
+    registration_token = serializers.CharField(required=False, allow_blank=True)
     new_password = serializers.CharField(min_length=8, write_only=True)
 
     def validate_new_password(self, value):
@@ -200,6 +201,15 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if not ok:
             raise serializers.ValidationError(msg)
         return value
+
+    def validate(self, attrs):
+        token = (attrs.get("token") or attrs.get("registration_token") or "").strip()
+        if not token:
+            raise serializers.ValidationError(
+                {"token": "Provide token or registration_token."}
+            )
+        attrs["token"] = token
+        return attrs
 
 
 # ---- Response ----

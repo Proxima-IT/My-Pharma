@@ -10,6 +10,7 @@ import { FiFilter, FiChevronDown } from 'react-icons/fi';
 import PopularProductCard from '../home/components/PopularProductCard';
 import { useProductData } from '../../hooks/useProductData';
 import Sidebar from '../../components/Sidebar';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Products Page Component
@@ -53,7 +54,7 @@ const Products = () => {
       try {
         // Fetch brands
         const brandsResponse = await fetch(
-          'http://localhost:8000/api/brands/?is_active=true',
+          `${API_BASE_URL}/brands/?is_active=true`,
         );
         const brandsData = await brandsResponse.json();
         const brandList = brandsData.results || brandsData;
@@ -68,7 +69,7 @@ const Products = () => {
 
         // Fetch ingredients
         const ingredientsResponse = await fetch(
-          'http://localhost:8000/api/ingredients/',
+          `${API_BASE_URL}/ingredients/`,
         );
         const ingredientsData = await ingredientsResponse.json();
         const ingredientList = ingredientsData.results || ingredientsData;

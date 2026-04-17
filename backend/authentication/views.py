@@ -23,6 +23,7 @@ from .serializers import (
     RegisterEmailRequestSerializer,
     LoginRequestSerializer,
     PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
     ChangeEmailRequestSerializer,
     ChangeEmailConfirmSerializer,
     ChangePhoneRequestSerializer,
@@ -45,6 +46,9 @@ from .services import (
     create_audit_log,
     confirm_change_email,
     confirm_change_phone,
+    create_password_reset_token,
+    build_password_reset_link,
+    reset_password_with_token,
     normalize_phone,
 )
 from . import utils
@@ -317,25 +321,59 @@ class LogoutView(APIView):
 
 
 class PasswordResetView(APIView):
-    """POST /api/auth/password-reset/ – Request password reset (email); sends link/token via Celery."""
+    """POST /api/auth/password-reset/ – Request password reset; sends reset link to registered email."""
     permission_classes = [AllowAny]
+    serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
         ser = PasswordResetRequestSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         email = ser.validated_data["email"].lower()
         user = User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).first()
-        if user:
-            from .tasks import send_password_reset_email
-            send_password_reset_email.delay(user.id)
+        if not user:
+            return Response(
+                {"detail": "Email does not exist.", "code": "email_not_found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        token = create_password_reset_token(user.id)
+        reset_link = build_password_reset_link(token)
+        from .tasks import send_password_reset_email
+        send_password_reset_email.delay(user.id, reset_link)
         create_audit_log(
-            user.id if user else None,
+            user.id,
             AuditAction.PASSWORD_RESET_REQUEST,
             request=request,
             metadata={"email_masked": email[:2] + "***" if email else ""},
         )
         return Response(
-            {"message": "If an account exists with this email, you will receive reset instructions."},
+            {"message": "Password reset link sent to your email."},
+            status=status.HTTP_200_OK,
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """POST /api/auth/password-reset/confirm/ – Reset password using reset token sent over email."""
+    permission_classes = [AllowAny]
+    serializer_class = PasswordResetConfirmSerializer
+
+    def post(self, request):
+        ser = PasswordResetConfirmSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        token = ser.validated_data["token"]
+        new_password = ser.validated_data["new_password"]
+
+        try:
+            user = reset_password_with_token(token, new_password)
+        except InvalidRegistrationTokenError as exc:
+            return Response(
+                {"detail": exc.detail, "code": "invalid_password_reset_token"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        create_audit_log(user.id, AuditAction.PASSWORD_RESET_COMPLETE, request=request)
+        return Response(
+            {"message": "Password reset successful. You can now log in."},
             status=status.HTTP_200_OK,
         )
 

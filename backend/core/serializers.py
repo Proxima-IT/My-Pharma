@@ -1244,14 +1244,21 @@ class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
         read_only_fields = ("updated_at",)
 
 
+class UserNotificationPreferenceUpdateSerializer(serializers.Serializer):
+    browser_permission = serializers.ChoiceField(
+        choices=UserNotificationPreference.BrowserPermission.choices,
+        required=False,
+    )
+    is_enabled = serializers.BooleanField(required=False)
+    platform = serializers.CharField(max_length=100, required=False, allow_blank=True)
+
+
 class UserPushSubscriptionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserPushSubscription
         fields = (
             "id",
-            "endpoint",
-            "p256dh",
-            "auth",
+            "fcm_token",
             "is_active",
             "last_seen_at",
             "user_agent",
@@ -1263,17 +1270,34 @@ class UserPushSubscriptionSerializer(serializers.ModelSerializer):
 
 
 class UserPushSubscriptionUpsertSerializer(serializers.Serializer):
-    endpoint = serializers.URLField(max_length=1000)
-    keys = serializers.DictField(required=True)
+    fcm_token = serializers.CharField(max_length=255)
     platform = serializers.CharField(max_length=100, required=False, allow_blank=True)
     is_active = serializers.BooleanField(required=False, default=True)
 
-    def validate_keys(self, value):
-        p256dh = (value or {}).get("p256dh")
-        auth = (value or {}).get("auth")
-        if not p256dh or not auth:
-            raise serializers.ValidationError("keys must contain p256dh and auth.")
-        return value
+
+class UserPushSubscriptionDeleteSerializer(serializers.Serializer):
+    fcm_token = serializers.CharField(max_length=255)
+
+
+class NotificationMarkedCountSerializer(serializers.Serializer):
+    marked_count = serializers.IntegerField(min_value=0)
+
+
+class NotificationRemovedCountSerializer(serializers.Serializer):
+    removed_count = serializers.IntegerField(min_value=0)
+
+
+class NotificationBroadcastResultSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    sent_count = serializers.IntegerField(min_value=0)
+    title = serializers.CharField()
+    send_to_opted_in_only = serializers.BooleanField()
+    target_url = serializers.CharField(allow_blank=True)
+    push_attempted = serializers.IntegerField(min_value=0)
+    push_succeeded = serializers.IntegerField(min_value=0)
+    push_failed = serializers.IntegerField(min_value=0)
+    push_deactivated = serializers.IntegerField(min_value=0)
+    push_async = serializers.BooleanField()
 
 
 # ---- Page (CMS) ----
