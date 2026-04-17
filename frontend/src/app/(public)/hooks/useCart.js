@@ -62,27 +62,55 @@ export const useCart = () => {
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
+      const parsedQuantity = Number.isFinite(Number(quantity))
+        ? Math.max(1, Math.floor(Number(quantity)))
+        : 1;
+      const productId =
+        product?.id ||
+        product?.product_id ||
+        (typeof product?.product === 'number' ? product.product : null);
+      const selectedDosage =
+        typeof product?.selected_dosage === 'string'
+          ? product.selected_dosage
+          : '';
+
+      if (token && !productId) {
+        throw new Error('Unable to add this product. Please refresh and try again.');
+      }
+
+      if (
+        token &&
+        Number.isFinite(Number(product?.quantity_in_stock)) &&
+        Number(product.quantity_in_stock) < parsedQuantity
+      ) {
+        throw new Error(
+          Number(product.quantity_in_stock) <= 0
+            ? 'This product is out of stock.'
+            : `Only ${Number(product.quantity_in_stock)} item(s) available in stock.`,
+        );
+      }
+
       if (token) {
         await addToCartApi(
           token,
-          product.id,
-          quantity,
-          product.selected_dosage,
+          productId,
+          parsedQuantity,
+          selectedDosage,
         );
       } else {
         const guestCart = getGuestCart();
         const existing = guestCart.items.find(
           i =>
-            i.id === product.id &&
-            i.selected_dosage === product.selected_dosage,
+            i.id === productId &&
+            i.selected_dosage === selectedDosage,
         );
         if (existing) {
-          existing.quantity += quantity;
+          existing.quantity += parsedQuantity;
         } else {
           guestCart.items.push({
-            id: product.id,
+            id: productId,
             product: product.slug,
-            quantity: quantity,
+            quantity: parsedQuantity,
             product_name: product.name,
             current_price: product.price,
             product_original_price: product.original_price,
@@ -90,7 +118,7 @@ export const useCart = () => {
             product_description: product.description,
             product_unit_label: product.unit_label,
             product_dosage: product.dosage,
-            selected_dosage: product.selected_dosage,
+            selected_dosage: selectedDosage,
             is_guest_item: true,
           });
         }

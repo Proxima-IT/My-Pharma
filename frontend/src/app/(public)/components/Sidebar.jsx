@@ -11,7 +11,11 @@ import {
   FiCheckCircle,
   FiTruck,
 } from 'react-icons/fi';
-import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
+import {
+  API_BASE_URL,
+  getMediaUrl,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Sidebar Component
@@ -155,7 +159,10 @@ const Sidebar = () => {
                     <div className="flex items-center gap-4 overflow-hidden">
                       <div className="w-5 h-5 relative shrink-0">
                         <Image
-                          src={cat.image_url || '/assets/images/applogo.png'}
+                          src={
+                            getMediaUrl(cat.image_url) ||
+                            '/assets/images/applogo.png'
+                          }
                           alt={cat.title}
                           fill
                           className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
@@ -189,7 +196,9 @@ const Sidebar = () => {
       <div className="w-full rounded-[32px] overflow-hidden leading-[0]">
         <Link href={activeAd?.link || '#'} className="block w-full h-full">
           <Image
-            src={activeAd?.image_url || '/assets/images/applogo.png'}
+            src={
+              getMediaUrl(activeAd?.image_url) || '/assets/images/applogo.png'
+            }
             alt="Promotional Banner"
             width={400}
             height={500}

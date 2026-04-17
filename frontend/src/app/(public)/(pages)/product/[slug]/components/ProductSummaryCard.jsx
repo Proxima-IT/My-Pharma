@@ -19,6 +19,7 @@ const ProductSummaryCard = ({ product }) => {
   const { addItem, isUpdating } = useCart();
   const [selectedDosage, setSelectedDosage] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const maxStock = Number(product?.quantity_in_stock || 0);
 
   const ratingAvg = useMemo(() => {
     const val = parseFloat(product?.rating_avg || 0);
@@ -46,6 +47,9 @@ const ProductSummaryCard = ({ product }) => {
   }, [availableDosages, selectedDosage]);
 
   const handleAddToCart = async () => {
+    if (maxStock > 0 && quantity > maxStock) {
+      return;
+    }
     if (product?.id) {
       const productWithSelection = {
         ...product,
@@ -169,6 +173,7 @@ const ProductSummaryCard = ({ product }) => {
             </div>
             <button
               onClick={() => setQuantity(quantity + 1)}
+              disabled={maxStock > 0 && quantity >= maxStock}
               className="w-9 h-9 lg:w-10 xl:w-[54px] lg:h-10 xl:h-[54px] rounded-full bg-[#EEF2FF] flex items-center justify-center text-[#1D3583] hover:brightness-95 transition-all cursor-pointer"
             >
               <FiPlus
@@ -184,6 +189,12 @@ const ProductSummaryCard = ({ product }) => {
       </div>
 
       <div className="h-px bg-gray-100 w-full pt-1" />
+
+      {maxStock > 0 && quantity >= maxStock && (
+        <p className="text-xs text-amber-600 font-semibold">
+          Maximum available stock reached ({maxStock}).
+        </p>
+      )}
 
       {/* 8. Action Buttons */}
       <div className="flex flex-col sm:flex-row gap-3 xl:gap-4 pt-1">

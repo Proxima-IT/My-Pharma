@@ -7,7 +7,11 @@ import { FiGrid, FiCheckCircle, FiTruck } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
+import {
+  API_BASE_URL,
+  getMediaUrl,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
 /**
@@ -153,8 +157,8 @@ const MobileDrawer = () => {
                           <div className="w-5 h-5 relative shrink-0">
                             <Image
                               src={
-                                cat.image_url ||
-                                systemLogo?.image_url ||
+                                getMediaUrl(cat.image_url) ||
+                                getMediaUrl(systemLogo?.image_url) ||
                                 '/assets/images/applogo.png'
                               }
                               alt={cat.title}
@@ -193,8 +197,8 @@ const MobileDrawer = () => {
                 >
                   <Image
                     src={
-                      activeAd.image_url ||
-                      systemLogo?.image_url ||
+                      getMediaUrl(activeAd.image_url) ||
+                      getMediaUrl(systemLogo?.image_url) ||
                       '/assets/images/applogo.png'
                     }
                     alt="Promotional Banner"

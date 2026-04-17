@@ -25,7 +25,7 @@ const DealsSection = () => {
     const fetchDeals = async () => {
       try {
         const response = await fetch(
-          `${PRODUCT_ENDPOINTS.BASE}?is_active=true`,
+          `${PRODUCT_ENDPOINTS.BASE}?is_active=true&available=true`,
         );
         if (!response.ok) {
           throw new Error(`Failed to fetch deals (${response.status})`);
@@ -34,7 +34,12 @@ const DealsSection = () => {
 
         const products = Array.isArray(data) ? data : (data.results || []);
         const deals = products
-          .filter(p => p.discount_percentage && p.discount_percentage > 0)
+          .filter(
+            p =>
+              p.discount_percentage &&
+              p.discount_percentage > 0 &&
+              Number(p.quantity_in_stock || 0) > 0,
+          )
           .slice(0, 4);
 
         setProducts(deals);
