@@ -1,8 +1,9 @@
 'use client';
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiCheck } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
 import { useCategoryAdmin } from '@/app/(admin)/hooks/useCategoryAdmin';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 export default function AdminEditCategoryPage({ params }) {
   const router = useRouter();
@@ -19,10 +20,14 @@ export default function AdminEditCategoryPage({ params }) {
     loading: fetchLoading,
   } = useCategoryAdmin();
 
+  const imageInputRef = useRef(null);
+
+  const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     parent: '',
     is_active: true,
+    image: null,
   });
 
   // ১. ডাটা লোড করা
@@ -35,11 +40,23 @@ export default function AdminEditCategoryPage({ params }) {
           name: data.name || '',
           parent: data.parent || '',
           is_active: data.is_active ?? true,
+          image: null, // New image will be set separately
         });
+        if (data.image) {
+          setPreviewImage(getMediaUrl(data.image));
+        }
       }
     };
     if (slug) loadData();
   }, [slug, fetchCategoryBySlug, fetchCategoryTree]);
+
+  const handleImageChange = e => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData({ ...formData, image: file });
+      setPreviewImage(URL.createObjectURL(file));
+    }
+  };
 
   // ২. গ্রুপের হায়ারার্কি দেখানোর জন্য ফাংশন
   const renderOptions = (nodes, depth = 0) => {
@@ -157,6 +174,43 @@ export default function AdminEditCategoryPage({ params }) {
                 {renderOptions(categoryTree)}
               </select>
             </div>
+          </div>
+
+          {/* Image Upload Section */}
+          <div className="space-y-4">
+            <label className={labelClass}>Category Icon / Image</label>
+            <div
+              onClick={() => imageInputRef.current.click()}
+              className="aspect-square max-w-[200px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative rounded-none"
+            >
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt="Preview"
+                  className="w-full h-full object-contain p-4"
+                />
+              ) : (
+                <>
+                  <FiImage
+                    size={32}
+                    className="text-gray-300 group-hover:text-[#3A5A40]"
+                  />
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Change Icon
+                  </span>
+                </>
+              )}
+            </div>
+            <input
+              ref={imageInputRef}
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={handleImageChange}
+            />
+            <p className="text-[10px] text-[#B7B7A4] font-medium uppercase">
+              Click to upload new icon. Recommended size: 64x64px (PNG/SVG).
+            </p>
           </div>
 
           {/* Status Toggle */}

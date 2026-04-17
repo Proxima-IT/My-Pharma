@@ -41,13 +41,33 @@ export const fetchCategoryDetailsApi = async (token, slug) => {
 };
 
 export const createCategoryApi = async (token, payload) => {
+  // Check if payload contains a File object (for image uploads)
+  const hasFile = Object.values(payload).some(value => value instanceof File);
+
+  let headers = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  let body;
+  if (hasFile) {
+    // Use FormData for file uploads
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        formData.append(key, value);
+      }
+    });
+    body = formData;
+  } else {
+    // Use JSON for regular data
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(payload);
+  }
+
   const response = await fetch(CATEGORY_ENDPOINTS.BASE, {
     method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    headers,
+    body,
   });
 
   const data = await response.json();
@@ -57,13 +77,33 @@ export const createCategoryApi = async (token, payload) => {
 };
 
 export const updateCategoryApi = async (token, slug, payload) => {
+  // Check if payload contains a File object (for image uploads)
+  const hasFile = Object.values(payload).some(value => value instanceof File);
+
+  let headers = {
+    Authorization: `Bearer ${token}`,
+  };
+
+  let body;
+  if (hasFile) {
+    // Use FormData for file uploads
+    const formData = new FormData();
+    Object.entries(payload).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        formData.append(key, value);
+      }
+    });
+    body = formData;
+  } else {
+    // Use JSON for regular data
+    headers['Content-Type'] = 'application/json';
+    body = JSON.stringify(payload);
+  }
+
   const response = await fetch(`${CATEGORY_ENDPOINTS.BASE}${slug}/`, {
     method: 'PATCH',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(payload),
+    headers,
+    body,
   });
 
   const data = await response.json();

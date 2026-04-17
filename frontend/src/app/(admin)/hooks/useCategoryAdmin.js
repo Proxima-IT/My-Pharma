@@ -2,10 +2,19 @@
 import { useState, useCallback } from 'react';
 import { categoryAdminApi } from '../api/categoryAdminApi';
 
+/**
+ * useCategoryAdmin Hook
+ * Manages product categories, hierarchy, and bulk selections for Sidebar/Featured views.
+ */
 export const useCategoryAdmin = () => {
   const [categories, setCategories] = useState({ results: [], count: 0 });
   const [categoryTree, setCategoryTree] = useState([]);
   const [categoryDetails, setCategoryDetails] = useState(null);
+
+  // New States for Sidebar and Featured Selections
+  const [sidebarSelection, setSidebarSelection] = useState([]);
+  const [featuredSelection, setFeaturedSelection] = useState([]);
+
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
@@ -56,12 +65,24 @@ export const useCategoryAdmin = () => {
   }, []);
 
   // ৪. নতুন গ্রুপ তৈরি করা
-  const createCategory = async data => {
+  const createCategory = async formData => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      await categoryAdminApi.createCategory(token, data);
+
+      // Convert plain object to FormData if needed
+      let dataToSend = formData;
+      if (!(formData instanceof FormData)) {
+        dataToSend = new FormData();
+        Object.keys(formData).forEach(key => {
+          if (formData[key] !== null && formData[key] !== undefined) {
+            dataToSend.append(key, formData[key]);
+          }
+        });
+      }
+
+      await categoryAdminApi.createCategory(token, dataToSend);
       return true;
     } catch (err) {
       setError(err.detail || 'গ্রুপ তৈরি করা সম্ভব হয়নি।');
@@ -72,12 +93,24 @@ export const useCategoryAdmin = () => {
   };
 
   // ৫. গ্রুপের তথ্য আপডেট করা
-  const updateCategory = async (slug, data) => {
+  const updateCategory = async (slug, formData) => {
     setIsUpdating(true);
     setError(null);
     try {
       const token = localStorage.getItem('access_token');
-      await categoryAdminApi.updateCategory(token, slug, data);
+
+      // Convert plain object to FormData if needed
+      let dataToSend = formData;
+      if (!(formData instanceof FormData)) {
+        dataToSend = new FormData();
+        Object.keys(formData).forEach(key => {
+          if (formData[key] !== null && formData[key] !== undefined) {
+            dataToSend.append(key, formData[key]);
+          }
+        });
+      }
+
+      await categoryAdminApi.updateCategory(token, slug, dataToSend);
       return true;
     } catch (err) {
       setError(err.detail || 'তথ্য আপডেট করা সম্ভব হয়নি।');
@@ -103,10 +136,72 @@ export const useCategoryAdmin = () => {
     }
   };
 
+  // --- NEW BULK SELECTION ACTIONS ---
+
+  // ৭. সাইডবার সিলেকশন লোড করা
+  const fetchSidebarSelection = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const data = await categoryAdminApi.getSelectedSidebarCategories(token);
+      setSidebarSelection(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ৮. সাইডবার সিলেকশন সেভ করা
+  const saveSidebarSelection = async categoryIds => {
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      await categoryAdminApi.updateSidebarSelection(token, categoryIds);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // ৯. ফিচারড সিলেকশন লোড করা
+  const fetchFeaturedSelection = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const data = await categoryAdminApi.getFeaturedHomeCategories(token);
+      setFeaturedSelection(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ১০. ফিচারড সিলেকশন সেভ করা
+  const saveFeaturedSelection = async categoryIds => {
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      await categoryAdminApi.updateFeaturedHomeSelection(token, categoryIds);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return {
     categories,
     categoryTree,
     categoryDetails,
+    sidebarSelection,
+    featuredSelection,
     loading,
     isUpdating,
     error,
@@ -116,5 +211,9 @@ export const useCategoryAdmin = () => {
     createCategory,
     updateCategory,
     deleteCategory,
+    fetchSidebarSelection,
+    saveSidebarSelection,
+    fetchFeaturedSelection,
+    saveFeaturedSelection,
   };
 };

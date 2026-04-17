@@ -25,7 +25,8 @@ const MobileDrawer = () => {
   const currentCategory = searchParams.get('category');
 
   const [open, setOpen] = useState(false);
-  const [categories, setCategories] = useState([]);
+  const [categoriesA, setCategoriesA] = useState([]); // Product Categories (Method A)
+  const [categoriesB, setCategoriesB] = useState([]); // Custom Items (Method B)
   const [allProducts, setAllProducts] = useState([]); // Added for counting
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,28 +53,26 @@ const MobileDrawer = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [catRes, adsRes, prodRes] = await Promise.all([
+        const [resA, resB, adsRes, prodRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/categories/sidebar-category/`),
           fetch(`${API_BASE_URL}/sidebar-categories/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
-          fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`), // Fetch products for count
+          fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
         ]);
-        const [catData, adsData, prodData] = await Promise.all([
-          parseJsonResponse(catRes, { results: [] }),
+
+        const [dataA, dataB, adsData, prodData] = await Promise.all([
+          parseJsonResponse(resA, []),
+          parseJsonResponse(resB, { results: [] }),
           parseJsonResponse(adsRes, { results: [] }),
           parseJsonResponse(prodRes, { results: [] }),
         ]);
 
-        if (!catRes.ok || !adsRes.ok || !prodRes.ok) {
-          console.error('Drawer API request failed', {
-            sidebarCategories: catRes.status,
-            ads: adsRes.status,
-            products: prodRes.status,
-          });
-        }
-
-        setCategories(Array.isArray(catData) ? catData : (catData.results || []));
-        setAds(Array.isArray(adsData) ? adsData : (adsData.results || []));
-        setAllProducts(Array.isArray(prodData) ? prodData : (prodData.results || []));
+        setCategoriesA(Array.isArray(dataA) ? dataA : dataA.results || []);
+        setCategoriesB(Array.isArray(dataB) ? dataB : dataB.results || []);
+        setAds(Array.isArray(adsData) ? adsData : adsData.results || []);
+        setAllProducts(
+          Array.isArray(prodData) ? prodData : prodData.results || [],
+        );
       } catch (error) {
         console.error('Error fetching drawer data:', error);
       } finally {
@@ -85,6 +84,82 @@ const MobileDrawer = () => {
 
   const isAllProductsActive = pathname === '/products' && !currentCategory;
   const activeAd = ads.length > 0 ? ads[0] : null;
+
+  // Navigation Item Component for Recursion
+  const NavItem = ({ item, isCustom = false, depth = 0 }) => {
+    const title = isCustom ? item.title : item.name;
+    const isActive = currentCategory === title;
+    const hasChildren = !isCustom && item.children && item.children.length > 0;
+    const count = categoryCounts[title] || 0;
+
+    return (
+      <div className="flex flex-col w-full">
+        <Link
+          href={
+            isCustom ? '#' : `/products?category=${encodeURIComponent(title)}`
+          }
+          onClick={() => setOpen(false)}
+          className={`flex items-center justify-between px-5 py-3 rounded-full transition-all ${
+            isActive
+              ? 'bg-[#233b8c] text-white'
+              : 'bg-white text-gray-500 border border-gray-50'
+          }`}
+        >
+          <div className="flex items-center gap-4 overflow-hidden">
+            {!isCustom && !depth && (
+              <div className="w-5 h-5 relative shrink-0">
+                <Image
+                  src={getMediaUrl(item.image) || '/assets/images/applogo.png'}
+                  alt={title}
+                  fill
+                  className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
+                  unoptimized
+                />
+              </div>
+            )}
+            {isCustom && (
+              <div className="w-5 h-5 relative shrink-0">
+                <Image
+                  src={
+                    getMediaUrl(item.image_url) || '/assets/images/applogo.png'
+                  }
+                  alt={title}
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            )}
+            <span
+              className={`text-[15px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium'}`}
+            >
+              {title}
+            </span>
+          </div>
+
+          {!isCustom && (
+            <span
+              className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
+                isActive
+                  ? 'bg-white/10 border-white/20 text-white'
+                  : 'bg-gray-50 border-gray-100 text-gray-400'
+              }`}
+            >
+              {count}
+            </span>
+          )}
+        </Link>
+
+        {hasChildren && (
+          <div className="flex flex-col gap-1 mt-1 border-l-2 border-gray-50 ml-6 animate-in slide-in-from-top-1">
+            {item.children.map(child => (
+              <NavItem key={child.id} item={child} depth={depth + 1} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -122,9 +197,9 @@ const MobileDrawer = () => {
               </h3>
               <nav className="flex flex-col gap-1">
                 <Link
-                  href="/categories"
+                  href="/products"
                   onClick={() => setOpen(false)}
-                  className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isAllProductsActive ? 'bg-[#233b8c] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-50'}`}
+                  className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isAllProductsActive ? 'bg-[#233b8c] text-white' : 'bg-white text-gray-500 border border-gray-50'}`}
                 >
                   <div className="flex items-center gap-4">
                     <FiGrid size={20} />
@@ -143,53 +218,35 @@ const MobileDrawer = () => {
                     <div className="w-6 h-6 border-2 border-gray-200 border-t-(--color-primary-500) rounded-full animate-spin" />
                   </div>
                 ) : (
-                  categories.map(cat => {
-                    const isActive = currentCategory === cat.title;
-                    const count = categoryCounts[cat.title] || 0;
-                    return (
-                      <Link
-                        key={cat.id}
-                        href={`/products?category=${encodeURIComponent(cat.title)}`}
-                        onClick={() => setOpen(false)}
-                        className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'bg-white text-gray-500 border border-gray-50'}`}
-                      >
-                        <div className="flex items-center gap-4 overflow-hidden">
-                          <div className="w-5 h-5 relative shrink-0">
-                            <Image
-                              src={
-                                getMediaUrl(cat.image_url) ||
-                                getMediaUrl(systemLogo?.image_url) ||
-                                '/assets/images/applogo.png'
-                              }
-                              alt={cat.title}
-                              fill
-                              className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
-                              unoptimized
-                            />
-                          </div>
-                          <span
-                            className={`text-[15px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium'}`}
-                          >
-                            {cat.title}
-                          </span>
-                        </div>
-                        <span
-                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${
-                            isActive
-                              ? 'bg-white/10 border-white/20 text-white'
-                              : 'bg-gray-50 border-gray-100 text-gray-400'
-                          }`}
-                        >
-                          {count}
+                  <>
+                    {/* Method A: Product Categories */}
+                    <div className="space-y-1">
+                      {categoriesA.map(cat => (
+                        <NavItem key={`catA-${cat.id}`} item={cat} />
+                      ))}
+                    </div>
+
+                    {/* Method B: Custom Items */}
+                    {categoriesB.length > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-50 space-y-1">
+                        <span className="px-5 text-[10px] font-bold text-gray-300 uppercase tracking-widest block mb-2">
+                          Other Links
                         </span>
-                      </Link>
-                    );
-                  })
+                        {categoriesB.map(item => (
+                          <NavItem
+                            key={`catB-${item.id}`}
+                            item={item}
+                            isCustom={true}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
               </nav>
             </div>
             {activeAd && (
-              <div className="w-full rounded-[24px] overflow-hidden leading-[0] shadow-md">
+              <div className="w-full rounded-[24px] overflow-hidden leading-[0]">
                 <Link
                   href={activeAd.link || '#'}
                   onClick={() => setOpen(false)}

@@ -1,23 +1,38 @@
 'use client';
 
-import { getFeaturedProducts } from '@/data/featureproduct';
+import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import React, { useEffect, useState, useRef } from 'react';
 import { MdArrowForwardIos } from 'react-icons/md';
+import {
+  API_BASE_URL,
+  getMediaUrl,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 const FeaturedCategory = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      const response = await getFeaturedProducts();
-      setFeaturedProducts(response);
+    const fetchFeaturedCategories = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE_URL}/categories/featured-category/`,
+        );
+        const data = await parseJsonResponse(res, []);
+        // Map backend 'name' to 'name' and 'product_count' to 'quantity' to match original design logic
+        setFeaturedProducts(Array.isArray(data) ? data : data.results || []);
+      } catch (error) {
+        console.error('Error fetching featured categories:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
-    fetchFeaturedProducts();
+    fetchFeaturedCategories();
   }, []);
 
   const checkScrollButtons = () => {
@@ -96,7 +111,7 @@ const FeaturedCategory = () => {
       >
         {featuredProducts.map(item => (
           <Link
-            href={`/products?category=${item.slug || item.name.toLowerCase().replace(/\s+/g, '-')}`}
+            href={`/products?category=${encodeURIComponent(item.name)}`}
             key={item.id}
             className="flex-shrink-0 flex flex-col items-center text-center snap-start group cursor-pointer
                        w-[calc((100%-24px)/2.5)] 
@@ -107,11 +122,11 @@ const FeaturedCategory = () => {
             <div className="relative bg-(--color-imageBG) rounded-full w-full aspect-square flex items-center justify-center overflow-hidden p-4 sm:p-6 xl:p-10 border border-gray-50 transition-all group-hover:border-(--color-primary-100)">
               <div className="relative w-full h-full">
                 <Image
-                  src={item.image}
+                  src={getMediaUrl(item.image) || '/assets/images/applogo.png'}
                   alt={item.name}
                   fill
                   className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110"
-                  priority
+                  unoptimized
                 />
               </div>
             </div>
@@ -122,7 +137,7 @@ const FeaturedCategory = () => {
                 {item.name}
               </h3>
               <p className="text-[10px] sm:text-xs lg:text-sm text-gray-400 font-medium">
-                {item.quantity} Products
+                {item.product_count || 0} Products
               </p>
             </div>
           </Link>
