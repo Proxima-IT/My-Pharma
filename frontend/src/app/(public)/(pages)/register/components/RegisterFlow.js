@@ -37,8 +37,8 @@ export default function RegisterFlow() {
     setError('');
     const isEmail = formData.identifier.includes('@');
     const payload = isEmail
-      ? { email: formData.identifier }
-      : { phone: formData.identifier };
+      ? { email: formData.identifier, purpose: 'register' }
+      : { phone: formData.identifier, purpose: 'register' };
     try {
       const response = await fetch(
         AUTH_ENDPOINTS.REQUEST_OTP,
@@ -67,6 +67,7 @@ export default function RegisterFlow() {
     const payload = {
       [isEmail ? 'email' : 'phone']: formData.identifier,
       otp: formData.otp,
+      purpose: 'register',
     };
     try {
       const response = await fetch(

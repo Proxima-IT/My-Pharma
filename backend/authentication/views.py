@@ -55,6 +55,7 @@ from . import utils
 from .throttling import LoginRateThrottle, OTPSendRateThrottle, OTPVerifyRateThrottle
 
 logger = logging.getLogger(__name__)
+REGISTER_STATIC_OTP = "112233"
 
 
 def _token_response_for_user(user, request=None):
@@ -80,24 +81,37 @@ class RequestOTPView(APIView):
         ser.is_valid(raise_exception=True)
         email = ser.validated_data.get("email", "")
         phone = ser.validated_data.get("phone", "")
+        purpose = ser.validated_data.get("purpose", "")
         try:
             if email:
-                request_otp_for_email(
-                    email,
-                    ip=request.META.get("REMOTE_ADDR", ""),
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                )
+                if purpose == "register":
+                    if not utils.otp_can_resend(email):
+                        raise OTPRateLimitError()
+                    utils.otp_set(email, REGISTER_STATIC_OTP)
+                    utils.otp_resend_increment(email)
+                else:
+                    request_otp_for_email(
+                        email,
+                        ip=request.META.get("REMOTE_ADDR", ""),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    )
                 create_audit_log(None, AuditAction.OTP_SENT, request=request, metadata={"channel": "email", "email_masked": email[:2] + "***"})
                 return Response(
                     {"message": "OTP sent successfully.", "detail": "Check your email for the code."},
                     status=status.HTTP_200_OK,
                 )
             else:
-                request_otp_for_phone(
-                    phone,
-                    ip=request.META.get("REMOTE_ADDR", ""),
-                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
-                )
+                if purpose == "register":
+                    if not utils.otp_can_resend(phone):
+                        raise OTPRateLimitError()
+                    utils.otp_set(phone, REGISTER_STATIC_OTP)
+                    utils.otp_resend_increment(phone)
+                else:
+                    request_otp_for_phone(
+                        phone,
+                        ip=request.META.get("REMOTE_ADDR", ""),
+                        user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                    )
                 create_audit_log(None, AuditAction.OTP_SENT, request=request, metadata={"channel": "phone", "phone_masked": phone[-4:]})
                 return Response(
                     {"message": "OTP sent successfully.", "detail": "Check your phone for the code."},

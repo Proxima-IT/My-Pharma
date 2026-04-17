@@ -88,7 +88,7 @@ export const useVerifyOtp = () => {
   const handleResend = async () => {
     if (timer > 0) return;
     try {
-      await requestOtpApi(email);
+      await requestOtpApi(email, 'register');
       setTimer(60);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0].focus();
@@ -106,7 +106,7 @@ export const useVerifyOtp = () => {
     setError(null);
 
     try {
-      const verifyData = await verifyOtpApi(email, otpString);
+      const verifyData = await verifyOtpApi(email, otpString, 'register');
       const fullName = sessionStorage.getItem('temp_reg_name');
       const password = sessionStorage.getItem('temp_reg_password');
       const [firstName, ...lastNameParts] = fullName.trim().split(/\s+/);

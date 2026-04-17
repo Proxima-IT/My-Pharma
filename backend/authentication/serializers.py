@@ -18,6 +18,7 @@ class RequestOTPSerializer(serializers.Serializer):
     """Unified: request OTP by email OR phone (exactly one)."""
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, trim_whitespace=True)
+    purpose = serializers.CharField(max_length=32, required=False, allow_blank=True, trim_whitespace=True)
 
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip()
@@ -34,6 +35,7 @@ class RequestOTPSerializer(serializers.Serializer):
             attrs["phone"] = normalized
         else:
             attrs["phone"] = ""
+        attrs["purpose"] = (attrs.get("purpose") or "").strip().lower()
         return attrs
 
 
@@ -52,6 +54,7 @@ class VerifyOTPRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, trim_whitespace=True)
     otp = serializers.CharField(max_length=8, min_length=6)
+    purpose = serializers.CharField(max_length=32, required=False, allow_blank=True, trim_whitespace=True)
 
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip()
@@ -65,6 +68,7 @@ class VerifyOTPRequestSerializer(serializers.Serializer):
             attrs["phone"] = normalize_phone(phone)
         else:
             attrs["phone"] = ""
+        attrs["purpose"] = (attrs.get("purpose") or "").strip().lower()
         return attrs
 
 

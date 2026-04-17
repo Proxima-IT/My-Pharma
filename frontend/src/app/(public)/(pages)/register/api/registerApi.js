@@ -2,22 +2,28 @@ import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 const AUTH_BASE = `${API_BASE_URL}/auth`;
 
-export const requestOtpApi = async (email) => {
+export const requestOtpApi = async (email, purpose) => {
+  const payload = { email };
+  if (purpose) payload.purpose = purpose;
+
   const response = await fetch(`${AUTH_BASE}/request-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify(payload),
   });
   const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.detail || 'Failed to send OTP');
   return data;
 };
 
-export const verifyOtpApi = async (email, otp) => {
+export const verifyOtpApi = async (email, otp, purpose) => {
+  const payload = { email, otp };
+  if (purpose) payload.purpose = purpose;
+
   const response = await fetch(`${AUTH_BASE}/verify-otp/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, otp }),
+    body: JSON.stringify(payload),
   });
   const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.detail || 'Invalid OTP');
