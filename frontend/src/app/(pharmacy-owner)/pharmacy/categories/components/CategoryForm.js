@@ -54,7 +54,7 @@ const CategoryForm = ({ initialData, categoryTree, onSubmit, isLoading }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Category Name */}
         <div>
-          <label className={labelClass}>GROUP NAME / TYPE</label>
+          <label className={labelClass}>CATEGORY NAME / TYPE</label>
           <input
             type="text"
             placeholder="E.G. TABLETS OR SYRUP"
@@ -67,13 +67,13 @@ const CategoryForm = ({ initialData, categoryTree, onSubmit, isLoading }) => {
 
         {/* Parent Selection */}
         <div>
-          <label className={labelClass}>UNDER WHICH GROUP? (OPTIONAL)</label>
+          <label className={labelClass}>UNDER WHICH CATEGORY? (OPTIONAL)</label>
           <select
             value={formData.parent}
             onChange={e => setFormData({ ...formData, parent: e.target.value })}
             className={inputClass + ' cursor-pointer appearance-none'}
           >
-            <option value="">NONE (THIS IS A MAIN GROUP)</option>
+            <option value="">NONE (THIS IS A MAIN CATEGORY)</option>
             {renderOptions(categoryTree)}
           </select>
         </div>
@@ -86,7 +86,7 @@ const CategoryForm = ({ initialData, categoryTree, onSubmit, isLoading }) => {
             SHOW IN SHOP?
           </span>
           <span className="font-mono text-[10px] text-(--color-text-secondary) uppercase">
-            IF OFF, CUSTOMERS CANNOT SEE THIS GROUP
+            IF OFF, CUSTOMERS CANNOT SEE THIS CATEGORY
           </span>
         </div>
         <input
@@ -108,7 +108,7 @@ const CategoryForm = ({ initialData, categoryTree, onSubmit, isLoading }) => {
           <span className="animate-pulse font-mono">SAVING...</span>
         ) : (
           <span className="font-mono">
-            {initialData ? 'SAVE CHANGES' : 'CREATE GROUP'}
+            {initialData ? 'SAVE CHANGES' : 'CREATE CATEGORY'}
           </span>
         )}
       </button>

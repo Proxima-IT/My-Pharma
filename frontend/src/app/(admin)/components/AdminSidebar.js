@@ -82,7 +82,7 @@ const AdminSidebar = () => {
         },
         { name: 'Company Registry', icon: <FiAward />, href: '/admin/brands' },
         {
-          name: 'Medicine Groups',
+          name: 'Categories',
           icon: <FiGrid />,
           href: '/admin/categories',
         },

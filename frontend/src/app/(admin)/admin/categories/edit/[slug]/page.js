@@ -106,7 +106,7 @@ export default function AdminEditCategoryPage({ params }) {
 
         <div className="space-y-2">
           <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
-            Edit Group Info
+            Edit Category Info
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
             Updating details for:{' '}
@@ -121,15 +121,15 @@ export default function AdminEditCategoryPage({ params }) {
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full">
         <div className="mb-10 border-b border-gray-50 pb-6">
           <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
-            Group Settings
+            Category Settings
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Group Name */}
+            {/* Category Name */}
             <div>
-              <label className={labelClass}>Group Name / Type</label>
+              <label className={labelClass}>Category Name / Type</label>
               <input
                 type="text"
                 className={inputClass}
@@ -143,7 +143,9 @@ export default function AdminEditCategoryPage({ params }) {
 
             {/* Parent Selection */}
             <div>
-              <label className={labelClass}>Move Under Group? (Optional)</label>
+              <label className={labelClass}>
+                Move Under Category? (Optional)
+              </label>
               <select
                 className={inputClass + ' cursor-pointer appearance-none'}
                 value={formData.parent}
@@ -151,7 +153,7 @@ export default function AdminEditCategoryPage({ params }) {
                   setFormData({ ...formData, parent: e.target.value })
                 }
               >
-                <option value="">NONE (SET AS MAIN GROUP)</option>
+                <option value="">NONE (SET AS MAIN CATEGORY)</option>
                 {renderOptions(categoryTree)}
               </select>
             </div>
@@ -164,7 +166,7 @@ export default function AdminEditCategoryPage({ params }) {
                 Active Status
               </span>
               <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                Show this group in the shop?
+                Show this category in the shop?
               </span>
             </div>
             <input
@@ -196,7 +198,7 @@ export default function AdminEditCategoryPage({ params }) {
 
       {/* Footer */}
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        Group_ID: {categoryDetails?.id}
+        Category_ID: {categoryDetails?.id}
       </div>
     </div>
   );

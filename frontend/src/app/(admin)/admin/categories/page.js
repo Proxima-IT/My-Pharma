@@ -23,7 +23,7 @@ export default function AdminCategoryListPage() {
   }, [page, search, fetchCategories]);
 
   const handleDelete = async (slug, name) => {
-    if (confirm(`Are you sure you want to delete the group "${name}"?`)) {
+    if (confirm(`Are you sure you want to delete the category "${name}"?`)) {
       await deleteCategory(slug);
     }
   };
@@ -34,7 +34,7 @@ export default function AdminCategoryListPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-gray-100 pb-6">
         <div>
           <h1 className="text-3xl font-black text-[#1B1B1B] tracking-tighter uppercase">
-            Medicine Groups
+            Categories
           </h1>
           <p className="text-[13px] text-[#6B6B5E] mt-1 font-medium">
             Organize your medicines into different types and categories.
@@ -42,7 +42,7 @@ export default function AdminCategoryListPage() {
         </div>
         <Link href="/admin/categories/new">
           <button className="bg-[#3A5A40] text-white px-8 py-3.5 rounded-none font-bold text-xs tracking-widest flex items-center gap-2 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer uppercase border border-transparent">
-            <FiPlus size={18} /> Add New Group
+            <FiPlus size={18} /> Add New Category
           </button>
         </Link>
       </div>
@@ -56,7 +56,7 @@ export default function AdminCategoryListPage() {
           />
           <input
             type="text"
-            placeholder="SEARCH GROUPS BY NAME..."
+            placeholder="SEARCH CATEGORIES BY NAME..."
             className="w-full h-10 pl-10 pr-4 bg-transparent rounded-none text-sm font-mono focus:outline-none uppercase tracking-tight placeholder:text-gray-300"
             value={search}
             onChange={e => {
@@ -74,10 +74,10 @@ export default function AdminCategoryListPage() {
             <thead>
               <tr className="bg-gray-50 text-[#1B1B1B] text-[11px] uppercase tracking-[0.2em] font-bold">
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  Group Name
+                  Category Name
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  Parent Group
+                  Parent Category
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
                   Status
@@ -90,7 +90,7 @@ export default function AdminCategoryListPage() {
                 <tr>
                   <td colSpan="4" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      LOADING_GROUPS...
+                      LOADING_CATEGORIES...
                     </div>
                   </td>
                 </tr>
@@ -102,7 +102,7 @@ export default function AdminCategoryListPage() {
                   >
                     <FiLayers size={40} />
                     <p className="font-mono text-sm font-bold uppercase">
-                      No Groups Found
+                      No Categories Found
                     </p>
                   </td>
                 </tr>
@@ -129,7 +129,7 @@ export default function AdminCategoryListPage() {
                         </span>
                       ) : (
                         <span className="font-mono text-[10px] font-bold text-[#3A5A40] bg-[#E8F0EA] px-2 py-1 border border-[#3A5A40]/20 tracking-widest">
-                          MAIN_GROUP
+                          MAIN_CATEGORY
                         </span>
                       )}
                     </td>
@@ -172,7 +172,7 @@ export default function AdminCategoryListPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between px-2">
         <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase">
-          Total Groups:{' '}
+          Total Categories:{' '}
           <span className="text-[#1B1B1B]">{categories.count}</span>
         </p>
         <div className="flex items-center gap-0 border border-gray-200 bg-white">

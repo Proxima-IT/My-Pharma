@@ -51,12 +51,12 @@ export default function CategoryListPage() {
   }, [fetchFilteredData]);
 
   const handleDelete = async slug => {
-    if (confirm('Are you sure? This will delete the medicine group.')) {
+    if (confirm('Are you sure? This will delete the category.')) {
       const token = localStorage.getItem('access_token');
       try {
         await deleteCategory(token, slug);
       } catch (err) {
-        alert('Failed to delete group');
+        alert('Failed to delete category');
       }
     }
   };
@@ -67,10 +67,10 @@ export default function CategoryListPage() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b-4 border-(--color-admin-border) pb-6">
         <div>
           <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
-            Store Records / Medicine Groups
+            Store Records / Categories
           </span>
           <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
-            Medicine Groups
+            Categories
           </h1>
           <p className="font-mono text-[11px] text-(--color-text-secondary) mt-2 uppercase">
             Organize medicines by their types (e.g. Syrup, Tablet)
@@ -78,7 +78,7 @@ export default function CategoryListPage() {
         </div>
         <Link href="/pharmacy/categories/new">
           <button className="bg-(--color-admin-primary) text-white px-8 py-3.5 rounded-none font-bold text-xs tracking-widest flex items-center gap-2 hover:bg-(--color-admin-accent) transition-all duration-300 cursor-pointer uppercase border border-(--color-admin-border)">
-            <FiPlus size={18} /> ADD NEW GROUP
+            <FiPlus size={18} /> ADD NEW CATEGORY
           </button>
         </Link>
       </div>
@@ -93,7 +93,7 @@ export default function CategoryListPage() {
             />
             <input
               type="text"
-              placeholder="SEARCH GROUPS BY NAME..."
+              placeholder="SEARCH CATEGORIES BY NAME..."
               className="w-full h-10 pl-10 pr-4 bg-transparent rounded-none text-sm font-mono focus:outline-none uppercase tracking-tight placeholder:text-gray-300"
               value={search}
               onChange={e => {
@@ -126,10 +126,10 @@ export default function CategoryListPage() {
             <thead>
               <tr className="bg-(--color-admin-navy) text-white text-[11px] uppercase tracking-[0.2em] font-bold">
                 <th className="px-8 py-4 text-left border-r border-white/10">
-                  GROUP NAME
+                  CATEGORY NAME
                 </th>
                 <th className="px-8 py-4 text-left border-r border-white/10">
-                  MAIN GROUP
+                  PARENT CATEGORY
                 </th>
                 <th className="px-8 py-4 text-left border-r border-white/10">
                   STATUS
@@ -152,7 +152,7 @@ export default function CategoryListPage() {
                     <div className="flex flex-col items-center gap-4 text-(--color-text-secondary)">
                       <FiLayers size={40} />
                       <p className="font-mono text-sm font-bold uppercase tracking-widest">
-                        NO GROUPS FOUND
+                        NO CATEGORIES FOUND
                       </p>
                     </div>
                   </td>
@@ -180,7 +180,7 @@ export default function CategoryListPage() {
                         </span>
                       ) : (
                         <span className="font-mono text-[10px] font-bold bg-(--color-admin-bg) border border-(--color-admin-primary) text-(--color-admin-primary) px-2 py-1 uppercase tracking-widest">
-                          MAIN_GROUP
+                          MAIN_CATEGORY
                         </span>
                       )}
                     </td>

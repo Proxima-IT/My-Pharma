@@ -69,10 +69,10 @@ export default function EditCategoryPage() {
         </button>
         <div>
           <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
-            Store Records / Edit / Group
+            Store Records / Edit / Category
           </span>
           <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
-            Edit Group Details
+            Edit Category Details
           </h1>
         </div>
       </div>
@@ -80,7 +80,7 @@ export default function EditCategoryPage() {
       <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8 md:p-12">
         <div className="mb-10 border-b border-(--color-admin-border) pb-8">
           <h2 className="font-mono text-sm font-bold text-(--color-admin-navy) uppercase tracking-widest">
-            Group Settings
+            Category Settings
           </h2>
           <p className="text-(--color-text-secondary) mt-2 font-medium text-xs uppercase tracking-wide">
             Changing details for:{' '}

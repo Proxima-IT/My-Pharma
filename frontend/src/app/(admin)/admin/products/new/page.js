@@ -191,7 +191,7 @@ export default function AdminNewProductPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelClass}>Medicine Group</label>
+                  <label className={labelClass}>Category</label>
                   <select
                     className={inputClass}
                     value={formData.category}
@@ -200,7 +200,7 @@ export default function AdminNewProductPage() {
                     }
                     required
                   >
-                    <option value="">Select Group</option>
+                    <option value="">Select Category</option>
                     {(Array.isArray(categories)
                       ? categories
                       : categories?.results || []

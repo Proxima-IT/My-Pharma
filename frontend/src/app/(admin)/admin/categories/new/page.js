@@ -69,7 +69,7 @@ export default function AdminNewCategoryPage() {
 
         <div className="space-y-2">
           <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
-            Add New Group
+            Add New Category
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
             Create a new classification for your medicines (e.g. Injections,
@@ -82,15 +82,15 @@ export default function AdminNewCategoryPage() {
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full">
         <div className="mb-10 border-b border-gray-50 pb-6">
           <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
-            Group Details
+            Category Details
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Group Name */}
+            {/* Category Name */}
             <div>
-              <label className={labelClass}>Group Name / Type</label>
+              <label className={labelClass}>Category Name / Type</label>
               <input
                 type="text"
                 placeholder="E.G. TABLETS OR SYRUP"
@@ -106,7 +106,7 @@ export default function AdminNewCategoryPage() {
             {/* Parent Selection */}
             <div>
               <label className={labelClass}>
-                Under Which Group? (Optional)
+                Under Which Category? (Optional)
               </label>
               <select
                 className={inputClass + ' cursor-pointer appearance-none'}
@@ -115,7 +115,7 @@ export default function AdminNewCategoryPage() {
                   setFormData({ ...formData, parent: e.target.value })
                 }
               >
-                <option value="">NONE (THIS IS A MAIN GROUP)</option>
+                <option value="">NONE (THIS IS A MAIN CATEGORY)</option>
                 {renderOptions(categoryTree)}
               </select>
             </div>
@@ -128,7 +128,7 @@ export default function AdminNewCategoryPage() {
                 Active Status
               </span>
               <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                Show this group to customers in the shop?
+                Show this category to customers in the shop?
               </span>
             </div>
             <input
@@ -151,7 +151,7 @@ export default function AdminNewCategoryPage() {
               'SAVING...'
             ) : (
               <>
-                <FiCheck size={20} /> SAVE GROUP
+                <FiCheck size={20} /> SAVE CATEGORY
               </>
             )}
           </button>

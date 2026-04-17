@@ -36,10 +36,10 @@ export default function NewCategoryPage() {
         </button>
         <div>
           <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
-            Store Records / Add / New Group
+            Store Records / Add / New Category
           </span>
           <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
-            Add New Group
+            Add New Category
           </h1>
         </div>
       </div>
@@ -47,10 +47,11 @@ export default function NewCategoryPage() {
       <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8 md:p-12">
         <div className="mb-10 border-b border-(--color-admin-border) pb-8">
           <h2 className="font-mono text-sm font-bold text-(--color-admin-navy) uppercase tracking-widest">
-            Group Details
+            Category Details
           </h2>
           <p className="text-(--color-text-secondary) mt-2 font-medium text-xs uppercase tracking-wide">
-            Create a new way to group your medicines (e.g. Injections, Creams).
+            Create a new classification for your medicines (e.g. Injections,
+            Creams).
           </p>
         </div>
         <CategoryForm
