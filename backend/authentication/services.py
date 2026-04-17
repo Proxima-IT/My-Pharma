@@ -307,22 +307,58 @@ def record_failed_login(user: User) -> None:
 
 def perform_login_email(email: str, password: str) -> User | None:
     """Authenticate by email/password; apply lockout on failure. Returns User or None."""
-    user = User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).first()
-    if not user:
+    normalized_email = (email or "").strip().lower()
+    candidates = list(
+        User.objects.filter(email__iexact=normalized_email)
+        .exclude(deleted_at__isnull=False)
+        .order_by("id")
+    )
+    if not candidates:
         return None
-    check_login_lockout(user)
-    if not user.check_password(password):
-        record_failed_login(user)
+
+    locked_error = None
+    first_unlocked = None
+
+    for user in candidates:
+        try:
+            check_login_lockout(user)
+        except AccountLockedError as e:
+            # Keep the first lockout error in case every candidate is locked.
+            if locked_error is None:
+                locked_error = e
+            continue
+
+        if first_unlocked is None:
+            first_unlocked = user
+
+        if not user.check_password(password):
+            continue
+
+        # Success: clear failed count and lock
+        user.failed_login_count = 0
+        user.last_failed_login_at = None
+        user.locked_until = None
+        user.save(
+            update_fields=[
+                "failed_login_count",
+                "last_failed_login_at",
+                "locked_until",
+                "updated_at",
+            ]
+        )
+        ident = user.email or user.phone
+        if ident:
+            utils.lockout_clear(ident)
+        return user
+
+    if first_unlocked is not None:
+        record_failed_login(first_unlocked)
         return None
-    # Success: clear failed count and lock
-    user.failed_login_count = 0
-    user.last_failed_login_at = None
-    user.locked_until = None
-    user.save(update_fields=["failed_login_count", "last_failed_login_at", "locked_until", "updated_at"])
-    ident = user.email or user.phone
-    if ident:
-        utils.lockout_clear(ident)
-    return user
+
+    if locked_error is not None:
+        raise locked_error
+
+    return None
 
 
 def perform_login_phone(phone: str, password: str) -> User | None:

@@ -93,10 +93,16 @@ class LoginRequestSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip()
         phone = (attrs.get("phone") or "").strip()
+        password = attrs.get("password") or ""
+        # Password policy disallows whitespace; trimming prevents accidental
+        # copy/paste/newline issues across devices.
+        password = password.strip()
         if not email and not phone:
             raise serializers.ValidationError("Provide email or phone.")
         if email and phone:
             raise serializers.ValidationError("Provide either email or phone, not both.")
+        if not password:
+            raise serializers.ValidationError({"password": "Password is required."})
         attrs["email"] = email.lower() if email else ""
         if phone:
             normalized = normalize_phone(phone)
@@ -105,6 +111,7 @@ class LoginRequestSerializer(serializers.Serializer):
             attrs["phone"] = normalized
         else:
             attrs["phone"] = ""
+        attrs["password"] = password
         return attrs
 
 
