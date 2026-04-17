@@ -1,10 +1,12 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { confirmPasswordResetApi } from '../api/resetPasswordApi';
 
 export const useResetPassword = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token') || '';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -16,11 +18,10 @@ export const useResetPassword = () => {
   });
 
   useEffect(() => {
-    const token = sessionStorage.getItem('reset_token');
     if (!token) {
       router.replace('/forgot-password');
     }
-  }, [router]);
+  }, [router, token]);
 
   const handleResetSubmit = async (e) => {
     e.preventDefault();
@@ -33,13 +34,11 @@ export const useResetPassword = () => {
     setError(null);
 
     try {
-      const token = sessionStorage.getItem('reset_token');
       await confirmPasswordResetApi({
-        registration_token: token,
+        token,
         new_password: formData.password
       });
 
-      sessionStorage.clear();
       router.push('/login');
     } catch (err) {
       setError(err.message);

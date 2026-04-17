@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
             name="UserPushSubscription",
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
-                ("endpoint", models.URLField(max_length=1000, unique=True)),
+                ("endpoint", models.URLField(max_length=500, unique=True)),
                 ("p256dh", models.CharField(max_length=255)),
                 ("auth", models.CharField(max_length=255)),
                 ("is_active", models.BooleanField(db_index=True, default=True)),

@@ -21,7 +21,7 @@ export const useRegister = () => {
 
     try {
       // 1. Request OTP from Backend
-      await requestOtpApi(formData.email);
+      await requestOtpApi(formData.email, 'register');
 
       // 2. Store details in sessionStorage to "remember" them after redirect
       // These will be used in the verify step to complete the registration

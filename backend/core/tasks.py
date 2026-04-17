@@ -31,6 +31,12 @@ def dispatch_web_push_notifications(
             user__notification_preference__is_enabled=True,
             user__notification_preference__browser_permission="granted",
         )
+    logger.info(
+        "Push fanout started users=%s opted_in_only=%s target_url=%s",
+        len(user_ids or []),
+        opted_in_only,
+        target_url,
+    )
 
     stats = {
         "push_attempted": 0,
@@ -52,6 +58,14 @@ def dispatch_web_push_notifications(
             continue
 
         stats["push_failed"] += 1
+        logger.warning(
+            "Push send failed user_id=%s token_prefix=%s status_code=%s permanent=%s reason=%s",
+            subscription.user_id,
+            (subscription.fcm_token or "")[:20],
+            result.get("status_code"),
+            result.get("permanent_failure"),
+            result.get("reason"),
+        )
         if result["permanent_failure"]:
             UserPushSubscription.objects.filter(pk=subscription.pk).update(is_active=False)
             stats["push_deactivated"] += 1

@@ -7,7 +7,7 @@ import PopularProductCard from './PopularProductCard';
 import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 const PopularProduct = () => {
-  const { isLoading, products } = useProductData();
+  const { isLoading, products } = useProductData({ available: 'true' });
 
   if (isLoading) {
     return (

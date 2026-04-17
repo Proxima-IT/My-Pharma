@@ -18,6 +18,7 @@ class RequestOTPSerializer(serializers.Serializer):
     """Unified: request OTP by email OR phone (exactly one)."""
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, trim_whitespace=True)
+    purpose = serializers.CharField(max_length=32, required=False, allow_blank=True, trim_whitespace=True)
 
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip()
@@ -34,6 +35,7 @@ class RequestOTPSerializer(serializers.Serializer):
             attrs["phone"] = normalized
         else:
             attrs["phone"] = ""
+        attrs["purpose"] = (attrs.get("purpose") or "").strip().lower()
         return attrs
 
 
@@ -52,6 +54,7 @@ class VerifyOTPRequestSerializer(serializers.Serializer):
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, trim_whitespace=True)
     otp = serializers.CharField(max_length=8, min_length=6)
+    purpose = serializers.CharField(max_length=32, required=False, allow_blank=True, trim_whitespace=True)
 
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip()
@@ -65,6 +68,7 @@ class VerifyOTPRequestSerializer(serializers.Serializer):
             attrs["phone"] = normalize_phone(phone)
         else:
             attrs["phone"] = ""
+        attrs["purpose"] = (attrs.get("purpose") or "").strip().lower()
         return attrs
 
 
@@ -93,10 +97,16 @@ class LoginRequestSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = (attrs.get("email") or "").strip()
         phone = (attrs.get("phone") or "").strip()
+        password = attrs.get("password") or ""
+        # Password policy disallows whitespace; trimming prevents accidental
+        # copy/paste/newline issues across devices.
+        password = password.strip()
         if not email and not phone:
             raise serializers.ValidationError("Provide email or phone.")
         if email and phone:
             raise serializers.ValidationError("Provide either email or phone, not both.")
+        if not password:
+            raise serializers.ValidationError({"password": "Password is required."})
         attrs["email"] = email.lower() if email else ""
         if phone:
             normalized = normalize_phone(phone)
@@ -105,6 +115,7 @@ class LoginRequestSerializer(serializers.Serializer):
             attrs["phone"] = normalized
         else:
             attrs["phone"] = ""
+        attrs["password"] = password
         return attrs
 
 
@@ -192,7 +203,8 @@ class PasswordResetRequestSerializer(serializers.Serializer):
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
-    token = serializers.CharField()
+    token = serializers.CharField(required=False, allow_blank=True)
+    registration_token = serializers.CharField(required=False, allow_blank=True)
     new_password = serializers.CharField(min_length=8, write_only=True)
 
     def validate_new_password(self, value):
@@ -200,6 +212,15 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if not ok:
             raise serializers.ValidationError(msg)
         return value
+
+    def validate(self, attrs):
+        token = (attrs.get("token") or attrs.get("registration_token") or "").strip()
+        if not token:
+            raise serializers.ValidationError(
+                {"token": "Provide token or registration_token."}
+            )
+        attrs["token"] = token
+        return attrs
 
 
 # ---- Response ----

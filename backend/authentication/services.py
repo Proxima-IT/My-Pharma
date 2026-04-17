@@ -4,6 +4,7 @@ Decoupled from views for testability and reuse.
 """
 import logging
 import re
+import secrets
 from django.conf import settings
 from django.utils import timezone
 
@@ -53,10 +54,8 @@ def request_otp_for_phone(phone: str, ip: str = "", user_agent: str = "") -> Non
 
 
 def _generate_otp() -> str:
-    # Static OTP for all flows (registration, login, change email/phone, etc.).
-    # NOTE: This is intentionally hard-coded for the current environment.
-    # If you re-enable random OTPs in future, update all client-side expectations.
-    return "112233"
+    # Cryptographically secure random 6-digit OTP.
+    return f"{secrets.randbelow(1_000_000):06d}"
 
 
 def request_otp_for_email(email: str, ip: str = "", user_agent: str = "") -> None:
@@ -308,22 +307,58 @@ def record_failed_login(user: User) -> None:
 
 def perform_login_email(email: str, password: str) -> User | None:
     """Authenticate by email/password; apply lockout on failure. Returns User or None."""
-    user = User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).first()
-    if not user:
+    normalized_email = (email or "").strip().lower()
+    candidates = list(
+        User.objects.filter(email__iexact=normalized_email)
+        .exclude(deleted_at__isnull=False)
+        .order_by("id")
+    )
+    if not candidates:
         return None
-    check_login_lockout(user)
-    if not user.check_password(password):
-        record_failed_login(user)
+
+    locked_error = None
+    first_unlocked = None
+
+    for user in candidates:
+        try:
+            check_login_lockout(user)
+        except AccountLockedError as e:
+            # Keep the first lockout error in case every candidate is locked.
+            if locked_error is None:
+                locked_error = e
+            continue
+
+        if first_unlocked is None:
+            first_unlocked = user
+
+        if not user.check_password(password):
+            continue
+
+        # Success: clear failed count and lock
+        user.failed_login_count = 0
+        user.last_failed_login_at = None
+        user.locked_until = None
+        user.save(
+            update_fields=[
+                "failed_login_count",
+                "last_failed_login_at",
+                "locked_until",
+                "updated_at",
+            ]
+        )
+        ident = user.email or user.phone
+        if ident:
+            utils.lockout_clear(ident)
+        return user
+
+    if first_unlocked is not None:
+        record_failed_login(first_unlocked)
         return None
-    # Success: clear failed count and lock
-    user.failed_login_count = 0
-    user.last_failed_login_at = None
-    user.locked_until = None
-    user.save(update_fields=["failed_login_count", "last_failed_login_at", "locked_until", "updated_at"])
-    ident = user.email or user.phone
-    if ident:
-        utils.lockout_clear(ident)
-    return user
+
+    if locked_error is not None:
+        raise locked_error
+
+    return None
 
 
 def perform_login_phone(phone: str, password: str) -> User | None:
@@ -361,3 +396,43 @@ def create_audit_log(user_id: int | None, action: str, request=None, metadata=No
         user_agent=ua,
         metadata=metadata or {},
     )
+
+
+def create_password_reset_token(user_id: int) -> str:
+    token = secrets.token_urlsafe(32)
+    utils.password_reset_token_set(token, user_id)
+    return token
+
+
+def build_password_reset_link(token: str) -> str:
+    base_url = (
+        getattr(settings, "AUTH_PASSWORD_RESET_FRONTEND_URL", "").strip()
+        or "http://localhost:3000"
+    )
+    return f"{base_url.rstrip('/')}/reset-password?token={token}"
+
+
+def reset_password_with_token(token: str, new_password: str) -> User:
+    payload = utils.password_reset_token_get(token)
+    if not payload:
+        raise InvalidRegistrationTokenError(
+            detail="Invalid or expired password reset token."
+        )
+
+    user_id = payload.get("user_id")
+    user = User.objects.filter(pk=user_id).exclude(deleted_at__isnull=False).first()
+    if not user:
+        utils.password_reset_token_delete(token)
+        raise InvalidRegistrationTokenError(
+            detail="Invalid or expired password reset token."
+        )
+
+    ok, msg = validate_password_strength(new_password)
+    if not ok:
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError({"new_password": msg})
+
+    user.set_password(new_password)
+    user.save(update_fields=["password", "updated_at"])
+    utils.password_reset_token_delete(token)
+    return user

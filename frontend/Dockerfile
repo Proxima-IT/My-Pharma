@@ -1,8 +1,8 @@
 # My Pharma – Next.js frontend (production-ready)
-# Multi-stage: build then minimal runtime with standalone output.
+# Single-stage build/start to avoid corrupted .next artifacts during cross-stage copy
+# in unstable Docker Desktop/containerd environments.
 
-# ---- Build ----
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
@@ -12,37 +12,39 @@ RUN npm ci 2>/dev/null || npm install --legacy-peer-deps
 
 COPY . .
 
-# Build-time env (required for NEXT_PUBLIC_* and API URL in rewrites)
+# Build-time env (required for NEXT_PUBLIC_* and runtime config)
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_FIREBASE_API_KEY
+ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
+ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+ARG NEXT_PUBLIC_FIREBASE_APP_ID
+ARG NEXT_PUBLIC_FIREBASE_VAPID_KEY
 ARG NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL} \
     NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL} \
-    NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY}
+    NEXT_PUBLIC_FIREBASE_API_KEY=${NEXT_PUBLIC_FIREBASE_API_KEY} \
+    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN} \
+    NEXT_PUBLIC_FIREBASE_PROJECT_ID=${NEXT_PUBLIC_FIREBASE_PROJECT_ID} \
+    NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET} \
+    NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID} \
+    NEXT_PUBLIC_FIREBASE_APP_ID=${NEXT_PUBLIC_FIREBASE_APP_ID} \
+    NEXT_PUBLIC_FIREBASE_VAPID_KEY=${NEXT_PUBLIC_FIREBASE_VAPID_KEY} \
+    NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY} \
+    NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    PORT=3000 \
+    HOSTNAME=0.0.0.0
 
 RUN npm run build
 
-# ---- Production ----
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
-ENV NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1
-
 RUN addgroup --system --gid 1001 nodejs \
     && adduser --system --uid 1001 nextjs
-
-# Copy standalone build output
-COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
 
 EXPOSE 3000
 
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["node", "server.js"]
+CMD ["npm", "run", "start", "--", "-H", "0.0.0.0", "-p", "3000"]

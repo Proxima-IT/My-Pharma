@@ -1,8 +1,8 @@
 # My Pharma – API Reference (All Current Endpoints)
 
-Single reference for **all current auth API endpoints**: request/response schemas, validation, errors, rate limits, and usage for app and web.
+Single reference for **current authentication and notification APIs**: request/response schemas, validation, errors, rate limits, and usage for app and web.
 
-**Base URL:** `http://localhost:8001` (or your API host)  
+**Base URL:** `http://localhost:8000` (or your API host)  
 **Auth prefix:** `/api/auth/`
 
 **→ User hierarchy & role permissions:** [RBAC.md](RBAC.md) (Super Admin, Pharmacy Admin, Doctor, Registered User, Guest; permissions matrix and admin/API access).
@@ -103,7 +103,12 @@ Endpoints that return tokens return:
 | POST   | `/api/auth/login/`             | No   | 5/min per IP     | Login (email or phone + password)                                             |
 | POST   | `/api/auth/token/refresh/`     | No   | —                | Get new access + refresh                                                      |
 | POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                                                     |
-| POST   | `/api/auth/password-reset/`    | No   | —                | Request password reset email                                                  |
+| POST   | `/api/auth/password-reset/`    | No   | —                | Send password reset link to registered email                                  |
+| POST   | `/api/auth/password-reset/confirm/` | No | —              | Reset password using token from reset link                                    |
+| POST   | `/api/auth/change-email/request/` | Yes | —              | Request OTP to change authenticated user's email                              |
+| POST   | `/api/auth/change-email/confirm/` | Yes | —              | Confirm OTP and change authenticated user's email                             |
+| POST   | `/api/auth/change-phone/request/` | Yes | —              | Request OTP to change authenticated user's phone                              |
+| POST   | `/api/auth/change-phone/confirm/` | Yes | —              | Confirm OTP and change authenticated user's phone                             |
 | GET    | `/api/auth/me/`                | Yes  | —                | Current user profile (includes addresses)                                      |
 | PUT    | `/api/auth/me/`                | Yes  | —                | Update profile (username, profile_picture, gender, date_of_birth)             |
 | PATCH  | `/api/auth/me/`                | Yes  | —                | Partial update profile (same fields as PUT)                                   |
@@ -114,6 +119,16 @@ Endpoints that return tokens return:
 | PUT    | `/api/auth/addresses/<id>/`    | Yes  | —                | Full update address                                                           |
 | PATCH  | `/api/auth/addresses/<id>/`    | Yes  | —                | Partial update address                                                        |
 | DELETE | `/api/auth/addresses/<id>/`    | Yes  | —                | Delete address                                                                |
+| GET    | `/api/notifications/`          | Yes  | —                | List current user's inbox notifications                                       |
+| GET    | `/api/notifications/{id}/`     | Yes  | —                | Retrieve one inbox notification                                               |
+| PATCH  | `/api/notifications/{id}/read/` | Yes | —                | Mark one inbox notification as read                                           |
+| PATCH  | `/api/notifications/read-all/` | Yes  | —                | Mark all inbox notifications as read                                          |
+| GET    | `/api/notifications/permission/` | Yes| —                | Get browser push permission state                                             |
+| POST   | `/api/notifications/permission/` | Yes| —                | Update browser push permission state                                          |
+| GET    | `/api/notifications/subscriptions/` | Yes | —           | List FCM push subscriptions                                                   |
+| POST   | `/api/notifications/subscriptions/` | Yes | —          | Upsert one FCM push subscription (`fcm_token`)                               |
+| DELETE | `/api/notifications/subscriptions/` | Yes | —          | Deactivate one FCM push subscription (`fcm_token`)                           |
+| POST   | `/api/notifications/broadcast/` | Yes (admin) | —        | Broadcast notification to users and enqueue web push fanout                  |
 
 ---
 
@@ -340,7 +355,7 @@ Blacklist the current access token and, if provided, the refresh token. Requires
 
 ### 3.9 POST `/api/auth/password-reset/`
 
-Request a password reset for the given email. If the user exists, a reset email is sent (via Celery). Response is same whether or not the email exists (security).
+Request a password reset for the given email. A reset link is sent to the registered email address.
 
 **Auth:** None  
 **Throttle:** None.
@@ -361,13 +376,48 @@ Request a password reset for the given email. If the user exists, a reset email 
 
 ```json
 {
-  "message": "If an account exists with this email, you will receive reset instructions."
+  "message": "Password reset link sent to your email."
 }
 ```
 
 ---
 
-### 3.10 GET `/api/auth/me/`
+### 3.10 POST `/api/auth/password-reset/confirm/`
+
+Reset password using the token from the password-reset link.
+
+**Auth:** None  
+**Throttle:** None.
+
+**Request body:**
+
+```json
+{
+  "token": "<token-from-reset-link>",
+  "new_password": "NewSecurePass1!"
+}
+```
+
+(`registration_token` is also accepted for backward compatibility.)
+
+**Success (200):**
+
+```json
+{
+  "message": "Password reset successful. You can now log in."
+}
+```
+
+**Errors:**
+
+| Status | Code                           | Condition                                        |
+| ------ | ------------------------------ | ------------------------------------------------ |
+| 400    | `invalid_password_reset_token` | Invalid/expired token                            |
+| 400    | —                              | Validation (e.g. weak password)                  |
+
+---
+
+### 3.11 GET `/api/auth/me/`
 
 Return the current authenticated user profile (includes `username`, `profile_picture`, `address`, `gender`, `gender_display`, `date_of_birth`, role, status, etc.).
 
@@ -386,7 +436,7 @@ Return the current authenticated user profile (includes `username`, `profile_pic
 
 ---
 
-### 3.11 PUT / PATCH `/api/auth/me/` (update profile)
+### 3.12 PUT / PATCH `/api/auth/me/` (update profile)
 
 Update the current user’s profile. Only provided fields are updated (PATCH = partial; PUT also updates only sent fields).
 
@@ -427,7 +477,7 @@ Update the current user’s profile. Only provided fields are updated (PATCH = p
 
 ---
 
-### 3.12 Multiple user addresses (CRUD)
+### 3.13 Multiple user addresses (CRUD)
 
 Users can have multiple saved addresses with: **Full Name**, **Phone**, **Delivery area** (BD district), **Address** (user input), **Address type** (Home, Office, Hometown), **Set default**.
 
@@ -444,6 +494,28 @@ Users can have multiple saved addresses with: **Full Name**, **Phone**, **Delive
 **Auth:** Required. Users only see and modify their own addresses.
 
 **Full documentation:** Request/response schemas, validation, districts list: **[API_ADDRESSES.md](API_ADDRESSES.md)**.
+
+---
+
+### 3.14 Push notifications (FCM web push)
+
+These endpoints power browser push registration and in-app inbox notifications.
+
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/api/notifications/` | List inbox notifications (current user). |
+| GET | `/api/notifications/{id}/` | Retrieve one inbox notification. |
+| PATCH | `/api/notifications/{id}/read/` | Mark one notification as read. |
+| PATCH | `/api/notifications/read-all/` | Mark all unread as read. Returns `{"marked_count": <int>}`. |
+| GET | `/api/notifications/permission/` | Get current push permission preference. |
+| POST | `/api/notifications/permission/` | Update preference with `browser_permission`, optional `is_enabled`, optional `platform`. |
+| GET | `/api/notifications/subscriptions/` | List current user push subscriptions. |
+| POST | `/api/notifications/subscriptions/` | Upsert one FCM subscription with `fcm_token`, optional `platform`, optional `is_active`. |
+| DELETE | `/api/notifications/subscriptions/` | Deactivate a token by body `{"fcm_token": "..."}`; returns `{"removed_count": <int>}`. |
+| POST | `/api/notifications/broadcast/` | Admin broadcast. Body: `title`, `message`, optional absolute `target_url` (`https://...`), optional `send_to_opted_in_only`. |
+
+Broadcast response is `201 Created` and includes delivery counters:
+`sent_count`, `push_attempted`, `push_succeeded`, `push_failed`, `push_deactivated`, and `push_async`.
 
 ---
 
@@ -467,6 +539,7 @@ Users can have multiple saved addresses with: **Full Name**, **Phone**, **Delive
 
 | Endpoint / scope                 | Limit                |
 | -------------------------------- | -------------------- |
+| `POST /api/auth/request-otp/`    | 3 per hour per identifier |
 | `POST /api/auth/register/phone/` | 3 per hour per phone |
 | `POST /api/auth/verify-otp/`     | 10 per minute per IP |
 | `POST /api/auth/login/`          | 5 per minute per IP  |

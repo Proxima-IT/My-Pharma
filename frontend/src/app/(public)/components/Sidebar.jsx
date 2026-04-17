@@ -11,7 +11,11 @@ import {
   FiCheckCircle,
   FiTruck,
 } from 'react-icons/fi';
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import {
+  API_BASE_URL,
+  getMediaUrl,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Sidebar Component
@@ -41,14 +45,23 @@ const Sidebar = () => {
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
           fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
         ]);
+        const [catData, adsData, prodData] = await Promise.all([
+          parseJsonResponse(catRes, { results: [] }),
+          parseJsonResponse(adsRes, { results: [] }),
+          parseJsonResponse(prodRes, { results: [] }),
+        ]);
 
-        const catData = await catRes.json();
-        const adsData = await adsRes.json();
-        const prodData = await prodRes.json();
+        if (!catRes.ok || !adsRes.ok || !prodRes.ok) {
+          console.error('Sidebar API request failed', {
+            sidebarCategories: catRes.status,
+            ads: adsRes.status,
+            products: prodRes.status,
+          });
+        }
 
-        setCategories(catData.results || []);
-        setAds(adsData.results || []);
-        setAllProducts(prodData.results || []);
+        setCategories(Array.isArray(catData) ? catData : (catData.results || []));
+        setAds(Array.isArray(adsData) ? adsData : (adsData.results || []));
+        setAllProducts(Array.isArray(prodData) ? prodData : (prodData.results || []));
       } catch (error) {
         console.error('Error fetching sidebar data:', error);
       } finally {
@@ -146,7 +159,10 @@ const Sidebar = () => {
                     <div className="flex items-center gap-4 overflow-hidden">
                       <div className="w-5 h-5 relative shrink-0">
                         <Image
-                          src={cat.image_url || '/assets/images/applogo.png'}
+                          src={
+                            getMediaUrl(cat.image_url) ||
+                            '/assets/images/applogo.png'
+                          }
                           alt={cat.title}
                           fill
                           className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
@@ -180,7 +196,9 @@ const Sidebar = () => {
       <div className="w-full rounded-[32px] overflow-hidden leading-[0]">
         <Link href={activeAd?.link || '#'} className="block w-full h-full">
           <Image
-            src={activeAd?.image_url || '/assets/images/applogo.png'}
+            src={
+              getMediaUrl(activeAd?.image_url) || '/assets/images/applogo.png'
+            }
             alt="Promotional Banner"
             width={400}
             height={500}

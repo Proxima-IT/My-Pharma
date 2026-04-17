@@ -10,7 +10,11 @@ import { MdArrowForwardIos } from 'react-icons/md';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { useCart } from '@/app/(public)/hooks/useCart';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
-import { PRODUCT_ENDPOINTS, getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import {
+  PRODUCT_ENDPOINTS,
+  getMediaUrl,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 const DealsSection = () => {
   const [products, setProducts] = useState([]);
@@ -21,12 +25,21 @@ const DealsSection = () => {
     const fetchDeals = async () => {
       try {
         const response = await fetch(
-          `${PRODUCT_ENDPOINTS.BASE}?is_active=true`,
+          `${PRODUCT_ENDPOINTS.BASE}?is_active=true&available=true`,
         );
-        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(`Failed to fetch deals (${response.status})`);
+        }
+        const data = await parseJsonResponse(response, { results: [] });
 
-        const deals = (data.results || data)
-          .filter(p => p.discount_percentage && p.discount_percentage > 0)
+        const products = Array.isArray(data) ? data : (data.results || []);
+        const deals = products
+          .filter(
+            p =>
+              p.discount_percentage &&
+              p.discount_percentage > 0 &&
+              Number(p.quantity_in_stock || 0) > 0,
+          )
           .slice(0, 4);
 
         setProducts(deals);

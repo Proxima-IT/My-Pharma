@@ -17,17 +17,35 @@ const serverApiBase = process.env.BACKEND_URL_INTERNAL
   ? `${process.env.BACKEND_URL_INTERNAL.replace(/\/$/, '')}/api`
   : '';
 
+const normalizeApiBase = value => {
+  const base = (value || '').replace(/\/$/, '');
+  if (!base) return '';
+  return base.endsWith('/api') ? base : `${base}/api`;
+};
+
+const envApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_API_URL);
+const envBackendApiBase = normalizeApiBase(process.env.NEXT_PUBLIC_BACKEND_URL);
+const publicEnvApiBase = envApiBase || envBackendApiBase;
+const envPointsToLocalhost =
+  publicEnvApiBase &&
+  /(^https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(publicEnvApiBase);
+
 /**
  * API_BASE_URL Logic:
  * - Browser on localhost => talk to local backend directly.
- * - Browser on non-localhost => use same-origin /api to avoid hardcoded-domain
- *   TLS/certificate mismatch (e.g. www vs apex).
+ * - Browser on non-localhost => prefer public env API host
+ *   (NEXT_PUBLIC_API_URL, then NEXT_PUBLIC_BACKEND_URL), fallback to same-origin
+ *   /api proxy.
  * - Server-side => prefer internal Docker backend URL to avoid public TLS/domain
  *   certificate issues; fallback to env-configured public API URL.
  */
 export const API_BASE_URL = isBrowser
-  ? (isLocalhost ? 'http://localhost:8000/api' : browserApiBase)
-  : (serverApiBase || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api');
+  ? (
+      isLocalhost
+        ? (publicEnvApiBase || 'http://localhost:8080/api')
+        : (!envPointsToLocalhost && publicEnvApiBase ? publicEnvApiBase : browserApiBase)
+    )
+  : (serverApiBase || publicEnvApiBase || 'http://localhost:8080/api');
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,

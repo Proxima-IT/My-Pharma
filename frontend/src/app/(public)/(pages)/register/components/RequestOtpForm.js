@@ -28,7 +28,9 @@ export default function RequestOtpForm() {
     setError('');
     // Logic to determine if identifier is email or phone
     const isEmail = identifier.includes('@');
-    const payload = isEmail ? { email: identifier } : { phone: identifier };
+    const payload = isEmail
+      ? { email: identifier, purpose: 'register' }
+      : { phone: identifier, purpose: 'register' };
     try {
       const response = await fetch(
         AUTH_ENDPOINTS.REQUEST_OTP,

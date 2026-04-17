@@ -7,7 +7,11 @@ import { FiGrid, FiCheckCircle, FiTruck } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import {
+  API_BASE_URL,
+  getMediaUrl,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
 /**
@@ -53,13 +57,23 @@ const MobileDrawer = () => {
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
           fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`), // Fetch products for count
         ]);
-        const catData = await catRes.json();
-        const adsData = await adsRes.json();
-        const prodData = await prodRes.json();
+        const [catData, adsData, prodData] = await Promise.all([
+          parseJsonResponse(catRes, { results: [] }),
+          parseJsonResponse(adsRes, { results: [] }),
+          parseJsonResponse(prodRes, { results: [] }),
+        ]);
 
-        setCategories(catData.results || []);
-        setAds(adsData.results || []);
-        setAllProducts(prodData.results || []);
+        if (!catRes.ok || !adsRes.ok || !prodRes.ok) {
+          console.error('Drawer API request failed', {
+            sidebarCategories: catRes.status,
+            ads: adsRes.status,
+            products: prodRes.status,
+          });
+        }
+
+        setCategories(Array.isArray(catData) ? catData : (catData.results || []));
+        setAds(Array.isArray(adsData) ? adsData : (adsData.results || []));
+        setAllProducts(Array.isArray(prodData) ? prodData : (prodData.results || []));
       } catch (error) {
         console.error('Error fetching drawer data:', error);
       } finally {
@@ -143,8 +157,8 @@ const MobileDrawer = () => {
                           <div className="w-5 h-5 relative shrink-0">
                             <Image
                               src={
-                                cat.image_url ||
-                                systemLogo?.image_url ||
+                                getMediaUrl(cat.image_url) ||
+                                getMediaUrl(systemLogo?.image_url) ||
                                 '/assets/images/applogo.png'
                               }
                               alt={cat.title}
@@ -183,8 +197,8 @@ const MobileDrawer = () => {
                 >
                   <Image
                     src={
-                      activeAd.image_url ||
-                      systemLogo?.image_url ||
+                      getMediaUrl(activeAd.image_url) ||
+                      getMediaUrl(systemLogo?.image_url) ||
                       '/assets/images/applogo.png'
                     }
                     alt="Promotional Banner"

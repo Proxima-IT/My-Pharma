@@ -1,0 +1,5 @@
+﻿{
+  "fcm_token": "sample_fcm_registration_token_here",
+  "platform": "Windows",
+  "is_active": true
+}

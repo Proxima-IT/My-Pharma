@@ -19,9 +19,11 @@ export const useLogin = () => {
     setError(null);
 
     try {
+      const email = (formData.email || '').trim().toLowerCase();
+      const password = (formData.password || '').trim();
       const result = await loginApi({
-        email: formData.email,
-        password: formData.password,
+        email,
+        password,
       });
 
       // Store tokens and user data
