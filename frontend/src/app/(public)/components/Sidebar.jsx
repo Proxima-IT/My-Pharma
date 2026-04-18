@@ -19,10 +19,10 @@ import {
 
 /**
  * Sidebar Component
- * Refactored to support:
- * 1. Method A: Product Categories (/api/categories/sidebar-category/)
- * 2. Method B: Custom Sidebar Items (/api/sidebar-categories/)
- * 3. Nested Menus: Dropdown support for parent categories.
+ * Features:
+ * 1. Method A (Product Categories): Reconstructs a tree structure on the fly.
+ * 2. Method B (Custom Items): Simple title/icon links.
+ * 3. Only Top-level categories show in main list; children are nested in dropdowns.
  */
 const Sidebar = () => {
   const router = useRouter();
@@ -70,6 +70,34 @@ const Sidebar = () => {
     fetchData();
   }, []);
 
+  // --- HIERARCHICAL LOGIC: Build Tree from Flat Array ---
+  const sidebarTree = useMemo(() => {
+    // 1. Create a deep copy of categories with an empty children array
+    const categoryMap = {};
+    categoriesA.forEach(cat => {
+      categoryMap[cat.id] = { ...cat, children: [] };
+    });
+
+    const roots = [];
+
+    // 2. Iterate and place children inside parents
+    categoriesA.forEach(cat => {
+      const parentId = cat.parent?.id || cat.parent; // Handle both object or ID
+
+      if (parentId && categoryMap[parentId]) {
+        // This is a child, and its parent is ALSO in the sidebar list
+        categoryMap[parentId].children.push(categoryMap[cat.id]);
+      } else {
+        // This is either a root category OR its parent is not in the sidebar selection
+        roots.push(categoryMap[cat.id]);
+      }
+    });
+
+    return roots.sort(
+      (a, b) => (a.sidebar_order || 0) - (b.sidebar_order || 0),
+    );
+  }, [categoriesA]);
+
   const categoryCounts = useMemo(() => {
     const counts = {};
     allProducts.forEach(product => {
@@ -85,14 +113,15 @@ const Sidebar = () => {
     }
   };
 
-  const toggleMenu = id => {
+  const toggleMenu = (e, id) => {
+    e.preventDefault();
+    e.stopPropagation();
     setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
   const isAllProductsActive = pathname === '/products' && !currentCategory;
   const activeAd = ads.length > 0 ? ads[0] : null;
 
-  // Navigation Item Component for Recursion
   const NavItem = ({ item, isCustom = false, depth = 0 }) => {
     const title = isCustom ? item.title : item.name;
     const isActive = currentCategory === title;
@@ -116,7 +145,7 @@ const Sidebar = () => {
             }`}
           >
             <div className="flex items-center gap-4 overflow-hidden">
-              {!isCustom && !depth && (
+              {!isCustom && depth === 0 && (
                 <div className="w-5 h-5 relative shrink-0">
                   <Image
                     src={
@@ -125,6 +154,7 @@ const Sidebar = () => {
                     alt={title}
                     fill
                     className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
+                    unoptimized
                   />
                 </div>
               )}
@@ -138,19 +168,19 @@ const Sidebar = () => {
                     alt={title}
                     fill
                     className="object-contain"
+                    unoptimized
                   />
                 </div>
               )}
               <span
-                className={`text-[14px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
+                className={`text-[15px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
               >
                 {title}
               </span>
             </div>
-
             {!isCustom && (
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+                className={`text-[11px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
               >
                 {count}
               </span>
@@ -159,11 +189,8 @@ const Sidebar = () => {
 
           {hasChildren && (
             <button
-              onClick={e => {
-                e.preventDefault();
-                toggleMenu(item.id);
-              }}
-              className={`p-2 ml-1 rounded-full transition-all ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
+              onClick={e => toggleMenu(e, item.id)}
+              className={`p-2 ml-1 rounded-full transition-all cursor-pointer ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
             >
               <FiChevronDown size={18} />
             </button>
@@ -171,7 +198,7 @@ const Sidebar = () => {
         </div>
 
         {hasChildren && isOpen && (
-          <div className="flex flex-col gap-1 mt-1 border-l-2 border-gray-50 ml-6 animate-in slide-in-from-top-1">
+          <div className="flex flex-col gap-1 mt-1 border-l border-gray-100 ml-7 animate-in slide-in-from-top-1">
             {item.children.map(child => (
               <NavItem key={child.id} item={child} depth={depth + 1} />
             ))}
@@ -183,8 +210,8 @@ const Sidebar = () => {
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
-      <div className="bg-white border border-gray-100 rounded-[32px] p-6">
-        <h2 className="text-[20px] font-bold text-gray-900 mb-6 tracking-tight">
+      <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-sm">
+        <h2 className="text-[22px] font-bold text-gray-900 mb-6 tracking-tight">
           All Product Category
         </h2>
 
@@ -199,17 +226,16 @@ const Sidebar = () => {
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             onKeyDown={handleSearch}
-            className="w-full h-12 pl-11 pr-4 bg-gray-50/50 border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all focus:bg-white"
+            className="w-full h-12 pl-11 pr-4 bg-white border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all"
           />
         </div>
 
-        <nav className="flex flex-col gap-2">
-          {/* Default Route */}
+        <nav className="flex flex-col gap-1">
           <Link
             href="/products"
             className={`flex items-center justify-between px-5 py-3.5 rounded-full transition-all ${
               isAllProductsActive
-                ? 'bg-[#233b8c] text-white'
+                ? 'bg-[#233b8c] text-white shadow-sm'
                 : 'text-gray-500 hover:bg-gray-50'
             }`}
           >
@@ -226,7 +252,7 @@ const Sidebar = () => {
             </span>
           </Link>
 
-          <div className="h-px bg-gray-50 my-2 w-full" />
+          <div className="h-px bg-gray-50 my-3 w-full" />
 
           {isLoading ? (
             <div className="py-10 flex justify-center">
@@ -234,9 +260,9 @@ const Sidebar = () => {
             </div>
           ) : (
             <>
-              {/* Method A: Product Categories */}
+              {/* Method A: Dynamically constructed Tree */}
               <div className="space-y-1">
-                {categoriesA.map(cat => (
+                {sidebarTree.map(cat => (
                   <NavItem key={`catA-${cat.id}`} item={cat} />
                 ))}
               </div>
@@ -277,7 +303,7 @@ const Sidebar = () => {
       )}
 
       <div className="flex flex-col gap-3 pb-4">
-        <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex items-center gap-4">
+        <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm">
           <div className="w-10 h-10 rounded-full bg-[#e6f7ed] flex items-center justify-center shrink-0">
             <FiCheckCircle size={20} color="#00ab49" />
           </div>
@@ -291,7 +317,7 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex items-center gap-4">
+        <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex items-center gap-4 shadow-sm">
           <div className="w-10 h-10 rounded-full bg-[#e6f7ed] flex items-center justify-center shrink-0">
             <FiTruck size={20} color="#00ab49" />
           </div>

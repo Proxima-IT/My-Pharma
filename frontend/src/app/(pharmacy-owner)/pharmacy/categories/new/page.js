@@ -26,30 +26,30 @@ export default function NewCategoryPage() {
   };
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-(--color-admin-bg)">
-      <div className="flex items-center gap-6 border-b-4 border-(--color-admin-border) pb-6">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 bg-[#FAF7F2]">
+      <div className="flex items-center gap-6 border-b-4 border-[#DAD7CD] pb-6">
         <button
           onClick={() => router.back()}
-          className="p-2 bg-(--color-admin-navy) text-white hover:bg-(--color-admin-accent) transition-colors border border-(--color-admin-border) cursor-pointer"
+          className="p-2 bg-[#3A5A40] text-white hover:bg-[#588157] transition-colors border border-[#DAD7CD] cursor-pointer"
         >
           <FiArrowLeft size={20} />
         </button>
         <div>
-          <span className="font-mono text-xs font-bold text-(--color-admin-primary) uppercase tracking-widest">
+          <span className="font-mono text-xs font-bold text-[#8A8A78] uppercase tracking-widest">
             Store Records / Add / New Category
           </span>
-          <h1 className="text-4xl font-black text-(--color-admin-navy) tracking-tighter uppercase">
+          <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase">
             Add New Category
           </h1>
         </div>
       </div>
 
-      <div className="bg-(--color-admin-card) border border-(--color-admin-border) p-8 md:p-12">
-        <div className="mb-10 border-b border-(--color-admin-border) pb-8">
-          <h2 className="font-mono text-sm font-bold text-(--color-admin-navy) uppercase tracking-widest">
+      <div className="bg-white border border-[#DAD7CD] p-8 md:p-12">
+        <div className="mb-10 border-b border-[#DAD7CD] pb-8">
+          <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
             Category Details
           </h2>
-          <p className="text-(--color-text-secondary) mt-2 font-medium text-xs uppercase tracking-wide">
+          <p className="text-[#6B6B5E] mt-2 font-medium text-xs uppercase tracking-wide">
             Create a new classification for your medicines (e.g. Injections,
             Creams).
           </p>

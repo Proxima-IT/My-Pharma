@@ -43,9 +43,9 @@ export default function PharmacyLayout({ children }) {
     <AuthGuard allowedRoles={['PHARMACY_ADMIN', 'SUPER_ADMIN']}>
       {showLoading && <LoadingOverlay onFinish={handleLoadingFinish} />}
 
-      <div className="flex min-h-screen bg-(--color-admin-bg) relative">
+      <div className="flex min-h-screen bg-[#FAF7F2] relative">
         {/* ১. ডেস্কটপ সাইডবার */}
-        <aside className="hidden lg:block w-[300px] shrink-0 h-screen sticky top-0 bg-white border-r border-(--color-admin-border) overflow-y-auto">
+        <aside className="hidden lg:block w-[300px] shrink-0 h-screen sticky top-0 bg-white border-r border-[#DAD7CD] overflow-y-auto">
           <PharmacySidebar />
         </aside>
 
@@ -63,7 +63,7 @@ export default function PharmacyLayout({ children }) {
               {/* ক্লোজ বাটন - ফ্লোটিং */}
               <button
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="absolute top-4 right-4 z-[110] p-2 bg-white border border-(--color-admin-border) text-(--color-admin-navy) hover:bg-gray-50 transition-all rounded-none"
+                className="absolute top-4 right-4 z-[110] p-2 bg-white border border-[#DAD7CD] text-[#3A5A40] hover:bg-gray-50 transition-all rounded-none"
               >
                 <FiX size={20} />
               </button>
@@ -79,11 +79,11 @@ export default function PharmacyLayout({ children }) {
         {/* ৩. মেইন কন্টেন্ট এরিয়া */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* হেডার */}
-          <header className="sticky top-0 z-40 bg-(--color-admin-card) border-b border-(--color-admin-border) px-4 md:px-8 py-5 flex items-center justify-between w-full shrink-0">
+          <header className="sticky top-0 z-40 bg-white border-b border-[#DAD7CD] px-4 md:px-8 py-5 flex items-center justify-between w-full shrink-0">
             <div className="flex items-center gap-4">
               <button
                 onClick={() => setIsMobileMenuOpen(true)}
-                className="lg:hidden p-2.5 -ml-2 bg-white text-(--color-admin-navy) border border-(--color-admin-border) hover:bg-gray-50 transition-all rounded-none"
+                className="lg:hidden p-2.5 -ml-2 bg-white text-[#3A5A40] border border-[#DAD7CD] hover:bg-gray-50 transition-all rounded-none"
               >
                 <FiMenu size={20} />
               </button>
@@ -92,42 +92,41 @@ export default function PharmacyLayout({ children }) {
                 <li className="flex items-center list-none">
                   <Link
                     href="/"
-                    className="text-(--color-text-secondary) hover:text-(--color-admin-navy) transition-colors"
+                    className="text-[#6B6B5E] hover:text-[#3A5A40] transition-colors"
                   >
                     ROOT
                   </Link>
-                  <span className="mx-2 text-(--color-border)">/</span>
+                  <span className="mx-2 text-[#DAD7CD]">/</span>
                 </li>
                 {breadcrumbs.map(crumb => (
                   <li key={crumb.href} className="flex items-center list-none">
                     {crumb.isLast ? (
-                      <span className="text-(--color-admin-navy) font-bold uppercase">
+                      <span className="text-[#3A5A40] font-bold uppercase">
                         {crumb.name}
                       </span>
                     ) : (
                       <>
                         <Link
                           href={crumb.href}
-                          className="text-(--color-text-secondary) hover:text-(--color-admin-navy) transition-colors uppercase"
+                          className="text-[#6B6B5E] hover:text-[#3A5A40] transition-colors uppercase"
                         >
                           {crumb.name}
                         </Link>
-                        <span className="mx-2 text-(--color-border)">/</span>
+                        <span className="mx-2 text-[#DAD7CD]">/</span>
                       </>
                     )}
                   </li>
                 ))}
               </nav>
 
-              <span className="sm:hidden font-black text-xs uppercase tracking-tighter text-(--color-admin-navy)">
+              <span className="sm:hidden font-black text-xs uppercase tracking-tighter text-[#3A5A40]">
                 {breadcrumbs[breadcrumbs.length - 1]?.name || 'Dashboard'}
               </span>
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="font-mono text-[9px] md:text-[10px] border border-(--color-admin-border) px-2 md:px-3 py-1 bg-(--color-admin-bg) font-bold text-(--color-admin-navy)">
-                SYS_STATUS:{' '}
-                <span className="text-(--color-admin-success)">ONLINE</span>
+              <div className="font-mono text-[9px] md:text-[10px] border border-[#DAD7CD] px-2 md:px-3 py-1 bg-[#FAF7F2] font-bold text-[#3A5A40]">
+                SYS_STATUS: <span className="text-[#00AB49]">ONLINE</span>
               </div>
             </div>
           </header>
@@ -137,7 +136,7 @@ export default function PharmacyLayout({ children }) {
             <div className="max-w-full">
               <Suspense
                 fallback={
-                  <div className="font-mono text-sm p-10 animate-pulse text-(--color-admin-primary)">
+                  <div className="font-mono text-sm p-10 animate-pulse text-[#8A8A78]">
                     LOADING_SYSTEM_RESOURCES...
                   </div>
                 }
