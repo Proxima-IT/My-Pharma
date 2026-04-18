@@ -19,6 +19,15 @@ class Category(models.Model):
         related_name="children",
         db_index=True,
     )
+    sidebar_category = models.ForeignKey(
+        "SidebarCategory",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="categories",
+        db_index=True,
+        help_text="Optional custom sidebar menu parent for this category.",
+    )
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=100, unique=True, db_index=True)
     image = models.ImageField(upload_to="categories/%Y/%m/", blank=True, null=True)

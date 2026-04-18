@@ -42,10 +42,20 @@ export default function LayoutWrapper({ children }) {
     !isCheckoutPage &&
     !isBlogsPage;
 
-  // If it's an Auth page, Pharmacy Panel, or Admin Panel, return children directly
-  // This removes the universal Header, Footer, and Sidebar
-  if (isAuthPage || isPharmacyPanel || isAdminPanel) {
+  // Auth pages should not show notification prompt/layout chrome.
+  if (isAuthPage) {
     return <>{children}</>;
+  }
+
+  // Admin and pharmacy routes still need the push prompt so these users can
+  // register FCM tokens and receive OS-level notifications.
+  if (isPharmacyPanel || isAdminPanel) {
+    return (
+      <>
+        <NotificationPermissionPrompt />
+        {children}
+      </>
+    );
   }
 
   return (

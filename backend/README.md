@@ -66,8 +66,8 @@ python manage.py runserver
 ```
 
 - API base: `http://localhost:8000/api/auth/`
-- Swagger UI: `http://localhost:8000/api/schema/` (redirects) or `http://localhost:8000/api/schema/swagger/`
-- Raw OpenAPI schema: `http://localhost:8000/api/schema/openapi/`
+- Swagger UI: `http://localhost:8000/api/schema/swagger/`
+- Raw OpenAPI schema: `http://localhost:8000/api/schema/`
 
 ## Auth API
 

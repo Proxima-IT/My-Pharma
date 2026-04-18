@@ -4,13 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { FiBell, FiX, FiCheck, FiAlertTriangle, FiWifi } from 'react-icons/fi';
 import { notificationApi } from '../api/notificationApi';
 import { registerPushSubscription } from '../lib/webPush';
+import {
+  notificationDebug,
+  notificationWarn,
+  notificationError,
+} from '../../(shared)/lib/notificationDebug';
 
-const isDev = process.env.NODE_ENV !== 'production';
 const logDebug = (...args) => {
-  if (isDev) console.log(...args);
+  notificationDebug(args[0], args[1]);
 };
 const logWarn = (...args) => {
-  if (isDev) console.warn(...args);
+  notificationWarn(args[0], args[1]);
 };
 
 /**
@@ -136,7 +140,7 @@ export default function NotificationPermissionPrompt() {
           fcmResult = await registerPushSubscription();
           logDebug('[NotificationPrompt] FCM token obtained:', fcmResult.fcmToken.substring(0, 20) + '...');
         } catch (subscribeError) {
-          console.error('[NotificationPrompt] FCM registration failed:', subscribeError?.message);
+          notificationError('FCM registration failed.', subscribeError?.message);
           pushAvailable = false;
 
           const msg = String(subscribeError?.message || '').toLowerCase();
@@ -208,7 +212,7 @@ export default function NotificationPermissionPrompt() {
         setIsVisible(false);
       }
     } catch (err) {
-      console.error('[NotificationPrompt] Unhandled error:', err);
+      notificationError('Unhandled permission prompt error.', err?.message || err);
       setResultState('error');
       setErrorMessage(err?.message || 'Something went wrong. Please try again.');
     } finally {

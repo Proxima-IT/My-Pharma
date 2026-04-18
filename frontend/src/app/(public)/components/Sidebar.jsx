@@ -79,6 +79,21 @@ const Sidebar = () => {
     return counts;
   }, [allProducts]);
 
+  const categoriesBySidebarParent = useMemo(() => {
+    const grouped = {};
+    categoriesA.forEach(cat => {
+      if (!cat.sidebar_category) return;
+      if (!grouped[cat.sidebar_category]) grouped[cat.sidebar_category] = [];
+      grouped[cat.sidebar_category].push(cat);
+    });
+    return grouped;
+  }, [categoriesA]);
+
+  const rootSidebarCategories = useMemo(
+    () => categoriesA.filter(cat => !cat.sidebar_category),
+    [categoriesA],
+  );
+
   const handleSearch = e => {
     if (e.key === 'Enter' && searchTerm.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
@@ -96,7 +111,7 @@ const Sidebar = () => {
   const NavItem = ({ item, isCustom = false, depth = 0 }) => {
     const title = isCustom ? item.title : item.name;
     const isActive = currentCategory === title;
-    const hasChildren = !isCustom && item.children && item.children.length > 0;
+    const hasChildren = item.children && item.children.length > 0;
     const isOpen = !!openMenus[item.id];
     const count = categoryCounts[title] || 0;
 
@@ -236,7 +251,7 @@ const Sidebar = () => {
             <>
               {/* Method A: Product Categories */}
               <div className="space-y-1">
-                {categoriesA.map(cat => (
+                {rootSidebarCategories.map(cat => (
                   <NavItem key={`catA-${cat.id}`} item={cat} />
                 ))}
               </div>
@@ -250,7 +265,10 @@ const Sidebar = () => {
                   {categoriesB.map(item => (
                     <NavItem
                       key={`catB-${item.id}`}
-                      item={item}
+                      item={{
+                        ...item,
+                        children: categoriesBySidebarParent[item.id] || [],
+                      }}
                       isCustom={true}
                     />
                   ))}

@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginApi } from "../api/loginApi";
+import {
+  notificationDebug,
+  notificationError,
+} from "../../../../(shared)/lib/notificationDebug";
 
 export const useLogin = () => {
   const router = useRouter();
@@ -19,6 +23,7 @@ export const useLogin = () => {
     setError(null);
 
     try {
+      notificationDebug("Login started. Attempting notification-ready session.");
       const email = (formData.email || "").trim().toLowerCase();
       const password = (formData.password || "").trim();
       const result = await loginApi({
@@ -29,6 +34,9 @@ export const useLogin = () => {
       // Store tokens and user data
       localStorage.setItem("access_token", result.access);
       localStorage.setItem("user", JSON.stringify(result.user));
+      notificationDebug("Login success. Token saved for notification API calls.", {
+        role: result?.user?.role,
+      });
 
       // Role-based redirection
       const routes = {
@@ -40,6 +48,7 @@ export const useLogin = () => {
 
       router.replace(routes[result.user.role] || "/");
     } catch (err) {
+      notificationError("Login failed before notification setup.", err?.message || err);
       setError(err.message);
     } finally {
       setIsLoading(false);

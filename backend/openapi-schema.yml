@@ -4801,6 +4801,14 @@ components:
         parent:
           type: integer
           nullable: true
+        sidebar_category:
+          type: integer
+          nullable: true
+          description: Optional custom sidebar menu parent for this category.
+        sidebar_category_title:
+          type: string
+          readOnly: true
+          nullable: true
         name:
           type: string
           maxLength: 100
@@ -4850,6 +4858,7 @@ components:
       - image_url
       - name
       - product_count
+      - sidebar_category_title
       - slug
       - updated_at
     CategoryMenu:
@@ -4859,6 +4868,11 @@ components:
         id:
           type: integer
           readOnly: true
+        sidebar_category:
+          type: integer
+          readOnly: true
+          nullable: true
+          description: Optional custom sidebar menu parent for this category.
         name:
           type: string
           readOnly: true
@@ -4895,6 +4909,7 @@ components:
       - image_url
       - name
       - quantity
+      - sidebar_category
       - sidebar_order
       - slug
       - title
@@ -4922,6 +4937,10 @@ components:
         parent:
           type: integer
           nullable: true
+        sidebar_category:
+          type: integer
+          nullable: true
+          description: Optional custom sidebar menu parent for this category.
         name:
           type: string
           maxLength: 100
@@ -6578,6 +6597,14 @@ components:
           readOnly: true
         parent:
           type: integer
+          nullable: true
+        sidebar_category:
+          type: integer
+          nullable: true
+          description: Optional custom sidebar menu parent for this category.
+        sidebar_category_title:
+          type: string
+          readOnly: true
           nullable: true
         name:
           type: string

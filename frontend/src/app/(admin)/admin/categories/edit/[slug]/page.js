@@ -3,6 +3,7 @@ import React, { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
 import { useCategoryAdmin } from '@/app/(admin)/hooks/useCategoryAdmin';
+import { useSidebarAdmin } from '@/app/(admin)/hooks/useSidebarAdmin';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 export default function AdminEditCategoryPage({ params }) {
@@ -19,6 +20,7 @@ export default function AdminEditCategoryPage({ params }) {
     isUpdating,
     loading: fetchLoading,
   } = useCategoryAdmin();
+  const { sidebarItems, fetchSidebarItems } = useSidebarAdmin();
 
   const imageInputRef = useRef(null);
 
@@ -26,6 +28,7 @@ export default function AdminEditCategoryPage({ params }) {
   const [formData, setFormData] = useState({
     name: '',
     parent: '',
+    sidebar_category: '',
     is_active: true,
     image: null,
   });
@@ -33,12 +36,13 @@ export default function AdminEditCategoryPage({ params }) {
   // ১. ডাটা লোড করা
   useEffect(() => {
     const loadData = async () => {
-      await fetchCategoryTree();
+      await Promise.all([fetchCategoryTree(), fetchSidebarItems({ page_size: 200 })]);
       const data = await fetchCategoryBySlug(slug);
       if (data) {
         setFormData({
           name: data.name || '',
           parent: data.parent || '',
+          sidebar_category: data.sidebar_category || '',
           is_active: data.is_active ?? true,
           image: null, // New image will be set separately
         });
@@ -48,7 +52,7 @@ export default function AdminEditCategoryPage({ params }) {
       }
     };
     if (slug) loadData();
-  }, [slug, fetchCategoryBySlug, fetchCategoryTree]);
+  }, [slug, fetchCategoryBySlug, fetchCategoryTree, fetchSidebarItems]);
 
   const handleImageChange = e => {
     const file = e.target.files[0];
@@ -81,6 +85,10 @@ export default function AdminEditCategoryPage({ params }) {
     const payload = {
       ...formData,
       parent: formData.parent === '' ? null : parseInt(formData.parent),
+      sidebar_category:
+        formData.sidebar_category === ''
+          ? null
+          : parseInt(formData.sidebar_category),
     };
     const success = await updateCategory(slug, payload);
     if (success) router.push('/admin/categories');
@@ -172,6 +180,26 @@ export default function AdminEditCategoryPage({ params }) {
               >
                 <option value="">NONE (SET AS MAIN CATEGORY)</option>
                 {renderOptions(categoryTree)}
+              </select>
+            </div>
+
+            <div>
+              <label className={labelClass}>
+                Sidebar Menu Parent (Optional)
+              </label>
+              <select
+                className={inputClass + ' cursor-pointer appearance-none'}
+                value={formData.sidebar_category}
+                onChange={e =>
+                  setFormData({ ...formData, sidebar_category: e.target.value })
+                }
+              >
+                <option value="">NONE (NO SIDEBAR MENU PARENT)</option>
+                {sidebarItems.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.title.toUpperCase()}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

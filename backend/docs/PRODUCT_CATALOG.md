@@ -30,10 +30,12 @@ PRODUCT CATALOG
 **Backend implementation:**
 
 - **Category** model has `parent` (self-referential FK). Root categories have `parent=None`; children have `parent` set to the root.
+- **Category** also has optional `sidebar_category` (FK to `SidebarCategory`) for mapping a category under a specific custom sidebar menu item.
 - **Endpoints:**  
   - `GET /api/categories/` – list categories (filter: `parent`, `is_active`; search: `name`, `slug`).  
   - `GET /api/categories/tree/` – category hierarchy (roots with nested `children`).  
   - CRUD: `POST/GET/PUT/PATCH/DELETE /api/categories/{slug}/`.
+  - Custom sidebar menu list: `GET /api/sidebar-categories/` (used as values for `sidebar_category`).
 
 Categories are managed via the above; products are linked via `category` and exposed at `/api/products/`.
 

@@ -55,12 +55,19 @@ from authentication.models import UserAddress
 class CategorySerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
+    sidebar_category_title = serializers.CharField(
+        source="sidebar_category.title",
+        read_only=True,
+        allow_null=True,
+    )
 
     class Meta:
         model = Category
         fields = (
             "id",
             "parent",
+            "sidebar_category",
+            "sidebar_category_title",
             "name",
             "slug",
             "image",
@@ -86,6 +93,20 @@ class CategorySerializer(serializers.ModelSerializer):
             return obj.product_count
         return obj.products.filter(is_active=True).count()
 
+    def validate(self, attrs):
+        instance = getattr(self, "instance", None)
+        sidebar_category = attrs.get(
+            "sidebar_category",
+            getattr(instance, "sidebar_category", None),
+        )
+        show_in_sidebar = attrs.get(
+            "show_in_sidebar",
+            getattr(instance, "show_in_sidebar", False),
+        )
+        if sidebar_category and not show_in_sidebar:
+            attrs["show_in_sidebar"] = True
+        return attrs
+
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
     """Category with nested children for hierarchy (PRODUCT CATALOG > MEDICINES, SUPPLEMENTS, DEVICES)."""
@@ -98,6 +119,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "parent",
+            "sidebar_category",
             "name",
             "slug",
             "image",
@@ -138,6 +160,7 @@ class CategoryMenuSerializer(serializers.ModelSerializer):
         model = Category
         fields = (
             "id",
+            "sidebar_category",
             "name",
             "title",
             "slug",

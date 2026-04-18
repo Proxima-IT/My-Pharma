@@ -374,7 +374,7 @@ def _verify_payment_amount_matches(payment_txn: PaymentTransaction, verification
     destroy=extend_schema(tags=["Categories"], summary="Delete category"),
 )
 class CategoryViewSet(viewsets.ModelViewSet):
-    queryset = Category.objects.select_related("parent").prefetch_related("children").annotate(
+    queryset = Category.objects.select_related("parent", "sidebar_category").prefetch_related("children").annotate(
         product_count=Count("products", filter=Q(products__is_active=True), distinct=True)
     ).all()
     serializer_class = CategorySerializer

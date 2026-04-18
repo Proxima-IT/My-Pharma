@@ -80,6 +80,9 @@ export default function AdminCategoryListPage() {
                   Parent Category
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
+                  Sidebar Menu Parent
+                </th>
+                <th className="px-8 py-4 text-left border-r border-gray-100">
                   Status
                 </th>
                 <th className="px-8 py-4 text-right">Options</th>
@@ -88,7 +91,7 @@ export default function AdminCategoryListPage() {
             <tbody className="divide-y divide-gray-50">
               {loading && categories.results.length === 0 ? (
                 <tr>
-                  <td colSpan="4" className="px-8 py-20 text-center">
+                  <td colSpan="5" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
                       LOADING_CATEGORIES...
                     </div>
@@ -97,7 +100,7 @@ export default function AdminCategoryListPage() {
               ) : categories.results.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="4"
+                    colSpan="5"
                     className="px-8 py-20 text-center flex flex-col items-center gap-4 text-[#8A8A78]"
                   >
                     <FiLayers size={40} />
@@ -130,6 +133,17 @@ export default function AdminCategoryListPage() {
                       ) : (
                         <span className="font-mono text-[10px] font-bold text-[#3A5A40] bg-[#E8F0EA] px-2 py-1 border border-[#3A5A40]/20 tracking-widest">
                           MAIN_CATEGORY
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-8 py-6 border-r border-gray-100">
+                      {category.sidebar_category_title ? (
+                        <span className="font-mono text-[10px] font-bold bg-[#E8F0EA] border border-[#3A5A40]/20 px-2 py-1 text-[#1B1B1B] tracking-widest">
+                          {category.sidebar_category_title.toUpperCase()}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[10px] font-bold text-[#8A8A78]">
+                          NONE
                         </span>
                       )}
                     </td>

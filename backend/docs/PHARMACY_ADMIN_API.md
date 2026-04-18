@@ -47,7 +47,7 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 | PUT / PATCH | `/api/categories/{slug}/` | Update category. |
 | DELETE | `/api/categories/{slug}/` | Delete category. |
 
-**Response fields:** `id`, `parent`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only), `created_at`, `updated_at`.
+**Response fields:** `id`, `parent`, `sidebar_category`, `sidebar_category_title`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only), `created_at`, `updated_at`.
 
 **Bulk selection body (`PUT /sidebar-category/` and `PUT /featured-category/`):**
 
@@ -65,10 +65,13 @@ Categories are saved in the given order (`sidebar_order` / `featured_order`).
 |-------|------|----------|-------------|
 | name | string | Yes (create) | Category name. |
 | parent | int (id) or null | No | Parent category id; null for root. |
+| sidebar_category | int (id) or null | No | Optional custom sidebar menu parent (`/api/sidebar-categories/{id}/`). |
 | image | file | No | Category image/icon. |
 | is_active | boolean | No | Default true. |
 
 `slug` is auto-generated from `name` on create.
+
+If `sidebar_category` is set, the category is automatically included in sidebar selection (`show_in_sidebar = true`) so it can render under that custom sidebar menu.
 
 ---
 

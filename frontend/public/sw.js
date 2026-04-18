@@ -12,6 +12,8 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
 
+const NOTIFICATION_ICON = '/assets/images/my-pharma-logo.png';
+
 self.addEventListener('activate', (event) => {
   console.log('[sw] activate');
   event.waitUntil(clients.claim());
@@ -62,8 +64,8 @@ self.addEventListener('push', function (event) {
   // (Firebase auto-shows when "notification" key is present in the payload)
   const options = {
     body: data.message,
-    icon: '/assets/images/appicon.png',
-    badge: '/assets/images/appicon.png',
+    icon: NOTIFICATION_ICON,
+    badge: NOTIFICATION_ICON,
     vibrate: [100, 50, 100],
     data: {
       url: data.target_url,

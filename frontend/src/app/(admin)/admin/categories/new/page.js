@@ -3,11 +3,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
 import { useCategoryAdmin } from '../../../hooks/useCategoryAdmin';
+import { useSidebarAdmin } from '../../../hooks/useSidebarAdmin';
 
 export default function AdminNewCategoryPage() {
   const router = useRouter();
   const { createCategory, fetchCategoryTree, categoryTree, isUpdating, error } =
     useCategoryAdmin();
+  const { sidebarItems, fetchSidebarItems } = useSidebarAdmin();
 
   const imageInputRef = useRef(null);
 
@@ -15,6 +17,7 @@ export default function AdminNewCategoryPage() {
   const [formData, setFormData] = useState({
     name: '',
     parent: '',
+    sidebar_category: '',
     is_active: true,
     image: null,
   });
@@ -22,7 +25,8 @@ export default function AdminNewCategoryPage() {
   // ড্রপডাউনের জন্য গ্রুপের তালিকা লোড করা
   useEffect(() => {
     fetchCategoryTree();
-  }, [fetchCategoryTree]);
+    fetchSidebarItems({ page_size: 200 });
+  }, [fetchCategoryTree, fetchSidebarItems]);
 
   const handleImageChange = e => {
     const file = e.target.files[0];
@@ -52,6 +56,10 @@ export default function AdminNewCategoryPage() {
     const payload = {
       ...formData,
       parent: formData.parent === '' ? null : parseInt(formData.parent),
+      sidebar_category:
+        formData.sidebar_category === ''
+          ? null
+          : parseInt(formData.sidebar_category),
     };
     const success = await createCategory(payload);
     if (success) router.push('/admin/categories');
@@ -129,6 +137,27 @@ export default function AdminNewCategoryPage() {
               >
                 <option value="">NONE (THIS IS A MAIN CATEGORY)</option>
                 {renderOptions(categoryTree)}
+              </select>
+            </div>
+
+            {/* Sidebar Menu Parent */}
+            <div>
+              <label className={labelClass}>
+                Sidebar Menu Parent (Optional)
+              </label>
+              <select
+                className={inputClass + ' cursor-pointer appearance-none'}
+                value={formData.sidebar_category}
+                onChange={e =>
+                  setFormData({ ...formData, sidebar_category: e.target.value })
+                }
+              >
+                <option value="">NONE (NO SIDEBAR MENU PARENT)</option>
+                {sidebarItems.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.title.toUpperCase()}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
