@@ -4,13 +4,18 @@
  */
 import { getFirebaseMessaging } from '../../(shared)/lib/firebaseConfig';
 import { getToken, deleteToken } from 'firebase/messaging';
+import {
+  notificationDebug,
+  notificationWarn,
+  notificationError,
+} from '../../(shared)/lib/notificationDebug';
 
 /**
  * Register for push notifications via Firebase Cloud Messaging.
  * Returns the FCM registration token string.
  */
 export async function registerPushSubscription() {
-  console.log('[webPush] Starting FCM registration flow.');
+  notificationDebug('FCM registration flow started.');
   if (typeof window === 'undefined') {
     throw new Error('Push is only available in browser.');
   }
@@ -25,13 +30,15 @@ export async function registerPushSubscription() {
   if (!messaging) {
     throw new Error('Firebase Messaging is not supported in this browser.');
   }
-  console.log('[webPush] Firebase Messaging is supported.');
+  notificationDebug('Firebase Messaging is supported.');
 
   // Register our custom SW that has Firebase compat scripts
   const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-  console.log('[webPush] Service worker registration state:', registration?.active ? 'active' : 'pending');
+  notificationDebug('Service worker registration state.', {
+    state: registration?.active ? 'active' : 'pending',
+  });
   await navigator.serviceWorker.ready;
-  console.log('[webPush] Service worker ready.');
+  notificationDebug('Service worker is ready.');
 
   // Send Firebase config to the service worker so it can initialize
   const firebaseConfig = {
@@ -53,13 +60,13 @@ export async function registerPushSubscription() {
   }
 
   if (registration.active) {
-    console.log('[webPush] Sending Firebase config to active service worker.');
+    notificationDebug('Sending Firebase config to active service worker.');
     registration.active.postMessage({
       type: 'FIREBASE_CONFIG',
       config: firebaseConfig,
     });
   } else {
-    console.warn('[webPush] No active service worker instance yet; config postMessage skipped.');
+    notificationWarn('No active service worker instance yet; config postMessage skipped.');
   }
 
   // Get FCM token using the VAPID key from Firebase project settings
@@ -96,7 +103,9 @@ export async function registerPushSubscription() {
   if (!token) {
     throw new Error('Failed to get FCM registration token.');
   }
-  console.log('[webPush] FCM token generated successfully.');
+  notificationDebug('FCM token generated successfully.', {
+    tokenPrefix: token.slice(0, 20),
+  });
 
   return {
     fcmToken: token,
@@ -110,14 +119,14 @@ export async function registerPushSubscription() {
 export async function unsubscribePush() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return false;
   try {
-    console.log('[webPush] Attempting FCM unsubscription.');
+    notificationDebug('Attempting FCM unsubscription.');
     const messaging = await getFirebaseMessaging();
     if (!messaging) return false;
     const removed = await deleteToken(messaging);
-    console.log('[webPush] FCM token deletion result:', removed);
+    notificationDebug('FCM token deletion result.', { removed });
     return removed;
-  } catch {
-    console.warn('[webPush] FCM unsubscription failed.');
+  } catch (err) {
+    notificationError('FCM unsubscription failed.', err?.message || err);
     return false;
   }
 }

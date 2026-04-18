@@ -67,8 +67,8 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             notification=messaging.WebpushNotification(
                 title=title,
                 body=message,
-                icon="/assets/images/appicon.png",
-                badge="/assets/images/appicon.png",
+                icon="/assets/images/my-pharma-logo.png",
+                badge="/assets/images/my-pharma-logo.png",
                 require_interaction=True,
                 tag="my-pharma-notification",
             ),

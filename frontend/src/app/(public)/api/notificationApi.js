@@ -1,4 +1,8 @@
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import {
+  notificationDebug,
+  notificationError,
+} from '@/app/(shared)/lib/notificationDebug';
 
 /**
  * My Pharma - Public Notification API
@@ -28,9 +32,10 @@ const readErrorMessage = async response => {
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const normalizeSubscriptionPayload = subscription => {
-  // Subscription is now { fcm_token, platform } from Firebase
+  // Accept both snake_case and camelCase token keys.
+  const fcmToken = subscription?.fcm_token || subscription?.fcmToken || '';
   return {
-    fcm_token: subscription?.fcm_token || '',
+    fcm_token: fcmToken,
     platform: subscription?.platform || (typeof navigator !== 'undefined' ? navigator.platform : ''),
     is_active: true,
   };
@@ -66,10 +71,14 @@ export const notificationApi = {
    */
   getNotifications: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString();
+    notificationDebug('Fetching notifications.', { query });
     const res = await fetch(`${API_BASE_URL}/notifications/?${query}`, {
       headers: { ...getAuthHeader(token) },
     });
-    if (!res.ok) throw new Error('Failed to fetch notifications');
+    if (!res.ok) {
+      notificationError('Failed to fetch notifications.', { status: res.status });
+      throw new Error('Failed to fetch notifications');
+    }
     return res.json();
   },
 
@@ -78,6 +87,7 @@ export const notificationApi = {
    * Mark a specific notification as read.
    */
   markAsRead: async (token, id) => {
+    notificationDebug('Marking notification as read.', { id });
     const res = await fetch(`${API_BASE_URL}/notifications/${id}/read/`, {
       method: 'PATCH',
       headers: {
@@ -85,7 +95,13 @@ export const notificationApi = {
         ...getAuthHeader(token),
       },
     });
-    if (!res.ok) throw new Error('Failed to mark notification as read');
+    if (!res.ok) {
+      notificationError('Failed to mark notification as read.', {
+        id,
+        status: res.status,
+      });
+      throw new Error('Failed to mark notification as read');
+    }
     return res.json();
   },
 
@@ -94,6 +110,7 @@ export const notificationApi = {
    * Mark all notifications as read for the user.
    */
   markAllRead: async token => {
+    notificationDebug('Marking all notifications as read.');
     const res = await fetch(`${API_BASE_URL}/notifications/read-all/`, {
       method: 'PATCH',
       headers: {
@@ -101,7 +118,12 @@ export const notificationApi = {
         ...getAuthHeader(token),
       },
     });
-    if (!res.ok) throw new Error('Failed to mark all as read');
+    if (!res.ok) {
+      notificationError('Failed to mark all notifications as read.', {
+        status: res.status,
+      });
+      throw new Error('Failed to mark all as read');
+    }
     return res.json();
   },
 
@@ -157,10 +179,16 @@ export const notificationApi = {
    * Check user's stored notification preferences.
    */
   getPermissionPreferences: async token => {
+    notificationDebug('Fetching notification permission preferences.');
     const res = await fetch(`${API_BASE_URL}/notifications/permission/`, {
       headers: { ...getAuthHeader(token) },
     });
-    if (!res.ok) throw new Error('Failed to fetch notification preferences');
+    if (!res.ok) {
+      notificationError('Failed to fetch notification permission preferences.', {
+        status: res.status,
+      });
+      throw new Error('Failed to fetch notification preferences');
+    }
     return res.json();
   },
 };

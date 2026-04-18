@@ -1,4 +1,8 @@
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import {
+  notificationDebug,
+  notificationError,
+} from '@/app/(shared)/lib/notificationDebug';
 
 /**
  * My Pharma - Super Admin Notification Management API
@@ -12,6 +16,10 @@ export const notificationAdminApi = {
    * @param {Object} data - { title, message, target_url, send_to_opted_in_only }
    */
   broadcastNotification: async (token, data) => {
+    notificationDebug('Admin broadcast request started.', {
+      title: data?.title,
+      optedInOnly: data?.send_to_opted_in_only,
+    });
     const res = await fetch(`${API_BASE_URL}/notifications/broadcast/`, {
       method: 'POST',
       headers: {
@@ -23,8 +31,13 @@ export const notificationAdminApi = {
 
     const result = await res.json();
     if (!res.ok) {
+      notificationError('Admin broadcast request failed.', {
+        status: res.status,
+        detail: result?.detail || result?.message,
+      });
       throw new Error(result.detail || 'Failed to execute system broadcast');
     }
+    notificationDebug('Admin broadcast request succeeded.', result);
     return result;
   },
 
