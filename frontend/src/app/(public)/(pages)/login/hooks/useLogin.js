@@ -1,15 +1,15 @@
-'use client';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { loginApi } from '../api/loginApi';
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { loginApi } from "../api/loginApi";
 
 export const useLogin = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: "",
+    password: "",
     keepLogin: false,
   });
 
@@ -19,26 +19,26 @@ export const useLogin = () => {
     setError(null);
 
     try {
-      const email = (formData.email || '').trim().toLowerCase();
-      const password = (formData.password || '').trim();
+      const email = (formData.email || "").trim().toLowerCase();
+      const password = (formData.password || "").trim();
       const result = await loginApi({
         email,
         password,
       });
 
       // Store tokens and user data
-      localStorage.setItem('access_token', result.access);
-      localStorage.setItem('user', JSON.stringify(result.user));
+      localStorage.setItem("access_token", result.access);
+      localStorage.setItem("user", JSON.stringify(result.user));
 
       // Role-based redirection
       const routes = {
-        SUPER_ADMIN: '/admin',
-        PHARMACY_ADMIN: '/pharmacy',
-        DOCTOR: '/doctor',
-        REGISTERED_USER: '/user',
+        SUPER_ADMIN: "/admin",
+        PHARMACY_ADMIN: "/pharmacy",
+        DOCTOR: "/doctor",
+        REGISTERED_USER: "/user",
       };
-      
-      router.replace(routes[result.user.role] || '/');
+
+      router.replace(routes[result.user.role] || "/");
     } catch (err) {
       setError(err.message);
     } finally {

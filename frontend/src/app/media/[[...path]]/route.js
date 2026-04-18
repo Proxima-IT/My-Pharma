@@ -12,6 +12,8 @@ const DEFAULT_BACKEND_BASES = [
   'http://localhost:8080',
   'http://localhost:8000',
 ];
+const DEFAULT_MEDIA_FALLBACK_IMAGE = '/assets/images/my-pharma-logo.png';
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.avif'];
 
 const normalizeBase = value => (value || '').trim().replace(/\/+$/, '');
 
@@ -36,12 +38,21 @@ const getBackendBaseCandidates = () => {
   addUnique(candidates, process.env.NEXT_PUBLIC_BACKEND_URL);
   // Derive backend base from API URL when only API URL is configured.
   addUnique(candidates, process.env.NEXT_PUBLIC_API_URL);
+  // Optional dedicated media host for environments where API and media differ.
+  addUnique(candidates, process.env.NEXT_PUBLIC_MEDIA_FALLBACK_URL);
 
   for (const fallback of DEFAULT_BACKEND_BASES) {
     addUnique(candidates, fallback);
   }
 
   return candidates;
+};
+
+const isImageRequest = (request, mediaPath) => {
+  const accept = (request.headers.get('accept') || '').toLowerCase();
+  if (accept.includes('image/')) return true;
+  const lowerPath = (mediaPath || '').toLowerCase();
+  return IMAGE_EXTENSIONS.some(ext => lowerPath.endsWith(ext));
 };
 
 const makeMediaUrl = (backendBase, requestUrl, mediaPath) => {
@@ -69,8 +80,10 @@ export async function GET(request, context) {
   const mediaPath = pathSegments ? `/${pathSegments}` : '';
   const requestOrigin = new URL(request.url).origin;
   const backendCandidates = getBackendBaseCandidates();
+  const shouldUseImageFallback = isImageRequest(request, mediaPath);
 
   let lastError = null;
+  let lastNotFoundResponse = null;
 
   for (const backendBase of backendCandidates) {
     // Prevent recursive self-proxy loops (e.g. NEXT_PUBLIC_API_URL points to frontend origin).
@@ -82,6 +95,11 @@ export async function GET(request, context) {
       const res = await fetchFromBackend(url, request);
       // Candidate replied but upstream is unavailable; try next candidate.
       if ([502, 503, 504].includes(res.status)) {
+        continue;
+      }
+      // If one backend does not have the file, try the next candidate.
+      if (res.status === 404) {
+        lastNotFoundResponse = res;
         continue;
       }
       const headers = new Headers();
@@ -104,6 +122,19 @@ export async function GET(request, context) {
   }
   if (!backendCandidates.length) {
     console.error('Media proxy has no backend candidates configured.');
+  }
+
+  // Final fallback for missing images so UI stays stable in both dev/prod.
+  if (shouldUseImageFallback) {
+    const fallbackUrl = new URL(DEFAULT_MEDIA_FALLBACK_IMAGE, request.url);
+    return NextResponse.redirect(fallbackUrl, { status: 307 });
+  }
+
+  if (lastNotFoundResponse) {
+    return new NextResponse(lastNotFoundResponse.body, {
+      status: 404,
+      statusText: lastNotFoundResponse.statusText || 'Not Found',
+    });
   }
 
   {

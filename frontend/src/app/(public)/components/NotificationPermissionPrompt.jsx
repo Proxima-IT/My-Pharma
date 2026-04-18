@@ -5,6 +5,14 @@ import { FiBell, FiX, FiCheck, FiAlertTriangle, FiWifi } from 'react-icons/fi';
 import { notificationApi } from '../api/notificationApi';
 import { registerPushSubscription } from '../lib/webPush';
 
+const isDev = process.env.NODE_ENV !== 'production';
+const logDebug = (...args) => {
+  if (isDev) console.log(...args);
+};
+const logWarn = (...args) => {
+  if (isDev) console.warn(...args);
+};
+
 /**
  * NotificationPermissionPrompt
  * Firebase Cloud Messaging version.
@@ -19,10 +27,10 @@ export default function NotificationPermissionPrompt() {
 
   const syncGrantedPermissionSilently = async authToken => {
     try {
-      console.log('[NotificationPrompt] Permission already granted. Running silent FCM sync.');
+      logDebug('[NotificationPrompt] Permission already granted. Running silent FCM sync.');
       const fcmResult = await registerPushSubscription();
       const tokenPreview = (fcmResult?.fcmToken || '').slice(0, 20);
-      console.log('[NotificationPrompt] Silent FCM token obtained:', `${tokenPreview}...`);
+      logDebug('[NotificationPrompt] Silent FCM token obtained:', `${tokenPreview}...`);
       await notificationApi.saveSubscription(authToken, {
         fcm_token: fcmResult.fcmToken,
         platform: fcmResult.platform,
@@ -32,9 +40,9 @@ export default function NotificationPermissionPrompt() {
         is_enabled: true,
         platform: navigator.platform,
       });
-      console.log('[NotificationPrompt] Silent FCM sync completed successfully.');
+      logDebug('[NotificationPrompt] Silent FCM sync completed successfully.');
     } catch (err) {
-      console.warn(
+      logWarn(
         '[NotificationPrompt] Silent FCM sync failed:',
         err?.message || err,
       );
@@ -46,43 +54,43 @@ export default function NotificationPermissionPrompt() {
   useEffect(() => {
     const checkStatus = async () => {
       if (!('Notification' in window) || !('serviceWorker' in navigator)) {
-        console.warn('[NotificationPrompt] Push not supported in this browser.');
+        logWarn('[NotificationPrompt] Push not supported in this browser.');
         return;
       }
 
       const currentPermission = Notification.permission;
-      console.log('[NotificationPrompt] Notification.permission =', currentPermission);
+      logDebug('[NotificationPrompt] Notification.permission =', currentPermission);
 
       const token = localStorage.getItem('access_token');
       if (!token) {
-        console.log('[NotificationPrompt] No auth token, skipping prompt.');
+        logDebug('[NotificationPrompt] No auth token, skipping prompt.');
         return;
       }
 
       if (currentPermission === 'granted') {
         await syncGrantedPermissionSilently(token);
-        console.log('[NotificationPrompt] Permission already granted, skipping prompt UI.');
+        logDebug('[NotificationPrompt] Permission already granted, skipping prompt UI.');
         return;
       }
 
       if (currentPermission === 'denied') {
-        console.log('[NotificationPrompt] Permission denied previously, skipping prompt UI.');
+        logDebug('[NotificationPrompt] Permission denied previously, skipping prompt UI.');
         return;
       }
 
       if (localStorage.getItem('push_prompt_dismissed') === 'true') {
-        console.log('[NotificationPrompt] Previously dismissed, not showing again.');
+        logDebug('[NotificationPrompt] Previously dismissed, not showing again.');
         return;
       }
 
       if (window.isSecureContext === false) {
-        console.warn('[NotificationPrompt] Not a secure context (HTTPS required). Skipping.');
+        logWarn('[NotificationPrompt] Not a secure context (HTTPS required). Skipping.');
         return;
       }
 
-      console.log('[NotificationPrompt] All checks passed — showing prompt in 3s.');
+      logDebug('[NotificationPrompt] All checks passed — showing prompt in 3s.');
       const timer = setTimeout(() => {
-        console.log('[NotificationPrompt] Showing prompt.');
+        logDebug('[NotificationPrompt] Showing prompt.');
         setIsVisible(true);
       }, 3000);
       return () => clearTimeout(timer);
@@ -117,7 +125,7 @@ export default function NotificationPermissionPrompt() {
     try {
       // Step 1: Ask browser permission
       const permission = await Notification.requestPermission();
-      console.log('[NotificationPrompt] Browser permission result:', permission);
+      logDebug('[NotificationPrompt] Browser permission result:', permission);
 
       if (permission === 'granted') {
         // Step 2: Get FCM token via Firebase
@@ -126,7 +134,7 @@ export default function NotificationPermissionPrompt() {
 
         try {
           fcmResult = await registerPushSubscription();
-          console.log('[NotificationPrompt] FCM token obtained:', fcmResult.fcmToken.substring(0, 20) + '...');
+          logDebug('[NotificationPrompt] FCM token obtained:', fcmResult.fcmToken.substring(0, 20) + '...');
         } catch (subscribeError) {
           console.error('[NotificationPrompt] FCM registration failed:', subscribeError?.message);
           pushAvailable = false;
@@ -138,7 +146,7 @@ export default function NotificationPermissionPrompt() {
             msg.includes('failed to get fcm') ||
             msg.includes('permission')
           ) {
-            console.warn('[NotificationPrompt] Push service unreachable.');
+            logWarn('[NotificationPrompt] Push service unreachable.');
             setResultState('push_unavailable');
           } else if (
             msg.includes('missing next_public_firebase_vapid_key') ||
@@ -165,7 +173,7 @@ export default function NotificationPermissionPrompt() {
               platform: fcmResult.platform,
             });
           } catch (saveError) {
-            console.warn('[NotificationPrompt] Token save failed (non-fatal):', saveError?.message);
+            logWarn('[NotificationPrompt] Token save failed (non-fatal):', saveError?.message);
           }
         }
 
@@ -177,7 +185,7 @@ export default function NotificationPermissionPrompt() {
             platform: navigator.platform,
           });
         } catch (syncError) {
-          console.warn('[NotificationPrompt] Permission sync failed:', syncError?.message);
+          logWarn('[NotificationPrompt] Permission sync failed:', syncError?.message);
         }
 
         if (pushAvailable) {
