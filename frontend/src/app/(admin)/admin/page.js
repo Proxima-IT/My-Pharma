@@ -9,70 +9,44 @@ import {
   FiArrowUpRight,
   FiDatabase,
   FiShield,
+  FiRefreshCw,
 } from 'react-icons/fi';
 import Link from 'next/link';
+import { useAdminDashboard } from '../hooks/useAdminDashboard';
 
 export default function AdminDashboardPage() {
-  // Mock Stats for Super Admin Overview
-  const stats = [
+  const { stats, recentActivity, isLoading, error, refetch } =
+    useAdminDashboard();
+
+  // Dynamic stats based on API data
+  const dynamicStats = [
     {
       label: 'TOTAL_USERS',
-      value: '1,240',
+      value: isLoading ? '...' : stats.totalUsers.toLocaleString(),
       change: '+12%',
       icon: <FiUsers />,
       color: 'text-blue-600',
     },
     {
       label: 'PHARMACY_PARTNERS',
-      value: '86',
+      value: isLoading ? '...' : stats.pharmacyPartners.toString(),
       change: '+4',
       icon: <FiDatabase />,
       color: 'text-[#3A5A40]',
     },
     {
       label: 'SYSTEM_REVENUE',
-      value: '৳ 1,45,230',
+      value: isLoading ? '...' : `৳ ${stats.systemRevenue.toLocaleString()}`,
       change: '+18%',
       icon: <FiShoppingBag />,
       color: 'text-amber-600',
     },
     {
       label: 'ACTIVE_DOCTORS',
-      value: '42',
+      value: isLoading ? '...' : stats.activeDoctors.toString(),
       change: '+2',
       icon: <FiShield />,
       color: 'text-purple-600',
-    },
-  ];
-
-  const recentActivity = [
-    {
-      id: 1,
-      event: 'New Pharmacy Registered',
-      target: 'Lazz Pharma Ltd.',
-      time: '2 mins ago',
-      type: 'REG',
-    },
-    {
-      id: 2,
-      event: 'System Update Deployed',
-      target: 'v1.0.4-stable',
-      time: '45 mins ago',
-      type: 'SYS',
-    },
-    {
-      id: 3,
-      event: 'High Value Order',
-      target: 'ORD-99283 (৳ 12,400)',
-      time: '1 hour ago',
-      type: 'TRX',
-    },
-    {
-      id: 4,
-      event: 'User Role Escalated',
-      target: 'admin_rahat',
-      time: '3 hours ago',
-      type: 'SEC',
     },
   ];
 
@@ -89,16 +63,36 @@ export default function AdminDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[10px] font-bold uppercase">
-            <div className="w-1.5 h-1.5 bg-[#3A5A40] animate-pulse" />
-            Live_Status: Operational
+          <div
+            className={`flex items-center gap-2 px-3 py-1.5 border font-mono text-[10px] font-bold uppercase ${
+              error
+                ? 'bg-red-50 border-red-200 text-red-600'
+                : isLoading
+                  ? 'bg-amber-50 border-amber-200 text-amber-600'
+                  : 'bg-[#E8F0EA] border-[#3A5A40]/20 text-[#3A5A40]'
+            }`}
+          >
+            <div
+              className={`w-1.5 h-1.5 ${
+                error
+                  ? 'bg-red-500'
+                  : isLoading
+                    ? 'bg-amber-500 animate-pulse'
+                    : 'bg-[#3A5A40] animate-pulse'
+              }`}
+            />
+            {error
+              ? 'Error'
+              : isLoading
+                ? 'Loading...'
+                : 'Live_Status: Operational'}
           </div>
         </div>
       </div>
 
       {/* 2. Light Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat, idx) => (
+        {dynamicStats.map((stat, idx) => (
           <div
             key={idx}
             className="bg-white border border-gray-100 p-6 flex flex-col gap-4 hover:border-[#3A5A40] transition-colors group"
@@ -131,34 +125,71 @@ export default function AdminDashboardPage() {
             <h2 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2">
               <FiActivity className="text-[#3A5A40]" /> Recent_Activity_Log
             </h2>
-            <button className="text-[10px] font-bold text-[#3A5A40] hover:underline uppercase tracking-tighter">
-              View_All_Logs
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={refetch}
+                disabled={isLoading}
+                className="text-[10px] font-bold text-[#3A5A40] hover:underline uppercase tracking-tighter disabled:opacity-50 flex items-center gap-1"
+              >
+                <FiRefreshCw
+                  className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`}
+                />
+                Refresh
+              </button>
+              <button className="text-[10px] font-bold text-[#3A5A40] hover:underline uppercase tracking-tighter">
+                View_All_Logs
+              </button>
+            </div>
           </div>
           <div className="divide-y divide-gray-50">
-            {recentActivity.map(item => (
-              <div
-                key={item.id}
-                className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <span className="font-mono text-[9px] font-bold bg-[#F1F1E6] border border-gray-200 px-2 py-1 text-[#6B6B5E]">
-                    {item.type}
-                  </span>
-                  <div>
-                    <p className="text-sm font-bold text-[#1B1B1B] uppercase tracking-tight">
-                      {item.event}
-                    </p>
-                    <p className="text-[11px] text-[#8A8A78] font-medium">
-                      {item.target}
-                    </p>
-                  </div>
+            {isLoading ? (
+              <div className="px-6 py-8 text-center">
+                <div className="inline-flex items-center gap-2 text-[#8A8A78] text-sm">
+                  <FiRefreshCw className="w-4 h-4 animate-spin" />
+                  Loading activity data...
                 </div>
-                <span className="font-mono text-[10px] text-[#B7B7A4]">
-                  {item.time}
-                </span>
               </div>
-            ))}
+            ) : error ? (
+              <div className="px-6 py-8 text-center">
+                <p className="text-red-600 text-sm font-medium">
+                  Error loading activity: {error}
+                </p>
+                <button
+                  onClick={refetch}
+                  className="mt-2 text-[10px] font-bold text-[#3A5A40] hover:underline uppercase tracking-tighter"
+                >
+                  Try Again
+                </button>
+              </div>
+            ) : recentActivity.length === 0 ? (
+              <div className="px-6 py-8 text-center">
+                <p className="text-[#8A8A78] text-sm">No recent activity</p>
+              </div>
+            ) : (
+              recentActivity.map(item => (
+                <div
+                  key={item.id}
+                  className="px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-[9px] font-bold bg-[#F1F1E6] border border-gray-200 px-2 py-1 text-[#6B6B5E]">
+                      {item.type}
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-[#1B1B1B] uppercase tracking-tight">
+                        {item.event}
+                      </p>
+                      <p className="text-[11px] text-[#8A8A78] font-medium">
+                        {item.target}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-mono text-[10px] text-[#B7B7A4]">
+                    {item.time}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </div>
 

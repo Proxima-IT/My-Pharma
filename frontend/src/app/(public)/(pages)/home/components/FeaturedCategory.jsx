@@ -10,6 +10,11 @@ import {
   parseJsonResponse,
 } from '@/app/(shared)/lib/apiConfig';
 
+/**
+ * FeaturedCategory Component
+ * Updated: Uses Tree API to ensure ONLY Main (Root) categories are displayed.
+ * Logic: Filters the top-level nodes of the tree for the 'is_featured_home' flag.
+ */
 const FeaturedCategory = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,21 +23,31 @@ const FeaturedCategory = () => {
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
-    const fetchFeaturedCategories = async () => {
+    const fetchFeaturedFromTree = async () => {
       try {
-        const res = await fetch(
-          `${API_BASE_URL}/categories/featured-category/`,
-        );
+        // Calling the Tree API because it guarantees hierarchy
+        const res = await fetch(`${API_BASE_URL}/categories/tree/`);
         const data = await parseJsonResponse(res, []);
-        // Map backend 'name' to 'name' and 'product_count' to 'quantity' to match original design logic
-        setFeaturedProducts(Array.isArray(data) ? data : data.results || []);
+
+        // 1. data contains ONLY root categories at the top level
+        // 2. We filter those roots to find which ones are marked as featured
+        const featuredRoots = (Array.isArray(data) ? data : []).filter(
+          item => item.is_featured_home === true,
+        );
+
+        // Sort them by the featured_order provided by backend
+        featuredRoots.sort(
+          (a, b) => (a.featured_order || 0) - (b.featured_order || 0),
+        );
+
+        setFeaturedProducts(featuredRoots);
       } catch (error) {
-        console.error('Error fetching featured categories:', error);
+        console.error('Error filtering featured categories from tree:', error);
       } finally {
         setIsLoading(false);
       }
     };
-    fetchFeaturedCategories();
+    fetchFeaturedFromTree();
   }, []);
 
   const checkScrollButtons = () => {
@@ -58,6 +73,14 @@ const FeaturedCategory = () => {
     }
   };
 
+  if (isLoading && featuredProducts.length === 0) {
+    return (
+      <div className="px-4 w-full h-40 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-gray-100 border-t-(--color-primary-500) rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 w-full">
       {/* Header Section */}
@@ -72,7 +95,7 @@ const FeaturedCategory = () => {
             <button
               onClick={() => scroll('left')}
               disabled={!canScrollLeft}
-              className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+              className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all shadow-none ${
                 canScrollLeft
                   ? 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50 cursor-pointer'
                   : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
@@ -83,7 +106,7 @@ const FeaturedCategory = () => {
             <button
               onClick={() => scroll('right')}
               disabled={!canScrollRight}
-              className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all ${
+              className={`w-10 h-10 rounded-full border flex items-center justify-center transition-all shadow-none ${
                 canScrollRight
                   ? 'bg-black text-white border-black hover:bg-gray-800 cursor-pointer'
                   : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
@@ -93,8 +116,8 @@ const FeaturedCategory = () => {
             </button>
           </div>
 
-          <Link href="/products">
-            <button className="border border-gray-100 bg-white rounded-full px-4 lg:px-6 py-2 lg:py-3 text-(--color-primary-500) flex gap-2 lg:gap-3 items-center text-xs lg:text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
+          <Link href="/categories">
+            <button className="border border-gray-100 bg-white rounded-full px-4 lg:px-6 py-2 lg:py-3 text-[#233b8c] flex gap-2 lg:gap-3 items-center text-xs lg:text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all shadow-none">
               See More Categories
               <MdArrowForwardIos size={14} />
             </button>
@@ -111,7 +134,7 @@ const FeaturedCategory = () => {
       >
         {featuredProducts.map(item => (
           <Link
-            href={`/products?category=${encodeURIComponent(item.name)}`}
+            href={`/category/${item.slug}`}
             key={item.id}
             className="flex-shrink-0 flex flex-col items-center text-center snap-start group cursor-pointer
                        w-[calc((100%-24px)/2.5)] 
@@ -119,7 +142,7 @@ const FeaturedCategory = () => {
                        xl:w-[calc((100%-120px)/6.5)]"
           >
             {/* Image Wrapper */}
-            <div className="relative bg-(--color-imageBG) rounded-full w-full aspect-square flex items-center justify-center overflow-hidden p-4 sm:p-6 xl:p-10 border border-gray-50 transition-all group-hover:border-(--color-primary-100)">
+            <div className="relative bg-(--color-imageBG) rounded-full w-full aspect-square flex items-center justify-center overflow-hidden p-4 sm:p-6 xl:p-10 border border-gray-50 transition-all group-hover:border-(--color-primary-100) shadow-none">
               <div className="relative w-full h-full">
                 <Image
                   src={getMediaUrl(item.image) || '/assets/images/applogo.png'}
