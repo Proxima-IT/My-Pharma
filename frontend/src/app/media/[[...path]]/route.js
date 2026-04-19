@@ -3,14 +3,14 @@
  *
  * Works in both:
  * - Docker production (BACKEND_URL_INTERNAL=http://backend:8000)
- * - Local dev (host backend ports such as 8080/8000)
+ * - Local dev (host backend ports such as 8000/8080)
  * - Custom deployments using NEXT_PUBLIC_BACKEND_URL or NEXT_PUBLIC_API_URL
  */
 import { NextResponse } from 'next/server';
 
 const DEFAULT_BACKEND_BASES = [
-  'http://localhost:8080',
   'http://localhost:8000',
+  'http://localhost:8080',
 ];
 const DEFAULT_MEDIA_FALLBACK_IMAGE = '/assets/images/my-pharma-logo.png';
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.avif'];

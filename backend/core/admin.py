@@ -8,6 +8,8 @@ from .models import (
     Brand,
     Category,
     Consultation,
+    NotificationCampaign,
+    NotificationDeliveryLog,
     UserNotification,
     BlogCategory,
     BlogPost,
@@ -218,10 +220,38 @@ class ConsultationAdmin(admin.ModelAdmin):
 
 @admin.register(UserNotification)
 class UserNotificationAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "title", "is_read", "created_by", "created_at", "read_at")
+    list_display = ("id", "campaign", "user", "title", "is_read", "created_by", "created_at", "read_at")
     list_filter = ("is_read",)
     search_fields = ("user__email", "user__phone", "title", "message")
-    raw_id_fields = ("user", "created_by")
+    raw_id_fields = ("campaign", "user", "created_by")
+    date_hierarchy = "created_at"
+
+
+@admin.register(NotificationCampaign)
+class NotificationCampaignAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "title",
+        "audience_mode",
+        "status",
+        "recipient_count",
+        "push_attempted",
+        "push_succeeded",
+        "push_failed",
+        "created_at",
+    )
+    list_filter = ("audience_mode", "status", "source")
+    search_fields = ("title", "message", "dedupe_key")
+    raw_id_fields = ("requested_by",)
+    date_hierarchy = "created_at"
+
+
+@admin.register(NotificationDeliveryLog)
+class NotificationDeliveryLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "campaign", "user", "status", "status_code", "permanent_failure", "created_at")
+    list_filter = ("status", "permanent_failure")
+    search_fields = ("reason", "fcm_token", "provider_message_id")
+    raw_id_fields = ("campaign", "user", "subscription")
     date_hierarchy = "created_at"
 
 

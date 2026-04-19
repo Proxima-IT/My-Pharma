@@ -30,6 +30,8 @@ from .models import (
     PrescriptionItem,
     PrescriptionStatusHistory,
     Consultation,
+    NotificationCampaign,
+    NotificationDeliveryLog,
     UserNotification,
     UserNotificationPreference,
     UserPushSubscription,
@@ -1343,13 +1345,34 @@ class UserNotificationSerializer(serializers.ModelSerializer):
 
 class AdminBroadcastNotificationSerializer(serializers.Serializer):
     title = serializers.CharField(max_length=200)
-    message = serializers.CharField()
+    message = serializers.CharField(max_length=2000)
     target_url = serializers.URLField(required=False, allow_blank=True)
     send_to_opted_in_only = serializers.BooleanField(
         required=False,
         default=False,
         help_text="When true, send only to users who enabled notification permission.",
     )
+    audience_mode = serializers.ChoiceField(
+        choices=NotificationCampaign.AudienceMode.choices,
+        required=False,
+        default=NotificationCampaign.AudienceMode.ALL_ACTIVE,
+    )
+    user_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+    )
+    role_filter = serializers.CharField(max_length=32, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        mode = attrs.get("audience_mode", NotificationCampaign.AudienceMode.ALL_ACTIVE)
+        if len(attrs.get("user_ids") or []) > 5000:
+            raise serializers.ValidationError({"user_ids": "Maximum 5000 user ids per request."})
+        if mode == NotificationCampaign.AudienceMode.USER_IDS and not attrs.get("user_ids"):
+            raise serializers.ValidationError({"user_ids": "user_ids is required when audience_mode is USER_IDS."})
+        if mode == NotificationCampaign.AudienceMode.ROLE_BASED and not attrs.get("role_filter"):
+            raise serializers.ValidationError({"role_filter": "role_filter is required when audience_mode is ROLE_BASED."})
+        return attrs
 
 
 class UserNotificationPreferenceSerializer(serializers.ModelSerializer):
@@ -1420,6 +1443,99 @@ class NotificationBroadcastResultSerializer(serializers.Serializer):
     push_failed = serializers.IntegerField(min_value=0)
     push_deactivated = serializers.IntegerField(min_value=0)
     push_async = serializers.BooleanField()
+    campaign_id = serializers.IntegerField(min_value=1)
+
+
+class NotificationHealthSerializer(serializers.Serializer):
+    firebase_initialized = serializers.BooleanField()
+    celery_task_always_eager = serializers.BooleanField()
+    redis_enabled = serializers.BooleanField()
+    active_subscriptions = serializers.IntegerField(min_value=0)
+    inactive_subscriptions = serializers.IntegerField(min_value=0)
+    recently_deactivated_7d = serializers.IntegerField(min_value=0)
+
+
+class NotificationDeliveryLogSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source="user.email", read_only=True)
+
+    class Meta:
+        model = NotificationDeliveryLog
+        fields = (
+            "id",
+            "campaign",
+            "user",
+            "user_email",
+            "status",
+            "status_code",
+            "permanent_failure",
+            "reason",
+            "provider_message_id",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class NotificationCampaignSerializer(serializers.ModelSerializer):
+    requested_by_email = serializers.EmailField(source="requested_by.email", read_only=True, allow_null=True)
+
+    class Meta:
+        model = NotificationCampaign
+        fields = (
+            "id",
+            "title",
+            "message",
+            "target_url",
+            "audience_mode",
+            "role_filter",
+            "source",
+            "status",
+            "dedupe_key",
+            "metadata",
+            "recipient_count",
+            "push_attempted",
+            "push_succeeded",
+            "push_failed",
+            "push_deactivated",
+            "requested_by",
+            "requested_by_email",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields
+
+
+class NotificationCampaignCreateSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    message = serializers.CharField(max_length=2000)
+    target_url = serializers.URLField(required=False, allow_blank=True)
+    send_to_opted_in_only = serializers.BooleanField(required=False, default=False)
+    audience_mode = serializers.ChoiceField(
+        choices=NotificationCampaign.AudienceMode.choices,
+        default=NotificationCampaign.AudienceMode.ALL_ACTIVE,
+    )
+    user_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        required=False,
+        allow_empty=True,
+    )
+    role_filter = serializers.CharField(max_length=32, required=False, allow_blank=True)
+    dedupe_key = serializers.CharField(max_length=200, required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        mode = attrs.get("audience_mode", NotificationCampaign.AudienceMode.ALL_ACTIVE)
+        if len(attrs.get("user_ids") or []) > 5000:
+            raise serializers.ValidationError({"user_ids": "Maximum 5000 user ids per request."})
+        if mode == NotificationCampaign.AudienceMode.USER_IDS and not attrs.get("user_ids"):
+            raise serializers.ValidationError({"user_ids": "user_ids is required when audience_mode is USER_IDS."})
+        if mode == NotificationCampaign.AudienceMode.ROLE_BASED and not attrs.get("role_filter"):
+            raise serializers.ValidationError({"role_filter": "role_filter is required when audience_mode is ROLE_BASED."})
+        return attrs
+
+
+class NotificationTestSendSerializer(serializers.Serializer):
+    title = serializers.CharField(max_length=200)
+    message = serializers.CharField(max_length=2000)
+    target_url = serializers.URLField(required=False, allow_blank=True)
 
 
 # ---- Page (CMS) ----

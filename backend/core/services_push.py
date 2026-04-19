@@ -26,6 +26,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": None,
             "permanent_failure": False,
             "reason": "firebase-admin is not installed.",
+            "provider_message_id": "",
         }
 
     if not fcm_is_configured():
@@ -35,6 +36,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": None,
             "permanent_failure": False,
             "reason": "Firebase Admin SDK is not configured.",
+            "provider_message_id": "",
         }
 
     fcm_token = subscription.fcm_token
@@ -45,6 +47,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": None,
             "permanent_failure": True,
             "reason": "Empty FCM token.",
+            "provider_message_id": "",
         }
 
     notification = messaging.Notification(
@@ -92,6 +95,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": 200,
             "permanent_failure": False,
             "reason": "",
+            "provider_message_id": message_id,
         }
     except messaging.UnregisteredError:
         # Token is expired or invalid — permanent failure
@@ -101,6 +105,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": 404,
             "permanent_failure": True,
             "reason": "Token unregistered (expired or invalid).",
+            "provider_message_id": "",
         }
     except messaging.SenderIdMismatchError:
         # Token belongs to a different Firebase project — permanent failure
@@ -110,6 +115,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": 403,
             "permanent_failure": True,
             "reason": "Sender ID mismatch.",
+            "provider_message_id": "",
         }
     except messaging.InvalidArgumentError as exc:
         logger.warning("FCM invalid argument: %s err=%s", fcm_token[:20], exc)
@@ -118,6 +124,7 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": 400,
             "permanent_failure": True,
             "reason": f"Invalid argument: {exc}",
+            "provider_message_id": "",
         }
     except Exception as exc:
         # Transient errors (network, quota, etc.)
@@ -127,4 +134,5 @@ def send_web_push(subscription, title: str, message: str, target_url: str = "") 
             "status_code": None,
             "permanent_failure": False,
             "reason": str(exc),
+            "provider_message_id": "",
         }

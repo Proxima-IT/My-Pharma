@@ -29,6 +29,10 @@ const publicEnvApiBase = envApiBase || envBackendApiBase;
 const envPointsToLocalhost =
   publicEnvApiBase &&
   /(^https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(publicEnvApiBase);
+const localhostDefaultApiBase = 'http://localhost:8000/api';
+const safeLocalhostApiBase = envPointsToLocalhost
+  ? publicEnvApiBase
+  : localhostDefaultApiBase;
 
 /**
  * API_BASE_URL Logic:
@@ -42,10 +46,10 @@ const envPointsToLocalhost =
 export const API_BASE_URL = isBrowser
   ? (
       isLocalhost
-        ? (publicEnvApiBase || 'http://localhost:8080/api')
+        ? safeLocalhostApiBase
         : (!envPointsToLocalhost && publicEnvApiBase ? publicEnvApiBase : browserApiBase)
     )
-  : (serverApiBase || publicEnvApiBase || 'http://localhost:8080/api');
+  : (serverApiBase || publicEnvApiBase || localhostDefaultApiBase);
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,

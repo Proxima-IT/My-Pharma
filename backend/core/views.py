@@ -5,6 +5,7 @@ import logging
 import json
 import uuid
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
 from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -34,7 +35,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -76,9 +77,14 @@ from .serializers import (
     UserPushSubscriptionUpsertSerializer,
     UserPushSubscriptionDeleteSerializer,
     AdminBroadcastNotificationSerializer,
+    NotificationCampaignCreateSerializer,
+    NotificationCampaignSerializer,
+    NotificationDeliveryLogSerializer,
+    NotificationHealthSerializer,
     NotificationMarkedCountSerializer,
     NotificationRemovedCountSerializer,
     NotificationBroadcastResultSerializer,
+    NotificationTestSendSerializer,
     PageSerializer,
     BlogCategorySerializer,
     BlogPostSerializer,
@@ -104,6 +110,7 @@ from .services import (
     update_product_review_aggregates,
 )
 from .tasks import dispatch_web_push_notifications
+from .notification_service import create_and_dispatch_campaign, send_user_event_notification
 from .filters import ProductFilter
 from .models import OrderSettlement, B2BCustomerProfile, B2BCommissionEntry
 
@@ -176,6 +183,7 @@ def _ssl_multi_card_name(method: str) -> str:
 
 
 def _mark_payment_result(payment_txn: PaymentTransaction, status_value: str, payload: dict, verification_response=None):
+    previous_status = payment_txn.status
     payment_txn.status = status_value
     payment_txn.gateway_response = payload or {}
     if payload.get("val_id"):
@@ -204,6 +212,23 @@ def _mark_payment_result(payment_txn: PaymentTransaction, status_value: str, pay
         settlement.payment_status = OrderSettlement.PaymentStatus.PENDING
     settlement.updated_at = timezone.now()
     settlement.save()
+
+    # Event notification to end user when payment status changes.
+    if payment_txn.user_id and previous_status != status_value:
+        status_label = status_value.replace("_", " ").title()
+        send_user_event_notification(
+            user_id=payment_txn.user_id,
+            title=f"Payment {status_label}",
+            message=f"Your payment status is now {status_label}.",
+            target_url=(f"/user/orders/{payment_txn.order_id}" if payment_txn.order_id else "/checkout"),
+            source="payment_event",
+            dedupe_key=f"payment:{payment_txn.id}:{status_value}",
+            metadata={
+                "payment_transaction_id": payment_txn.id,
+                "status": status_value,
+                "order_id": payment_txn.order_id,
+            },
+        )
 
 
 def _create_order_from_payment_transaction(payment_txn: PaymentTransaction):
@@ -861,6 +886,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         order = self.get_object()
+        previous_status = order.status
         role = getattr(request.user, "role", None)
         if role not in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
             return Response({"detail": "Only pharmacy admin or super admin can update order status."}, status=status.HTTP_403_FORBIDDEN)
@@ -897,6 +923,21 @@ class OrderViewSet(viewsets.ModelViewSet):
                             "status": B2BCommissionEntry.Status.PENDING,
                         },
                     )
+            if previous_status != order.status:
+                status_label = order.status.replace("_", " ").title()
+                send_user_event_notification(
+                    user_id=order.user_id,
+                    title=f"Order Status: {status_label}",
+                    message=f"Your order #{order.id} status changed to {status_label}.",
+                    target_url=f"/user/orders/{order.id}",
+                    source="order_event",
+                    dedupe_key=f"order:{order.id}:{order.status}",
+                    metadata={
+                        "order_id": order.id,
+                        "previous_status": previous_status,
+                        "new_status": order.status,
+                    },
+                )
         order.refresh_from_db()
         qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "duration")
         order = qs.get()
@@ -1519,6 +1560,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """Verify or reject prescription. PENDING -> APPROVED (with doctor details + items) or REJECTED."""
         prescription = self.get_object()
+        previous_status = prescription.status
         serializer = PrescriptionVerifySerializer(prescription, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -1546,6 +1588,21 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
             _create_order_from_prescription(prescription)
         if "status" in request.data:
             PrescriptionStatusHistory.objects.create(prescription=prescription, status=prescription.status)
+            if previous_status != prescription.status:
+                status_label = prescription.status.replace("_", " ").title()
+                send_user_event_notification(
+                    user_id=prescription.user_id,
+                    title=f"Prescription {status_label}",
+                    message=f"Your prescription #{prescription.id} is now {status_label}.",
+                    target_url="/user/prescriptions",
+                    source="prescription_event",
+                    dedupe_key=f"prescription:{prescription.id}:{prescription.status}",
+                    metadata={
+                        "prescription_id": prescription.id,
+                        "previous_status": previous_status,
+                        "new_status": prescription.status,
+                    },
+                )
         prescription.refresh_from_db()
         qs = Prescription.objects.filter(pk=prescription.pk).select_related("user", "verified_by", "shipping_address").prefetch_related("items__product", "images", "status_history")
         prescription = qs.get()
@@ -1664,6 +1721,10 @@ class ConsultationViewSet(viewsets.ModelViewSet):
     mark_read=extend_schema(tags=["Notifications"], summary="Mark one notification as read"),
     mark_all_read=extend_schema(tags=["Notifications"], summary="Mark all my notifications as read"),
     subscriptions=extend_schema(tags=["Notifications"], summary="List/create/delete my browser push subscriptions"),
+    campaigns=extend_schema(tags=["Notifications"], summary="List/create notification campaigns (admin)"),
+    campaign_detail=extend_schema(tags=["Notifications"], summary="Notification campaign details with delivery logs (admin)"),
+    health=extend_schema(tags=["Notifications"], summary="Notification system health snapshot (admin)"),
+    test_send=extend_schema(tags=["Notifications"], summary="Send test notification to current admin user"),
     broadcast=extend_schema(
         tags=["Notifications"],
         summary="Broadcast notification to all users (admin)",
@@ -1677,7 +1738,7 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
-        if self.action == "broadcast":
+        if self.action in ("broadcast", "campaigns", "campaign_detail", "health", "test_send"):
             return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
         return [IsAuthenticated(), IsRegisteredUser()]
 
@@ -1836,107 +1897,179 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     def broadcast(self, request):
         serializer = AdminBroadcastNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        audience_mode = serializer.validated_data.get(
+            "audience_mode",
+            NotificationCampaign.AudienceMode.ALL_ACTIVE,
+        )
+        send_to_opted_in_only = serializer.validated_data.get("send_to_opted_in_only", False)
         logger.info(
-            "Notification broadcast requested by_user_id=%s opted_in_only=%s title=%s",
+            "Notification broadcast requested by_user_id=%s audience_mode=%s opted_in_only=%s title=%s",
             request.user.id,
-            serializer.validated_data.get("send_to_opted_in_only", False),
+            audience_mode,
+            send_to_opted_in_only,
             serializer.validated_data.get("title", "")[:80],
         )
-
-        User = get_user_model()
-        recipients = (
-            User.objects.filter(is_active=True, deleted_at__isnull=True)
-            .exclude(role=UserRole.GUEST_USER)
-            .values_list("id", flat=True)
+        campaign, stats = create_and_dispatch_campaign(
+            title=serializer.validated_data["title"],
+            message=serializer.validated_data["message"],
+            target_url=serializer.validated_data.get("target_url", ""),
+            requested_by=request.user,
+            audience_mode=audience_mode,
+            send_to_opted_in_only=send_to_opted_in_only,
+            user_ids=serializer.validated_data.get("user_ids", []),
+            role_filter=serializer.validated_data.get("role_filter", ""),
+            source="admin",
+            metadata={"via": "broadcast"},
         )
-        if serializer.validated_data.get("send_to_opted_in_only"):
-            opted_in_user_ids = UserNotificationPreference.objects.filter(
-                is_enabled=True,
-                browser_permission=UserNotificationPreference.BrowserPermission.GRANTED,
-            ).values_list("user_id", flat=True)
-            recipients = recipients.filter(id__in=opted_in_user_ids)
-
-        recipient_ids = list(recipients)
-        rows = []
-        count = 0
-        for user_id in recipient_ids:
-            rows.append(
-                UserNotification(
-                    user_id=user_id,
-                    title=serializer.validated_data["title"],
-                    message=serializer.validated_data["message"],
-                    created_by=request.user,
-                )
-            )
-            if len(rows) >= 1000:
-                UserNotification.objects.bulk_create(rows, batch_size=1000)
-                count += len(rows)
-                rows = []
-
-        if rows:
-            UserNotification.objects.bulk_create(rows, batch_size=1000)
-            count += len(rows)
-
-        push_queryset = UserPushSubscription.objects.filter(
-            user_id__in=recipient_ids,
-            is_active=True,
-            user__is_active=True,
-        )
-        if serializer.validated_data.get("send_to_opted_in_only"):
-            push_queryset = push_queryset.filter(
-                user__notification_preference__is_enabled=True,
-                user__notification_preference__browser_permission=UserNotificationPreference.BrowserPermission.GRANTED,
-            )
-        push_attempted = push_queryset.count()
-        push_succeeded = 0
-        push_failed = 0
-        push_deactivated = 0
-
-        if recipient_ids and push_attempted > 0:
-            task_result = dispatch_web_push_notifications.delay(
-                user_ids=recipient_ids,
-                title=serializer.validated_data["title"],
-                message=serializer.validated_data["message"],
-                target_url=serializer.validated_data.get("target_url", ""),
-                opted_in_only=serializer.validated_data.get("send_to_opted_in_only", False),
-            )
-            if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
-                stats = task_result.get(timeout=30) or {}
-                push_attempted = stats.get("push_attempted", push_attempted)
-                push_succeeded = stats.get("push_succeeded", 0)
-                push_failed = stats.get("push_failed", 0)
-                push_deactivated = stats.get("push_deactivated", 0)
-                logger.info(
-                    "Notification broadcast push completed eagerly task_id=%s stats=%s",
-                    getattr(task_result, "id", None),
-                    stats,
-                )
-            else:
-                logger.info(
-                    "Notification broadcast push enqueued task_id=%s recipients=%s attempted=%s",
-                    getattr(task_result, "id", None),
-                    len(recipient_ids),
-                    push_attempted,
-                )
-        else:
-            logger.info(
-                "Notification broadcast skipped push recipients=%s attempted=%s",
-                len(recipient_ids),
-                push_attempted,
-            )
 
         return Response(
             {
                 "detail": "Notification broadcast sent.",
-                "sent_count": count,
+                "sent_count": stats["sent_count"],
                 "title": serializer.validated_data["title"],
-                "send_to_opted_in_only": serializer.validated_data.get("send_to_opted_in_only", False),
+                "send_to_opted_in_only": send_to_opted_in_only,
                 "target_url": serializer.validated_data.get("target_url", ""),
-                "push_attempted": push_attempted,
-                "push_succeeded": push_succeeded,
-                "push_failed": push_failed,
-                "push_deactivated": push_deactivated,
-                "push_async": not getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False),
+                "push_attempted": stats["push_attempted"],
+                "push_succeeded": stats["push_succeeded"],
+                "push_failed": stats["push_failed"],
+                "push_deactivated": stats["push_deactivated"],
+                "push_async": stats["push_async"],
+                "campaign_id": campaign.id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        methods=["GET"],
+        request=None,
+        responses={200: NotificationHealthSerializer},
+    )
+    @action(detail=False, methods=["get"], url_path="health")
+    def health(self, request):
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        payload = {
+            "firebase_initialized": bool(getattr(settings, "FIREBASE_INITIALIZED", False)),
+            "celery_task_always_eager": bool(getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False)),
+            "redis_enabled": bool(getattr(settings, "USE_REDIS", False)),
+            "active_subscriptions": UserPushSubscription.objects.filter(is_active=True).count(),
+            "inactive_subscriptions": UserPushSubscription.objects.filter(is_active=False).count(),
+            "recently_deactivated_7d": UserPushSubscription.objects.filter(
+                is_active=False,
+                updated_at__gte=seven_days_ago,
+            ).count(),
+        }
+        return Response(NotificationHealthSerializer(payload).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        methods=["GET"],
+        request=None,
+        responses={200: NotificationCampaignSerializer(many=True)},
+    )
+    @extend_schema(
+        methods=["POST"],
+        request=NotificationCampaignCreateSerializer,
+        responses={201: NotificationBroadcastResultSerializer},
+    )
+    @action(detail=False, methods=["get", "post"], url_path="campaigns")
+    def campaigns(self, request):
+        if request.method.lower() == "get":
+            queryset = NotificationCampaign.objects.select_related("requested_by").order_by("-created_at")[:100]
+            return Response(
+                NotificationCampaignSerializer(queryset, many=True).data,
+                status=status.HTTP_200_OK,
+            )
+
+        serializer = NotificationCampaignCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        campaign, stats = create_and_dispatch_campaign(
+            title=serializer.validated_data["title"],
+            message=serializer.validated_data["message"],
+            target_url=serializer.validated_data.get("target_url", ""),
+            requested_by=request.user,
+            audience_mode=serializer.validated_data.get(
+                "audience_mode",
+                NotificationCampaign.AudienceMode.ALL_ACTIVE,
+            ),
+            send_to_opted_in_only=serializer.validated_data.get("send_to_opted_in_only", False),
+            user_ids=serializer.validated_data.get("user_ids", []),
+            role_filter=serializer.validated_data.get("role_filter", ""),
+            source="admin",
+            dedupe_key=serializer.validated_data.get("dedupe_key", ""),
+            metadata={"via": "campaigns"},
+        )
+        return Response(
+            {
+                "detail": "Notification campaign sent.",
+                "sent_count": stats["sent_count"],
+                "title": campaign.title,
+                "send_to_opted_in_only": serializer.validated_data.get("send_to_opted_in_only", False),
+                "target_url": campaign.target_url,
+                "push_attempted": stats["push_attempted"],
+                "push_succeeded": stats["push_succeeded"],
+                "push_failed": stats["push_failed"],
+                "push_deactivated": stats["push_deactivated"],
+                "push_async": stats["push_async"],
+                "campaign_id": campaign.id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        request=None,
+        responses={200: NotificationCampaignSerializer},
+    )
+    @action(detail=False, methods=["get"], url_path=r"campaigns/(?P<campaign_id>[^/.]+)")
+    def campaign_detail(self, request, campaign_id=None):
+        campaign = NotificationCampaign.objects.select_related("requested_by").filter(pk=campaign_id).first()
+        if not campaign:
+            return Response({"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND)
+        failures = NotificationDeliveryLog.objects.filter(
+            campaign=campaign,
+            status__in=(
+                NotificationDeliveryLog.DeliveryStatus.FAILED,
+                NotificationDeliveryLog.DeliveryStatus.DEACTIVATED,
+            ),
+        ).select_related("user")[:30]
+        return Response(
+            {
+                "campaign": NotificationCampaignSerializer(campaign).data,
+                "recent_failures": NotificationDeliveryLogSerializer(failures, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=NotificationTestSendSerializer,
+        responses={201: NotificationBroadcastResultSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="test-send")
+    def test_send(self, request):
+        serializer = NotificationTestSendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        campaign, stats = create_and_dispatch_campaign(
+            title=serializer.validated_data["title"],
+            message=serializer.validated_data["message"],
+            target_url=serializer.validated_data.get("target_url", ""),
+            requested_by=request.user,
+            audience_mode=NotificationCampaign.AudienceMode.USER_IDS,
+            send_to_opted_in_only=False,
+            user_ids=[request.user.id],
+            source="admin_test",
+            metadata={"via": "test-send"},
+        )
+        return Response(
+            {
+                "detail": "Test notification sent.",
+                "sent_count": stats["sent_count"],
+                "title": campaign.title,
+                "send_to_opted_in_only": False,
+                "target_url": campaign.target_url,
+                "push_attempted": stats["push_attempted"],
+                "push_succeeded": stats["push_succeeded"],
+                "push_failed": stats["push_failed"],
+                "push_deactivated": stats["push_deactivated"],
+                "push_async": stats["push_async"],
+                "campaign_id": campaign.id,
             },
             status=status.HTTP_201_CREATED,
         )
