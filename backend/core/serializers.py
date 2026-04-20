@@ -620,12 +620,17 @@ class OrderSerializer(serializers.ModelSerializer):
     user_username = serializers.CharField(source="user.username", read_only=True)
     duration_name = serializers.CharField(source="duration.name", read_only=True, allow_null=True)
     duration_days = serializers.IntegerField(source="duration.days", read_only=True, allow_null=True)
+    # Payment info from related OrderSettlement
+    payment_status = serializers.CharField(source="settlement.payment_status", read_only=True, default="PENDING")
+    payment_method = serializers.CharField(source="settlement.payment_method", read_only=True, default="COD")
 
     class Meta:
         model = Order
         fields = (
             "id", "user", "user_email", "user_username", "prescription", "duration", "duration_name", "duration_days",
             "status",
+            "payment_status",
+            "payment_method",
             "subtotal_before_discount",
             "discount_amount",
             "delivery_fee",

@@ -233,93 +233,24 @@ def _mark_payment_result(payment_txn: PaymentTransaction, status_value: str, pay
 
 def _create_order_from_payment_transaction(payment_txn: PaymentTransaction):
     """
-    Create the actual order only after verified successful payment.
-    Idempotent: if order already linked, return it.
+    Mark the pre-existing order's settlement as PAID after successful payment verification.
+    Orders are now created at checkout time (before payment), so this function just updates
+    the payment status. Idempotent: safe to call multiple times.
+
+    Returns the linked order, or None if no order is linked.
     """
-    if payment_txn.order_id:
-        return payment_txn.order
+    if not payment_txn.order_id:
+        return None
 
-    with transaction.atomic():
-        payment_txn = PaymentTransaction.objects.select_for_update().get(pk=payment_txn.pk)
-        if payment_txn.order_id:
-            return payment_txn.order
+    order = payment_txn.order
+    settlement = OrderSettlement.objects.filter(order=order).first()
+    if settlement and settlement.payment_status != OrderSettlement.PaymentStatus.PAID:
+        settlement.payment_method = OrderSettlement.PaymentMethod.ONLINE
+        settlement.payment_status = OrderSettlement.PaymentStatus.PAID
+        settlement.updated_at = timezone.now()
+        settlement.save(update_fields=["payment_method", "payment_status", "updated_at"])
 
-        snapshot = payment_txn.cart_snapshot or []
-        if not snapshot:
-            raise ValueError("Cart snapshot missing for this payment transaction.")
-
-        selected_duration = None
-        if payment_txn.delivery_duration_id_ref:
-            selected_duration = DeliveryDuration.objects.filter(
-                pk=payment_txn.delivery_duration_id_ref
-            ).first()
-
-        order = Order.objects.create(
-            user=payment_txn.user,
-            status=Order.Status.PENDING,
-            total=payment_txn.amount,
-            subtotal_before_discount=payment_txn.subtotal_before_discount or Decimal("0"),
-            discount_amount=payment_txn.discount_amount or Decimal("0"),
-            delivery_fee=payment_txn.delivery_fee or Decimal("0"),
-            coupon_id=payment_txn.coupon_id_ref,
-            duration=selected_duration,
-            shipping_address=payment_txn.shipping_address or "",
-            notes=payment_txn.notes or "",
-        )
-
-        product_ids = [int(entry.get("product_id")) for entry in snapshot if entry.get("product_id")]
-        products = {p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)}
-
-        for entry in snapshot:
-            product_id = int(entry.get("product_id"))
-            qty = int(entry.get("quantity") or 0)
-            if qty <= 0:
-                continue
-            product = products.get(product_id)
-            if not product:
-                raise ValueError(f"Product not found for snapshot item: {product_id}")
-            if product.quantity_in_stock < qty:
-                raise ValueError(f"Insufficient stock for {product.name}.")
-            price_at_order = Decimal(str(entry.get("price_at_order") or product.price))
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=qty,
-                price_at_order=price_at_order,
-                dosage=(entry.get("dosage") or "").strip()[:50],
-            )
-            product.quantity_in_stock -= qty
-            product.save(update_fields=["quantity_in_stock"])
-
-        OrderStatusHistory.objects.get_or_create(order=order, status=Order.Status.PENDING)
-        OrderSettlement.objects.get_or_create(
-            order=order,
-            defaults={
-                "payment_method": OrderSettlement.PaymentMethod.ONLINE,
-                "payment_status": OrderSettlement.PaymentStatus.PAID,
-                "gross_amount": order.total,
-                "net_payable": order.total,
-                "status": OrderSettlement.Status.PENDING,
-            },
-        )
-
-        if payment_txn.coupon_id_ref:
-            coupon = Coupon.objects.filter(pk=payment_txn.coupon_id_ref).first()
-            if coupon:
-                coupon.times_used += 1
-                coupon.save(update_fields=["times_used"])
-
-        # Clear user's cart after payment success and order creation.
-        if payment_txn.user_id:
-            cart = Cart.objects.filter(user_id=payment_txn.user_id).first()
-            if cart:
-                cart.items.all().delete()
-                cart.coupon = None
-                cart.save(update_fields=["coupon", "updated_at"])
-
-        payment_txn.order = order
-        payment_txn.save(update_fields=["order", "updated_at"])
-        return order
+    return order
 
 
 def _extract_payload(request):
@@ -843,7 +774,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Order.objects.select_related("user", "prescription", "duration", "coupon")
+            Order.objects.select_related("user", "prescription", "duration", "coupon", "settlement")
             .prefetch_related("items__product", "images", "status_history")
             .all()
         )
@@ -945,6 +876,111 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"], url_path="pay")
+    def pay(self, request, pk=None):
+        """
+        POST /api/orders/<id>/pay/ – Create a new SSLCommerz session for an unpaid online order.
+        Body: { payment_method?: str }  (optional, defaults to ONLINE)
+        Returns { gateway_url, tran_id } so the frontend can redirect to the payment page.
+        """
+        order = self.get_object()
+        # Only the order owner can pay
+        if order.user_id != request.user.id:
+            return Response({"detail": "Not your order."}, status=status.HTTP_403_FORBIDDEN)
+
+        settlement = OrderSettlement.objects.filter(order=order).first()
+        if not settlement:
+            return Response({"detail": "No settlement record found."}, status=status.HTTP_400_BAD_REQUEST)
+        if settlement.payment_status == OrderSettlement.PaymentStatus.PAID:
+            return Response({"detail": "This order is already paid."}, status=status.HTTP_400_BAD_REQUEST)
+        if settlement.payment_method == OrderSettlement.PaymentMethod.COD:
+            return Response({"detail": "COD orders do not require online payment."}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_method = (request.data.get("payment_method") or "ONLINE").strip().upper()
+        payment_method = _normalize_payment_method(raw_method)
+        if not _is_online_payment_method(payment_method):
+            payment_method = PaymentTransaction.Method.ONLINE
+
+        try:
+            # Parse shipping address for customer details
+            parts = (order.shipping_address or "").split(",")
+            customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+            customer_email = (request.user.email or (parts[1].strip() if len(parts) > 1 else "") or "customer@example.com").strip()
+            customer_phone = (request.user.phone or (parts[2].strip() if len(parts) > 2 else "") or "").strip() or "01700000000"
+            product_names = ", ".join([oi.product.name for oi in order.items.select_related("product").all()[:3]]) or "Pharmacy Order"
+
+            sslcz = _get_sslcommerz_client()
+            tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
+            total_payable = Decimal(str(order.total)).quantize(Decimal("0.01"))
+            multi_card_name = _ssl_multi_card_name(payment_method)
+
+            post_body = {
+                "total_amount": str(total_payable),
+                "currency": "BDT",
+                "tran_id": tran_id,
+                "success_url": _build_ssl_backend_url("success"),
+                "fail_url": _build_ssl_backend_url("fail"),
+                "cancel_url": _build_ssl_backend_url("cancel"),
+                "ipn_url": _build_ssl_backend_url("ipn"),
+                "emi_option": 0,
+                "cus_name": customer_name,
+                "cus_email": customer_email,
+                "cus_phone": customer_phone,
+                "cus_add1": (parts[-1].strip() if parts else "")[:255],
+                "cus_city": (parts[-2].strip() if len(parts) > 1 else "Dhaka")[:50],
+                "cus_country": "Bangladesh",
+                "shipping_method": "NO",
+                "num_of_item": order.items.count() or 1,
+                "product_name": product_names[:255],
+                "product_category": "Pharmacy",
+                "product_profile": "general",
+                "value_a": str(request.user.id),
+                "value_b": str(order.id),
+            }
+            if multi_card_name:
+                post_body["multi_card_name"] = multi_card_name
+
+            session_response = sslcz.createSession(post_body)
+            gateway_url = (session_response or {}).get("GatewayPageURL")
+            if not gateway_url:
+                raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing.")
+
+            PaymentTransaction.objects.create(
+                user=request.user,
+                order=order,
+                method=payment_method,
+                amount=total_payable,
+                currency="BDT",
+                tran_id=tran_id,
+                session_key=(session_response or {}).get("sessionkey", ""),
+                gateway_url=gateway_url,
+                status=PaymentTransaction.Status.INITIATED,
+                shipping_address=order.shipping_address or "",
+                notes=order.notes or "",
+                subtotal_before_discount=order.subtotal_before_discount or Decimal("0"),
+                discount_amount=order.discount_amount or Decimal("0"),
+                delivery_fee=order.delivery_fee or Decimal("0"),
+                coupon_id_ref=getattr(order.coupon, "id", None),
+                delivery_duration_id_ref=getattr(order.duration, "id", None),
+                cart_snapshot=[],
+                request_payload=post_body,
+                gateway_response=session_response or {},
+            )
+
+            return Response(
+                {
+                    "gateway_url": gateway_url,
+                    "tran_id": tran_id,
+                    "payment_method": payment_method,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:
+            return Response(
+                {"detail": f"Failed to initialize payment: {exc}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 # ---- Delivery duration (admin CRUD) ----
@@ -1255,98 +1291,7 @@ class CartViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        # Online flow: do NOT place order yet. Create SSL session first; order will be created on payment success callback.
-        if _is_online_payment_method(payment_method):
-            try:
-                items_qs = cart.items.select_related("product").all()
-                cart_snapshot = [
-                    {
-                        "product_id": item.product_id,
-                        "quantity": item.quantity,
-                        "price_at_order": str(item.price_at_order),
-                        "dosage": (item.dosage or "").strip()[:50],
-                    }
-                    for item in items_qs
-                ]
-                sslcz = _get_sslcommerz_client()
-                tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
-                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
-                customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
-                customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
-                product_names = ", ".join([item.product.name for item in items_qs[:3]]) or "Pharmacy Order"
-
-                total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
-                multi_card_name = _ssl_multi_card_name(payment_method)
-                post_body = {
-                    "total_amount": str(total_payable),
-                    "currency": "BDT",
-                    "tran_id": tran_id,
-                    "success_url": _build_ssl_backend_url("success"),
-                    "fail_url": _build_ssl_backend_url("fail"),
-                    "cancel_url": _build_ssl_backend_url("cancel"),
-                    "ipn_url": _build_ssl_backend_url("ipn"),
-                    "emi_option": 0,
-                    "cus_name": customer_name,
-                    "cus_email": customer_email,
-                    "cus_phone": customer_phone,
-                    "cus_add1": (address.address or "")[:255],
-                    "cus_city": (address.district or "Dhaka")[:50],
-                    "cus_country": "Bangladesh",
-                    "shipping_method": "NO",
-                    "num_of_item": len(cart_snapshot) or 1,
-                    "product_name": product_names[:255],
-                    "product_category": "Pharmacy",
-                    "product_profile": "general",
-                    "value_a": str(request.user.id),
-                    "value_b": str(address_id),
-                }
-                # ONLINE means default SSLCommerz gateway page with all enabled channels.
-                # For specific selections (bKash/Nagad/Rocket/Upay/Card), pass a filtered channel hint.
-                if multi_card_name:
-                    post_body["multi_card_name"] = multi_card_name
-                session_response = sslcz.createSession(post_body)
-                gateway_url = (session_response or {}).get("GatewayPageURL")
-                if not gateway_url:
-                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
-
-                PaymentTransaction.objects.create(
-                    user=request.user,
-                    method=payment_method,
-                    amount=total_payable,
-                    currency="BDT",
-                    tran_id=tran_id,
-                    session_key=(session_response or {}).get("sessionkey", ""),
-                    gateway_url=gateway_url,
-                    status=PaymentTransaction.Status.INITIATED,
-                    shipping_address=shipping_text,
-                    notes=notes,
-                    subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
-                    discount_amount=summary.get("discount_amount") or Decimal("0"),
-                    delivery_fee=summary.get("delivery_fee") or Decimal("0"),
-                    coupon_id_ref=getattr(cart.coupon, "id", None),
-                    delivery_duration_id_ref=getattr(delivery_duration, "id", None),
-                    cart_snapshot=cart_snapshot,
-                    request_payload=post_body,
-                    gateway_response=session_response or {},
-                )
-
-                return Response(
-                    {
-                        "payment_required": True,
-                        "payment_method": payment_method,
-                        "payment_provider": "SSLCOMMERZ",
-                        "gateway_url": gateway_url,
-                        "tran_id": tran_id,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-            except Exception as exc:
-                return Response(
-                    {"detail": f"Failed to initialize SSLCommerz payment: {exc}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        # COD flow: place order immediately.
+        # ── Unified flow: create order FIRST for all payment methods ──
         with transaction.atomic():
             order = Order.objects.create(
                 user=request.user,
@@ -1371,10 +1316,13 @@ class CartViewSet(viewsets.GenericViewSet):
                 item.product.quantity_in_stock -= item.quantity
                 item.product.save(update_fields=["quantity_in_stock"])
 
+            OrderStatusHistory.objects.get_or_create(order=order, status=Order.Status.PENDING)
+
+            is_online = _is_online_payment_method(payment_method)
             OrderSettlement.objects.get_or_create(
                 order=order,
                 defaults={
-                    "payment_method": OrderSettlement.PaymentMethod.COD,
+                    "payment_method": OrderSettlement.PaymentMethod.ONLINE if is_online else OrderSettlement.PaymentMethod.COD,
                     "payment_status": OrderSettlement.PaymentStatus.PENDING,
                     "gross_amount": order.total,
                     "net_payable": order.total,
@@ -1390,13 +1338,101 @@ class CartViewSet(viewsets.GenericViewSet):
             cart.coupon = None
             cart.save(update_fields=["coupon", "updated_at"])
 
-            return Response(
-                {
-                    **OrderSerializer(order, context={"request": request}).data,
-                    "payment_required": False,
-                },
-                status=status.HTTP_201_CREATED,
-            )
+        # ── For online payments: create SSLCommerz session after order exists ──
+        if is_online:
+            try:
+                sslcz = _get_sslcommerz_client()
+                tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
+                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+                customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
+                customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
+                product_names = ", ".join([oi.product.name for oi in order.items.select_related("product").all()[:3]]) or "Pharmacy Order"
+
+                total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
+                multi_card_name = _ssl_multi_card_name(payment_method)
+                post_body = {
+                    "total_amount": str(total_payable),
+                    "currency": "BDT",
+                    "tran_id": tran_id,
+                    "success_url": _build_ssl_backend_url("success"),
+                    "fail_url": _build_ssl_backend_url("fail"),
+                    "cancel_url": _build_ssl_backend_url("cancel"),
+                    "ipn_url": _build_ssl_backend_url("ipn"),
+                    "emi_option": 0,
+                    "cus_name": customer_name,
+                    "cus_email": customer_email,
+                    "cus_phone": customer_phone,
+                    "cus_add1": (address.address or "")[:255],
+                    "cus_city": (address.district or "Dhaka")[:50],
+                    "cus_country": "Bangladesh",
+                    "shipping_method": "NO",
+                    "num_of_item": order.items.count() or 1,
+                    "product_name": product_names[:255],
+                    "product_category": "Pharmacy",
+                    "product_profile": "general",
+                    "value_a": str(request.user.id),
+                    "value_b": str(address_id),
+                }
+                if multi_card_name:
+                    post_body["multi_card_name"] = multi_card_name
+                session_response = sslcz.createSession(post_body)
+                gateway_url = (session_response or {}).get("GatewayPageURL")
+                if not gateway_url:
+                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
+
+                PaymentTransaction.objects.create(
+                    user=request.user,
+                    order=order,
+                    method=payment_method,
+                    amount=total_payable,
+                    currency="BDT",
+                    tran_id=tran_id,
+                    session_key=(session_response or {}).get("sessionkey", ""),
+                    gateway_url=gateway_url,
+                    status=PaymentTransaction.Status.INITIATED,
+                    shipping_address=shipping_text,
+                    notes=notes,
+                    subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
+                    discount_amount=summary.get("discount_amount") or Decimal("0"),
+                    delivery_fee=summary.get("delivery_fee") or Decimal("0"),
+                    coupon_id_ref=getattr(order.coupon, "id", None),
+                    delivery_duration_id_ref=getattr(delivery_duration, "id", None),
+                    cart_snapshot=[],
+                    request_payload=post_body,
+                    gateway_response=session_response or {},
+                )
+
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_method": payment_method,
+                        "payment_provider": "SSLCOMMERZ",
+                        "gateway_url": gateway_url,
+                        "tran_id": tran_id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as exc:
+                # Order is already created; return it with a warning about payment init failure
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_init_failed": True,
+                        "detail": f"Order placed but payment initialization failed: {exc}",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+        # COD flow: order already created above, just return it.
+        return Response(
+            {
+                **OrderSerializer(order, context={"request": request}).data,
+                "payment_required": False,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CartItemViewSet(viewsets.GenericViewSet):
