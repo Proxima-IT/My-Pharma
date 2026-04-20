@@ -125,26 +125,16 @@ const OrderSummaryCard = ({
           />
         )}
 
-        {/* Row 3: Base Delivery Fee */}
+        {/* Row 3: Delivery Fee (single row — shows selected option's charge) */}
         <SummaryRow
-          label={
-            displayData.optionCharge > 0 ? 'Base Shipping' : 'Delivery Fee'
-          }
+          label={displayData.optionName || 'Delivery Fee'}
           value={
-            displayData.baseDelivery > 0
-              ? formatCurrency(displayData.baseDelivery)
+            displayData.totalDelivery > 0
+              ? formatCurrency(displayData.totalDelivery)
               : 'FREE'
           }
-          isFree={displayData.baseDelivery <= 0}
+          isFree={displayData.totalDelivery <= 0}
         />
-
-        {/* Row 4: Delivery Option Extra Charge (If Selected) */}
-        {displayData.optionCharge > 0 && (
-          <SummaryRow
-            label={displayData.optionName || 'Express Handling'}
-            value={`+${formatCurrency(displayData.optionCharge)}`}
-          />
-        )}
       </div>
 
       <div className="h-px bg-gray-100 w-full my-6" />
