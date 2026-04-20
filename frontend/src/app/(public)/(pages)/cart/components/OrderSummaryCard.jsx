@@ -53,18 +53,25 @@ const OrderSummaryCard = ({
 
   const isApplied = !!appliedCoupon;
 
-  // 2. Map display data using persisted backend fields including delivery breakdown
+  // 2. Map display data using persisted backend fields including delivery breakdown.
+  //    Use explicit null/undefined checks so that a backend value of 0 (free delivery)
+  //    is correctly used instead of falling back to the hardcoded guest default.
+  const hasBackendSummary = activeSummary?.base_delivery_fee != null;
   const displayData = {
     subtotal: parseFloat(
       activeSummary?.sub_total || calculatedValues.subtotal || 0,
     ),
     discount: parseFloat(activeSummary?.discount_amount || 0),
-    // Breakdown fields for shipping
-    baseDelivery: parseFloat(
-      activeSummary?.base_delivery_fee || calculatedValues.deliveryFee || 0,
-    ),
+    // Breakdown fields for shipping — trust backend values (including 0) when present
+    baseDelivery: hasBackendSummary
+      ? parseFloat(activeSummary.base_delivery_fee)
+      : parseFloat(calculatedValues.deliveryFee || 0),
     optionCharge: parseFloat(activeSummary?.delivery_option_charge || 0),
     optionName: activeSummary?.delivery_option_name || '',
+    // Total delivery = base + option charge (already computed by backend as delivery_fee)
+    totalDelivery: hasBackendSummary
+      ? parseFloat(activeSummary.delivery_fee || 0)
+      : parseFloat(calculatedValues.deliveryFee || 0),
     total: parseFloat(
       activeSummary?.total_amount ||
         calculatedValues.subtotal + calculatedValues.deliveryFee,
@@ -123,14 +130,19 @@ const OrderSummaryCard = ({
           label={
             displayData.optionCharge > 0 ? 'Base Shipping' : 'Delivery Fee'
           }
-          value={formatCurrency(displayData.baseDelivery)}
+          value={
+            displayData.baseDelivery > 0
+              ? formatCurrency(displayData.baseDelivery)
+              : 'FREE'
+          }
+          isFree={displayData.baseDelivery <= 0}
         />
 
         {/* Row 4: Delivery Option Extra Charge (If Selected) */}
         {displayData.optionCharge > 0 && (
           <SummaryRow
             label={displayData.optionName || 'Express Handling'}
-            value={formatCurrency(displayData.optionCharge)}
+            value={`+${formatCurrency(displayData.optionCharge)}`}
           />
         )}
       </div>
@@ -216,7 +228,7 @@ const OrderSummaryCard = ({
   );
 };
 
-const SummaryRow = ({ label, value, isDiscount = false }) => (
+const SummaryRow = ({ label, value, isDiscount = false, isFree = false }) => (
   <div className="flex items-center justify-between w-full">
     <span className="text-[14px] font-medium text-gray-500 uppercase tracking-wide">
       {label}
@@ -224,7 +236,7 @@ const SummaryRow = ({ label, value, isDiscount = false }) => (
     <div className="flex items-center gap-3">
       <span className="text-gray-300 font-light">-</span>
       <span
-        className={`text-[18px] font-bold ${isDiscount ? 'text-(--color-success-500)' : 'text-gray-900'}`}
+        className={`text-[18px] font-bold ${isDiscount || isFree ? 'text-(--color-success-500)' : 'text-gray-900'}`}
       >
         {value}
       </span>
