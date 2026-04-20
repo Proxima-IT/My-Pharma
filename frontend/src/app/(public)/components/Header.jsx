@@ -91,6 +91,11 @@ const Header = () => {
     return new File([u8arr], filename, { type: mime });
   };
 
+  // Auto-close dropdown on route change
+  useEffect(() => {
+    setIsProfileOpen(false);
+  }, [pathname]);
+
   // Click Outside logic for Profile and Search
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -250,11 +255,6 @@ const Header = () => {
     return (
       <Link
         href={href}
-        onClick={(e) => {
-          e.preventDefault();
-          setIsProfileOpen(false);
-          router.push(href);
-        }}
         className={`flex items-center gap-4 px-4 py-2 rounded-full text-[14px] transition-all duration-200 group ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'text-gray-700 hover:bg-[#233b8c] hover:text-white'}`}
       >
         <Icon
