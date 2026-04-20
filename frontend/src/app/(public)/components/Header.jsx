@@ -253,7 +253,7 @@ const Header = () => {
   const DropdownItem = ({ href, icon: Icon, label }) => {
     const isActive = pathname === href;
     return (
-      <Link
+      <a
         href={href}
         className={`flex items-center gap-4 px-4 py-2 rounded-full text-[14px] transition-all duration-200 group ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'text-gray-700 hover:bg-[#233b8c] hover:text-white'}`}
       >
@@ -264,7 +264,7 @@ const Header = () => {
           }
         />
         <span className={isActive ? 'font-bold' : 'font-medium'}>{label}</span>
-      </Link>
+      </a>
     );
   };
 
