@@ -12,7 +12,7 @@ import { useCart } from '@/app/(public)/hooks/useCart';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 import {
   PRODUCT_ENDPOINTS,
-  getMediaUrl,
+  getProductImageUrl,
   parseJsonResponse,
 } from '@/app/(shared)/lib/apiConfig';
 
@@ -96,9 +96,9 @@ const DealsSection = () => {
                 )}
 
                 {/* Conditional Rendering: Image vs Icon */}
-                {product.image ? (
+                {getProductImageUrl(product) ? (
                   <Image
-                    src={getMediaUrl(product.image)}
+                    src={getProductImageUrl(product)}
                     alt={product.name}
                     fill
                     className="object-contain mix-blend-multiply transition-transform duration-500 group-hover:scale-110 p-4"

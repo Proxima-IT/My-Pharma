@@ -10,7 +10,7 @@ import {
   removeCartCouponApi,
 } from '../api/cartApi';
 import { useCartContext } from '../context/CartContext';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * useCart Hook
@@ -114,7 +114,7 @@ export const useCart = () => {
             product_name: product.name,
             current_price: product.price,
             product_original_price: product.original_price,
-            image_url: getMediaUrl(product.image),
+            image_url: getProductImageUrl(product),
             product_description: product.description,
             product_unit_label: product.unit_label,
             product_dosage: product.dosage,

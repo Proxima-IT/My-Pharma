@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 import { FiArrowRight, FiSearch } from 'react-icons/fi';
 
 /**
@@ -39,13 +39,19 @@ const SearchSuggestions = ({ suggestions, isLoading, onSelect, visible }) => {
                 className="flex items-center gap-4 px-6 py-3 hover:bg-gray-50 transition-colors group"
               >
                 <div className="relative w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 overflow-hidden shrink-0">
-                  <Image
-                    src={getMediaUrl(product.image)}
-                    alt={product.name}
-                    fill
-                    className="object-contain p-1"
-                    unoptimized
-                  />
+                  {getProductImageUrl(product) ? (
+                    <Image
+                      src={getProductImageUrl(product)}
+                      alt={product.name}
+                      fill
+                      className="object-contain p-1"
+                      unoptimized
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-gray-300 text-[8px] font-bold uppercase">
+                      N/A
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h4 className="text-[15px] font-bold text-gray-900 truncate group-hover:text-(--color-primary-500) transition-colors">

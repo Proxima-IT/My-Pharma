@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 import {
   FiPlus,
   FiSearch,
@@ -36,7 +36,7 @@ export default function ProductManagementPage() {
     handleSearch(searchTerm);
   };
 
-  const getDisplayImage = url => getMediaUrl(url) || null;
+  const getDisplayImage = product => getProductImageUrl(product);
 
   const getStockStatus = product => {
     if (product.quantity_in_stock <= 0)
@@ -164,7 +164,7 @@ export default function ProductManagementPage() {
               ) : products.length > 0 ? (
                 products.map(product => {
                   const stock = getStockStatus(product);
-                  const displayImage = getDisplayImage(product.image);
+                  const displayImage = getDisplayImage(product);
 
                   return (
                     <tr

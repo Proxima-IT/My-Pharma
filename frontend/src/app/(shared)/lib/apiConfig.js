@@ -153,3 +153,23 @@ export function getMediaUrl(url) {
   }
   return url;
 }
+
+/**
+ * Resolve the best available image URL for a product object.
+ * Priority: product.image (primary) → first gallery URL in product.images → null.
+ * Returns a normalised media path ready for <Image> src or <img> src.
+ */
+export function getProductImageUrl(product) {
+  if (!product) return null;
+  if (product.image) return getMediaUrl(product.image);
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    // Gallery items can be URL strings or objects with an image/image_url key.
+    const first = product.images[0];
+    const raw =
+      typeof first === 'string'
+        ? first
+        : first?.image_url || first?.image || null;
+    return raw ? getMediaUrl(raw) : null;
+  }
+  return null;
+}
