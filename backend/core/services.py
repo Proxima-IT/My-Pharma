@@ -117,7 +117,12 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_dura
     delivery_option_charge = Decimal("0.00")
     if delivery_duration and getattr(delivery_duration, "is_active", True):
         delivery_option_charge = Decimal(str(delivery_duration.extra_charge or "0")).quantize(Decimal("0.01"))
-    delivery_fee = (base_delivery_fee + delivery_option_charge).quantize(Decimal("0.01"))
+    # If the selected delivery option has its own charge, use ONLY that charge
+    # (replaces base fee). Otherwise fall back to the zone-based base fee.
+    if delivery_option_charge > 0:
+        delivery_fee = delivery_option_charge
+    else:
+        delivery_fee = base_delivery_fee
     # Discount applies to product subtotal (not delivery fee).
     # If prices already discounted, this will be computed from original_subtotal.
     discount_amount = max(Decimal("0"), (original_subtotal - subtotal).quantize(Decimal("0.01")))

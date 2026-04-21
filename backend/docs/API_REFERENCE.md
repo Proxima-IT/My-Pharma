@@ -513,6 +513,11 @@ These endpoints power browser push registration and in-app inbox notifications.
 | POST | `/api/notifications/subscriptions/` | Upsert one FCM subscription with `fcm_token`, optional `platform`, optional `is_active`. |
 | DELETE | `/api/notifications/subscriptions/` | Deactivate a token by body `{"fcm_token": "..."}`; returns `{"removed_count": <int>}`. |
 | POST | `/api/notifications/broadcast/` | Admin broadcast. Body: `title`, `message`, optional absolute `target_url` (`https://...`), optional `send_to_opted_in_only`. |
+| GET | `/api/notifications/health/` | Admin diagnostics for Firebase/Celery/subscription health. |
+| GET | `/api/notifications/campaigns/` | Admin list of recent notification campaigns. |
+| POST | `/api/notifications/campaigns/` | Admin create/send campaign (supports audience modes and optional dedupe key). |
+| GET | `/api/notifications/campaigns/{id}/` | Admin campaign detail with recent push failures. |
+| POST | `/api/notifications/test-send/` | Admin test send to own user account/tokens. |
 
 Broadcast response is `201 Created` and includes delivery counters:
 `sent_count`, `push_attempted`, `push_succeeded`, `push_failed`, `push_deactivated`, and `push_async`.

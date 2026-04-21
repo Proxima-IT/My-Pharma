@@ -5,7 +5,7 @@ import { BsCart3 } from 'react-icons/bs';
 import { GoStarFill } from 'react-icons/go';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { FiTrash2 } from 'react-icons/fi';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 export default function ProductCard({ product, onRemove }) {
   return (
@@ -28,9 +28,9 @@ export default function ProductCard({ product, onRemove }) {
         </button>
 
         {/* Product image */}
-        {product.image ? (
+        {getProductImageUrl(product) ? (
           <Image
-            src={getMediaUrl(product.image)}
+            src={getProductImageUrl(product)}
             alt={product.name}
             width={300}
             height={300}

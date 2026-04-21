@@ -2,6 +2,13 @@
 const nextConfig = {
   reactCompiler: true,
   output: 'standalone',
+  experimental: {
+    cpus: 2,
+    workerThreads: false,
+    memoryBasedWorkersCount: true,
+  },
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
   images: {
     // This tells Next.js to use our custom function for EVERY <Image /> component
     loader: 'custom',

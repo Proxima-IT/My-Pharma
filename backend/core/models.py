@@ -1042,6 +1042,14 @@ class Consultation(models.Model):
 class UserNotification(models.Model):
     """Per-user notification row; admins can broadcast to all non-guest users."""
 
+    campaign = models.ForeignKey(
+        "NotificationCampaign",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notifications",
+        db_index=True,
+    )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -1072,6 +1080,134 @@ class UserNotification(models.Model):
 
     def __str__(self):
         return f"Notification #{self.id} -> user {self.user_id}"
+
+
+class NotificationCampaign(models.Model):
+    """Tracks one admin/system notification send request and aggregate delivery metrics."""
+
+    class AudienceMode(models.TextChoices):
+        ALL_ACTIVE = "ALL_ACTIVE", "All active users"
+        OPTED_IN_ONLY = "OPTED_IN_ONLY", "Opted-in users only"
+        USER_IDS = "USER_IDS", "Specific user ids"
+        ROLE_BASED = "ROLE_BASED", "Role-based segment"
+
+    class Status(models.TextChoices):
+        DRAFT = "DRAFT", "Draft"
+        QUEUED = "QUEUED", "Queued"
+        PARTIAL = "PARTIAL", "Partially delivered"
+        COMPLETED = "COMPLETED", "Completed"
+        FAILED = "FAILED", "Failed"
+
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    target_url = models.URLField(max_length=500, blank=True)
+    audience_mode = models.CharField(
+        max_length=32,
+        choices=AudienceMode.choices,
+        default=AudienceMode.ALL_ACTIVE,
+        db_index=True,
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="notification_campaigns",
+    )
+    source = models.CharField(
+        max_length=40,
+        default="admin",
+        help_text="Origin of this campaign: admin, order_event, prescription_event, payment_event, etc.",
+    )
+    role_filter = models.CharField(
+        max_length=32,
+        blank=True,
+        help_text="Optional role when audience_mode=ROLE_BASED.",
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.DRAFT,
+        db_index=True,
+    )
+    dedupe_key = models.CharField(
+        max_length=200,
+        blank=True,
+        db_index=True,
+        help_text="Optional idempotency key for event-driven notifications.",
+    )
+    metadata = models.JSONField(default=dict, blank=True)
+    recipient_count = models.PositiveIntegerField(default=0)
+    push_attempted = models.PositiveIntegerField(default=0)
+    push_succeeded = models.PositiveIntegerField(default=0)
+    push_failed = models.PositiveIntegerField(default=0)
+    push_deactivated = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_notification_campaign"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["status", "created_at"]),
+            models.Index(fields=["audience_mode", "created_at"]),
+            models.Index(fields=["source", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"Campaign #{self.id} ({self.title})"
+
+
+class NotificationDeliveryLog(models.Model):
+    """One push-delivery attempt against a specific token for a campaign."""
+
+    class DeliveryStatus(models.TextChoices):
+        SUCCESS = "SUCCESS", "Success"
+        FAILED = "FAILED", "Failed"
+        DEACTIVATED = "DEACTIVATED", "Token deactivated"
+
+    campaign = models.ForeignKey(
+        "NotificationCampaign",
+        on_delete=models.CASCADE,
+        related_name="delivery_logs",
+        db_index=True,
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="notification_delivery_logs",
+        db_index=True,
+    )
+    subscription = models.ForeignKey(
+        "UserPushSubscription",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="delivery_logs",
+        db_index=True,
+    )
+    fcm_token = models.CharField(max_length=255, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=DeliveryStatus.choices,
+        db_index=True,
+    )
+    status_code = models.IntegerField(null=True, blank=True)
+    permanent_failure = models.BooleanField(default=False)
+    reason = models.CharField(max_length=300, blank=True)
+    provider_message_id = models.CharField(max_length=255, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_notification_delivery_log"
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["campaign", "status"]),
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"DeliveryLog(campaign={self.campaign_id}, user={self.user_id}, status={self.status})"
 
 
 class UserNotificationPreference(models.Model):

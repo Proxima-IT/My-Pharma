@@ -29,6 +29,10 @@ const publicEnvApiBase = envApiBase || envBackendApiBase;
 const envPointsToLocalhost =
   publicEnvApiBase &&
   /(^https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(publicEnvApiBase);
+const localhostDefaultApiBase = 'http://localhost:8000/api';
+const safeLocalhostApiBase = envPointsToLocalhost
+  ? publicEnvApiBase
+  : localhostDefaultApiBase;
 
 /**
  * API_BASE_URL Logic:
@@ -42,10 +46,10 @@ const envPointsToLocalhost =
 export const API_BASE_URL = isBrowser
   ? (
       isLocalhost
-        ? (publicEnvApiBase || 'http://localhost:8080/api')
+        ? safeLocalhostApiBase
         : (!envPointsToLocalhost && publicEnvApiBase ? publicEnvApiBase : browserApiBase)
     )
-  : (serverApiBase || publicEnvApiBase || 'http://localhost:8080/api');
+  : (serverApiBase || publicEnvApiBase || localhostDefaultApiBase);
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
@@ -148,4 +152,24 @@ export function getMediaUrl(url) {
     return path.startsWith('/') ? path : `/${path}`;
   }
   return url;
+}
+
+/**
+ * Resolve the best available image URL for a product object.
+ * Priority: product.image (primary) → first gallery URL in product.images → null.
+ * Returns a normalised media path ready for <Image> src or <img> src.
+ */
+export function getProductImageUrl(product) {
+  if (!product) return null;
+  if (product.image) return getMediaUrl(product.image);
+  if (Array.isArray(product.images) && product.images.length > 0) {
+    // Gallery items can be URL strings or objects with an image/image_url key.
+    const first = product.images[0];
+    const raw =
+      typeof first === 'string'
+        ? first
+        : first?.image_url || first?.image || null;
+    return raw ? getMediaUrl(raw) : null;
+  }
+  return null;
 }

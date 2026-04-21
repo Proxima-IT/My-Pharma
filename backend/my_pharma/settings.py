@@ -10,7 +10,34 @@ from datetime import timedelta
 from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-load_dotenv(BASE_DIR / ".env")
+
+def _load_env_files():
+    """
+    Load environment variables from backend/.env and project-root env files.
+    APP_ENV_FILE (e.g. .env.dev/.env) takes priority when present.
+    """
+    root_dir = BASE_DIR.parent
+    requested_env_file = os.environ.get("APP_ENV_FILE", "").strip()
+
+    # Keep backward compatibility for backend/.env based local runs.
+    load_dotenv(BASE_DIR / ".env", override=False)
+
+    if requested_env_file:
+        load_dotenv(root_dir / requested_env_file, override=True)
+    else:
+        # Local development default. Production typically injects env directly.
+        load_dotenv(root_dir / ".env.dev", override=False)
+        load_dotenv(root_dir / ".env", override=False)
+
+
+def _parse_csv_env(name, default_values):
+    raw_value = os.environ.get(name, "")
+    if raw_value.strip():
+        return [item.strip() for item in raw_value.split(",") if item.strip()]
+    return list(default_values)
+
+
+_load_env_files()
   
 # ------------------------------------------------------------------------------
 # SECURITY
@@ -43,7 +70,7 @@ ALLOWED_HOSTS = _allowed
 # CORS + CSRF
 # -----------------------------
 CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
+_default_cors_allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://46.202.194.251:3000",
@@ -56,17 +83,19 @@ CORS_ALLOWED_ORIGINS = [
     "https://mypharma.com.bd",
     "https://www.mypharma.com.bd",
 ]
+CORS_ALLOWED_ORIGINS = _parse_csv_env("CORS_ALLOWED_ORIGINS", _default_cors_allowed_origins)
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_PRIVATE_NETWORK = True
 # Allow localhost/127.0.0.1 from any port/scheme in development tooling.
 # This prevents fragile CORS failures when frontend runs on 3000/3001 or HTTPS localhost.
-CORS_ALLOWED_ORIGIN_REGEXES = [
+_default_cors_origin_regexes = [
     r"^https?://localhost(:\d+)?$",
     r"^https?://127\.0\.0\.1(:\d+)?$",
 ]
+CORS_ALLOWED_ORIGIN_REGEXES = _parse_csv_env("CORS_ALLOWED_ORIGIN_REGEXES", _default_cors_origin_regexes)
 
-CSRF_TRUSTED_ORIGINS = [
+_default_csrf_trusted_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://46.202.194.251:3000",
@@ -79,6 +108,7 @@ CSRF_TRUSTED_ORIGINS = [
     "https://mypharma.com.bd",
     "https://www.mypharma.com.bd",
 ]
+CSRF_TRUSTED_ORIGINS = _parse_csv_env("CSRF_TRUSTED_ORIGINS", _default_csrf_trusted_origins)
 
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False

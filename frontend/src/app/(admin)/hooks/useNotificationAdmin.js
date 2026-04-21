@@ -15,6 +15,9 @@ export const useNotificationAdmin = () => {
   const [success, setSuccess] = useState(false);
   const [analytics, setAnalytics] = useState(null);
   const [logs, setLogs] = useState({ results: [], count: 0 });
+  const [campaigns, setCampaigns] = useState([]);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [health, setHealth] = useState(null);
 
   /**
    * Dispatches a notification to the system broadcast queue.
@@ -33,6 +36,14 @@ export const useNotificationAdmin = () => {
     try {
       const result = await notificationAdminApi.broadcastNotification(token, formData);
       notificationDebug('Broadcast flow completed.', result);
+      if (result?.campaign_id) {
+        try {
+          const detail = await notificationAdminApi.getCampaignDetail(token, result.campaign_id);
+          setSelectedCampaign(detail);
+        } catch {
+          // non-fatal
+        }
+      }
       setSuccess(true);
       return true;
     } catch (err) {
@@ -91,15 +102,54 @@ export const useNotificationAdmin = () => {
     setError(null);
   };
 
+  const fetchCampaigns = useCallback(async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    try {
+      const data = await notificationAdminApi.getCampaigns(token);
+      setCampaigns(Array.isArray(data) ? data : []);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
+  const fetchCampaignDetail = useCallback(async campaignId => {
+    const token = localStorage.getItem('access_token');
+    if (!token || !campaignId) return;
+    try {
+      const data = await notificationAdminApi.getCampaignDetail(token, campaignId);
+      setSelectedCampaign(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
+  const fetchHealth = useCallback(async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) return;
+    try {
+      const data = await notificationAdminApi.getHealth(token);
+      setHealth(data);
+    } catch (err) {
+      setError(err.message);
+    }
+  }, []);
+
   return {
     broadcast,
     fetchAnalytics,
     fetchLogs,
+    fetchCampaigns,
+    fetchCampaignDetail,
+    fetchHealth,
     clearStatus,
     loading,
     error,
     success,
     analytics,
     logs,
+    campaigns,
+    selectedCampaign,
+    health,
   };
 };

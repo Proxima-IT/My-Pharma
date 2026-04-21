@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiChevronRight } from 'react-icons/fi';
 import { formatCurrency } from '../../../../lib/formatters';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getMediaUrl, getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * OrderedProductCard Component
@@ -16,7 +16,9 @@ export default function OrderedProductCard({ item, productInfo }) {
   const slug = productInfo?.slug || item.product_slug || item.product;
   const productPath = `/product/${slug}`;
   const unitPrice = parseFloat(item.price_at_order || 0);
-  const imageUrl = getMediaUrl(productInfo?.image || item.image_url);
+  const imageUrl = productInfo
+    ? getProductImageUrl(productInfo)
+    : (item.image_url ? getMediaUrl(item.image_url) : null);
 
   const genericName =
     productInfo?.ingredient_name ||

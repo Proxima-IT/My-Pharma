@@ -42,6 +42,48 @@ export const notificationAdminApi = {
   },
 
   /**
+   * GET /api/notifications/campaigns/
+   * Fetch recent notification campaigns.
+   */
+  getCampaigns: async token => {
+    const res = await fetch(`${API_BASE_URL}/notifications/campaigns/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error('Failed to fetch campaigns');
+    return res.json();
+  },
+
+  /**
+   * GET /api/notifications/campaigns/{id}/
+   * Fetch campaign metrics and recent failures.
+   */
+  getCampaignDetail: async (token, campaignId) => {
+    const res = await fetch(`${API_BASE_URL}/notifications/campaigns/${campaignId}/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error('Failed to fetch campaign detail');
+    return res.json();
+  },
+
+  /**
+   * GET /api/notifications/health/
+   * Fetch health diagnostics for notification stack.
+   */
+  getHealth: async token => {
+    const res = await fetch(`${API_BASE_URL}/notifications/health/`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    if (!res.ok) throw new Error('Failed to fetch notification health');
+    return res.json();
+  },
+
+  /**
    * GET /api/notifications/
    * Admin view of sent notifications (if needed for logs).
    */

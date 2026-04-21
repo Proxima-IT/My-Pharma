@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, use, useMemo } from 'react';
+import React, { useEffect, use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fi';
 import { TbTruckDelivery, TbBike } from 'react-icons/tb';
 import { useOrders } from '../../../hooks/useOrders';
+import { orderApi } from '../../../api/orderApi';
 import { useProductData } from '@/app/(public)/hooks/useProductData';
 import { formatDate, formatCurrency } from '../../../lib/formatters';
 import OrderedProductCard from './components/OrderedProductCard';
@@ -31,6 +32,7 @@ export default function OrderDetailsPage({ params }) {
     loadOrderDetails,
   } = useOrders();
   const { products } = useProductData();
+  const [payLoading, setPayLoading] = useState(false);
 
   useEffect(() => {
     if (resolvedParams?.id) loadOrderDetails(resolvedParams.id);
@@ -138,18 +140,25 @@ export default function OrderDetailsPage({ params }) {
           </div>
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-6 md:gap-10 lg:gap-16 w-full lg:w-auto">
             <div className="text-left sm:text-center md:text-right">
-              <span
-                className={`px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase ${isCancelled ? 'bg-red-50 text-red-600' : 'bg-[#F0FDF4] text-[#10B981]'}`}
-              >
-                {isCancelled ? 'Cancelled' : 'Paid'}
-              </span>
+              {(() => {
+                const ps = (orderDetails.payment_status || 'PENDING').toUpperCase();
+                if (isCancelled) return (
+                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-red-50 text-red-600">Cancelled</span>
+                );
+                if (ps === 'PAID') return (
+                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-[#F0FDF4] text-[#10B981]">Paid</span>
+                );
+                return (
+                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-amber-50 text-amber-700">Unpaid</span>
+                );
+              })()}
               <p className="text-[10px] md:text-[12px] font-light uppercase tracking-widest mt-2">
                 Payment Status
               </p>
             </div>
             <div className="text-left sm:text-center md:text-right">
               <span className="px-4 py-1.5 bg-gray-50 text-black text-[11px] md:text-[13px] font-bold rounded-full uppercase">
-                {orderDetails.payment_method || 'ONLINE'}
+                {orderDetails.payment_method === 'ONLINE' ? 'Online' : orderDetails.payment_method === 'COD' ? 'Cash on Delivery' : (orderDetails.payment_method || 'COD')}
               </span>
               <p className="text-[10px] md:text-[12px] font-light uppercase tracking-widest mt-2">
                 Payment Type
@@ -267,33 +276,17 @@ export default function OrderDetailsPage({ params }) {
                   </div>
                 )}
 
-                {/* Base Shipping Fee */}
+                {/* Delivery Fee - single row */}
                 <div className="flex justify-between text-sm md:text-[17px] font-bold">
                   <span className="text-black font-light uppercase tracking-widest">
-                    {parseFloat(orderDetails.delivery_option_charge) > 0
-                      ? 'Base Shipping'
-                      : 'Delivery Fee'}
+                    {orderDetails.duration_name || 'Delivery Fee'}
                   </span>
                   <span className="font-bold">
-                    {formatCurrency(
-                      orderDetails.base_delivery_fee ||
-                        orderDetails.delivery_fee ||
-                        0,
-                    )}
+                    {parseFloat(orderDetails.delivery_fee) > 0
+                      ? formatCurrency(orderDetails.delivery_fee)
+                      : <span className="text-emerald-500">FREE</span>}
                   </span>
                 </div>
-
-                {/* Optional Delivery Upgrade Charge */}
-                {parseFloat(orderDetails.delivery_option_charge) > 0 && (
-                  <div className="flex justify-between text-sm md:text-[17px] font-bold">
-                    <span className="text-black font-light uppercase tracking-widest">
-                      {orderDetails.delivery_option_name || 'Express Upgrade'}
-                    </span>
-                    <span className="font-bold">
-                      +{formatCurrency(orderDetails.delivery_option_charge)}
-                    </span>
-                  </div>
-                )}
 
                 <div className="h-px bg-gray-100 w-full" />
                 <div className="flex justify-between text-xl md:text-2xl font-black">
@@ -302,6 +295,32 @@ export default function OrderDetailsPage({ params }) {
                     {formatCurrency(orderDetails.total)}
                   </span>
                 </div>
+
+                {/* Pay Now button for unpaid online orders */}
+                {(orderDetails.payment_status || 'PENDING').toUpperCase() !== 'PAID' &&
+                  (orderDetails.payment_method || '').toUpperCase() === 'ONLINE' &&
+                  !isCancelled && (
+                  <button
+                    onClick={async () => {
+                      setPayLoading(true);
+                      try {
+                        const token = localStorage.getItem('access_token');
+                        const data = await orderApi.payOrder(token, orderDetails.id);
+                        if (data.gateway_url) {
+                          window.location.href = data.gateway_url;
+                        }
+                      } catch (err) {
+                        alert(err.message || 'Payment failed. Please try again.');
+                      } finally {
+                        setPayLoading(false);
+                      }
+                    }}
+                    disabled={payLoading}
+                    className="w-full mt-4 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-2xl transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {payLoading ? 'Initializing Payment...' : '💳 Pay Now'}
+                  </button>
+                )}
               </div>
             </div>
           </div>

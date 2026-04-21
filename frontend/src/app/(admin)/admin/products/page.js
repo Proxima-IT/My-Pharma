@@ -13,7 +13,7 @@ import {
 } from 'react-icons/fi';
 import { useProductAdmin } from '../../hooks/useProductAdmin';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 export default function AdminProductListPage() {
   const { products, loading, fetchProducts, deleteProduct } = useProductAdmin();
@@ -144,9 +144,9 @@ export default function AdminProductListPage() {
                       <td className="px-8 py-5 border-r border-gray-100">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 border border-gray-100 bg-white flex items-center justify-center p-1 shrink-0">
-                            {product.image ? (
+                            {getProductImageUrl(product) ? (
                               <Image
-                                src={getMediaUrl(product.image)}
+                                src={getProductImageUrl(product)}
                                 alt={product.name}
                                 width={40}
                                 height={40}

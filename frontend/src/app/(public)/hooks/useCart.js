@@ -10,7 +10,7 @@ import {
   removeCartCouponApi,
 } from '../api/cartApi';
 import { useCartContext } from '../context/CartContext';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * useCart Hook
@@ -109,7 +109,7 @@ export const useCart = () => {
             product_name: product.name,
             current_price: product.price,
             product_original_price: product.original_price,
-            image_url: getMediaUrl(product.image),
+            image_url: getProductImageUrl(product),
             product_description: product.description,
             product_unit_label: product.unit_label,
             product_dosage: product.dosage,
@@ -237,6 +237,12 @@ export const useCart = () => {
         shipping_charge: parseFloat(s.shipping_charge || s.delivery_fee || 150),
         total_amount: parseFloat(s.total_payable || s.total_amount || 0),
         coupon_code: s.coupon_code || null,
+        // Delivery breakdown fields — preserve backend values (including 0)
+        base_delivery_fee: s.base_delivery_fee != null ? parseFloat(s.base_delivery_fee) : null,
+        delivery_option_charge: parseFloat(s.delivery_option_charge || 0),
+        delivery_option_name: s.delivery_option_name || null,
+        delivery_option_type: s.delivery_option_type || null,
+        delivery_fee: s.delivery_fee != null ? parseFloat(s.delivery_fee) : null,
       };
     }
     return guestSummary;

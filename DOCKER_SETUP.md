@@ -27,15 +27,15 @@ cd /path/to/test
 
 ---
 
-## 2. Create environment file
+## 2. Create environment files
 
-Create a `.env` file in the **project root** (same folder as `docker-compose.yml`):
+Create a `.env.dev` file in the **project root** (same folder as `docker-compose.yml`) for local Docker development:
 
 ```bash
-cp .env.docker.example .env
+cp .env .env.dev
 ```
 
-Edit `.env` and set **at least**:
+Edit `.env.dev` and set **at least**:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
@@ -55,17 +55,23 @@ Optional (defaults work for local Docker):
 
 ## 3. Build and start all services
 
-From the project root:
+From the project root, **always set `APP_ENV_FILE` explicitly**:
 
 ```bash
-docker compose build
-docker compose up -d
+APP_ENV_FILE=.env.dev docker compose build
+APP_ENV_FILE=.env.dev docker compose up -d
 ```
 
 Or in one step:
 
 ```bash
-docker compose up -d --build
+APP_ENV_FILE=.env.dev docker compose up -d --build
+```
+
+Or use the helper script:
+
+```bash
+./scripts/run-dev.sh
 ```
 
 This starts:
@@ -121,7 +127,8 @@ docker compose down -v
 
 ### 1. Use real secrets
 
-- Do **not** commit `.env`. Use a secrets manager or inject env in CI/CD.
+- Use `APP_ENV_FILE=.env` for production compose runs.
+- Do **not** commit `.env` or `.env.dev`. Use a secrets manager or inject env in CI/CD.
 - Set `DJANGO_SECRET_KEY`, `MYSQL_PASSWORD`, `MYSQL_ROOT_PASSWORD` to strong random values.
 
 ### 2. Frontend build URLs
@@ -135,6 +142,18 @@ docker compose down -v
   docker compose build --no-cache frontend
   docker compose up -d frontend
   ```
+
+Example production run:
+
+```bash
+APP_ENV_FILE=.env docker compose up -d --build
+```
+
+Or use the helper script:
+
+```bash
+./scripts/run-prod.sh
+```
 
 ### 3. Reverse proxy (Nginx / Traefik)
 

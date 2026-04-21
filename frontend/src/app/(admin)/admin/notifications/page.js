@@ -25,7 +25,19 @@ export default function AdminNotificationPage() {
 }
 
 function NotificationBroadcastContent() {
-  const { broadcast, loading, error, success, clearStatus } =
+  const {
+    broadcast,
+    loading,
+    error,
+    success,
+    clearStatus,
+    campaigns,
+    selectedCampaign,
+    health,
+    fetchCampaigns,
+    fetchCampaignDetail,
+    fetchHealth,
+  } =
     useNotificationAdmin();
 
   const [formData, setFormData] = useState({
@@ -44,6 +56,18 @@ function NotificationBroadcastContent() {
       return () => clearTimeout(timer);
     }
   }, [success, clearStatus]);
+
+  useEffect(() => {
+    fetchCampaigns();
+    fetchHealth();
+  }, [fetchCampaigns, fetchHealth]);
+
+  useEffect(() => {
+    if (success) {
+      fetchCampaigns();
+      fetchHealth();
+    }
+  }, [success, fetchCampaigns, fetchHealth]);
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -173,6 +197,22 @@ function NotificationBroadcastContent() {
 
         {/* Configuration Sidebar */}
         <div className="space-y-6">
+          <div className="border border-gray-100 p-6 space-y-3 bg-white">
+            <h4 className={labelClass}>Delivery Health</h4>
+            <p className="font-mono text-[11px] text-gray-600">
+              Firebase: {health?.firebase_initialized ? 'READY' : 'NOT_READY'}
+            </p>
+            <p className="font-mono text-[11px] text-gray-600">
+              Active tokens: {health?.active_subscriptions ?? '-'}
+            </p>
+            <p className="font-mono text-[11px] text-gray-600">
+              Inactive tokens: {health?.inactive_subscriptions ?? '-'}
+            </p>
+            <p className="font-mono text-[11px] text-gray-600">
+              Deactivated (7d): {health?.recently_deactivated_7d ?? '-'}
+            </p>
+          </div>
+
           <div className="border border-gray-100 p-6 space-y-6 bg-gray-50/30">
             <h3 className={labelClass}>Segmentation Control</h3>
 
@@ -216,6 +256,39 @@ function NotificationBroadcastContent() {
                 <p>• Action Link Injection</p>
               </div>
             </div>
+          </div>
+
+          <div className="border border-gray-100 p-6 bg-white space-y-4">
+            <h4 className={labelClass}>Recent Campaigns</h4>
+            <div className="space-y-2 max-h-56 overflow-y-auto">
+              {(campaigns || []).slice(0, 8).map(c => (
+                <button
+                  key={c.id}
+                  type="button"
+                  className="w-full text-left border border-gray-100 p-3 hover:border-black transition-colors cursor-pointer"
+                  onClick={() => fetchCampaignDetail(c.id)}
+                >
+                  <p className="font-mono text-[11px] font-bold text-gray-700">
+                    #{c.id} {c.title}
+                  </p>
+                  <p className="font-mono text-[10px] text-gray-500">
+                    sent={c.recipient_count} ok={c.push_succeeded} fail={c.push_failed}
+                  </p>
+                </button>
+              ))}
+            </div>
+            {!!selectedCampaign?.recent_failures?.length && (
+              <div className="border border-red-100 p-3 bg-red-50/40 space-y-2">
+                <p className="font-mono text-[10px] font-bold text-red-700 uppercase">
+                  Recent Failures
+                </p>
+                {selectedCampaign.recent_failures.slice(0, 5).map(f => (
+                  <p key={f.id} className="font-mono text-[10px] text-red-600">
+                    user:{f.user} status:{f.status} reason:{f.reason || 'unknown'}
+                  </p>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="p-6 border border-amber-100 bg-amber-50/50 shadow-none">

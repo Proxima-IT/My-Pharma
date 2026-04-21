@@ -30,6 +30,13 @@ Production-oriented Django 4+ API for the My Pharma online pharmacy platform. Au
    # Legacy NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY is still accepted as fallback.
    ```
 
+   Docker compose runs must explicitly select env source:
+
+   ```bash
+   APP_ENV_FILE=.env.dev docker compose up -d --build   # local/dev
+   APP_ENV_FILE=.env docker compose up -d --build       # production
+   ```
+
 2. **Dependencies**
 
    ```bash

@@ -5,6 +5,7 @@ import logging
 import json
 import uuid
 from decimal import Decimal, InvalidOperation
+from datetime import timedelta
 from urllib.parse import urlencode
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -34,7 +35,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction
+from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -76,9 +77,14 @@ from .serializers import (
     UserPushSubscriptionUpsertSerializer,
     UserPushSubscriptionDeleteSerializer,
     AdminBroadcastNotificationSerializer,
+    NotificationCampaignCreateSerializer,
+    NotificationCampaignSerializer,
+    NotificationDeliveryLogSerializer,
+    NotificationHealthSerializer,
     NotificationMarkedCountSerializer,
     NotificationRemovedCountSerializer,
     NotificationBroadcastResultSerializer,
+    NotificationTestSendSerializer,
     PageSerializer,
     BlogCategorySerializer,
     BlogPostSerializer,
@@ -104,6 +110,7 @@ from .services import (
     update_product_review_aggregates,
 )
 from .tasks import dispatch_web_push_notifications
+from .notification_service import create_and_dispatch_campaign, send_user_event_notification
 from .filters import ProductFilter
 from .models import OrderSettlement, B2BCustomerProfile, B2BCommissionEntry
 
@@ -176,6 +183,7 @@ def _ssl_multi_card_name(method: str) -> str:
 
 
 def _mark_payment_result(payment_txn: PaymentTransaction, status_value: str, payload: dict, verification_response=None):
+    previous_status = payment_txn.status
     payment_txn.status = status_value
     payment_txn.gateway_response = payload or {}
     if payload.get("val_id"):
@@ -205,96 +213,44 @@ def _mark_payment_result(payment_txn: PaymentTransaction, status_value: str, pay
     settlement.updated_at = timezone.now()
     settlement.save()
 
-
-def _create_order_from_payment_transaction(payment_txn: PaymentTransaction):
-    """
-    Create the actual order only after verified successful payment.
-    Idempotent: if order already linked, return it.
-    """
-    if payment_txn.order_id:
-        return payment_txn.order
-
-    with transaction.atomic():
-        payment_txn = PaymentTransaction.objects.select_for_update().get(pk=payment_txn.pk)
-        if payment_txn.order_id:
-            return payment_txn.order
-
-        snapshot = payment_txn.cart_snapshot or []
-        if not snapshot:
-            raise ValueError("Cart snapshot missing for this payment transaction.")
-
-        selected_duration = None
-        if payment_txn.delivery_duration_id_ref:
-            selected_duration = DeliveryDuration.objects.filter(
-                pk=payment_txn.delivery_duration_id_ref
-            ).first()
-
-        order = Order.objects.create(
-            user=payment_txn.user,
-            status=Order.Status.PENDING,
-            total=payment_txn.amount,
-            subtotal_before_discount=payment_txn.subtotal_before_discount or Decimal("0"),
-            discount_amount=payment_txn.discount_amount or Decimal("0"),
-            delivery_fee=payment_txn.delivery_fee or Decimal("0"),
-            coupon_id=payment_txn.coupon_id_ref,
-            duration=selected_duration,
-            shipping_address=payment_txn.shipping_address or "",
-            notes=payment_txn.notes or "",
-        )
-
-        product_ids = [int(entry.get("product_id")) for entry in snapshot if entry.get("product_id")]
-        products = {p.id: p for p in Product.objects.select_for_update().filter(id__in=product_ids)}
-
-        for entry in snapshot:
-            product_id = int(entry.get("product_id"))
-            qty = int(entry.get("quantity") or 0)
-            if qty <= 0:
-                continue
-            product = products.get(product_id)
-            if not product:
-                raise ValueError(f"Product not found for snapshot item: {product_id}")
-            if product.quantity_in_stock < qty:
-                raise ValueError(f"Insufficient stock for {product.name}.")
-            price_at_order = Decimal(str(entry.get("price_at_order") or product.price))
-            OrderItem.objects.create(
-                order=order,
-                product=product,
-                quantity=qty,
-                price_at_order=price_at_order,
-                dosage=(entry.get("dosage") or "").strip()[:50],
-            )
-            product.quantity_in_stock -= qty
-            product.save(update_fields=["quantity_in_stock"])
-
-        OrderStatusHistory.objects.get_or_create(order=order, status=Order.Status.PENDING)
-        OrderSettlement.objects.get_or_create(
-            order=order,
-            defaults={
-                "payment_method": OrderSettlement.PaymentMethod.ONLINE,
-                "payment_status": OrderSettlement.PaymentStatus.PAID,
-                "gross_amount": order.total,
-                "net_payable": order.total,
-                "status": OrderSettlement.Status.PENDING,
+    # Event notification to end user when payment status changes.
+    if payment_txn.user_id and previous_status != status_value:
+        status_label = status_value.replace("_", " ").title()
+        send_user_event_notification(
+            user_id=payment_txn.user_id,
+            title=f"Payment {status_label}",
+            message=f"Your payment status is now {status_label}.",
+            target_url=(f"/user/orders/{payment_txn.order_id}" if payment_txn.order_id else "/checkout"),
+            source="payment_event",
+            dedupe_key=f"payment:{payment_txn.id}:{status_value}",
+            metadata={
+                "payment_transaction_id": payment_txn.id,
+                "status": status_value,
+                "order_id": payment_txn.order_id,
             },
         )
 
-        if payment_txn.coupon_id_ref:
-            coupon = Coupon.objects.filter(pk=payment_txn.coupon_id_ref).first()
-            if coupon:
-                coupon.times_used += 1
-                coupon.save(update_fields=["times_used"])
 
-        # Clear user's cart after payment success and order creation.
-        if payment_txn.user_id:
-            cart = Cart.objects.filter(user_id=payment_txn.user_id).first()
-            if cart:
-                cart.items.all().delete()
-                cart.coupon = None
-                cart.save(update_fields=["coupon", "updated_at"])
+def _create_order_from_payment_transaction(payment_txn: PaymentTransaction):
+    """
+    Mark the pre-existing order's settlement as PAID after successful payment verification.
+    Orders are now created at checkout time (before payment), so this function just updates
+    the payment status. Idempotent: safe to call multiple times.
 
-        payment_txn.order = order
-        payment_txn.save(update_fields=["order", "updated_at"])
-        return order
+    Returns the linked order, or None if no order is linked.
+    """
+    if not payment_txn.order_id:
+        return None
+
+    order = payment_txn.order
+    settlement = OrderSettlement.objects.filter(order=order).first()
+    if settlement and settlement.payment_status != OrderSettlement.PaymentStatus.PAID:
+        settlement.payment_method = OrderSettlement.PaymentMethod.ONLINE
+        settlement.payment_status = OrderSettlement.PaymentStatus.PAID
+        settlement.updated_at = timezone.now()
+        settlement.save(update_fields=["payment_method", "payment_status", "updated_at"])
+
+    return order
 
 
 def _extract_payload(request):
@@ -818,7 +774,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Order.objects.select_related("user", "prescription", "duration", "coupon")
+            Order.objects.select_related("user", "prescription", "duration", "coupon", "settlement")
             .prefetch_related("items__product", "images", "status_history")
             .all()
         )
@@ -861,6 +817,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def partial_update(self, request, *args, **kwargs):
         order = self.get_object()
+        previous_status = order.status
         role = getattr(request.user, "role", None)
         if role not in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
             return Response({"detail": "Only pharmacy admin or super admin can update order status."}, status=status.HTTP_403_FORBIDDEN)
@@ -897,6 +854,21 @@ class OrderViewSet(viewsets.ModelViewSet):
                             "status": B2BCommissionEntry.Status.PENDING,
                         },
                     )
+            if previous_status != order.status:
+                status_label = order.status.replace("_", " ").title()
+                send_user_event_notification(
+                    user_id=order.user_id,
+                    title=f"Order Status: {status_label}",
+                    message=f"Your order #{order.id} status changed to {status_label}.",
+                    target_url=f"/user/orders/{order.id}",
+                    source="order_event",
+                    dedupe_key=f"order:{order.id}:{order.status}",
+                    metadata={
+                        "order_id": order.id,
+                        "previous_status": previous_status,
+                        "new_status": order.status,
+                    },
+                )
         order.refresh_from_db()
         qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "duration")
         order = qs.get()
@@ -904,6 +876,111 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)
+
+    @action(detail=True, methods=["post"], url_path="pay")
+    def pay(self, request, pk=None):
+        """
+        POST /api/orders/<id>/pay/ – Create a new SSLCommerz session for an unpaid online order.
+        Body: { payment_method?: str }  (optional, defaults to ONLINE)
+        Returns { gateway_url, tran_id } so the frontend can redirect to the payment page.
+        """
+        order = self.get_object()
+        # Only the order owner can pay
+        if order.user_id != request.user.id:
+            return Response({"detail": "Not your order."}, status=status.HTTP_403_FORBIDDEN)
+
+        settlement = OrderSettlement.objects.filter(order=order).first()
+        if not settlement:
+            return Response({"detail": "No settlement record found."}, status=status.HTTP_400_BAD_REQUEST)
+        if settlement.payment_status == OrderSettlement.PaymentStatus.PAID:
+            return Response({"detail": "This order is already paid."}, status=status.HTTP_400_BAD_REQUEST)
+        if settlement.payment_method == OrderSettlement.PaymentMethod.COD:
+            return Response({"detail": "COD orders do not require online payment."}, status=status.HTTP_400_BAD_REQUEST)
+
+        raw_method = (request.data.get("payment_method") or "ONLINE").strip().upper()
+        payment_method = _normalize_payment_method(raw_method)
+        if not _is_online_payment_method(payment_method):
+            payment_method = PaymentTransaction.Method.ONLINE
+
+        try:
+            # Parse shipping address for customer details
+            parts = (order.shipping_address or "").split(",")
+            customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+            customer_email = (request.user.email or (parts[1].strip() if len(parts) > 1 else "") or "customer@example.com").strip()
+            customer_phone = (request.user.phone or (parts[2].strip() if len(parts) > 2 else "") or "").strip() or "01700000000"
+            product_names = ", ".join([oi.product.name for oi in order.items.select_related("product").all()[:3]]) or "Pharmacy Order"
+
+            sslcz = _get_sslcommerz_client()
+            tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
+            total_payable = Decimal(str(order.total)).quantize(Decimal("0.01"))
+            multi_card_name = _ssl_multi_card_name(payment_method)
+
+            post_body = {
+                "total_amount": str(total_payable),
+                "currency": "BDT",
+                "tran_id": tran_id,
+                "success_url": _build_ssl_backend_url("success"),
+                "fail_url": _build_ssl_backend_url("fail"),
+                "cancel_url": _build_ssl_backend_url("cancel"),
+                "ipn_url": _build_ssl_backend_url("ipn"),
+                "emi_option": 0,
+                "cus_name": customer_name,
+                "cus_email": customer_email,
+                "cus_phone": customer_phone,
+                "cus_add1": (parts[-1].strip() if parts else "")[:255],
+                "cus_city": (parts[-2].strip() if len(parts) > 1 else "Dhaka")[:50],
+                "cus_country": "Bangladesh",
+                "shipping_method": "NO",
+                "num_of_item": order.items.count() or 1,
+                "product_name": product_names[:255],
+                "product_category": "Pharmacy",
+                "product_profile": "general",
+                "value_a": str(request.user.id),
+                "value_b": str(order.id),
+            }
+            if multi_card_name:
+                post_body["multi_card_name"] = multi_card_name
+
+            session_response = sslcz.createSession(post_body)
+            gateway_url = (session_response or {}).get("GatewayPageURL")
+            if not gateway_url:
+                raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing.")
+
+            PaymentTransaction.objects.create(
+                user=request.user,
+                order=order,
+                method=payment_method,
+                amount=total_payable,
+                currency="BDT",
+                tran_id=tran_id,
+                session_key=(session_response or {}).get("sessionkey", ""),
+                gateway_url=gateway_url,
+                status=PaymentTransaction.Status.INITIATED,
+                shipping_address=order.shipping_address or "",
+                notes=order.notes or "",
+                subtotal_before_discount=order.subtotal_before_discount or Decimal("0"),
+                discount_amount=order.discount_amount or Decimal("0"),
+                delivery_fee=order.delivery_fee or Decimal("0"),
+                coupon_id_ref=getattr(order.coupon, "id", None),
+                delivery_duration_id_ref=getattr(order.duration, "id", None),
+                cart_snapshot=[],
+                request_payload=post_body,
+                gateway_response=session_response or {},
+            )
+
+            return Response(
+                {
+                    "gateway_url": gateway_url,
+                    "tran_id": tran_id,
+                    "payment_method": payment_method,
+                },
+                status=status.HTTP_200_OK,
+            )
+        except Exception as exc:
+            return Response(
+                {"detail": f"Failed to initialize payment: {exc}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 # ---- Delivery duration (admin CRUD) ----
@@ -1214,98 +1291,7 @@ class CartViewSet(viewsets.GenericViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-        # Online flow: do NOT place order yet. Create SSL session first; order will be created on payment success callback.
-        if _is_online_payment_method(payment_method):
-            try:
-                items_qs = cart.items.select_related("product").all()
-                cart_snapshot = [
-                    {
-                        "product_id": item.product_id,
-                        "quantity": item.quantity,
-                        "price_at_order": str(item.price_at_order),
-                        "dosage": (item.dosage or "").strip()[:50],
-                    }
-                    for item in items_qs
-                ]
-                sslcz = _get_sslcommerz_client()
-                tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
-                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
-                customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
-                customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
-                product_names = ", ".join([item.product.name for item in items_qs[:3]]) or "Pharmacy Order"
-
-                total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
-                multi_card_name = _ssl_multi_card_name(payment_method)
-                post_body = {
-                    "total_amount": str(total_payable),
-                    "currency": "BDT",
-                    "tran_id": tran_id,
-                    "success_url": _build_ssl_backend_url("success"),
-                    "fail_url": _build_ssl_backend_url("fail"),
-                    "cancel_url": _build_ssl_backend_url("cancel"),
-                    "ipn_url": _build_ssl_backend_url("ipn"),
-                    "emi_option": 0,
-                    "cus_name": customer_name,
-                    "cus_email": customer_email,
-                    "cus_phone": customer_phone,
-                    "cus_add1": (address.address or "")[:255],
-                    "cus_city": (address.district or "Dhaka")[:50],
-                    "cus_country": "Bangladesh",
-                    "shipping_method": "NO",
-                    "num_of_item": len(cart_snapshot) or 1,
-                    "product_name": product_names[:255],
-                    "product_category": "Pharmacy",
-                    "product_profile": "general",
-                    "value_a": str(request.user.id),
-                    "value_b": str(address_id),
-                }
-                # ONLINE means default SSLCommerz gateway page with all enabled channels.
-                # For specific selections (bKash/Nagad/Rocket/Upay/Card), pass a filtered channel hint.
-                if multi_card_name:
-                    post_body["multi_card_name"] = multi_card_name
-                session_response = sslcz.createSession(post_body)
-                gateway_url = (session_response or {}).get("GatewayPageURL")
-                if not gateway_url:
-                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
-
-                PaymentTransaction.objects.create(
-                    user=request.user,
-                    method=payment_method,
-                    amount=total_payable,
-                    currency="BDT",
-                    tran_id=tran_id,
-                    session_key=(session_response or {}).get("sessionkey", ""),
-                    gateway_url=gateway_url,
-                    status=PaymentTransaction.Status.INITIATED,
-                    shipping_address=shipping_text,
-                    notes=notes,
-                    subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
-                    discount_amount=summary.get("discount_amount") or Decimal("0"),
-                    delivery_fee=summary.get("delivery_fee") or Decimal("0"),
-                    coupon_id_ref=getattr(cart.coupon, "id", None),
-                    delivery_duration_id_ref=getattr(delivery_duration, "id", None),
-                    cart_snapshot=cart_snapshot,
-                    request_payload=post_body,
-                    gateway_response=session_response or {},
-                )
-
-                return Response(
-                    {
-                        "payment_required": True,
-                        "payment_method": payment_method,
-                        "payment_provider": "SSLCOMMERZ",
-                        "gateway_url": gateway_url,
-                        "tran_id": tran_id,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-            except Exception as exc:
-                return Response(
-                    {"detail": f"Failed to initialize SSLCommerz payment: {exc}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        # COD flow: place order immediately.
+        # ── Unified flow: create order FIRST for all payment methods ──
         with transaction.atomic():
             order = Order.objects.create(
                 user=request.user,
@@ -1330,10 +1316,13 @@ class CartViewSet(viewsets.GenericViewSet):
                 item.product.quantity_in_stock -= item.quantity
                 item.product.save(update_fields=["quantity_in_stock"])
 
+            OrderStatusHistory.objects.get_or_create(order=order, status=Order.Status.PENDING)
+
+            is_online = _is_online_payment_method(payment_method)
             OrderSettlement.objects.get_or_create(
                 order=order,
                 defaults={
-                    "payment_method": OrderSettlement.PaymentMethod.COD,
+                    "payment_method": OrderSettlement.PaymentMethod.ONLINE if is_online else OrderSettlement.PaymentMethod.COD,
                     "payment_status": OrderSettlement.PaymentStatus.PENDING,
                     "gross_amount": order.total,
                     "net_payable": order.total,
@@ -1349,13 +1338,101 @@ class CartViewSet(viewsets.GenericViewSet):
             cart.coupon = None
             cart.save(update_fields=["coupon", "updated_at"])
 
-            return Response(
-                {
-                    **OrderSerializer(order, context={"request": request}).data,
-                    "payment_required": False,
-                },
-                status=status.HTTP_201_CREATED,
-            )
+        # ── For online payments: create SSLCommerz session after order exists ──
+        if is_online:
+            try:
+                sslcz = _get_sslcommerz_client()
+                tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
+                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+                customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
+                customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
+                product_names = ", ".join([oi.product.name for oi in order.items.select_related("product").all()[:3]]) or "Pharmacy Order"
+
+                total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
+                multi_card_name = _ssl_multi_card_name(payment_method)
+                post_body = {
+                    "total_amount": str(total_payable),
+                    "currency": "BDT",
+                    "tran_id": tran_id,
+                    "success_url": _build_ssl_backend_url("success"),
+                    "fail_url": _build_ssl_backend_url("fail"),
+                    "cancel_url": _build_ssl_backend_url("cancel"),
+                    "ipn_url": _build_ssl_backend_url("ipn"),
+                    "emi_option": 0,
+                    "cus_name": customer_name,
+                    "cus_email": customer_email,
+                    "cus_phone": customer_phone,
+                    "cus_add1": (address.address or "")[:255],
+                    "cus_city": (address.district or "Dhaka")[:50],
+                    "cus_country": "Bangladesh",
+                    "shipping_method": "NO",
+                    "num_of_item": order.items.count() or 1,
+                    "product_name": product_names[:255],
+                    "product_category": "Pharmacy",
+                    "product_profile": "general",
+                    "value_a": str(request.user.id),
+                    "value_b": str(address_id),
+                }
+                if multi_card_name:
+                    post_body["multi_card_name"] = multi_card_name
+                session_response = sslcz.createSession(post_body)
+                gateway_url = (session_response or {}).get("GatewayPageURL")
+                if not gateway_url:
+                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
+
+                PaymentTransaction.objects.create(
+                    user=request.user,
+                    order=order,
+                    method=payment_method,
+                    amount=total_payable,
+                    currency="BDT",
+                    tran_id=tran_id,
+                    session_key=(session_response or {}).get("sessionkey", ""),
+                    gateway_url=gateway_url,
+                    status=PaymentTransaction.Status.INITIATED,
+                    shipping_address=shipping_text,
+                    notes=notes,
+                    subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
+                    discount_amount=summary.get("discount_amount") or Decimal("0"),
+                    delivery_fee=summary.get("delivery_fee") or Decimal("0"),
+                    coupon_id_ref=getattr(order.coupon, "id", None),
+                    delivery_duration_id_ref=getattr(delivery_duration, "id", None),
+                    cart_snapshot=[],
+                    request_payload=post_body,
+                    gateway_response=session_response or {},
+                )
+
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_method": payment_method,
+                        "payment_provider": "SSLCOMMERZ",
+                        "gateway_url": gateway_url,
+                        "tran_id": tran_id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as exc:
+                # Order is already created; return it with a warning about payment init failure
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_init_failed": True,
+                        "detail": f"Order placed but payment initialization failed: {exc}",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+        # COD flow: order already created above, just return it.
+        return Response(
+            {
+                **OrderSerializer(order, context={"request": request}).data,
+                "payment_required": False,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class CartItemViewSet(viewsets.GenericViewSet):
@@ -1519,6 +1596,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         """Verify or reject prescription. PENDING -> APPROVED (with doctor details + items) or REJECTED."""
         prescription = self.get_object()
+        previous_status = prescription.status
         serializer = PrescriptionVerifySerializer(prescription, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
@@ -1546,6 +1624,21 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
             _create_order_from_prescription(prescription)
         if "status" in request.data:
             PrescriptionStatusHistory.objects.create(prescription=prescription, status=prescription.status)
+            if previous_status != prescription.status:
+                status_label = prescription.status.replace("_", " ").title()
+                send_user_event_notification(
+                    user_id=prescription.user_id,
+                    title=f"Prescription {status_label}",
+                    message=f"Your prescription #{prescription.id} is now {status_label}.",
+                    target_url="/user/prescriptions",
+                    source="prescription_event",
+                    dedupe_key=f"prescription:{prescription.id}:{prescription.status}",
+                    metadata={
+                        "prescription_id": prescription.id,
+                        "previous_status": previous_status,
+                        "new_status": prescription.status,
+                    },
+                )
         prescription.refresh_from_db()
         qs = Prescription.objects.filter(pk=prescription.pk).select_related("user", "verified_by", "shipping_address").prefetch_related("items__product", "images", "status_history")
         prescription = qs.get()
@@ -1664,6 +1757,10 @@ class ConsultationViewSet(viewsets.ModelViewSet):
     mark_read=extend_schema(tags=["Notifications"], summary="Mark one notification as read"),
     mark_all_read=extend_schema(tags=["Notifications"], summary="Mark all my notifications as read"),
     subscriptions=extend_schema(tags=["Notifications"], summary="List/create/delete my browser push subscriptions"),
+    campaigns=extend_schema(tags=["Notifications"], summary="List/create notification campaigns (admin)"),
+    campaign_detail=extend_schema(tags=["Notifications"], summary="Notification campaign details with delivery logs (admin)"),
+    health=extend_schema(tags=["Notifications"], summary="Notification system health snapshot (admin)"),
+    test_send=extend_schema(tags=["Notifications"], summary="Send test notification to current admin user"),
     broadcast=extend_schema(
         tags=["Notifications"],
         summary="Broadcast notification to all users (admin)",
@@ -1677,7 +1774,7 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     http_method_names = ["get", "post", "patch", "delete", "head", "options"]
 
     def get_permissions(self):
-        if self.action == "broadcast":
+        if self.action in ("broadcast", "campaigns", "campaign_detail", "health", "test_send"):
             return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
         return [IsAuthenticated(), IsRegisteredUser()]
 
@@ -1836,107 +1933,179 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
     def broadcast(self, request):
         serializer = AdminBroadcastNotificationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        audience_mode = serializer.validated_data.get(
+            "audience_mode",
+            NotificationCampaign.AudienceMode.ALL_ACTIVE,
+        )
+        send_to_opted_in_only = serializer.validated_data.get("send_to_opted_in_only", False)
         logger.info(
-            "Notification broadcast requested by_user_id=%s opted_in_only=%s title=%s",
+            "Notification broadcast requested by_user_id=%s audience_mode=%s opted_in_only=%s title=%s",
             request.user.id,
-            serializer.validated_data.get("send_to_opted_in_only", False),
+            audience_mode,
+            send_to_opted_in_only,
             serializer.validated_data.get("title", "")[:80],
         )
-
-        User = get_user_model()
-        recipients = (
-            User.objects.filter(is_active=True, deleted_at__isnull=True)
-            .exclude(role=UserRole.GUEST_USER)
-            .values_list("id", flat=True)
+        campaign, stats = create_and_dispatch_campaign(
+            title=serializer.validated_data["title"],
+            message=serializer.validated_data["message"],
+            target_url=serializer.validated_data.get("target_url", ""),
+            requested_by=request.user,
+            audience_mode=audience_mode,
+            send_to_opted_in_only=send_to_opted_in_only,
+            user_ids=serializer.validated_data.get("user_ids", []),
+            role_filter=serializer.validated_data.get("role_filter", ""),
+            source="admin",
+            metadata={"via": "broadcast"},
         )
-        if serializer.validated_data.get("send_to_opted_in_only"):
-            opted_in_user_ids = UserNotificationPreference.objects.filter(
-                is_enabled=True,
-                browser_permission=UserNotificationPreference.BrowserPermission.GRANTED,
-            ).values_list("user_id", flat=True)
-            recipients = recipients.filter(id__in=opted_in_user_ids)
-
-        recipient_ids = list(recipients)
-        rows = []
-        count = 0
-        for user_id in recipient_ids:
-            rows.append(
-                UserNotification(
-                    user_id=user_id,
-                    title=serializer.validated_data["title"],
-                    message=serializer.validated_data["message"],
-                    created_by=request.user,
-                )
-            )
-            if len(rows) >= 1000:
-                UserNotification.objects.bulk_create(rows, batch_size=1000)
-                count += len(rows)
-                rows = []
-
-        if rows:
-            UserNotification.objects.bulk_create(rows, batch_size=1000)
-            count += len(rows)
-
-        push_queryset = UserPushSubscription.objects.filter(
-            user_id__in=recipient_ids,
-            is_active=True,
-            user__is_active=True,
-        )
-        if serializer.validated_data.get("send_to_opted_in_only"):
-            push_queryset = push_queryset.filter(
-                user__notification_preference__is_enabled=True,
-                user__notification_preference__browser_permission=UserNotificationPreference.BrowserPermission.GRANTED,
-            )
-        push_attempted = push_queryset.count()
-        push_succeeded = 0
-        push_failed = 0
-        push_deactivated = 0
-
-        if recipient_ids and push_attempted > 0:
-            task_result = dispatch_web_push_notifications.delay(
-                user_ids=recipient_ids,
-                title=serializer.validated_data["title"],
-                message=serializer.validated_data["message"],
-                target_url=serializer.validated_data.get("target_url", ""),
-                opted_in_only=serializer.validated_data.get("send_to_opted_in_only", False),
-            )
-            if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
-                stats = task_result.get(timeout=30) or {}
-                push_attempted = stats.get("push_attempted", push_attempted)
-                push_succeeded = stats.get("push_succeeded", 0)
-                push_failed = stats.get("push_failed", 0)
-                push_deactivated = stats.get("push_deactivated", 0)
-                logger.info(
-                    "Notification broadcast push completed eagerly task_id=%s stats=%s",
-                    getattr(task_result, "id", None),
-                    stats,
-                )
-            else:
-                logger.info(
-                    "Notification broadcast push enqueued task_id=%s recipients=%s attempted=%s",
-                    getattr(task_result, "id", None),
-                    len(recipient_ids),
-                    push_attempted,
-                )
-        else:
-            logger.info(
-                "Notification broadcast skipped push recipients=%s attempted=%s",
-                len(recipient_ids),
-                push_attempted,
-            )
 
         return Response(
             {
                 "detail": "Notification broadcast sent.",
-                "sent_count": count,
+                "sent_count": stats["sent_count"],
                 "title": serializer.validated_data["title"],
-                "send_to_opted_in_only": serializer.validated_data.get("send_to_opted_in_only", False),
+                "send_to_opted_in_only": send_to_opted_in_only,
                 "target_url": serializer.validated_data.get("target_url", ""),
-                "push_attempted": push_attempted,
-                "push_succeeded": push_succeeded,
-                "push_failed": push_failed,
-                "push_deactivated": push_deactivated,
-                "push_async": not getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False),
+                "push_attempted": stats["push_attempted"],
+                "push_succeeded": stats["push_succeeded"],
+                "push_failed": stats["push_failed"],
+                "push_deactivated": stats["push_deactivated"],
+                "push_async": stats["push_async"],
+                "campaign_id": campaign.id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        methods=["GET"],
+        request=None,
+        responses={200: NotificationHealthSerializer},
+    )
+    @action(detail=False, methods=["get"], url_path="health")
+    def health(self, request):
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        payload = {
+            "firebase_initialized": bool(getattr(settings, "FIREBASE_INITIALIZED", False)),
+            "celery_task_always_eager": bool(getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False)),
+            "redis_enabled": bool(getattr(settings, "USE_REDIS", False)),
+            "active_subscriptions": UserPushSubscription.objects.filter(is_active=True).count(),
+            "inactive_subscriptions": UserPushSubscription.objects.filter(is_active=False).count(),
+            "recently_deactivated_7d": UserPushSubscription.objects.filter(
+                is_active=False,
+                updated_at__gte=seven_days_ago,
+            ).count(),
+        }
+        return Response(NotificationHealthSerializer(payload).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        methods=["GET"],
+        request=None,
+        responses={200: NotificationCampaignSerializer(many=True)},
+    )
+    @extend_schema(
+        methods=["POST"],
+        request=NotificationCampaignCreateSerializer,
+        responses={201: NotificationBroadcastResultSerializer},
+    )
+    @action(detail=False, methods=["get", "post"], url_path="campaigns")
+    def campaigns(self, request):
+        if request.method.lower() == "get":
+            queryset = NotificationCampaign.objects.select_related("requested_by").order_by("-created_at")[:100]
+            return Response(
+                NotificationCampaignSerializer(queryset, many=True).data,
+                status=status.HTTP_200_OK,
+            )
+
+        serializer = NotificationCampaignCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        campaign, stats = create_and_dispatch_campaign(
+            title=serializer.validated_data["title"],
+            message=serializer.validated_data["message"],
+            target_url=serializer.validated_data.get("target_url", ""),
+            requested_by=request.user,
+            audience_mode=serializer.validated_data.get(
+                "audience_mode",
+                NotificationCampaign.AudienceMode.ALL_ACTIVE,
+            ),
+            send_to_opted_in_only=serializer.validated_data.get("send_to_opted_in_only", False),
+            user_ids=serializer.validated_data.get("user_ids", []),
+            role_filter=serializer.validated_data.get("role_filter", ""),
+            source="admin",
+            dedupe_key=serializer.validated_data.get("dedupe_key", ""),
+            metadata={"via": "campaigns"},
+        )
+        return Response(
+            {
+                "detail": "Notification campaign sent.",
+                "sent_count": stats["sent_count"],
+                "title": campaign.title,
+                "send_to_opted_in_only": serializer.validated_data.get("send_to_opted_in_only", False),
+                "target_url": campaign.target_url,
+                "push_attempted": stats["push_attempted"],
+                "push_succeeded": stats["push_succeeded"],
+                "push_failed": stats["push_failed"],
+                "push_deactivated": stats["push_deactivated"],
+                "push_async": stats["push_async"],
+                "campaign_id": campaign.id,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        request=None,
+        responses={200: NotificationCampaignSerializer},
+    )
+    @action(detail=False, methods=["get"], url_path=r"campaigns/(?P<campaign_id>[^/.]+)")
+    def campaign_detail(self, request, campaign_id=None):
+        campaign = NotificationCampaign.objects.select_related("requested_by").filter(pk=campaign_id).first()
+        if not campaign:
+            return Response({"detail": "Campaign not found."}, status=status.HTTP_404_NOT_FOUND)
+        failures = NotificationDeliveryLog.objects.filter(
+            campaign=campaign,
+            status__in=(
+                NotificationDeliveryLog.DeliveryStatus.FAILED,
+                NotificationDeliveryLog.DeliveryStatus.DEACTIVATED,
+            ),
+        ).select_related("user")[:30]
+        return Response(
+            {
+                "campaign": NotificationCampaignSerializer(campaign).data,
+                "recent_failures": NotificationDeliveryLogSerializer(failures, many=True).data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        request=NotificationTestSendSerializer,
+        responses={201: NotificationBroadcastResultSerializer},
+    )
+    @action(detail=False, methods=["post"], url_path="test-send")
+    def test_send(self, request):
+        serializer = NotificationTestSendSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        campaign, stats = create_and_dispatch_campaign(
+            title=serializer.validated_data["title"],
+            message=serializer.validated_data["message"],
+            target_url=serializer.validated_data.get("target_url", ""),
+            requested_by=request.user,
+            audience_mode=NotificationCampaign.AudienceMode.USER_IDS,
+            send_to_opted_in_only=False,
+            user_ids=[request.user.id],
+            source="admin_test",
+            metadata={"via": "test-send"},
+        )
+        return Response(
+            {
+                "detail": "Test notification sent.",
+                "sent_count": stats["sent_count"],
+                "title": campaign.title,
+                "send_to_opted_in_only": False,
+                "target_url": campaign.target_url,
+                "push_attempted": stats["push_attempted"],
+                "push_succeeded": stats["push_succeeded"],
+                "push_failed": stats["push_failed"],
+                "push_deactivated": stats["push_deactivated"],
+                "push_async": stats["push_async"],
+                "campaign_id": campaign.id,
             },
             status=status.HTTP_201_CREATED,
         )

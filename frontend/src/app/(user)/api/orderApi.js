@@ -62,4 +62,25 @@ export const orderApi = {
     if (!response.ok) throw new Error('Order not found');
     return response.json();
   },
+
+  /**
+   * Initiate payment for an unpaid online order.
+   * Endpoint: POST /api/orders/<id>/pay/
+   * @returns {{ gateway_url: string, tran_id: string }}
+   */
+  payOrder: async (token, orderId, paymentMethod = 'ONLINE') => {
+    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/pay/`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ payment_method: paymentMethod }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.detail || 'Failed to initiate payment');
+    }
+    return data;
+  },
 };

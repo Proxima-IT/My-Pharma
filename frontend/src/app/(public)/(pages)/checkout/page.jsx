@@ -117,10 +117,7 @@ const Checkout = () => {
 
     const result = await placeOrder(orderPayload);
     if (result) {
-      if (result.payment_required && result.gateway_url) {
-        window.location.href = result.gateway_url;
-        return;
-      }
+      // Always show success screen first — order is created for all methods
       setOrderSuccess(result);
     }
   };
@@ -145,6 +142,8 @@ const Checkout = () => {
   }
 
   if (orderSuccess) {
+    const isOnlinePayment =
+      orderSuccess.payment_required && orderSuccess.gateway_url;
     return (
       <div className="w-full px-4 md:px-7 pt-10 pb-28 flex justify-center items-center animate-in fade-in duration-700">
         <div className="bg-white rounded-[32px] border border-gray-100 p-8 md:p-16 max-w-3xl w-full flex flex-col items-center text-center shadow-sm">
@@ -157,27 +156,71 @@ const Checkout = () => {
           <p className="text-gray-500 font-medium text-lg leading-relaxed mb-2">
             Thank you for your purchase.
           </p>
-          <p className="text-gray-500 font-medium text-lg mb-10">
+          <p className="text-gray-500 font-medium text-lg mb-4">
             Your order ID is{' '}
-            <span className="text-gray-900 font-bold">#{orderSuccess.id}</span>
+            <span className="text-gray-900 font-bold">
+              #{orderSuccess.id}
+            </span>
           </p>
+
+          {/* Payment Status Badge */}
+          {isOnlinePayment ? (
+            <div className="mb-8 px-5 py-2.5 bg-amber-50 border border-amber-200 rounded-full">
+              <span className="text-amber-700 text-sm font-bold uppercase tracking-wider">
+                ⏳ Payment Pending
+              </span>
+            </div>
+          ) : (
+            <div className="mb-8 px-5 py-2.5 bg-blue-50 border border-blue-200 rounded-full">
+              <span className="text-blue-700 text-sm font-bold uppercase tracking-wider">
+                💵 Cash on Delivery
+              </span>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-            <Link href="/user/orders" className="w-full">
-              <UiButton className="w-full h-14">
-                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                  <span>Track Order</span>
-                  <FiArrowRight />
-                </div>
-              </UiButton>
-            </Link>
-            <Link href="/" className="w-full">
-              <UiButton variant="outline" className="w-full h-14">
-                <div className="flex items-center justify-center gap-2 whitespace-nowrap">
-                  <FiShoppingBag />
-                  <span>Continue Shopping</span>
-                </div>
-              </UiButton>
-            </Link>
+            {isOnlinePayment ? (
+              <>
+                <a href={orderSuccess.gateway_url} className="w-full">
+                  <UiButton className="w-full h-14 bg-emerald-600 hover:bg-emerald-700">
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                      <span>Pay Now</span>
+                      <FiArrowRight />
+                    </div>
+                  </UiButton>
+                </a>
+                <Link
+                  href={`/user/orders/${orderSuccess.id}`}
+                  className="w-full"
+                >
+                  <UiButton variant="outline" className="w-full h-14">
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                      <span>Pay Later / Track Order</span>
+                      <FiArrowRight />
+                    </div>
+                  </UiButton>
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link href="/user/orders" className="w-full">
+                  <UiButton className="w-full h-14">
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                      <span>Track Order</span>
+                      <FiArrowRight />
+                    </div>
+                  </UiButton>
+                </Link>
+                <Link href="/" className="w-full">
+                  <UiButton variant="outline" className="w-full h-14">
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                      <FiShoppingBag />
+                      <span>Continue Shopping</span>
+                    </div>
+                  </UiButton>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
