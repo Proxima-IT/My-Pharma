@@ -146,7 +146,7 @@ const Header = () => {
             const file = base64ToFile(item.fileData, item.fileName);
             const formData = new FormData();
             formData.append('file', file);
-            await uploadPrescriptionApi(token, formData);
+            await uploadPrescriptionApi(formData);
           }
           localStorage.removeItem('guest_prescriptions');
         } catch (err) {
@@ -159,12 +159,7 @@ const Header = () => {
           const guestCart = JSON.parse(guestCartData);
           if (guestCart.items?.length > 0) {
             for (const item of guestCart.items) {
-              await addToCartApi(
-                token,
-                item.id,
-                item.quantity,
-                item.selected_dosage,
-              );
+              await addToCartApi(item.id, item.quantity, item.selected_dosage);
             }
           }
           localStorage.removeItem('guest_cart');
@@ -187,6 +182,7 @@ const Header = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     sessionStorage.clear();
     setIsLoggedIn(false);
@@ -204,11 +200,10 @@ const Header = () => {
     if (!file) return;
     try {
       setIsUploading(true);
-      const token = localStorage.getItem('access_token');
-      if (isLoggedIn && token) {
+      if (isLoggedIn) {
         const formData = new FormData();
         formData.append('file', file);
-        await uploadPrescriptionApi(token, formData);
+        await uploadPrescriptionApi(formData);
         alert('Prescription uploaded successfully!');
         router.push('/user/prescriptions');
       } else {

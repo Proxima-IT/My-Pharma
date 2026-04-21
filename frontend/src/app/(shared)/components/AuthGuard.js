@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { authenticatedFetch } from '../lib/authenticatedApi';
 
 /**
  * AuthGuard Component
@@ -13,21 +14,47 @@ export default function AuthGuard({
 }) {
   const router = useRouter();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isValidating, setIsValidating] = useState(true);
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem('access_token');
       const userJson = localStorage.getItem('user');
-      const user = userJson ? JSON.parse(userJson) : null;
 
       // 1. Check if logged in at all
-      if (!token || !user) {
+      if (!token || !userJson) {
         router.replace('/login');
         return;
       }
 
-      // 2. Role-Based Access Control (RBAC)
-      // Check if the user's role is in the list of allowed roles for this section
+      let user;
+      try {
+        user = JSON.parse(userJson);
+      } catch {
+        // Invalid user data
+        handleLogout();
+        return;
+      }
+
+      // 2. Try to validate token by making a test API call
+      try {
+        // Make a lightweight API call to validate the token
+        const response = await authenticatedFetch('/auth/me/', {
+          method: 'GET',
+        });
+
+        if (!response.ok) {
+          // Token is invalid and refresh failed
+          handleLogout();
+          return;
+        }
+      } catch (error) {
+        // Token refresh failed or network error
+        handleLogout();
+        return;
+      }
+
+      // 3. Role-Based Access Control (RBAC)
       const hasPermission = allowedRoles.includes(user.role);
 
       if (!hasPermission) {
@@ -47,19 +74,38 @@ export default function AuthGuard({
         return;
       }
 
-      // 3. If role matches, authorize the view
+      // 4. If role matches and token is valid, authorize the view
       setIsAuthorized(true);
+      setIsValidating(false);
+    };
+
+    const handleLogout = () => {
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      router.replace('/login');
     };
 
     checkAuth();
   }, [router, allowedRoles]);
 
-  if (!isAuthorized) {
+  if (isValidating) {
     return (
       <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
         <div className="w-12 h-12 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-sm font-bold text-gray-400 uppercase tracking-widest animate-pulse">
           Verifying Permissions...
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-white">
+        <div className="w-12 h-12 border-4 border-red-500 border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-sm font-bold text-red-400 uppercase tracking-widest animate-pulse">
+          Access Denied
         </p>
       </div>
     );

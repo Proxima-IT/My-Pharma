@@ -75,7 +75,9 @@ export const useCart = () => {
           : '';
 
       if (token && !productId) {
-        throw new Error('Unable to add this product. Please refresh and try again.');
+        throw new Error(
+          'Unable to add this product. Please refresh and try again.',
+        );
       }
 
       if (
@@ -91,18 +93,11 @@ export const useCart = () => {
       }
 
       if (token) {
-        await addToCartApi(
-          token,
-          productId,
-          parsedQuantity,
-          selectedDosage,
-        );
+        await addToCartApi(productId, parsedQuantity, selectedDosage);
       } else {
         const guestCart = getGuestCart();
         const existing = guestCart.items.find(
-          i =>
-            i.id === productId &&
-            i.selected_dosage === selectedDosage,
+          i => i.id === productId && i.selected_dosage === selectedDosage,
         );
         if (existing) {
           existing.quantity += parsedQuantity;
@@ -139,7 +134,7 @@ export const useCart = () => {
     const token = localStorage.getItem('access_token');
     if (token) {
       const currentItem = cart?.items?.find(i => i.id === itemId);
-      await updateCartItemApi(token, itemId, newQuantity, currentItem?.dosage);
+      await updateCartItemApi(itemId, newQuantity, currentItem?.dosage);
     } else {
       const guestCart = getGuestCart();
       const item = guestCart.items.find(i => i.id === itemId);
@@ -154,7 +149,7 @@ export const useCart = () => {
     setIsUpdating(true);
     const token = localStorage.getItem('access_token');
     if (token) {
-      await removeFromCartApi(token, itemId);
+      await removeFromCartApi(itemId);
     } else {
       const guestCart = getGuestCart();
       guestCart.items = guestCart.items.filter(i => i.id !== itemId);
@@ -169,7 +164,7 @@ export const useCart = () => {
     if (!token) return null;
     setIsUpdating(true);
     try {
-      const result = await placeOrderApi(token, orderData);
+      const result = await placeOrderApi(orderData);
       await refreshCart(null, true);
       return result;
     } catch (err) {
@@ -192,7 +187,7 @@ export const useCart = () => {
     setIsApplyingCoupon(true);
     setError(null);
     try {
-      await applyCartCouponApi(token, code);
+      await applyCartCouponApi(code);
       // Refresh the cart to get the new discounted prices and summary from backend
       await refreshCart(null, false);
       return true;
@@ -212,7 +207,7 @@ export const useCart = () => {
     if (!token) return;
     setIsUpdating(true);
     try {
-      await removeCartCouponApi(token);
+      await removeCartCouponApi();
       await refreshCart(null, false);
     } catch (err) {
       setError(err.message);
