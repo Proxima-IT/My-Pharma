@@ -58,6 +58,7 @@ const Header = () => {
   const pathname = usePathname();
   const fileInputRef = useRef(null);
   const dropdownRef = useRef(null);
+  const mobileDropdownRef = useRef(null);
   const searchRef = useRef(null);
 
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -102,7 +103,9 @@ const Header = () => {
     if (token) setIsLoggedIn(true);
 
     const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      const insideDesktop = dropdownRef.current && dropdownRef.current.contains(event.target);
+      const insideMobile = mobileDropdownRef.current && mobileDropdownRef.current.contains(event.target);
+      if (!insideDesktop && !insideMobile) {
         setIsProfileOpen(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -253,9 +256,13 @@ const Header = () => {
   const DropdownItem = ({ href, icon: Icon, label }) => {
     const isActive = pathname === href;
     return (
-      <a
-        href={href}
-        className={`flex items-center gap-4 px-4 py-2 rounded-full text-[14px] transition-all duration-200 group ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'text-gray-700 hover:bg-[#233b8c] hover:text-white'}`}
+      <button
+        type="button"
+        onClick={() => {
+          setIsProfileOpen(false);
+          router.push(href);
+        }}
+        className={`w-full flex items-center gap-4 px-4 py-2 rounded-full text-[14px] transition-all duration-200 group cursor-pointer ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'text-gray-700 hover:bg-[#233b8c] hover:text-white'}`}
       >
         <Icon
           size={18}
@@ -263,10 +270,49 @@ const Header = () => {
             isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
           }
         />
-        <span className={isActive ? 'font-bold' : 'font-medium'}>{label}</span>
-      </a>
+        <span className={`text-left ${isActive ? 'font-bold' : 'font-medium'}`}>{label}</span>
+      </button>
     );
   };
+
+  // Shared dropdown menu content used by both desktop and mobile
+  const ProfileDropdownContent = () => (
+    <div className="bg-white border border-gray-100 rounded-[28px] p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-50">
+      <div className="px-4 pt-2 pb-4">
+        <h3 className="text-xl font-bold text-gray-900">Account</h3>
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <DropdownItem href="/user/profile" icon={FiUser} label="Profile" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/user/orders" icon={TrackOrderIcon} label="Track Order" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/user/prescriptions" icon={FiFileText} label="Prescriptions" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/user/wishlist" icon={FiHeart} label="Wishlist" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/user/address" icon={FiMapPin} label="Manage Address" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/user/transactions" icon={FiCreditCard} label="Transaction History" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/terms" icon={FiFileText} label="Terms & Conditions" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/privacy" icon={FiShield} label="Privacy Policy" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/return-policy" icon={FiRefreshCcw} label="Refund Policy" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <DropdownItem href="/user/faq" icon={FiHelpCircle} label="FAQ" />
+        <div className="h-px bg-gray-50 mx-4 my-0.5" />
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center gap-4 px-4 py-2 rounded-full text-[14px] font-medium text-red-500 hover:bg-red-50 transition-all duration-200 cursor-pointer"
+        >
+          <FiLogOut size={18} />
+          <span>Logout</span>
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
@@ -323,15 +369,22 @@ const Header = () => {
                 </span>
               )}
             </Link>
-            <div
-              className={iconContainerClass}
-              onClick={() =>
-                isLoggedIn
-                  ? setIsProfileOpen(!isProfileOpen)
-                  : router.push('/login')
-              }
-            >
-              <FiUser size={18} className="text-gray-700" />
+            <div className="relative" ref={mobileDropdownRef}>
+              <div
+                className={iconContainerClass}
+                onClick={() =>
+                  isLoggedIn
+                    ? setIsProfileOpen(!isProfileOpen)
+                    : router.push('/login')
+                }
+              >
+                <FiUser size={18} className="text-gray-700" />
+              </div>
+              {isLoggedIn && isProfileOpen && (
+                <div className="absolute right-0 top-[calc(100%+12px)] w-72 z-50">
+                  <ProfileDropdownContent />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -432,71 +485,8 @@ const Header = () => {
               )}
             </div>
             {isLoggedIn && isProfileOpen && (
-              <div className="absolute right-0 top-[calc(100%+12px)] w-72 bg-white border border-gray-100 rounded-[28px] p-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200 z-50">
-                <div className="px-4 pt-2 pb-4">
-                  <h3 className="text-xl font-bold text-gray-900">Account</h3>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <DropdownItem
-                    href="/user/profile"
-                    icon={FiUser}
-                    label="Profile"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/user/orders"
-                    icon={TrackOrderIcon}
-                    label="Track Order"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/user/prescriptions"
-                    icon={FiFileText}
-                    label="Prescriptions"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/user/wishlist"
-                    icon={FiHeart}
-                    label="Wishlist"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/user/address"
-                    icon={FiMapPin}
-                    label="Manage Address"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/user/transactions"
-                    icon={FiCreditCard}
-                    label="Transaction History"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/terms"
-                    icon={FiFileText}
-                    label="Terms & Conditions"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/privacy"
-                    icon={FiShield}
-                    label="Privacy Policy"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/return-policy"
-                    icon={FiRefreshCcw}
-                    label="Refund Policy"
-                  />
-                  <div className="h-px bg-gray-50 mx-4 my-0.5" />
-                  <DropdownItem
-                    href="/user/faq"
-                    icon={FiHelpCircle}
-                    label="FAQ"
-                  />
-                </div>
+              <div className="absolute right-0 top-[calc(100%+12px)] w-72 z-50">
+                <ProfileDropdownContent />
               </div>
             )}
           </div>
