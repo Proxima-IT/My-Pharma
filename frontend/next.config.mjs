@@ -7,7 +7,6 @@ const nextConfig = {
     workerThreads: false,
     memoryBasedWorkersCount: true,
   },
-  eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
   images: {
     // This tells Next.js to use our custom function for EVERY <Image /> component

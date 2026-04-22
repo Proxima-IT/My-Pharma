@@ -1,20 +1,7 @@
 import { Suspense } from 'react';
-import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import LayoutWrapper from './LayoutWrapper';
 import { CartProvider } from './(public)/context/CartContext';
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-});
 
 export const metadata = {
   title: 'My Pharma',
@@ -23,7 +10,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+    <html lang="en">
       <body className="antialiased" suppressHydrationWarning={true}>
         <CartProvider>
           {/* 
