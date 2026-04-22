@@ -5,7 +5,19 @@ Uses DRF throttle classes and Redis-backed cache.
 from rest_framework.throttling import SimpleRateThrottle
 
 
-class AuthRateThrottle(SimpleRateThrottle):
+class SafeSimpleRateThrottle(SimpleRateThrottle):
+    """
+    Fail-open throttle to avoid auth endpoint outages when cache backend is down.
+    """
+
+    def allow_request(self, request, view):
+        try:
+            return super().allow_request(request, view)
+        except Exception:
+            return True
+
+
+class AuthRateThrottle(SafeSimpleRateThrottle):
     """Generic auth throttle; rate from settings 'auth'."""
     scope = "auth"
     rate = "10/minute"
@@ -17,7 +29,7 @@ class AuthRateThrottle(SimpleRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": ident}
 
 
-class LoginRateThrottle(SimpleRateThrottle):
+class LoginRateThrottle(SafeSimpleRateThrottle):
     """Login attempts per IP."""
     scope = "login"
     rate = "5/minute"
@@ -26,7 +38,7 @@ class LoginRateThrottle(SimpleRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
 
 
-class OTPSendRateThrottle(SimpleRateThrottle):
+class OTPSendRateThrottle(SafeSimpleRateThrottle):
     """OTP send per phone/identifier per hour (stricter than default)."""
     scope = "otp_send"
     rate = "3/hour"
@@ -38,7 +50,7 @@ class OTPSendRateThrottle(SimpleRateThrottle):
         return self.cache_format % {"scope": self.scope, "ident": f"phone:{phone}"}
 
 
-class OTPVerifyRateThrottle(SimpleRateThrottle):
+class OTPVerifyRateThrottle(SafeSimpleRateThrottle):
     """OTP verify attempts per IP."""
     scope = "otp_verify"
     rate = "10/minute"

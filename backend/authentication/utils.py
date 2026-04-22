@@ -20,6 +20,29 @@ CHANGE_PHONE_PENDING_PREFIX = f"{KEY_PREFIX}:change_phone_pending"
 PASSWORD_RESET_TOKEN_PREFIX = f"{KEY_PREFIX}:password_reset"
 
 
+def _cache_get(key: str, default=None):
+    try:
+        value = cache.get(key, default)
+    except Exception as exc:
+        logger.warning("Cache get failed for key=%s: %s", key, exc)
+        return default
+    return default if value is None else value
+
+
+def _cache_set(key: str, value, timeout=None) -> None:
+    try:
+        cache.set(key, value, timeout=timeout)
+    except Exception as exc:
+        logger.warning("Cache set failed for key=%s: %s", key, exc)
+
+
+def _cache_delete(key: str) -> None:
+    try:
+        cache.delete(key)
+    except Exception as exc:
+        logger.warning("Cache delete failed for key=%s: %s", key, exc)
+
+
 def _otp_key(identifier: str) -> str:
     return f"{OTP_PREFIX}:{identifier}"
 
@@ -47,28 +70,28 @@ def get_max_resend_per_hour() -> int:
 def otp_set(identifier: str, otp: str) -> None:
     """Store OTP for identifier; TTL from settings."""
     key = _otp_key(identifier)
-    cache.set(key, otp, timeout=get_otp_ttl_seconds())
+    _cache_set(key, otp, timeout=get_otp_ttl_seconds())
 
 
 def otp_get(identifier: str) -> str | None:
     """Return OTP if present and not expired."""
-    return cache.get(_otp_key(identifier))
+    return _cache_get(_otp_key(identifier))
 
 
 def otp_delete(identifier: str) -> None:
-    cache.delete(_otp_key(identifier))
+    _cache_delete(_otp_key(identifier))
 
 
 def otp_resend_increment(identifier: str) -> int:
     """Increment resend count for the hour; returns new count."""
     key = _otp_resend_key(identifier)
-    count = cache.get(key, 0) + 1
-    cache.set(key, count, timeout=get_otp_resend_ttl_seconds())
+    count = _cache_get(key, 0) + 1
+    _cache_set(key, count, timeout=get_otp_resend_ttl_seconds())
     return count
 
 
 def otp_resend_count(identifier: str) -> int:
-    return cache.get(_otp_resend_key(identifier), 0)
+    return _cache_get(_otp_resend_key(identifier), 0)
 
 
 def otp_can_resend(identifier: str) -> bool:
@@ -78,25 +101,25 @@ def otp_can_resend(identifier: str) -> bool:
 def lockout_set(identifier: str, minutes: int) -> None:
     """Mark identifier as locked for given minutes."""
     key = _lockout_key(identifier)
-    cache.set(key, "1", timeout=minutes * 60)
+    _cache_set(key, "1", timeout=minutes * 60)
 
 
 def lockout_is_locked(identifier: str) -> bool:
-    return cache.get(_lockout_key(identifier)) is not None
+    return _cache_get(_lockout_key(identifier)) is not None
 
 
 def lockout_clear(identifier: str) -> None:
-    cache.delete(_lockout_key(identifier))
+    _cache_delete(_lockout_key(identifier))
 
 
 def token_blacklist_add(jti: str, ttl_seconds: int) -> None:
     """Blacklist a JWT by jti until TTL (e.g. refresh token lifetime)."""
     key = f"{BLACKLIST_PREFIX}:{jti}"
-    cache.set(key, "1", timeout=ttl_seconds)
+    _cache_set(key, "1", timeout=ttl_seconds)
 
 
 def token_blacklist_exists(jti: str) -> bool:
-    return cache.get(f"{BLACKLIST_PREFIX}:{jti}") is not None
+    return _cache_get(f"{BLACKLIST_PREFIX}:{jti}") is not None
 
 
 # Registration completion: short-lived token after OTP verify (phone or email, no user yet)
@@ -110,14 +133,14 @@ def registration_token_set(token: str, identifier_type: str, identifier_value: s
     import json
     key = f"{REGISTRATION_TOKEN_PREFIX}:{token}"
     payload = {"type": identifier_type, "value": identifier_value}
-    cache.set(key, json.dumps(payload), timeout=get_registration_token_ttl_seconds())
+    _cache_set(key, json.dumps(payload), timeout=get_registration_token_ttl_seconds())
 
 
 def registration_token_get(token: str) -> dict | None:
     """Return {"type": "phone"|"email", "value": "..."} for this token, or None if invalid/expired."""
     import json
     key = f"{REGISTRATION_TOKEN_PREFIX}:{token}"
-    raw = cache.get(key)
+    raw = _cache_get(key)
     if not raw:
         return None
     try:
@@ -130,7 +153,7 @@ def registration_token_get(token: str) -> dict | None:
 
 
 def registration_token_delete(token: str) -> None:
-    cache.delete(f"{REGISTRATION_TOKEN_PREFIX}:{token}")
+    _cache_delete(f"{REGISTRATION_TOKEN_PREFIX}:{token}")
 
 
 def _change_pending_ttl_seconds() -> int:
@@ -139,30 +162,30 @@ def _change_pending_ttl_seconds() -> int:
 
 def change_email_pending_set(user_id: int, new_email: str) -> None:
     key = f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}"
-    cache.set(key, new_email.lower().strip(), timeout=_change_pending_ttl_seconds())
+    _cache_set(key, new_email.lower().strip(), timeout=_change_pending_ttl_seconds())
 
 
 def change_email_pending_get(user_id: int) -> str | None:
     key = f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}"
-    return cache.get(key)
+    return _cache_get(key)
 
 
 def change_email_pending_delete(user_id: int) -> None:
-    cache.delete(f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}")
+    _cache_delete(f"{CHANGE_EMAIL_PENDING_PREFIX}:{user_id}")
 
 
 def change_phone_pending_set(user_id: int, new_phone: str) -> None:
     key = f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}"
-    cache.set(key, new_phone.strip(), timeout=_change_pending_ttl_seconds())
+    _cache_set(key, new_phone.strip(), timeout=_change_pending_ttl_seconds())
 
 
 def change_phone_pending_get(user_id: int) -> str | None:
     key = f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}"
-    return cache.get(key)
+    return _cache_get(key)
 
 
 def change_phone_pending_delete(user_id: int) -> None:
-    cache.delete(f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}")
+    _cache_delete(f"{CHANGE_PHONE_PENDING_PREFIX}:{user_id}")
 
 
 def get_password_reset_token_ttl_seconds() -> int:
@@ -172,7 +195,7 @@ def get_password_reset_token_ttl_seconds() -> int:
 
 def password_reset_token_set(token: str, user_id: int) -> None:
     key = f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}"
-    cache.set(
+    _cache_set(
         key,
         json.dumps({"user_id": int(user_id)}),
         timeout=get_password_reset_token_ttl_seconds(),
@@ -181,7 +204,7 @@ def password_reset_token_set(token: str, user_id: int) -> None:
 
 def password_reset_token_get(token: str) -> dict | None:
     key = f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}"
-    raw = cache.get(key)
+    raw = _cache_get(key)
     if not raw:
         return None
     try:
@@ -191,4 +214,4 @@ def password_reset_token_get(token: str) -> dict | None:
 
 
 def password_reset_token_delete(token: str) -> None:
-    cache.delete(f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}")
+    _cache_delete(f"{PASSWORD_RESET_TOKEN_PREFIX}:{token}")

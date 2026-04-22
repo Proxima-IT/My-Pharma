@@ -283,6 +283,9 @@ REDIS_URL = os.environ.get(
 )
 
 if USE_REDIS:
+    # Fail open when Redis is temporarily unavailable so auth/login APIs keep
+    # responding instead of bubbling cache connection errors to clients/proxies.
+    DJANGO_REDIS_IGNORE_EXCEPTIONS = True
     CACHES = {
         "default": {
             "BACKEND":
@@ -292,6 +295,8 @@ if USE_REDIS:
                 "CLIENT_CLASS":
                     "django_redis.client.DefaultClient",
                 "SOCKET_CONNECT_TIMEOUT": 2,
+                "SOCKET_TIMEOUT": 2,
+                "IGNORE_EXCEPTIONS": True,
             },
             "KEY_PREFIX": "my_pharma",
         }
