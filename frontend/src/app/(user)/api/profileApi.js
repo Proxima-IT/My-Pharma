@@ -1,53 +1,57 @@
-import { AUTH_ENDPOINTS } from '../../(shared)/lib/apiConfig';
 import {
-  authenticatedFetch,
+  AUTH_ENDPOINTS,
+  fetchWithAuth,
   parseJsonResponse,
-} from '../../(shared)/lib/authenticatedApi';
+} from '@/app/(shared)/lib/apiConfig';
 
 /**
- * Pure API functions for Profile and Identity management
+ * My Pharma - Profile and Identity Management API
+ * Refactored: Uses fetchWithAuth interceptor for session persistence and automatic retries.
  */
 
-export const fetchProfileApi = async () => {
-  const response = await authenticatedFetch(AUTH_ENDPOINTS.ME, {
+export const fetchProfileApi = async token => {
+  const response = await fetchWithAuth(AUTH_ENDPOINTS.ME, {
     method: 'GET',
   });
+
   const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.detail || 'Failed to fetch profile');
   return data;
 };
 
-export const updateProfileApi = async formData => {
-  const response = await authenticatedFetch(AUTH_ENDPOINTS.ME, {
+export const updateProfileApi = async (token, formData) => {
+  // Note: When sending FormData, we must ensure the 'Content-Type' is not
+  // forced to 'application/json' so the browser can set the multipart boundary.
+  const response = await fetchWithAuth(AUTH_ENDPOINTS.ME, {
     method: 'PUT',
-    body: formData, // FormData handles its own boundaries
+    body: formData,
+    headers: {
+      'Content-Type': null, // This tells our interceptor not to force JSON headers
+    },
   });
+
   const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.detail || 'Failed to update profile');
   return data;
 };
 
-export const requestVerificationOtpApi = async payload => {
-  const response = await authenticatedFetch(AUTH_ENDPOINTS.ME, {
+export const requestVerificationOtpApi = async (token, payload) => {
+  const response = await fetchWithAuth(AUTH_ENDPOINTS.ME, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(payload),
   });
+
   const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.detail || 'Failed to send code');
   return data;
 };
 
-export const verifyIdentityOtpApi = async payload => {
-  const response = await authenticatedFetch(AUTH_ENDPOINTS.ME, {
+export const verifyIdentityOtpApi = async (token, payload) => {
+  const response = await fetchWithAuth(AUTH_ENDPOINTS.ME, {
     method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(payload),
   });
+
   const data = await parseJsonResponse(response);
   if (!response.ok) throw new Error(data.detail || 'Invalid code');
   return data;

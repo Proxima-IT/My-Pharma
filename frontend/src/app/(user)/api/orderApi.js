@@ -1,83 +1,100 @@
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import {
+  API_BASE_URL,
+  fetchWithAuth,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 /**
  * My Pharma - Order Management API
- * Updated: Switched to dedicated prescription-orders endpoint.
+ * Refactored: Uses fetchWithAuth interceptor for automatic token injection and silent refresh.
  */
 export const orderApi = {
+  /**
+   * GET /api/orders/
+   * List orders for the authenticated user.
+   */
   getOrders: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_BASE_URL}/orders/?${query}`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/orders/?${query}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
     });
-    if (!response.ok) throw new Error('Failed to fetch orders');
-    return response.json();
-  },
 
-  getDeliveryDurations: async token => {
-    const response = await fetch(`${API_BASE_URL}/delivery-durations/`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) throw new Error('Failed to fetch delivery durations');
-    return response.json();
+    const data = await parseJsonResponse(response);
+    if (!response.ok) throw new Error(data.detail || 'Failed to fetch orders');
+    return data;
   },
 
   /**
-   * Place an order using a prescription
-   * Endpoint: /api/prescription-orders/
-   * @param {FormData} formData - { images, address, duration, note }
+   * GET /api/delivery-durations/
+   */
+  getDeliveryDurations: async token => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/delivery-durations/`,
+      {
+        method: 'GET',
+      },
+    );
+
+    const data = await parseJsonResponse(response);
+    if (!response.ok)
+      throw new Error(data.detail || 'Failed to fetch delivery durations');
+    return data;
+  },
+
+  /**
+   * POST /api/prescription-orders/
+   * Place an order using a prescription (Multipart/FormData)
    */
   createPrescriptionOrder: async (token, formData) => {
-    const response = await fetch(`${API_BASE_URL}/prescription-orders/`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
+    // Note: When sending FormData, we don't set Content-Type header manually
+    // to allow the browser to set the correct boundary.
+    // fetchWithAuth handles the Authorization token.
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/prescription-orders/`,
+      {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // Explicitly override to prevent automatic JSON content-type if needed
+          'Content-Type': null,
+        },
       },
-      body: formData,
-    });
+    );
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw data;
     }
     return data;
   },
 
+  /**
+   * GET /api/orders/{id}/
+   */
   getOrderDetails: async (token, orderId) => {
-    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/`, {
+    const response = await fetchWithAuth(`${API_BASE_URL}/orders/${orderId}/`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
     });
-    if (!response.ok) throw new Error('Order not found');
-    return response.json();
+
+    const data = await parseJsonResponse(response);
+    if (!response.ok) throw new Error(data.detail || 'Order not found');
+    return data;
   },
 
   /**
+   * POST /api/orders/<id>/pay/
    * Initiate payment for an unpaid online order.
-   * Endpoint: POST /api/orders/<id>/pay/
-   * @returns {{ gateway_url: string, tran_id: string }}
    */
   payOrder: async (token, orderId, paymentMethod = 'ONLINE') => {
-    const response = await fetch(`${API_BASE_URL}/orders/${orderId}/pay/`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/orders/${orderId}/pay/`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ payment_method: paymentMethod }),
       },
-      body: JSON.stringify({ payment_method: paymentMethod }),
-    });
-    const data = await response.json();
+    );
+
+    const data = await parseJsonResponse(response);
     if (!response.ok) {
       throw new Error(data.detail || 'Failed to initiate payment');
     }

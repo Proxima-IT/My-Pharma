@@ -13,7 +13,10 @@ export const usePrescriptions = () => {
       if (showLoading) setIsLoading(true);
       setError(null);
       try {
-        const data = await fetchPrescriptionsApi(filter);
+        const token = localStorage.getItem('access_token');
+        if (!token) throw new Error('Session expired. Please login again.');
+
+        const data = await fetchPrescriptionsApi(token, filter);
 
         // FIXED: Handle paginated response structure
         // If backend returns { results: [...] }, use that. Otherwise use raw array.

@@ -3,6 +3,7 @@
 import Image from 'next/image';
 import LinkComponent from 'next/link';
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import { MdKeyboardArrowLeft } from 'react-icons/md';
 import { FiShoppingBag } from 'react-icons/fi';
 import CartCard from './components/CartCard';
@@ -11,8 +12,16 @@ import SmartHealthBundle from '../home/components/SmartHealthBundle';
 import ShippingAddressCard from './components/ShippingAddressCard';
 import OrderSummaryCard from './components/OrderSummaryCard';
 import { useCart } from '../../hooks/useCart';
+import { useAuthModal } from '../../context/AuthModalContext';
 
+/**
+ * Cart Page
+ * Updated: Integrated with AuthModal to trigger login popup if user attempts
+ * to proceed to checkout while unauthenticated.
+ */
 const Cart = () => {
+  const router = useRouter();
+  const { openAuthModal } = useAuthModal();
   const {
     items,
     summary,
@@ -22,6 +31,19 @@ const Cart = () => {
     removeItem,
     refresh,
   } = useCart();
+
+  /**
+   * Intercepts the proceed action.
+   * If user is not logged in, opens the login modal with a redirect intent.
+   */
+  const handleProceedToCheckout = () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      openAuthModal('/checkout');
+    } else {
+      router.push('/checkout');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -34,7 +56,7 @@ const Cart = () => {
   if (error) {
     return (
       <div className="w-full px-4 md:px-7 pt-7 pb-28 text-center">
-        <div className="bg-red-50 border border-red-100 rounded-[32px] p-12 max-w-2xl mx-auto">
+        <div className="bg-red-50 border border-red-100 rounded-[32px] p-12 max-w-2xl mx-auto shadow-none">
           <p className="text-red-600 font-bold">Error loading cart: {error}</p>
           <button
             onClick={() => window.location.reload()}
@@ -51,7 +73,7 @@ const Cart = () => {
     <div className="w-full px-4 md:px-7 pt-7 pb-28">
       <div className="flex items-center gap-5 mb-8">
         <LinkComponent href="/products">
-          <button className="border border-gray-100 bg-white rounded-full px-6 py-2 text-center text-(--color-primary-500) flex gap-2 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all">
+          <button className="border border-gray-100 bg-white rounded-full px-6 py-2 text-center text-(--color-primary-500) flex gap-2 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all shadow-none">
             <MdKeyboardArrowLeft size={20} />
             Back
           </button>
@@ -66,7 +88,7 @@ const Cart = () => {
           <div className="w-full lg:w-[58%] flex flex-col gap-4">
             {items.map((item, index) => (
               <CartCard
-                key={item.id || `cart-item-${index}`} // Fixed unique key warning
+                key={item.id || `cart-item-${index}`}
                 item={item}
                 onUpdate={updateQuantity}
                 onRemove={removeItem}
@@ -80,11 +102,12 @@ const Cart = () => {
               summary={summary}
               items={items}
               refresh={refresh}
+              onPlaceOrder={handleProceedToCheckout}
             />
           </div>
         </div>
       ) : (
-        <div className="w-full py-20 flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[32px] text-center space-y-6 shadow-sm">
+        <div className="w-full py-20 flex flex-col items-center justify-center bg-white border border-gray-100 rounded-[32px] text-center space-y-6 shadow-none">
           <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center text-gray-300">
             <FiShoppingBag size={40} />
           </div>
@@ -97,7 +120,7 @@ const Cart = () => {
             </p>
           </div>
           <LinkComponent href="/products">
-            <button className="bg-(--color-primary-500) text-white px-10 py-4 rounded-full font-bold uppercase tracking-widest hover:bg-(--color-primary-600) transition-all cursor-pointer">
+            <button className="bg-(--color-primary-500) text-white px-10 py-4 rounded-full font-bold uppercase tracking-widest hover:bg-(--color-primary-600) transition-all cursor-pointer shadow-none">
               Start Shopping
             </button>
           </LinkComponent>

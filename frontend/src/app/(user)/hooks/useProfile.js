@@ -33,7 +33,9 @@ export const useProfile = () => {
   const loadProfile = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await fetchProfileApi();
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+      const data = await fetchProfileApi(token);
 
       // Normalize profile picture URL so it loads via Next.js proxy (same-origin)
       let profilePicUrl = data.profile_picture || null;
@@ -82,7 +84,7 @@ export const useProfile = () => {
     }
 
     try {
-      await updateProfileApi(data);
+      await updateProfileApi(token, data);
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000);
       await loadProfile();
@@ -97,7 +99,8 @@ export const useProfile = () => {
     setIsUpdating(true);
     setError(null);
     try {
-      await requestVerificationOtpApi({ [type]: formData[type] });
+      const token = localStorage.getItem('access_token');
+      await requestVerificationOtpApi(token, { [type]: formData[type] });
       setVerifyingType(type);
     } catch (err) {
       setError(err.message);
@@ -110,8 +113,9 @@ export const useProfile = () => {
     setIsUpdating(true);
     setError(null);
     try {
+      const token = localStorage.getItem('access_token');
       const payload = { [verifyingType]: formData[verifyingType], otp };
-      await verifyIdentityOtpApi(payload);
+      await verifyIdentityOtpApi(token, payload);
       setVerifyingType(null);
       setOtp('');
       await loadProfile();

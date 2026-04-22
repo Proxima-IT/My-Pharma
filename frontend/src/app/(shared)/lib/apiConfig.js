@@ -1,6 +1,7 @@
 /**
- * Dynamic API Configuration
- * Automatically switches between production server and local development
+ * Dynamic API Configuration & Authenticated Client (Interceptor)
+ * Automatically switches between production server and local development.
+ * Handles automatic token refreshing and session persistence.
  */
 
 // Check if we are in a browser environment
@@ -37,23 +38,23 @@ const safeLocalhostApiBase = envPointsToLocalhost
 /**
  * API_BASE_URL Logic:
  * - Browser on localhost => talk to local backend directly.
- * - Browser on non-localhost => prefer public env API host
- *   (NEXT_PUBLIC_API_URL, then NEXT_PUBLIC_BACKEND_URL), fallback to same-origin
- *   /api proxy.
- * - Server-side => prefer internal Docker backend URL to avoid public TLS/domain
- *   certificate issues; fallback to env-configured public API URL.
+ * - Browser on non-localhost => prefer public env API host.
+ * - Server-side => prefer internal Docker backend URL.
  */
 export const API_BASE_URL = isBrowser
-  ? (
-      isLocalhost
-        ? safeLocalhostApiBase
-        : (!envPointsToLocalhost && publicEnvApiBase ? publicEnvApiBase : browserApiBase)
-    )
-  : (serverApiBase || publicEnvApiBase || localhostDefaultApiBase);
+  ? isLocalhost
+    ? safeLocalhostApiBase
+    : !envPointsToLocalhost && publicEnvApiBase
+      ? publicEnvApiBase
+      : browserApiBase
+  : serverApiBase || publicEnvApiBase || localhostDefaultApiBase;
+
+// --- ENDPOINT DEFINITIONS ---
 
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
   LOGIN: `${API_BASE_URL}/auth/login/`,
+  REFRESH: `${API_BASE_URL}/auth/token/refresh/`,
   LOGOUT: `${API_BASE_URL}/auth/logout/`,
   REGISTER: `${API_BASE_URL}/auth/register/`,
   REQUEST_OTP: `${API_BASE_URL}/auth/request-otp/`,
@@ -71,6 +72,7 @@ export const CART_ENDPOINTS = {
   ADD: `${API_BASE_URL}/cart/add/`,
   ITEMS: `${API_BASE_URL}/cart/items/`,
   PLACE_ORDER: `${API_BASE_URL}/cart/place-order/`,
+  SUMMARY: `${API_BASE_URL}/cart/`,
 };
 
 export const PRODUCT_ENDPOINTS = {
@@ -101,13 +103,89 @@ export const NOTIFICATION_ENDPOINTS = {
   BROADCAST: `${API_BASE_URL}/notifications/broadcast/`,
 };
 
+export const SETTLEMENT_ENDPOINTS = {
+  BASE: `${API_BASE_URL}/settlements/`,
+};
+
+export const B2B_ENDPOINTS = {
+  COMMISSIONS: `${API_BASE_URL}/b2b/commissions/`,
+  CUSTOMERS: `${API_BASE_URL}/b2b/customers/`,
+};
+
 export const WEB_PUSH_VAPID_PUBLIC_KEY =
   process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || '';
 
+// --- AUTHENTICATED FETCH (INTERCEPTOR) ---
+
 /**
- * Safely parse a fetch response as JSON. When the server returns HTML (e.g. 500
- * error page) instead of JSON, avoids "Unexpected token '<'" and returns a
- * fallback object so callers can show a friendly error.
+ * fetchWithAuth
+ * A professional wrapper around native fetch that handles:
+ * 1. Automatic Access Token injection.
+ * 2. 401 Error interception for Expired Tokens.
+ * 3. Silent Refresh using refresh_token.
+ * 4. Automatic retry of the original failed request.
+ */
+export const fetchWithAuth = async (url, options = {}) => {
+  if (!isBrowser) return fetch(url, options);
+
+  const accessToken = localStorage.getItem('access_token');
+
+  const authOptions = {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    },
+  };
+
+  // If Content-Type is explicitly set to null (for FormData), remove it
+  if (authOptions.headers['Content-Type'] === null) {
+    delete authOptions.headers['Content-Type'];
+  }
+
+  let response = await fetch(url, authOptions);
+
+  // INTERCEPTOR: Handle Token Expiration
+  if (response.status === 401) {
+    const refreshToken = localStorage.getItem('refresh_token');
+
+    if (refreshToken) {
+      try {
+        const refreshResponse = await fetch(AUTH_ENDPOINTS.REFRESH, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh: refreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+          const newData = await refreshResponse.json();
+          // Save new valid access token
+          localStorage.setItem('access_token', newData.access);
+
+          // RETRY: Re-execute the original request with the NEW token
+          authOptions.headers['Authorization'] = `Bearer ${newData.access}`;
+          return fetch(url, authOptions);
+        }
+      } catch (err) {
+        console.error('Critical: Token refresh failed', err);
+      }
+    }
+
+    // Fallback: Clear session if refresh fails or no token exists
+    // This will cause AuthGuard to redirect to login on next check
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+  }
+
+  return response;
+};
+
+// --- HELPER UTILITIES ---
+
+/**
+ * Safely parse a fetch response as JSON.
  */
 export async function parseJsonResponse(
   response,
@@ -125,24 +203,16 @@ export async function parseJsonResponse(
 }
 
 /**
- * Normalize any backend media URL to the frontend proxy path so images load
- * via Next.js rewrite (same-origin). Handles full URLs, /media/... paths, and
- * relative paths like profile_pics/... or products/...
+ * Normalize any backend media URL to the frontend proxy path.
  */
 export function getMediaUrl(url) {
   if (!url || typeof url !== 'string') return url;
   const s = url.trim();
-  if (!s) return url;
-  // Blob or data URLs (e.g. file preview) - use as-is
-  if (s.startsWith('blob:') || s.startsWith('data:')) return url;
-  // Already a frontend-relative media path
+  if (!s || s.startsWith('blob:') || s.startsWith('data:')) return url;
   if (s.startsWith('/media/')) return s;
-  // Full URL: strip origin to get /media/... path
   if (s.includes('/media/')) {
-    const i = s.indexOf('/media/');
-    return s.slice(i);
+    return s.slice(s.indexOf('/media/'));
   }
-  // Relative path without /media/ (e.g. profile_pics/2026/03/x.jpeg)
   if (
     s.startsWith('profile_pics/') ||
     s.startsWith('products/') ||
@@ -156,14 +226,11 @@ export function getMediaUrl(url) {
 
 /**
  * Resolve the best available image URL for a product object.
- * Priority: product.image (primary) → first gallery URL in product.images → null.
- * Returns a normalised media path ready for <Image> src or <img> src.
  */
 export function getProductImageUrl(product) {
   if (!product) return null;
   if (product.image) return getMediaUrl(product.image);
   if (Array.isArray(product.images) && product.images.length > 0) {
-    // Gallery items can be URL strings or objects with an image/image_url key.
     const first = product.images[0];
     const raw =
       typeof first === 'string'

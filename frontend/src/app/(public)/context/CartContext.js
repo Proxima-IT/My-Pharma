@@ -56,7 +56,7 @@ export const CartProvider = ({ children }) => {
         if (couponCode) params.coupon_code = couponCode;
         if (activeDeliveryId) params.delivery_duration_id = activeDeliveryId;
 
-        const data = await fetchCartApi(params);
+        const data = await fetchCartApi(token, params);
         setCart(processCartResponse(data));
       } catch (err) {
         console.error('Cart refresh error:', err);

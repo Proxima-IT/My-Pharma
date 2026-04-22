@@ -9,7 +9,7 @@ import { useCart } from '../../../hooks/useCart';
 
 /**
  * OrderSummaryCard Component
- * Updated: Integrated with dynamic delivery fee breakdown (Base + Option Charge).
+ * Updated: Prioritizes onPlaceOrder callback to allow external AuthModal triggering.
  * Features: Displays subtotal_before_discount and detailed shipping components.
  */
 const OrderSummaryCard = ({
@@ -54,8 +54,6 @@ const OrderSummaryCard = ({
   const isApplied = !!appliedCoupon;
 
   // 2. Map display data using persisted backend fields including delivery breakdown.
-  //    Use explicit null/undefined checks so that a backend value of 0 (free delivery)
-  //    is correctly used instead of falling back to the hardcoded guest default.
   const hasBackendSummary = activeSummary?.base_delivery_fee != null;
   const displayData = {
     subtotal: parseFloat(
@@ -89,22 +87,31 @@ const OrderSummaryCard = ({
     setCouponCode('');
   };
 
+  /**
+   * handleAction
+   * Refactored: Prioritizes onPlaceOrder prop to allow the parent (Cart/Checkout)
+   * to handle authentication logic (like showing the AuthModal).
+   */
   const handleAction = () => {
+    // If a custom action is provided (e.g. from Cart/Checkout pages), execute it.
+    // This allows the parent to trigger the Login Modal if needed.
+    if (onPlaceOrder) {
+      onPlaceOrder();
+      return;
+    }
+
+    // Fallback logic for standalone use
     const token = localStorage.getItem('access_token');
     if (!token) {
       setLoginError('Please Login your account to order the product');
       setTimeout(() => setLoginError(''), 5000);
       return;
     }
-    if (onPlaceOrder) {
-      onPlaceOrder();
-    } else {
-      router.push('/checkout');
-    }
+    router.push('/checkout');
   };
 
   return (
-    <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 w-full transition-all">
+    <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 w-full transition-all shadow-none">
       <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">
         Order Summary
       </h2>
@@ -139,7 +146,7 @@ const OrderSummaryCard = ({
 
       <div className="h-px bg-gray-100 w-full my-6" />
 
-      {/* Final Total: ((Subtotal - Discount) + Base Delivery + Option Charge) */}
+      {/* Final Total */}
       <div className="flex items-center justify-between mb-8">
         <span className="text-lg font-bold text-gray-900 uppercase tracking-wider">
           Total
@@ -203,13 +210,13 @@ const OrderSummaryCard = ({
       <div className="space-y-3">
         <button
           onClick={handleAction}
-          className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer"
+          className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer shadow-none"
         >
           <span>{onPlaceOrder ? 'Confirm Order' : 'Place Order'}</span>
           <FiChevronRight size={20} strokeWidth={3} />
         </button>
-        {loginError && (
-          <p className="text-[13px] font-bold text-red-500 text-center animate-in fade-in">
+        {loginError && !onPlaceOrder && (
+          <p className="text-[13px] font-bold text-red-500 text-center animate-in fade-in uppercase tracking-tighter">
             {loginError}
           </p>
         )}

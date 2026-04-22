@@ -1,16 +1,20 @@
-import { USER_ENDPOINTS } from '../../(shared)/lib/apiConfig';
+import {
+  USER_ENDPOINTS,
+  fetchWithAuth,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for User Address Management
- * Aligned with /api/auth/addresses/ documentation
+ * Refactored: Uses fetchWithAuth interceptor for automatic token injection and silent refresh.
  */
 export const addressApi = {
   // List all addresses (Paginated)
   getAddresses: async token => {
-    const response = await fetch(USER_ENDPOINTS.ADDRESSES, {
-      headers: { Authorization: `Bearer ${token}` },
+    const response = await fetchWithAuth(USER_ENDPOINTS.ADDRESSES, {
+      method: 'GET',
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok)
       throw new Error(data.detail || 'Failed to fetch addresses');
     return data;
@@ -18,10 +22,13 @@ export const addressApi = {
 
   // Get list of BD districts
   getDistricts: async token => {
-    const response = await fetch(`${USER_ENDPOINTS.ADDRESSES}districts/`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    const data = await response.json();
+    const response = await fetchWithAuth(
+      `${USER_ENDPOINTS.ADDRESSES}districts/`,
+      {
+        method: 'GET',
+      },
+    );
+    const data = await parseJsonResponse(response);
     if (!response.ok)
       throw new Error(data.detail || 'Failed to fetch districts');
     return data;
@@ -29,15 +36,11 @@ export const addressApi = {
 
   // Add new address
   createAddress: async (token, addressData) => {
-    const response = await fetch(USER_ENDPOINTS.ADDRESSES, {
+    const response = await fetchWithAuth(USER_ENDPOINTS.ADDRESSES, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(addressData),
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok)
       throw new Error(JSON.stringify(data) || 'Failed to add address');
     return data;
@@ -45,15 +48,11 @@ export const addressApi = {
 
   // Update address (Partial)
   updateAddress: async (token, id, addressData) => {
-    const response = await fetch(`${USER_ENDPOINTS.ADDRESSES}${id}/`, {
+    const response = await fetchWithAuth(`${USER_ENDPOINTS.ADDRESSES}${id}/`, {
       method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
       body: JSON.stringify(addressData),
     });
-    const data = await response.json();
+    const data = await parseJsonResponse(response);
     if (!response.ok)
       throw new Error(data.detail || 'Failed to update address');
     return data;
@@ -61,12 +60,11 @@ export const addressApi = {
 
   // Delete address
   deleteAddress: async (token, id) => {
-    const response = await fetch(`${USER_ENDPOINTS.ADDRESSES}${id}/`, {
+    const response = await fetchWithAuth(`${USER_ENDPOINTS.ADDRESSES}${id}/`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
     });
     if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
+      const data = await parseJsonResponse(response, {});
       throw new Error(data.detail || 'Failed to delete address');
     }
     return true;

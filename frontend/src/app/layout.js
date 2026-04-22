@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
 import LayoutWrapper from './LayoutWrapper';
 import { CartProvider } from './(public)/context/CartContext';
+import { AuthModalProvider } from './(public)/context/AuthModalContext';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -25,15 +26,17 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
       <body className="antialiased" suppressHydrationWarning={true}>
-        <CartProvider>
-          {/* 
-            UNIVERSAL FIX: Wrapping LayoutWrapper in Suspense 
-            resolves useSearchParams() build errors for Header, Sidebar, and all Pages.
-          */}
-          <Suspense fallback={null}>
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </Suspense>
-        </CartProvider>
+        <AuthModalProvider>
+          <CartProvider>
+            {/* 
+              UNIVERSAL FIX: Wrapping LayoutWrapper in Suspense 
+              resolves useSearchParams() build errors for Header, Sidebar, and all Pages.
+            */}
+            <Suspense fallback={null}>
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </Suspense>
+          </CartProvider>
+        </AuthModalProvider>
       </body>
     </html>
   );

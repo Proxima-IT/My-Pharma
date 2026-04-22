@@ -21,6 +21,7 @@ import OrderSummaryCard from '../cart/components/OrderSummaryCard';
 import PaymentMethodCard from '../cart/components/PaymentMethodCard';
 import { useCart } from '../../hooks/useCart';
 import { useCartContext } from '../../context/CartContext';
+import { useAuthModal } from '../../context/AuthModalContext';
 import { fetchDeliveryDurationsApi } from '../../api/cartApi';
 import UiButton from '@/app/(public)/components/UiButton';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
@@ -28,6 +29,7 @@ import { formatCurrency } from '@/app/(user)/lib/formatters';
 const Checkout = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openAuthModal } = useAuthModal();
   const {
     items,
     summary,
@@ -52,12 +54,11 @@ const Checkout = () => {
     const loadDeliveryOptions = async () => {
       try {
         const token = localStorage.getItem('access_token');
-        // Passing token to fix 401 Unauthorized error
+        // Passing token if available to fetch options
         const data = await fetchDeliveryDurationsApi(token);
         const activeOptions = Array.isArray(data) ? data : data.results || [];
         setDeliveryOptions(activeOptions.filter(opt => opt.is_active));
 
-        // Default to first option if none selected
         if (!selectedDeliveryId && activeOptions.length > 0) {
           updateDeliveryOption(activeOptions[0].id);
         }
@@ -99,6 +100,13 @@ const Checkout = () => {
   }, [items, isLoading, router, orderSuccess]);
 
   const handleConfirmOrder = async () => {
+    // INTERCEPT: Check for authentication before proceeding
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      openAuthModal(); // Trigger the login popup without losing state
+      return;
+    }
+
     if (!selectedAddressId) {
       alert('Please select a shipping address');
       return;
@@ -117,7 +125,6 @@ const Checkout = () => {
 
     const result = await placeOrder(orderPayload);
     if (result) {
-      // Always show success screen first — order is created for all methods
       setOrderSuccess(result);
     }
   };
@@ -146,7 +153,7 @@ const Checkout = () => {
       orderSuccess.payment_required && orderSuccess.gateway_url;
     return (
       <div className="w-full px-4 md:px-7 pt-10 pb-28 flex justify-center items-center animate-in fade-in duration-700">
-        <div className="bg-white rounded-[32px] border border-gray-100 p-8 md:p-16 max-w-3xl w-full flex flex-col items-center text-center shadow-sm">
+        <div className="bg-white rounded-[32px] border border-gray-100 p-8 md:p-16 max-w-3xl w-full flex flex-col items-center text-center shadow-none">
           <div className="w-24 h-24 bg-(--success-50) border-2 border-(--success-100) text-(--success-500) rounded-full flex items-center justify-center mb-8">
             <FiCheckCircle size={60} strokeWidth={1.5} />
           </div>
@@ -158,12 +165,9 @@ const Checkout = () => {
           </p>
           <p className="text-gray-500 font-medium text-lg mb-4">
             Your order ID is{' '}
-            <span className="text-gray-900 font-bold">
-              #{orderSuccess.id}
-            </span>
+            <span className="text-gray-900 font-bold">#{orderSuccess.id}</span>
           </p>
 
-          {/* Payment Status Badge */}
           {isOnlinePayment ? (
             <div className="mb-8 px-5 py-2.5 bg-amber-50 border border-amber-200 rounded-full">
               <span className="text-amber-700 text-sm font-bold uppercase tracking-wider">
@@ -182,7 +186,7 @@ const Checkout = () => {
             {isOnlinePayment ? (
               <>
                 <a href={orderSuccess.gateway_url} className="w-full">
-                  <UiButton className="w-full h-14 bg-emerald-600 hover:bg-emerald-700">
+                  <UiButton className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 shadow-none border-none">
                     <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                       <span>Pay Now</span>
                       <FiArrowRight />
@@ -193,7 +197,10 @@ const Checkout = () => {
                   href={`/user/orders/${orderSuccess.id}`}
                   className="w-full"
                 >
-                  <UiButton variant="outline" className="w-full h-14">
+                  <UiButton
+                    variant="outline"
+                    className="w-full h-14 shadow-none border-gray-100"
+                  >
                     <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                       <span>Pay Later / Track Order</span>
                       <FiArrowRight />
@@ -204,7 +211,7 @@ const Checkout = () => {
             ) : (
               <>
                 <Link href="/user/orders" className="w-full">
-                  <UiButton className="w-full h-14">
+                  <UiButton className="w-full h-14 shadow-none border-none">
                     <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                       <span>Track Order</span>
                       <FiArrowRight />
@@ -212,7 +219,10 @@ const Checkout = () => {
                   </UiButton>
                 </Link>
                 <Link href="/" className="w-full">
-                  <UiButton variant="outline" className="w-full h-14">
+                  <UiButton
+                    variant="outline"
+                    className="w-full h-14 shadow-none border-gray-100"
+                  >
                     <div className="flex items-center justify-center gap-2 whitespace-nowrap">
                       <FiShoppingBag />
                       <span>Continue Shopping</span>
@@ -261,7 +271,6 @@ const Checkout = () => {
             onAddressSelect={id => setSelectedAddressId(id)}
           />
 
-          {/* Delivery Options Selection */}
           <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 transition-all shadow-none">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6">
               Delivery Time

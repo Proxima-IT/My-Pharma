@@ -7,6 +7,10 @@ import {
   notificationError,
 } from '../../../../(shared)/lib/notificationDebug';
 
+/**
+ * useLogin hook
+ * Updated: Persists both access_token and refresh_token for silent authentication refresh.
+ */
 export const useLogin = () => {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
@@ -34,11 +38,13 @@ export const useLogin = () => {
       });
 
       // Store tokens and user data
+      // Important: storing refresh_token to allow the interceptor to renew the session
       localStorage.setItem('access_token', result.access);
       localStorage.setItem('refresh_token', result.refresh);
       localStorage.setItem('user', JSON.stringify(result.user));
+
       notificationDebug(
-        'Login success. Token saved for notification API calls.',
+        'Login success. Tokens saved for session persistence.',
         {
           role: result?.user?.role,
         },

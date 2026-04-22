@@ -19,8 +19,11 @@ import {
 
 /**
  * Sidebar Component
- * Refactored: Uses the Category Tree API for recursive nesting.
- * Updates: Reduced spacing, images enabled for all depths, shadows removed.
+ * Refactored: Implements Method B (Custom Menus) as parents for Method A (Product Categories).
+ * Logic:
+ * 1. Method B items act as Top-Level navigation headers.
+ * 2. Method A categories are nested inside Method B items based on 'sidebar_category' ID.
+ * 3. Supports recursive children for Method A.
  */
 const Sidebar = () => {
   const router = useRouter();
@@ -78,6 +81,27 @@ const Sidebar = () => {
     return counts;
   }, [allProducts]);
 
+  /**
+   * Organizing Method A inside Method B
+   */
+  const unifiedNavigation = useMemo(() => {
+    // 1. Create a map of Method B items as primary containers
+    const menuStructure = categoriesB.map(customItem => ({
+      ...customItem,
+      isCustomMenu: true,
+      children: categoriesA.filter(
+        cat => cat.sidebar_category === customItem.id,
+      ),
+    }));
+
+    // 2. Identify standalone Method A categories (marked for sidebar but no Method B parent)
+    const standalone = categoriesA.filter(
+      cat => cat.show_in_sidebar && !cat.sidebar_category,
+    );
+
+    return { grouped: menuStructure, standalone };
+  }, [categoriesA, categoriesB]);
+
   const handleSearch = e => {
     if (e.key === 'Enter' && searchTerm.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
@@ -93,63 +117,67 @@ const Sidebar = () => {
   const isAllProductsActive = pathname === '/products' && !currentCategorySlug;
   const activeAd = ads.length > 0 ? ads[0] : null;
 
-  const sidebarRootsA = useMemo(() => {
-    return categoriesA.filter(cat => cat.show_in_sidebar);
-  }, [categoriesA]);
-
-  const NavItem = ({ item, isCustom = false, depth = 0 }) => {
-    const title = isCustom ? item.title : item.name;
-    const isActive = !isCustom && currentCategorySlug === item.slug;
+  const NavItem = ({ item, isCustomMenu = false, depth = 0 }) => {
+    const title = isCustomMenu ? item.title : item.name;
+    const isActive = !isCustomMenu && currentCategorySlug === item.slug;
     const hasChildren =
-      !isCustom && Array.isArray(item.children) && item.children.length > 0;
-    const isOpen = !!openMenus[item.id];
+      Array.isArray(item.children) && item.children.length > 0;
+    const isOpen = !!openMenus[item.id + (isCustomMenu ? '-custom' : '-tree')];
     const count = categoryCounts[title] || 0;
+
+    const href = isCustomMenu ? '#' : `/category/${item.slug}`;
 
     return (
       <div className="flex flex-col w-full">
         <div
           className={`flex items-center w-full group ${depth > 0 ? 'pl-3' : ''}`}
         >
-          <Link
-            href={isCustom ? '#' : `/category/${item.slug}`}
-            className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all ${
-              isActive
-                ? 'bg-[#233b8c] text-white shadow-none'
-                : 'text-gray-500 hover:bg-gray-50 shadow-none'
-            }`}
+          <div
+            onClick={e => isCustomMenu && toggleMenu(e, item.id + '-custom')}
+            className="flex-1 flex items-center"
           >
-            <div className="flex items-center gap-3 overflow-hidden">
-              {/* Image shown for all levels including children */}
-              <div className="w-5 h-5 relative shrink-0">
-                <Image
-                  src={
-                    getMediaUrl(item.image_url || item.image) ||
-                    '/assets/images/applogo.png'
-                  }
-                  alt={title}
-                  fill
-                  className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
-                  unoptimized
-                />
+            <Link
+              href={href}
+              className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all ${
+                isActive
+                  ? 'bg-[#233b8c] text-white shadow-none'
+                  : 'text-gray-500 hover:bg-gray-50 shadow-none'
+              } ${isCustomMenu ? 'cursor-pointer' : ''}`}
+            >
+              <div className="flex items-center gap-3 overflow-hidden">
+                <div className="w-5 h-5 relative shrink-0">
+                  <Image
+                    src={
+                      getMediaUrl(item.image_url || item.image) ||
+                      '/assets/images/applogo.png'
+                    }
+                    alt={title}
+                    fill
+                    className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
+                    unoptimized
+                  />
+                </div>
+                <span
+                  className={`text-[14px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
+                >
+                  {title}
+                </span>
               </div>
-              <span
-                className={`text-[14px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
-              >
-                {title}
-              </span>
-            </div>
-            {!isCustom && (
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
-              >
-                {count}
-              </span>
-            )}
-          </Link>
+              {!isCustomMenu && (
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+                >
+                  {count}
+                </span>
+              )}
+            </Link>
+          </div>
 
           {hasChildren && (
             <button
-              onClick={e => toggleMenu(e, item.id)}
+              onClick={e =>
+                toggleMenu(e, item.id + (isCustomMenu ? '-custom' : '-tree'))
+              }
               className={`p-2 ml-1 rounded-full transition-all cursor-pointer shadow-none ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
             >
               <FiChevronDown size={16} />
@@ -220,23 +248,25 @@ const Sidebar = () => {
             </div>
           ) : (
             <>
+              {/* Custom Menus with assigned Product Categories */}
               <div className="space-y-0.5">
-                {sidebarRootsA.map(cat => (
-                  <NavItem key={`tree-${cat.id}`} item={cat} />
+                {unifiedNavigation.grouped.map(menu => (
+                  <NavItem
+                    key={`menu-b-${menu.id}`}
+                    item={menu}
+                    isCustomMenu={true}
+                  />
                 ))}
               </div>
 
-              {categoriesB.length > 0 && (
+              {/* Standalone Product Categories */}
+              {unifiedNavigation.standalone.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-gray-50 space-y-0.5">
                   <span className="px-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest block mb-1">
-                    Other Links
+                    Direct Categories
                   </span>
-                  {categoriesB.map(item => (
-                    <NavItem
-                      key={`custom-${item.id}`}
-                      item={item}
-                      isCustom={true}
-                    />
+                  {unifiedNavigation.standalone.map(cat => (
+                    <NavItem key={`standalone-a-${cat.id}`} item={cat} />
                   ))}
                 </div>
               )}

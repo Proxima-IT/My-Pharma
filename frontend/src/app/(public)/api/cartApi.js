@@ -1,12 +1,13 @@
-import { CART_ENDPOINTS, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 import {
-  authenticatedFetch,
+  CART_ENDPOINTS,
+  API_BASE_URL,
+  fetchWithAuth,
   parseJsonResponse,
-} from '@/app/(shared)/lib/authenticatedApi';
+} from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for Cart and Delivery management.
- * Updated to support dynamic delivery options (Standard, Same Day, Express).
+ * Refactored: Uses fetchWithAuth interceptor for silent token refresh and session persistence.
  */
 
 const getApiErrorMessage = (data, fallback) => {
@@ -28,11 +29,11 @@ const getApiErrorMessage = (data, fallback) => {
  * GET /api/cart/
  * Supports query params like ?delivery_duration_id= to fetch updated summary.
  */
-export const fetchCartApi = async (params = {}) => {
+export const fetchCartApi = async (token, params = {}) => {
   const queryString = new URLSearchParams(params).toString();
   const url = `${CART_ENDPOINTS.BASE}${queryString ? `?${queryString}` : ''}`;
 
-  const response = await authenticatedFetch(url, {
+  const response = await fetchWithAuth(url, {
     method: 'GET',
   });
 
@@ -46,15 +47,11 @@ export const fetchCartApi = async (params = {}) => {
 /**
  * GET /api/delivery-durations/
  * Fetches available delivery options (Standard, Same Day, Express).
- * Updated: Now accepts token for authenticated retrieval.
  */
 export const fetchDeliveryDurationsApi = async () => {
-  const response = await authenticatedFetch(
-    `${API_BASE_URL}/delivery-durations/`,
-    {
-      method: 'GET',
-    },
-  );
+  const response = await fetchWithAuth(`${API_BASE_URL}/delivery-durations/`, {
+    method: 'GET',
+  });
 
   const data = await parseJsonResponse(response);
   if (!response.ok) {
@@ -63,19 +60,23 @@ export const fetchDeliveryDurationsApi = async () => {
   return data;
 };
 
-// POST /api/cart/add/
-export const addToCartApi = async (productId, quantity, dosage = null) => {
+/**
+ * POST /api/cart/add/
+ */
+export const addToCartApi = async (
+  token,
+  productId,
+  quantity,
+  dosage = null,
+) => {
   const body = {
     product: productId,
     quantity: quantity,
   };
   if (dosage) body.dosage = dosage;
 
-  const response = await authenticatedFetch(CART_ENDPOINTS.ADD, {
+  const response = await fetchWithAuth(CART_ENDPOINTS.ADD, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(body),
   });
 
@@ -86,21 +87,22 @@ export const addToCartApi = async (productId, quantity, dosage = null) => {
   return data;
 };
 
-// PATCH /api/cart/items/{id}/
-export const updateCartItemApi = async (itemId, quantity, dosage = null) => {
+/**
+ * PATCH /api/cart/items/{id}/
+ */
+export const updateCartItemApi = async (
+  token,
+  itemId,
+  quantity,
+  dosage = null,
+) => {
   const body = { quantity: quantity };
   if (dosage) body.dosage = dosage;
 
-  const response = await authenticatedFetch(
-    `${CART_ENDPOINTS.ITEMS}${itemId}/`,
-    {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    },
-  );
+  const response = await fetchWithAuth(`${CART_ENDPOINTS.ITEMS}${itemId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
 
   const data = await parseJsonResponse(response);
   if (!response.ok) {
@@ -109,17 +111,16 @@ export const updateCartItemApi = async (itemId, quantity, dosage = null) => {
   return data;
 };
 
-// DELETE /api/cart/items/{id}/
-export const removeFromCartApi = async itemId => {
-  const response = await authenticatedFetch(
-    `${CART_ENDPOINTS.ITEMS}${itemId}/`,
-    {
-      method: 'DELETE',
-    },
-  );
+/**
+ * DELETE /api/cart/items/{id}/
+ */
+export const removeFromCartApi = async (token, itemId) => {
+  const response = await fetchWithAuth(`${CART_ENDPOINTS.ITEMS}${itemId}/`, {
+    method: 'DELETE',
+  });
 
   if (!response.ok) {
-    const data = await parseJsonResponse(response);
+    const data = await parseJsonResponse(response, {});
     throw new Error(
       getApiErrorMessage(data, 'Failed to remove item from cart'),
     );
@@ -131,12 +132,9 @@ export const removeFromCartApi = async itemId => {
  * POST /api/cart/place-order/
  * Accepts delivery_duration_id in orderData.
  */
-export const placeOrderApi = async orderData => {
-  const response = await authenticatedFetch(CART_ENDPOINTS.PLACE_ORDER, {
+export const placeOrderApi = async (token, orderData) => {
+  const response = await fetchWithAuth(CART_ENDPOINTS.PLACE_ORDER, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
     body: JSON.stringify(orderData),
   });
 
@@ -147,18 +145,14 @@ export const placeOrderApi = async orderData => {
   return data;
 };
 
-// POST /api/cart/apply-coupon/
-export const applyCartCouponApi = async code => {
-  const response = await authenticatedFetch(
-    `${CART_ENDPOINTS.BASE}apply-coupon/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ coupon_code: code }),
-    },
-  );
+/**
+ * POST /api/cart/apply-coupon/
+ */
+export const applyCartCouponApi = async (token, code) => {
+  const response = await fetchWithAuth(`${CART_ENDPOINTS.BASE}apply-coupon/`, {
+    method: 'POST',
+    body: JSON.stringify({ coupon_code: code }),
+  });
 
   const data = await parseJsonResponse(response);
   if (!response.ok) {
@@ -167,17 +161,13 @@ export const applyCartCouponApi = async code => {
   return data;
 };
 
-// POST /api/cart/remove-coupon/
-export const removeCartCouponApi = async () => {
-  const response = await authenticatedFetch(
-    `${CART_ENDPOINTS.BASE}remove-coupon/`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    },
-  );
+/**
+ * POST /api/cart/remove-coupon/
+ */
+export const removeCartCouponApi = async token => {
+  const response = await fetchWithAuth(`${CART_ENDPOINTS.BASE}remove-coupon/`, {
+    method: 'POST',
+  });
 
   const data = await parseJsonResponse(response);
   if (!response.ok) {

@@ -93,7 +93,7 @@ export const useCart = () => {
       }
 
       if (token) {
-        await addToCartApi(productId, parsedQuantity, selectedDosage);
+        await addToCartApi(token, productId, parsedQuantity, selectedDosage);
       } else {
         const guestCart = getGuestCart();
         const existing = guestCart.items.find(
@@ -134,7 +134,7 @@ export const useCart = () => {
     const token = localStorage.getItem('access_token');
     if (token) {
       const currentItem = cart?.items?.find(i => i.id === itemId);
-      await updateCartItemApi(itemId, newQuantity, currentItem?.dosage);
+      await updateCartItemApi(token, itemId, newQuantity, currentItem?.dosage);
     } else {
       const guestCart = getGuestCart();
       const item = guestCart.items.find(i => i.id === itemId);
@@ -149,7 +149,7 @@ export const useCart = () => {
     setIsUpdating(true);
     const token = localStorage.getItem('access_token');
     if (token) {
-      await removeFromCartApi(itemId);
+      await removeFromCartApi(token, itemId);
     } else {
       const guestCart = getGuestCart();
       guestCart.items = guestCart.items.filter(i => i.id !== itemId);
@@ -164,7 +164,7 @@ export const useCart = () => {
     if (!token) return null;
     setIsUpdating(true);
     try {
-      const result = await placeOrderApi(orderData);
+      const result = await placeOrderApi(token, orderData);
       await refreshCart(null, true);
       return result;
     } catch (err) {
@@ -187,7 +187,7 @@ export const useCart = () => {
     setIsApplyingCoupon(true);
     setError(null);
     try {
-      await applyCartCouponApi(code);
+      await applyCartCouponApi(token, code);
       // Refresh the cart to get the new discounted prices and summary from backend
       await refreshCart(null, false);
       return true;
@@ -207,7 +207,7 @@ export const useCart = () => {
     if (!token) return;
     setIsUpdating(true);
     try {
-      await removeCartCouponApi();
+      await removeCartCouponApi(token);
       await refreshCart(null, false);
     } catch (err) {
       setError(err.message);
@@ -238,11 +238,13 @@ export const useCart = () => {
         total_amount: parseFloat(s.total_payable || s.total_amount || 0),
         coupon_code: s.coupon_code || null,
         // Delivery breakdown fields — preserve backend values (including 0)
-        base_delivery_fee: s.base_delivery_fee != null ? parseFloat(s.base_delivery_fee) : null,
+        base_delivery_fee:
+          s.base_delivery_fee != null ? parseFloat(s.base_delivery_fee) : null,
         delivery_option_charge: parseFloat(s.delivery_option_charge || 0),
         delivery_option_name: s.delivery_option_name || null,
         delivery_option_type: s.delivery_option_type || null,
-        delivery_fee: s.delivery_fee != null ? parseFloat(s.delivery_fee) : null,
+        delivery_fee:
+          s.delivery_fee != null ? parseFloat(s.delivery_fee) : null,
       };
     }
     return guestSummary;
