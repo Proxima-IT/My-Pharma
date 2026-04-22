@@ -1453,6 +1453,8 @@ class NotificationBroadcastResultSerializer(serializers.Serializer):
 
 class NotificationHealthSerializer(serializers.Serializer):
     firebase_initialized = serializers.BooleanField()
+    firebase_credential_source = serializers.CharField()
+    firebase_init_error = serializers.CharField(allow_blank=True)
     celery_task_always_eager = serializers.BooleanField()
     redis_enabled = serializers.BooleanField()
     active_subscriptions = serializers.IntegerField(min_value=0)

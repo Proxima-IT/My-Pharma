@@ -390,25 +390,38 @@ SSLCOMMERZ_FRONTEND_BASE_URL = os.environ.get("SSLCOMMERZ_FRONTEND_BASE_URL", ""
 import json as _json
 
 FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
+FIREBASE_CREDENTIAL_SOURCE = "none"
+FIREBASE_INIT_ERROR = ""
 
 def _init_firebase():
     """Lazy-initialize Firebase Admin SDK (safe to call multiple times)."""
+    global FIREBASE_CREDENTIAL_SOURCE, FIREBASE_INIT_ERROR
     try:
         import firebase_admin
         from firebase_admin import credentials
         if firebase_admin._apps:
+            FIREBASE_CREDENTIAL_SOURCE = "existing_app"
+            FIREBASE_INIT_ERROR = ""
             return True  # Already initialized
         if FIREBASE_SERVICE_ACCOUNT_JSON:
             cred_dict = _json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
+            FIREBASE_CREDENTIAL_SOURCE = "service_account_json"
+            FIREBASE_INIT_ERROR = ""
             return True
         elif os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             firebase_admin.initialize_app()
+            FIREBASE_CREDENTIAL_SOURCE = "google_application_credentials"
+            FIREBASE_INIT_ERROR = ""
             return True
+        FIREBASE_CREDENTIAL_SOURCE = "none"
+        FIREBASE_INIT_ERROR = "Missing FIREBASE_SERVICE_ACCOUNT_JSON and GOOGLE_APPLICATION_CREDENTIALS."
         return False
     except Exception as exc:
         import logging
+        FIREBASE_CREDENTIAL_SOURCE = "error"
+        FIREBASE_INIT_ERROR = str(exc)
         logging.getLogger(__name__).warning("Firebase init failed: %s", exc)
         return False
 
