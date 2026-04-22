@@ -82,7 +82,7 @@ const AdminSidebar = () => {
         },
         { name: 'Company Registry', icon: <FiAward />, href: '/admin/brands' },
         {
-          name: 'Categories',
+          name: 'Sub-categories',
           icon: <FiGrid />,
           href: '/admin/categories',
         },
@@ -91,7 +91,7 @@ const AdminSidebar = () => {
     {
       title: 'Website Content',
       items: [
-        { name: 'Sidebar Menu', icon: <FiLayout />, href: '/admin/sidebar' },
+        { name: 'Main Category', icon: <FiLayout />, href: '/admin/sidebar' },
         { name: 'Ads Management', icon: <FiImage />, href: '/admin/ads' },
         {
           name: 'Combo Management',

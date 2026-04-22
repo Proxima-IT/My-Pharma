@@ -312,7 +312,7 @@ const Checkout = () => {
                     >
                       {Number(option.extra_charge) > 0
                         ? `+${formatCurrency(option.extra_charge)}`
-                        : 'FREE'}
+                        : ''}
                     </p>
                   </div>
                 </button>
