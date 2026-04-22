@@ -234,7 +234,7 @@ function NavigationManagerContent() {
           <div className="bg-white border border-gray-100 p-8 space-y-6 rounded-none shadow-none">
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
-                <FiList className="text-[#3A5A40]" /> Sidebar Selection
+                <FiList className="text-[#3A5A40]" /> Category Selection
               </h3>
               <button
                 onClick={() => saveDisplayMapping('SIDEBAR')}
