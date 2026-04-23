@@ -10,8 +10,8 @@ import AuthGuard from '@/app/(shared)/components/AuthGuard';
 /**
  * AdminEditCategoryPage
  * Super Admin Zone: Handles category updates and organization.
- * Feature: Links Product Categories to Custom Sidebar Menus (sidebar_category).
- * Design: Strictly rounded-none, high contrast industrial feel.
+ * Fixed: Explicitly handles 'parent' and 'sidebar_category' clearing logic
+ * to ensure updates persist correctly on the backend.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -62,8 +62,10 @@ function EditCategoryContent({ slug }) {
       if (data) {
         setFormData({
           name: data.name || '',
-          parent: data.parent || '',
-          sidebar_category: data.sidebar_category || '',
+          // Ensure we extract the ID if parent/sidebar_category come as objects
+          parent: data.parent?.id || data.parent || '',
+          sidebar_category:
+            data.sidebar_category?.id || data.sidebar_category || '',
           is_active: data.is_active ?? true,
           image: null,
         });
@@ -108,19 +110,12 @@ function EditCategoryContent({ slug }) {
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
 
-    if (formData.parent !== '' && formData.parent !== null) {
-      data.append('parent', formData.parent);
-    }
+    // FIX: Always append 'parent'. If empty string, it clears the parent in DRF.
+    // This allows moving a category from "Child" back to "Root".
+    data.append('parent', formData.parent || '');
 
-    // Crucial: Linking to Custom Sidebar Menu (Method B)
-    if (
-      formData.sidebar_category !== '' &&
-      formData.sidebar_category !== null
-    ) {
-      data.append('sidebar_category', formData.sidebar_category);
-    } else {
-      data.append('sidebar_category', ''); // Send empty to unassign
-    }
+    // FIX: Always append 'sidebar_category'. If empty, it unassigns from Custom Menu.
+    data.append('sidebar_category', formData.sidebar_category || '');
 
     if (formData.image) {
       data.append('image', formData.image);
@@ -150,7 +145,7 @@ function EditCategoryContent({ slug }) {
 
   return (
     <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
-      {/* Header */}
+      {/* Header Section */}
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
@@ -178,7 +173,7 @@ function EditCategoryContent({ slug }) {
         </div>
       </div>
 
-      {/* Form Body */}
+      {/* Form Container - Full Width */}
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none">
         <div className="mb-10 border-b border-gray-50 pb-6">
           <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">

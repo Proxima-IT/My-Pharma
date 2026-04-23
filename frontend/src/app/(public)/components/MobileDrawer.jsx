@@ -16,18 +16,20 @@ import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
 /**
  * MobileDrawer Component
- * Refactored: Uses Tree API for hierarchical nesting and mirrors Sidebar logic.
- * Updates: Removed all shadows, tightened spacing, and enabled recursive child images.
+ * Refactored: Uses Method B (Main Category) as roots and Method A (Sub-categories) as children.
+ * Spacing and hierarchical logic synced with the Public Sidebar.
  */
 const MobileDrawer = () => {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const currentCategory = searchParams.get('category');
+  const currentCategorySlug = pathname.startsWith('/category/')
+    ? pathname.replace('/category/', '').split('/')[0]
+    : '';
 
   const [open, setOpen] = useState(false);
-  const [categoriesA, setCategoriesA] = useState([]); // Product Categories (Method A Tree)
-  const [categoriesB, setCategoriesB] = useState([]); // Custom Items (Method B)
+  const [categoriesA, setCategoriesA] = useState([]); // Product Category Tree
+  const [categoriesB, setCategoriesB] = useState([]); // Custom Main Categories
   const [allProducts, setAllProducts] = useState([]);
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -81,9 +83,24 @@ const MobileDrawer = () => {
     return counts;
   }, [allProducts]);
 
-  const sidebarRootsA = useMemo(() => {
-    return categoriesA.filter(cat => cat.show_in_sidebar);
-  }, [categoriesA]);
+  /**
+   * Organizing Method A inside Method B (Hierarchy Logic)
+   */
+  const unifiedNavigation = useMemo(() => {
+    const menuStructure = categoriesB.map(customItem => ({
+      ...customItem,
+      isCustomMenu: true,
+      children: categoriesA.filter(
+        cat => cat.sidebar_category === customItem.id,
+      ),
+    }));
+
+    const standalone = categoriesA.filter(
+      cat => cat.show_in_sidebar && !cat.sidebar_category,
+    );
+
+    return { grouped: menuStructure, standalone };
+  }, [categoriesA, categoriesB]);
 
   const toggleMenu = (e, id) => {
     e.preventDefault();
@@ -91,17 +108,19 @@ const MobileDrawer = () => {
     setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const isAllProductsActive = pathname === '/products' && !currentCategory;
+  const isAllProductsActive = pathname === '/products' && !currentCategorySlug;
   const activeAd = ads.length > 0 ? ads[0] : null;
 
   // Navigation Item Component for Recursion
-  const NavItem = ({ item, isCustom = false, depth = 0 }) => {
-    const title = isCustom ? item.title : item.name;
-    const isActive = currentCategory === title;
+  const NavItem = ({ item, isCustomMenu = false, depth = 0 }) => {
+    const title = isCustomMenu ? item.title : item.name;
+    const isActive = !isCustomMenu && currentCategorySlug === item.slug;
     const hasChildren =
-      !isCustom && Array.isArray(item.children) && item.children.length > 0;
-    const isOpen = !!openMenus[item.id];
+      Array.isArray(item.children) && item.children.length > 0;
+    const isOpen = !!openMenus[item.id + (isCustomMenu ? '-custom' : '-tree')];
     const count = categoryCounts[title] || 0;
+
+    const href = isCustomMenu ? '#' : `/category/${item.slug}`;
 
     return (
       <div className="flex flex-col w-full">
@@ -109,14 +128,21 @@ const MobileDrawer = () => {
           className={`flex items-center w-full group ${depth > 0 ? 'pl-3' : ''}`}
         >
           <Link
-            href={
-              isCustom ? '#' : `/products?category=${encodeURIComponent(title)}`
-            }
-            onClick={() => !isCustom && setOpen(false)}
+            href={href}
+            onClick={() => {
+              if (isCustomMenu) {
+                setOpenMenus(prev => ({
+                  ...prev,
+                  [item.id + '-custom']: !prev[item.id + '-custom'],
+                }));
+              } else {
+                setOpen(false);
+              }
+            }}
             className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all border border-transparent ${
               isActive
-                ? 'bg-[#233b8c] text-white'
-                : 'bg-white text-gray-500 border-gray-50'
+                ? 'bg-[#233b8c] text-white shadow-none'
+                : 'bg-white text-gray-500 border-gray-50 shadow-none'
             }`}
           >
             <div className="flex items-center gap-3 overflow-hidden">
@@ -139,7 +165,7 @@ const MobileDrawer = () => {
               </span>
             </div>
 
-            {!isCustom && (
+            {!isCustomMenu && (
               <span
                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
               >
@@ -150,10 +176,12 @@ const MobileDrawer = () => {
 
           {hasChildren && (
             <button
-              onClick={e => toggleMenu(e, item.id)}
+              onClick={e =>
+                toggleMenu(e, item.id + (isCustomMenu ? '-custom' : '-tree'))
+              }
               className={`p-2 ml-1 rounded-full transition-all ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
             >
-              <FiChevronDown size={18} />
+              <FiChevronDown size={16} />
             </button>
           )}
         </div>
@@ -188,8 +216,8 @@ const MobileDrawer = () => {
       >
         <div className="flex flex-col h-full">
           <div className="p-6 flex justify-between items-center bg-white border-b border-gray-100 sticky top-0 z-10">
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-              Menu
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight uppercase">
+              Navigation
             </h2>
             <button
               onClick={() => setOpen(false)}
@@ -201,7 +229,7 @@ const MobileDrawer = () => {
           <div className="p-6 space-y-6">
             <div className="space-y-4">
               <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] px-2">
-                All Product Category
+                Catalog
               </h3>
               <nav className="flex flex-col gap-0.5">
                 <Link
@@ -231,22 +259,22 @@ const MobileDrawer = () => {
                 ) : (
                   <>
                     <div className="space-y-0.5">
-                      {sidebarRootsA.map(cat => (
-                        <NavItem key={`catA-${cat.id}`} item={cat} />
+                      {unifiedNavigation.grouped.map(menu => (
+                        <NavItem
+                          key={`menu-b-${menu.id}`}
+                          item={menu}
+                          isCustomMenu={true}
+                        />
                       ))}
                     </div>
 
-                    {categoriesB.length > 0 && (
+                    {unifiedNavigation.standalone.length > 0 && (
                       <div className="mt-4 pt-4 border-t border-gray-100 space-y-0.5">
                         <span className="px-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest block mb-1">
-                          Other Links
+                          Direct Categories
                         </span>
-                        {categoriesB.map(item => (
-                          <NavItem
-                            key={`catB-${item.id}`}
-                            item={item}
-                            isCustom={true}
-                          />
+                        {unifiedNavigation.standalone.map(cat => (
+                          <NavItem key={`standalone-a-${cat.id}`} item={cat} />
                         ))}
                       </div>
                     )}
