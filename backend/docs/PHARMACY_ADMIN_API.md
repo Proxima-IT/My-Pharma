@@ -270,6 +270,22 @@ Use **multipart/form-data** if you send `image`; otherwise **application/json** 
 | review_count | int | No | Number of reviews. |
 | key_benefits | array of strings | No | Bullet points for description tab. |
 | specifications | object | No | Key-value, e.g. `{"Dosage Form": "Oral Tablet"}`. |
+| indications | string | No | Medical indications. |
+| therapeutic_class | string | No | Therapeutic class of the product. |
+| pharmacology | string | No | Pharmacology details. |
+| dosage_administration | string | No | Dosage and administration instructions. |
+| interaction | string | No | Drug interactions. |
+| contraindications | string | No | Contraindications. |
+| side_effects | string | No | Possible side effects. |
+| pregnancy_lactation | string | No | Notes on pregnancy and lactation. |
+| precautions_warnings | string | No | Precautions and warnings. |
+| overdose_effects | string | No | Effects of overdose. |
+| storage_conditions | string | No | Storage conditions. |
+| mode_of_action | string | No | Mode of action. |
+| drug_classes | string | No | Associated drug classes. |
+| pregnancy | string | No | Pregnancy category/notes. |
+| alternative_products | string | No | Alternative products. |
+| faq | string | No | Frequently asked questions. |
 | quantity_in_stock | int | No | Default 0. |
 | low_stock_threshold | int | No | Default 5. |
 | is_active | boolean | No | Default true. |
