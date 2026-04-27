@@ -37,7 +37,7 @@ export async function registerPushSubscription() {
   notificationDebug('Service worker registration state.', {
     state: registration?.active ? 'active' : 'pending',
   });
-  await navigator.serviceWorker.ready;
+  const readyRegistration = await navigator.serviceWorker.ready;
   notificationDebug('Service worker is ready.');
 
   // Send Firebase config to the service worker so it can initialize
@@ -59,9 +59,13 @@ export async function registerPushSubscription() {
     );
   }
 
-  if (registration.active) {
+  const activeWorker =
+    registration.active ||
+    readyRegistration?.active ||
+    navigator.serviceWorker.controller;
+  if (activeWorker) {
     notificationDebug('Sending Firebase config to active service worker.');
-    registration.active.postMessage({
+    activeWorker.postMessage({
       type: 'FIREBASE_CONFIG',
       config: firebaseConfig,
     });
@@ -69,11 +73,15 @@ export async function registerPushSubscription() {
     notificationWarn('No active service worker instance yet; config postMessage skipped.');
   }
 
-  // Get FCM token using the VAPID key from Firebase project settings
-  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY || '';
+  // Get FCM token using the VAPID key from Firebase project settings.
+  // Legacy env support: NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY.
+  const vapidKey =
+    process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ||
+    process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY ||
+    '';
   if (!vapidKey) {
     throw new Error(
-      'Missing NEXT_PUBLIC_FIREBASE_VAPID_KEY. ' +
+      'Missing NEXT_PUBLIC_FIREBASE_VAPID_KEY (or legacy NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY). ' +
       'Use Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificate key pair.',
     );
   }
@@ -92,7 +100,7 @@ export async function registerPushSubscription() {
     ) {
       throw new Error(
         'FCM subscribe failed (401). Verify Firebase Web Push setup: ' +
-        '1) NEXT_PUBLIC_FIREBASE_VAPID_KEY must be Firebase Cloud Messaging Web Push public key, ' +
+        '1) NEXT_PUBLIC_FIREBASE_VAPID_KEY (or NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY) must be Firebase Cloud Messaging Web Push public key, ' +
         '2) API key restrictions must allow your localhost origin, ' +
         '3) appId/senderId/projectId must match same Firebase project.',
       );

@@ -1985,6 +1985,8 @@ class NotificationViewSet(mixins.ListModelMixin, mixins.RetrieveModelMixin, view
         seven_days_ago = timezone.now() - timedelta(days=7)
         payload = {
             "firebase_initialized": bool(getattr(settings, "FIREBASE_INITIALIZED", False)),
+            "firebase_credential_source": (getattr(settings, "FIREBASE_CREDENTIAL_SOURCE", "none") or "none"),
+            "firebase_init_error": (getattr(settings, "FIREBASE_INIT_ERROR", "") or "")[:300],
             "celery_task_always_eager": bool(getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False)),
             "redis_enabled": bool(getattr(settings, "USE_REDIS", False)),
             "active_subscriptions": UserPushSubscription.objects.filter(is_active=True).count(),

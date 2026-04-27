@@ -50,6 +50,17 @@ Optional (defaults work for local Docker):
 - `NEXT_PUBLIC_API_URL` – API URL as seen by the **browser** (default: `http://localhost:8000/api`)
 - `NEXT_PUBLIC_BACKEND_URL` – Backend base URL as seen by the browser (default: `http://localhost:8000`)
 - **`BACKEND_URL_INTERNAL`** – Set by `docker-compose.yml` to `http://backend:8000` so the frontend container can proxy `/media/*` (profile and product images) to the backend. Do not change unless you use a different backend service name.
+- For Firebase web push in the browser, set:
+  - `NEXT_PUBLIC_FIREBASE_API_KEY`
+  - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+  - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+  - `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+  - `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+  - `NEXT_PUBLIC_FIREBASE_APP_ID`
+  - `NEXT_PUBLIC_FIREBASE_VAPID_KEY` (legacy fallback: `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`)
+- For backend/admin push delivery, set one credential source:
+  - `FIREBASE_SERVICE_ACCOUNT_JSON` (single-line JSON), or
+  - `GOOGLE_APPLICATION_CREDENTIALS` (path to mounted JSON credentials file)
 
 ---
 

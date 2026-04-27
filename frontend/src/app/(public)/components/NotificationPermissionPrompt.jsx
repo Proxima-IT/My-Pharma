@@ -154,6 +154,7 @@ export default function NotificationPermissionPrompt() {
             setResultState('push_unavailable');
           } else if (
             msg.includes('missing next_public_firebase_vapid_key') ||
+            msg.includes('next_public_web_push_vapid_public_key') ||
             msg.includes('missing firebase config keys') ||
             msg.includes('token-subscribe-failed') ||
             msg.includes('authentication credential')
@@ -161,6 +162,7 @@ export default function NotificationPermissionPrompt() {
             setResultState('error');
             setErrorMessage(
               'Firebase Web Push config is invalid. Set correct NEXT_PUBLIC_FIREBASE_* values ' +
+              '(and NEXT_PUBLIC_FIREBASE_VAPID_KEY or NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY) ' +
               'and Firebase Web Push certificate key, then rebuild frontend.',
             );
           } else {

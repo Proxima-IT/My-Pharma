@@ -113,7 +113,9 @@ export const B2B_ENDPOINTS = {
 };
 
 export const WEB_PUSH_VAPID_PUBLIC_KEY =
-  process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY || '';
+  process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ||
+  process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY ||
+  '';
 
 // --- AUTHENTICATED FETCH (INTERCEPTOR) ---
 

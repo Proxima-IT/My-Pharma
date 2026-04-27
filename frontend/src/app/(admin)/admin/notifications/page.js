@@ -104,7 +104,7 @@ function NotificationBroadcastContent() {
         <div className="flex items-center gap-2 border border-gray-100 p-3 bg-gray-50/50">
           <FiInfo className="text-gray-400" />
           <span className="font-mono text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
-            Protocol: VAPID_SUBSCRIPTION_ACTIVE
+            Protocol: FCM_TOKEN_ACTIVE
           </span>
         </div>
       </div>
@@ -202,6 +202,14 @@ function NotificationBroadcastContent() {
             <p className="font-mono text-[11px] text-gray-600">
               Firebase: {health?.firebase_initialized ? 'READY' : 'NOT_READY'}
             </p>
+            <p className="font-mono text-[11px] text-gray-600">
+              Credentials: {health?.firebase_credential_source || '-'}
+            </p>
+            {!health?.firebase_initialized && !!health?.firebase_init_error && (
+              <p className="font-mono text-[10px] text-red-600 break-words">
+                {health.firebase_init_error}
+              </p>
+            )}
             <p className="font-mono text-[11px] text-gray-600">
               Active tokens: {health?.active_subscriptions ?? '-'}
             </p>
