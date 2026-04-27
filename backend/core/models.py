@@ -269,6 +269,24 @@ class Product(models.Model):
         blank=True,
         help_text="Key-value pairs for Specification tab (e.g. {'Dosage Form': 'Oral Tablet'}).",
     )
+    # Medical details
+    indications = models.TextField(blank=True)
+    therapeutic_class = models.TextField(blank=True)
+    pharmacology = models.TextField(blank=True)
+    dosage_administration = models.TextField(blank=True)
+    interaction = models.TextField(blank=True)
+    contraindications = models.TextField(blank=True)
+    side_effects = models.TextField(blank=True)
+    pregnancy_lactation = models.TextField(blank=True)
+    precautions_warnings = models.TextField(blank=True)
+    overdose_effects = models.TextField(blank=True)
+    storage_conditions = models.TextField(blank=True)
+    mode_of_action = models.TextField(blank=True)
+    drug_classes = models.TextField(blank=True)
+    pregnancy = models.TextField(blank=True)
+    alternative_products = models.TextField(blank=True)
+    faq = models.TextField(blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
        
