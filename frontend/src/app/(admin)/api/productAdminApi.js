@@ -1,76 +1,122 @@
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import {
+  API_BASE_URL,
+  fetchWithAuth,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
+/**
+ * My Pharma - Super Admin Product Management API
+ * Refactored: Uses fetchWithAuth interceptor for session persistence.
+ * Supports extended medical metadata including Indications, Pharmacology, Side Effects, etc.
+ */
 export const productAdminApi = {
+  /**
+   * GET /api/products/
+   */
   getProducts: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE_URL}/products/?${query}`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/?${query}`, {
+      method: 'GET',
     });
-    if (!res.ok) throw new Error('প্রোডাক্ট লিস্ট পাওয়া যায়নি।');
-    return res.json();
+    const data = await parseJsonResponse(res);
+    if (!res.ok)
+      throw new Error(data.detail || 'Failed to fetch product list.');
+    return data;
   },
 
+  /**
+   * GET /api/products/{slug}/
+   */
   getProductBySlug: async (token, slug) => {
-    const res = await fetch(`${API_BASE_URL}/products/${slug}/`, {
-      headers: { Authorization: `Bearer ${token}` },
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${slug}/`, {
+      method: 'GET',
     });
-    if (!res.ok) throw new Error('প্রোডাক্টের তথ্য পাওয়া যায়নি।');
-    return res.json();
+    const data = await parseJsonResponse(res);
+    if (!res.ok)
+      throw new Error(data.detail || 'Failed to fetch product details.');
+    return data;
   },
 
+  /**
+   * POST /api/products/
+   * Supports full medical metadata via FormData.
+   * Fields: indications, therapeutic_class, pharmacology, dosage_administration,
+   * interaction, contraindications, side_effects, pregnancy_lactation,
+   * precautions_warnings, overdose_effects, storage_conditions, mode_of_action,
+   * drug_classes, pregnancy, alternative_products, faq.
+   */
   createProduct: async (token, formData) => {
-    const res = await fetch(`${API_BASE_URL}/products/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
       body: formData,
+      headers: {
+        'Content-Type': null, // Let browser set boundary for multipart
+      },
     });
+    const data = await parseJsonResponse(res);
     if (!res.ok) {
-      const err = await res.json();
-      throw err;
+      throw data;
     }
-    return res.json();
+    return data;
   },
 
+  /**
+   * POST /api/products/{slug}/images/
+   */
   uploadGalleryImage: async (token, slug, imageFile) => {
     const formData = new FormData();
     formData.append('image', imageFile);
-    const res = await fetch(`${API_BASE_URL}/products/${slug}/images/`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    return res.json();
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/products/${slug}/images/`,
+      {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': null,
+        },
+      },
+    );
+    return parseJsonResponse(res);
   },
 
-  // গ্যালারি ইমেজ ডিলিট করার ফাংশন
+  /**
+   * DELETE /api/products/{slug}/images/{imagePk}/
+   */
   deleteGalleryImage: async (token, slug, imagePk) => {
-    const res = await fetch(
+    const res = await fetchWithAuth(
       `${API_BASE_URL}/products/${slug}/images/${imagePk}/`,
       {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       },
     );
     return res.ok;
   },
 
+  /**
+   * PATCH /api/products/{slug}/
+   * Partial update for all product fields including medical metadata.
+   */
   updateProduct: async (token, slug, formData) => {
-    const res = await fetch(`${API_BASE_URL}/products/${slug}/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${slug}/`, {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${token}` },
       body: formData,
+      headers: {
+        'Content-Type': null,
+      },
     });
+    const data = await parseJsonResponse(res);
     if (!res.ok) {
-      const err = await res.json();
-      throw err;
+      throw data;
     }
-    return res.json();
+    return data;
   },
 
+  /**
+   * DELETE /api/products/{slug}/
+   */
   deleteProduct: async (token, slug) => {
-    const res = await fetch(`${API_BASE_URL}/products/${slug}/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/products/${slug}/`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
     });
     return res.ok;
   },

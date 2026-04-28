@@ -7,11 +7,14 @@ import PopularProductCard from './PopularProductCard';
 import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 /**
- * PopularProduct Component
- * Updated: Applied background color #E9EBF4 and section padding.
- * Design: Public Zone (rounded-[32px], premium feel).
+ * NaturaCare Component
+ * A carbon copy of PopularProduct with customized "Pure for you" branding.
+ * Background Color: #B0E5C799 (Light transparent green)
+ * Heading Color: #009C42
+ * Design: Public Zone (rounded-[32px], no shadows).
  */
-const PopularProduct = () => {
+const NaturaCare = () => {
+  // Fetching available products (same logic as PopularProduct)
   const { isLoading, products } = useProductData({ available: 'true' });
 
   if (isLoading) {
@@ -23,14 +26,14 @@ const PopularProduct = () => {
   }
 
   return (
-    <div className="bg-[#E9EBF4] rounded-[32px] py-12 px-4 md:px-8 lg:px-10 animate-in fade-in duration-700 shadow-none">
+    <div className="bg-[#B0E5C799] rounded-[32px] py-12 px-4 md:px-8 lg:px-10 animate-in fade-in duration-700 shadow-none">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-bold text-lg lg:text-2xl text-[#233B8C] tracking-tight">
-          Popular Products
+        <h1 className="font-bold text-lg lg:text-2xl text-[#009C42] tracking-tight">
+          Natura Care - Pure for you
         </h1>
-        <Link href="/products">
-          <button className="border border-gray-200 bg-white rounded-full px-5 lg:px-8 py-2.5 lg:py-3.5 text-(--color-primary-500) flex gap-2 lg:gap-3 items-center text-xs lg:text-[14px] font-bold cursor-pointer hover:border-(--color-primary-500) transition-all active:scale-95 shadow-none">
-            See More Products
+        <Link href="/products?category=natura-care">
+          <button className="border border-gray-200 bg-white rounded-full px-5 lg:px-8 py-2.5 lg:py-3.5 text-[#009C42] flex gap-2 lg:gap-3 items-center text-xs lg:text-[14px] font-bold cursor-pointer hover:border-[#009C42] transition-all active:scale-95 shadow-none">
+            See More Natura
             <MdArrowForwardIos size={14} />
           </button>
         </Link>
@@ -52,7 +55,7 @@ const PopularProduct = () => {
       {products?.length === 0 && (
         <div className="w-full py-32 text-center bg-white rounded-[32px] border border-gray-100 shadow-none">
           <p className="text-gray-400 font-bold text-lg uppercase tracking-widest">
-            No products found
+            No herbal products found
           </p>
         </div>
       )}
@@ -60,4 +63,4 @@ const PopularProduct = () => {
   );
 };
 
-export default PopularProduct;
+export default NaturaCare;

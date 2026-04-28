@@ -3,33 +3,50 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiArrowLeft,
-  FiPlus,
-  FiImage,
   FiCheck,
-  FiX,
+  FiInfo,
+  FiActivity,
+  FiSettings,
+  FiImage,
+  FiHash,
   FiAlertCircle,
 } from 'react-icons/fi';
 import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
 import { useBrands } from '@/app/(pharmacy-owner)/hooks/useBrands';
 import { useCategories } from '@/app/(pharmacy-owner)/hooks/useCategories';
 import { useIngredientAdmin } from '@/app/(admin)/hooks/useIngredientAdmin';
+import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
-/**
- * AdminNewProductPage
- * Updated to support 'is_generic' flag for the price suggestion engine.
- */
+// Modular Tab Imports
+import BasicInfoTab from '../components/form-tabs/BasicInfoTab';
+import StockPriceTab from '../components/form-tabs/StockPriceTab';
+import MedicalGuideTab from '../components/form-tabs/MedicalGuideTab';
+import AssetsTab from '../components/form-tabs/AssetsTab';
+import AdvancedTab from '../components/form-tabs/AdvancedTab';
+
 export default function AdminNewProductPage() {
+  return (
+    <AuthGuard allowedRoles={['SUPER_ADMIN']}>
+      <NewProductContent />
+    </AuthGuard>
+  );
+}
+
+function NewProductContent() {
   const router = useRouter();
-  const { createProductWithImages, isUpdating } = useProductAdmin();
+  const { createProductWithImages, isUpdating, error } = useProductAdmin();
   const { brands, getBrands } = useBrands();
   const { categories, getCategories } = useCategories();
   const { ingredients, fetchIngredients } = useIngredientAdmin();
 
-  const mainImageRef = useRef(null);
-  const galleryRef = useRef(null);
-
+  // 1. Core Form State
+  const [activeTab, setActiveTab] = useState('GENERAL');
   const [mainImage, setMainImage] = useState(null);
   const [galleryImages, setGalleryImages] = useState([]);
+
+  // 2. Dynamic Builders State
+  const [specs, setSpecs] = useState([{ key: '', value: '' }]);
+  const [faqs, setFaqs] = useState([{ question: '', answer: '' }]); // FAQ State added here
 
   const [formData, setFormData] = useState({
     name: '',
@@ -44,361 +61,198 @@ export default function AdminNewProductPage() {
     description: '',
     requires_prescription: false,
     is_active: true,
-    is_generic: false, // NEW FIELD: Crucial for cheaper suggestion engine
+    is_generic: false,
+    indications: '',
+    therapeutic_class: '',
+    pharmacology: '',
+    dosage_administration: '',
+    interaction: '',
+    contraindications: '',
+    side_effects: '',
+    pregnancy_lactation: '',
+    precautions_warnings: '',
+    overdose_effects: '',
+    storage_conditions: '',
+    mode_of_action: '',
+    drug_classes: '',
+    pregnancy: '',
+    alternative_products: '',
   });
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     getBrands(token);
     getCategories(token);
-    fetchIngredients({ page_size: 100 });
+    fetchIngredients({ page_size: 200 });
   }, [getBrands, getCategories, fetchIngredients]);
 
-  const handleMainImage = e => {
-    const file = e.target.files[0];
-    if (file) setMainImage({ file, preview: URL.createObjectURL(file) });
-  };
-
-  const handleGalleryImages = e => {
-    const files = Array.from(e.target.files);
-    const newPreviews = files.map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
+  // --- Handlers ---
+  const handleInputChange = e => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
     }));
-    setGalleryImages(prev => [...prev, ...newPreviews]);
   };
 
-  const removeGalleryImage = index => {
-    setGalleryImages(prev => prev.filter((_, i) => i !== index));
+  // Specification Handlers
+  const addSpecField = () => setSpecs([...specs, { key: '', value: '' }]);
+  const removeSpecField = i => setSpecs(specs.filter((_, idx) => idx !== i));
+  const updateSpec = (i, field, val) => {
+    const newSpecs = [...specs];
+    newSpecs[i][field] = val;
+    setSpecs(newSpecs);
+  };
+
+  // FAQ Handlers (Fixed: Now implemented in parent)
+  const addFaqField = () => setFaqs([...faqs, { question: '', answer: '' }]);
+  const removeFaqField = i => setFaqs(faqs.filter((_, idx) => idx !== i));
+  const updateFaq = (i, field, val) => {
+    const newFaqs = [...faqs];
+    newFaqs[i][field] = val;
+    setFaqs(newFaqs);
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
     const data = new FormData();
 
+    // Serialize Standard Fields
     Object.keys(formData).forEach(key => {
       if (key === 'dosages') {
-        const dosageArray = formData.dosages
+        formData.dosages
           .split(',')
           .map(d => d.trim())
-          .filter(d => d !== '');
-        dosageArray.forEach(val => data.append('dosages', val));
+          .filter(Boolean)
+          .forEach(v => data.append('dosages', v));
       } else {
         data.append(key, formData[key]);
       }
     });
 
-    if (mainImage?.file) data.append('image', mainImage.file);
+    // Serialize Specifications (JSON)
+    const specObj = {};
+    specs.forEach(s => {
+      if (s.key.trim()) specObj[s.key.trim()] = s.value;
+    });
+    data.append('specifications', JSON.stringify(specObj));
 
+    // Serialize FAQs (JSON stringified into the single 'faq' string field)
+    const validFaqs = faqs.filter(f => f.question.trim());
+    data.append('faq', JSON.stringify(validFaqs));
+
+    // Assets
+    if (mainImage?.file) data.append('image', mainImage.file);
     const galleryFiles = galleryImages.map(img => img.file);
+
     const success = await createProductWithImages(data, galleryFiles);
     if (success) router.push('/admin/products');
   };
 
-  const labelClass =
-    'font-mono text-[11px] font-bold text-[#8A8A78] uppercase mb-2 block tracking-widest';
-  const inputClass =
-    'w-full h-12 px-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all uppercase';
+  const tabs = [
+    { id: 'GENERAL', label: 'Basic Info', icon: <FiInfo /> },
+    { id: 'PRICING', label: 'Stock & Price', icon: <FiHash /> },
+    { id: 'MEDICAL', label: 'Medical Guide', icon: <FiActivity /> },
+    { id: 'ASSETS', label: 'Photos', icon: <FiImage /> },
+    { id: 'ADVANCED', label: 'Advanced', icon: <FiSettings /> },
+  ];
 
   return (
-    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
-      <div className="flex flex-col items-start gap-8">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b-2 border-black pb-8">
+        <div className="flex items-center gap-6">
+          <button
+            onClick={() => router.back()}
+            className="p-4 bg-black text-white hover:bg-gray-800 transition-all cursor-pointer rounded-none"
+          >
+            <FiArrowLeft size={24} />
+          </button>
+          <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
+            New Medicine
+          </h1>
+        </div>
         <button
-          onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer border border-transparent"
+          onClick={handleSubmit}
+          disabled={isUpdating}
+          className="h-16 px-10 bg-[#3A5A40] text-white font-black uppercase tracking-[0.2em] text-sm flex items-center gap-4 hover:bg-black transition-all disabled:opacity-30 cursor-pointer rounded-none"
         >
-          <FiArrowLeft size={16} />
-          <span className="font-mono text-[11px] font-bold uppercase">
-            Go Back
-          </span>
+          {isUpdating ? (
+            'SAVING...'
+          ) : (
+            <>
+              <FiCheck size={20} /> SAVE MEDICINE
+            </>
+          )}
         </button>
-        <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
-          Add New Medicine
-        </h1>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 lg:grid-cols-3 gap-10"
-      >
-        <div className="lg:col-span-2 space-y-8">
-          {/* General Information */}
-          <div className="bg-white border border-gray-100 p-8">
-            <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6">
-              General Info & DNA Matching
-            </h3>
-            <div className="space-y-6">
-              <div>
-                <label className={labelClass}>Medicine Name</label>
-                <input
-                  className={inputClass}
-                  placeholder="E.G. NAPA EXTEND"
-                  value={formData.name}
-                  onChange={e =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  required
-                />
-              </div>
-
-              <div>
-                <label className={labelClass}>
-                  Active Ingredient (Required for Price Suggestions)
-                </label>
-                <select
-                  className={inputClass}
-                  value={formData.ingredient}
-                  onChange={e =>
-                    setFormData({ ...formData, ingredient: e.target.value })
-                  }
-                  required
-                >
-                  <option value="">Select Generic Ingredient</option>
-                  {(Array.isArray(ingredients)
-                    ? ingredients
-                    : ingredients?.results || []
-                  ).map(ing => (
-                    <option key={ing.id} value={ing.id}>
-                      {ing.name.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-                <div className="mt-3 p-3 bg-amber-50 border-l-2 border-amber-400 flex items-start gap-2">
-                  <FiAlertCircle
-                    className="text-amber-500 mt-0.5 shrink-0"
-                    size={14}
-                  />
-                  <p className="text-[10px] text-amber-700 uppercase font-bold leading-relaxed">
-                    Products with the same ingredient will be suggested as
-                    cheaper alternatives in the frontend.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>
-                  Available Dosages (Comma Separated)
-                </label>
-                <input
-                  className={inputClass}
-                  placeholder="E.G. 6MG, 12MG, 24MG"
-                  value={formData.dosages}
-                  onChange={e =>
-                    setFormData({ ...formData, dosages: e.target.value })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelClass}>Category</label>
-                  <select
-                    className={inputClass}
-                    value={formData.category}
-                    onChange={e =>
-                      setFormData({ ...formData, category: e.target.value })
-                    }
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {(Array.isArray(categories)
-                      ? categories
-                      : categories?.results || []
-                    ).map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={labelClass}>Manufacturing Company</label>
-                  <select
-                    className={inputClass}
-                    value={formData.brand}
-                    onChange={e =>
-                      setFormData({ ...formData, brand: e.target.value })
-                    }
-                    required
-                  >
-                    <option value="">Select Company</option>
-                    {(Array.isArray(brands)
-                      ? brands
-                      : brands?.results || []
-                    ).map(brand => (
-                      <option key={brand.id} value={brand.id}>
-                        {brand.name.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className={labelClass}>Description</label>
-                <textarea
-                  className="w-full min-h-[120px] p-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all resize-none uppercase"
-                  value={formData.description}
-                  onChange={e =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Pricing & Stock */}
-          <div className="bg-white border border-gray-100 p-8">
-            <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6">
-              Price & Stock
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className={labelClass}>Selling Price (৳)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className={inputClass}
-                  value={formData.price}
-                  onChange={e =>
-                    setFormData({ ...formData, price: e.target.value })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelClass}>MRP / Original Price (৳)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className={inputClass}
-                  value={formData.original_price}
-                  onChange={e =>
-                    setFormData({ ...formData, original_price: e.target.value })
-                  }
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Current Stock</label>
-                <input
-                  type="number"
-                  className={inputClass}
-                  value={formData.quantity_in_stock}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      quantity_in_stock: e.target.value,
-                    })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Low Stock Alert</label>
-                <input
-                  type="number"
-                  className={inputClass}
-                  value={formData.low_stock_threshold}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      low_stock_threshold: e.target.value,
-                    })
-                  }
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Assets & Meta */}
-        <div className="space-y-8">
-          <div className="bg-white border border-gray-100 p-8">
-            <h3 className={labelClass}>Main Photo</h3>
-            <div
-              onClick={() => mainImageRef.current.click()}
-              className="aspect-square border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center cursor-pointer hover:bg-[#E8F0EA] transition-all overflow-hidden"
-            >
-              {mainImage ? (
-                <img
-                  src={mainImage.preview}
-                  className="w-full h-full object-contain p-2"
-                />
-              ) : (
-                <FiImage size={32} className="text-gray-300" />
-              )}
-            </div>
-            <input
-              ref={mainImageRef}
-              type="file"
-              className="hidden"
-              onChange={handleMainImage}
-            />
-          </div>
-
-          <div className="bg-white border border-gray-100 p-8">
-            <h3 className={labelClass}>Settings</h3>
-            <div className="space-y-4">
-              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
-                  Is Generic Product?
-                </span>
-                <input
-                  type="checkbox"
-                  className="w-6 h-6 accent-[#3A5A40]"
-                  checked={formData.is_generic}
-                  onChange={e =>
-                    setFormData({ ...formData, is_generic: e.target.checked })
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
-                  Needs Prescription
-                </span>
-                <input
-                  type="checkbox"
-                  className="w-6 h-6 accent-[#3A5A40]"
-                  checked={formData.requires_prescription}
-                  onChange={e =>
-                    setFormData({
-                      ...formData,
-                      requires_prescription: e.target.checked,
-                    })
-                  }
-                />
-              </label>
-              <label className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100 cursor-pointer">
-                <span className="text-[11px] font-bold text-[#1B1B1B] uppercase tracking-tight">
-                  Active in Store
-                </span>
-                <input
-                  type="checkbox"
-                  className="w-6 h-6 accent-[#3A5A40]"
-                  checked={formData.is_active}
-                  onChange={e =>
-                    setFormData({ ...formData, is_active: e.target.checked })
-                  }
-                />
-              </label>
-            </div>
-          </div>
-
+      {/* Tab Switcher */}
+      <div className="flex flex-wrap bg-gray-50 p-1 border border-gray-100">
+        {tabs.map(tab => (
           <button
-            type="submit"
-            disabled={isUpdating}
-            className="w-full h-20 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#F59E0B] transition-all disabled:opacity-50"
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-3 px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-none ${activeTab === tab.id ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
           >
-            {isUpdating ? (
-              'SAVING...'
-            ) : (
-              <>
-                <FiCheck size={20} /> SAVE MEDICINE
-              </>
-            )}
+            {tab.icon} {tab.label}
           </button>
+        ))}
+      </div>
+
+      <div className="bg-white border-2 border-gray-100 p-10 shadow-none">
+        {activeTab === 'GENERAL' && (
+          <BasicInfoTab
+            formData={formData}
+            handleInputChange={handleInputChange}
+            brands={brands}
+            categories={categories}
+            ingredients={ingredients}
+          />
+        )}
+        {activeTab === 'PRICING' && (
+          <StockPriceTab
+            formData={formData}
+            handleInputChange={handleInputChange}
+          />
+        )}
+        {activeTab === 'MEDICAL' && (
+          <MedicalGuideTab
+            formData={formData}
+            handleInputChange={handleInputChange}
+          />
+        )}
+        {activeTab === 'ASSETS' && (
+          <AssetsTab
+            mainImage={mainImage}
+            setMainImage={setMainImage}
+            galleryImages={galleryImages}
+            setGalleryImages={setGalleryImages}
+          />
+        )}
+        {activeTab === 'ADVANCED' && (
+          <AdvancedTab
+            formData={formData}
+            handleInputChange={handleInputChange}
+            specs={specs}
+            addSpecField={addSpecField}
+            removeSpecField={removeSpecField}
+            updateSpec={updateSpec}
+            faqs={faqs}
+            addFaqField={addFaqField}
+            removeFaqField={removeFaqField}
+            updateFaq={updateFaq}
+          />
+        )}
+      </div>
+
+      {error && (
+        <div className="p-6 bg-red-50 border-l-4 border-red-600 flex gap-4">
+          <FiAlertCircle className="text-red-600 shrink-0" size={24} />
+          <p className="text-xs font-black text-red-700 uppercase tracking-widest">
+            {error}
+          </p>
         </div>
-      </form>
+      )}
     </div>
   );
 }

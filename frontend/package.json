@@ -10,12 +10,18 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.1",
+    "@tiptap/extension-underline": "^3.22.4",
+    "@tiptap/pm": "^3.22.4",
+    "@tiptap/react": "^3.22.4",
+    "@tiptap/starter-kit": "^3.22.4",
     "firebase": "^12.12.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-icons": "^5.5.0",
-    "remixicon": "^4.9.1"
+    "react-markdown": "^10.1.0",
+    "remixicon": "^4.9.1",
+    "tiptap-markdown": "^0.9.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",

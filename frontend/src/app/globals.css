@@ -206,3 +206,14 @@ body {
     }
   }
 }
+
+/* Override Tailwind's uppercase class globally for inputs and textareas */
+input.uppercase, 
+textarea.uppercase, 
+select.uppercase,
+.prose.uppercase * {
+  text-transform: none !important;
+}
+
+/* Optional: If you want to disable it for everything across the site */
+.uppercase { text-transform: none !important; }
