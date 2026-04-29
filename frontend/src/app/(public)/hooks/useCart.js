@@ -111,7 +111,7 @@ export const useCart = () => {
             product_original_price: product.original_price,
             image_url: getProductImageUrl(product),
             product_description: product.description,
-            product_unit_label: product.unit_label,
+            product_unit_name: product.unit_name,
             product_dosage: product.dosage,
             selected_dosage: selectedDosage,
             is_guest_item: true,

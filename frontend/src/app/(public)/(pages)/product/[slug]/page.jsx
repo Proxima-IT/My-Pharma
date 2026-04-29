@@ -157,18 +157,13 @@ const ProductSingle = ({ params }) => {
             <BundleSlider cardsToShow={1} />
           </div>
 
-          {/* Generic Alternatives Engine - Integrated Fetch-on-Load */}
+          {/* Generic Alternatives Engine */}
           <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[24px] p-6 lg:p-5 space-y-4">
             <div>
-              <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight px-1 uppercase">
-                Generic Alternatives
+              <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight px-1 uppercase leading-tight">
+                Alternative Brands For {product.name}
               </h3>
               <p className="text-[11px] font-medium text-gray-500 px-1 mt-1 leading-relaxed">
-                Medically equivalent versions with the same active ingredient{' '}
-                <span className="font-bold text-black">
-                  ({product.ingredient_name || 'Generic Component'})
-                </span>{' '}
-                but at a lower cost.
               </p>
             </div>
             {/* Component now handles its own fetching based on product.ingredient ID */}

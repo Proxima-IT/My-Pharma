@@ -101,7 +101,7 @@ const AlternativeProductCard = ({ currentProduct }) => {
               {item.name}
             </h4>
             <p className="text-[11px] text-gray-500 font-medium mb-2">
-              {item.dosage} {item.unit_label}
+              {item.dosage} {item.unit_name}
             </p>
 
             <div className="flex items-center gap-2">

@@ -7,11 +7,14 @@ import PopularProductCard from './PopularProductCard';
 import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 /**
- * PopularProduct Component
- * Updated: Applied background color #E9EBF4 and section padding.
- * Design: Public Zone (rounded-[32px], premium feel).
+ * UnileverDeals Component
+ * Custom section for Unilever branded products/deals.
+ * Background Color: #E0F6FA
+ * Heading/Accent Color: #4CCBE0
+ * Design: Public Zone (rounded-[32px], no shadows).
  */
-const PopularProduct = () => {
+const UnileverDeals = () => {
+  // Fetching available products - in a real scenario, we'd filter by Unilever brand ID
   const { isLoading, products } = useProductData({ available: 'true' });
 
   if (isLoading) {
@@ -23,28 +26,24 @@ const PopularProduct = () => {
   }
 
   return (
-    <div className="bg-[#E9EBF4] rounded-[32px] py-12 px-4 md:px-8 lg:px-10 animate-in fade-in duration-700 shadow-none">
+    <div className="bg-[#E0F6FA] rounded-[32px] py-12 px-4 md:px-8 lg:px-10 animate-in fade-in duration-700 shadow-none">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-bold text-lg lg:text-2xl text-[#233B8C] tracking-tight">
-          Popular Products
+        <h1 className="font-bold text-lg lg:text-2xl text-[#4CCBE0] tracking-tight">
+          Unilever: Deals you can't miss
         </h1>
-        <Link href="/products">
-          <button className="border border-gray-200 bg-white rounded-full px-5 lg:px-8 py-2.5 lg:py-3.5 text-(--color-primary-500) flex gap-2 lg:gap-3 items-center text-xs lg:text-[14px] font-bold cursor-pointer hover:border-(--color-primary-500) transition-all active:scale-95 shadow-none">
-            See More Products
+        <Link href="/products?search=unilever">
+          <button className="border border-gray-200 bg-white rounded-full px-5 lg:px-8 py-2.5 lg:py-3.5 text-[#4CCBE0] flex gap-2 lg:gap-3 items-center text-xs lg:text-[14px] font-bold cursor-pointer hover:border-[#4CCBE0] transition-all active:scale-95 shadow-none">
+            Explore Deals
             <MdArrowForwardIos size={14} />
           </button>
         </Link>
       </div>
 
       {/* 
-        Product Grid - 4 Breakpoint Strategy:
-        1. Large Screen (xl): grid-cols-4 (4 Cards)
-        2. Laptop Screen (lg): grid-cols-3 (3 Cards)
-        3. Tab Screen (md): grid-cols-2 (2 Cards)
-        4. Phone Screen (base): grid-cols-1 (1 Card)
+        Product Grid - Standard 4 Breakpoint Layout
       */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {products?.map(product => (
+        {products?.slice(0, 4).map(product => (
           <PopularProductCard product={product} key={product.id} />
         ))}
       </div>
@@ -52,7 +51,7 @@ const PopularProduct = () => {
       {products?.length === 0 && (
         <div className="w-full py-32 text-center bg-white rounded-[32px] border border-gray-100 shadow-none">
           <p className="text-gray-400 font-bold text-lg uppercase tracking-widest">
-            No products found
+            No Unilever deals available
           </p>
         </div>
       )}
@@ -60,4 +59,4 @@ const PopularProduct = () => {
   );
 };
 
-export default PopularProduct;
+export default UnileverDeals;

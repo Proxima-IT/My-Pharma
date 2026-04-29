@@ -57,7 +57,7 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
           </p>
 
           <div className="flex items-center gap-2 text-[14px] text-gray-700 font-bold">
-            <span>{item.product_unit_label || 'Unit N/A'}</span>
+            <span>{item.product_unit_name || 'Unit N/A'}</span>
 
             {/* Displaying Selected Dosage (Supports Backend 'dosage' and Guest 'selected_dosage') */}
             {(item.dosage || item.selected_dosage || item.product_dosage) && (
