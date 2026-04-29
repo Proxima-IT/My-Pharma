@@ -11,15 +11,15 @@ import {
   FiLayers,
   FiHelpCircle,
 } from 'react-icons/fi';
-import ReactMarkdown from 'react-markdown';
 import { useReviews } from '../../../../hooks/useReviews';
 import ReviewForm from './ReviewForm';
 import ReviewCard from './ReviewCard';
 
 /**
  * ProductDetailsTabs Component
- * Refactored: Support for high-fidelity Markdown rendering for medical metadata.
- * Features: Structured Medical Guide, Dynamic Specifications, and FAQ Parsing.
+ * Refactored: Enhanced RAW HTML rendering with forced vertical rhythm.
+ * Fix: Added explicit margin utilities ([&_p]:mb-6, etc.) to override CSS resets and ensure
+ * spacing between headings and paragraphs is rendered prominently.
  */
 const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const [activeTab, setActiveTab] = useState('Description');
@@ -31,17 +31,20 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     product?.id,
   );
 
-  // 1. FAQ Parsing Logic (Stored as JSON string in Backend)
+  // 1. FAQ Parsing Logic
   const parsedFaqs = useMemo(() => {
     if (!product?.faq) return [];
     try {
-      return JSON.parse(product.faq);
+      const data =
+        typeof product.faq === 'string' ? JSON.parse(product.faq) : product.faq;
+      return Array.isArray(data) ? data : [];
     } catch (e) {
+      console.error('FAQ Parsing Error:', e);
       return [];
     }
   }, [product?.faq]);
 
-  // 2. Medical Info Mapping (Markdown Fields)
+  // 2. Medical Info Mapping
   const medicalInfo = useMemo(() => {
     if (!product) return [];
     const fields = [
@@ -59,7 +62,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       { label: 'Overdose Effects', value: product.overdose_effects },
       { label: 'Mode of Action', value: product.mode_of_action },
     ];
-    return fields.filter(f => f.value && f.value.trim() !== '');
+    return fields.filter(
+      f => f.value && f.value.trim() !== '' && f.value !== '<p></p>',
+    );
   }, [product]);
 
   // 3. Specification Logic
@@ -71,13 +76,10 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       { label: 'Category', value: product.category_name || 'N/A' },
       { label: 'Therapeutic Class', value: product.therapeutic_class || 'N/A' },
       { label: 'Storage', value: product.storage_conditions || 'N/A' },
-      { label: 'Unit / Pack Size', value: product.unit_name || 'N/A' },
+      { label: 'Unit / Pack Size', value: product.unit_label || 'N/A' },
     ];
     const customSpecs = Object.entries(product.specifications || {}).map(
-      ([key, val]) => ({
-        label: key,
-        value: val,
-      }),
+      ([key, val]) => ({ label: key, value: val }),
     );
     return [...baseSpecs, ...customSpecs];
   }, [product]);
@@ -108,7 +110,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const TabButton = ({ id, label, icon }) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`px-6 md:px-8 py-3 rounded-full text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap border flex items-center gap-2 ${
+      className={`px-6 md:px-8 py-3 rounded-full text-[13px] font-bold transition-all cursor-pointer whitespace-nowrap border flex items-center gap-2 shadow-none ${
         activeTab === id
           ? 'bg-black text-white border-black'
           : 'bg-transparent text-gray-400 border-gray-100 hover:border-gray-200'
@@ -117,6 +119,10 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       {icon} {label}
     </button>
   );
+
+  // Unified Spacing Class for HTML content
+  const htmlContainerClass =
+    'prose prose-slate max-w-none text-gray-600 leading-relaxed [&_p]:mb-6 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-gray-900 [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:text-gray-800 [&_ul]:mb-6 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-2';
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700">
@@ -131,7 +137,11 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               icon={<FiActivity />}
             />
           )}
-          <TabButton id="Specification" label="Technical" icon={<FiLayers />} />
+          <TabButton
+            id="Specification"
+            label="Specifications"
+            icon={<FiLayers />}
+          />
           {parsedFaqs.length > 0 && (
             <TabButton id="FAQ" label="Q&A" icon={<FiHelpCircle />} />
           )}
@@ -139,36 +149,42 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
         </div>
       </div>
 
-      <div className="bg-white border border-gray-100 rounded-[32px] p-6 md:p-12 min-h-[400px]">
+      <div className="bg-white border border-gray-100 rounded-[32px] p-6 md:p-12 min-h-[400px] shadow-none">
         {/* TAB: DESCRIPTION */}
         {activeTab === 'Description' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">
               Product Overview
             </h2>
-            <div className="prose prose-slate max-w-none text-gray-600 leading-relaxed">
-              <ReactMarkdown>
-                {product.description || 'No description available.'}
-              </ReactMarkdown>
-            </div>
+            <div
+              className={htmlContainerClass}
+              dangerouslySetInnerHTML={{
+                __html: product.description || 'No description available.',
+              }}
+            />
           </div>
         )}
 
-        {/* TAB: MEDICAL GUIDE (New) */}
+        {/* TAB: MEDICAL GUIDE */}
         {activeTab === 'Medical' && (
           <div className="space-y-10 animate-in fade-in duration-500">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">
               Clinical Information
             </h2>
-            <div className="grid grid-cols-1 gap-8">
+            <div className="grid grid-cols-1 gap-10">
               {medicalInfo.map((info, idx) => (
-                <div key={idx} className="space-y-3">
-                  <h4 className="text-[12px] font-black text-black uppercase tracking-widest border-l-4 border-black pl-3">
+                <div
+                  key={idx}
+                  className="space-y-4 border-l-2 border-gray-100 pl-6"
+                >
+                  <h4 className="text-[12px] font-black text-black uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 bg-(--color-primary-500) rounded-full"></span>
                     {info.label}
                   </h4>
-                  <div className="prose prose-sm max-w-none text-gray-600 pl-4">
-                    <ReactMarkdown>{info.value}</ReactMarkdown>
-                  </div>
+                  <div
+                    className={htmlContainerClass}
+                    dangerouslySetInnerHTML={{ __html: info.value }}
+                  />
                 </div>
               ))}
             </div>
@@ -181,13 +197,13 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
             <h2 className="text-2xl font-bold text-gray-900 mb-8 uppercase tracking-tight">
               Technical Data
             </h2>
-            <div className="space-y-0">
+            <div className="space-y-0 border-t border-gray-50">
               {specs.map((spec, idx) => (
                 <div
                   key={idx}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between w-full py-5 border-b border-gray-50 last:border-0 hover:bg-gray-50/50 px-2 transition-colors"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between w-full py-5 border-b border-gray-50 hover:bg-gray-50/30 px-4 transition-colors"
                 >
-                  <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest mb-1 sm:mb-0">
+                  <span className="text-[11px] text-gray-400 font-bold uppercase tracking-widest">
                     {spec.label}
                   </span>
                   <span className="text-[14px] font-bold text-gray-900 text-left sm:text-right uppercase">
@@ -199,24 +215,35 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
           </div>
         )}
 
-        {/* TAB: FAQ (New Dynamic Logic) */}
+        {/* TAB: FAQ */}
         {activeTab === 'FAQ' && (
-          <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="space-y-10 animate-in fade-in duration-500">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">
-              Frequently Asked Questions
+              Common Inquiries
             </h2>
             <div className="space-y-6">
               {parsedFaqs.map((faq, idx) => (
                 <div
                   key={idx}
-                  className="bg-gray-50 rounded-[24px] p-6 space-y-3 border border-gray-100"
+                  className="bg-gray-50/50 rounded-[24px] p-8 border border-gray-100 space-y-4"
                 >
-                  <h4 className="text-base font-bold text-black flex gap-3">
-                    <span className="text-gray-300">Q.</span> {faq.question}
-                  </h4>
-                  <p className="text-sm text-gray-600 leading-relaxed pl-7">
-                    {faq.answer}
-                  </p>
+                  <div className="flex gap-4">
+                    <span className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center font-black text-(--color-primary-500) shrink-0">
+                      Q
+                    </span>
+                    <h4 className="text-lg font-bold text-gray-900 pt-1">
+                      {faq.question}
+                    </h4>
+                  </div>
+                  <div className="flex gap-4">
+                    <span className="w-10 h-10 rounded-full bg-(--color-primary-50) flex items-center justify-center font-black text-(--color-primary-600) shrink-0 opacity-0 md:opacity-100 text-sm">
+                      A
+                    </span>
+                    <div
+                      className={htmlContainerClass + ' pt-1'}
+                      dangerouslySetInnerHTML={{ __html: faq.answer }}
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -226,7 +253,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
         {/* TAB: REVIEWS */}
         {activeTab === 'Reviews' && (
           <div className="space-y-12 animate-in fade-in duration-500">
-            <div className="flex flex-col md:flex-row items-center gap-10 md:gap-24">
+            <div className="flex flex-col md:flex-row items-center gap-10 md:gap-24 pb-12 border-b border-gray-50">
               <div className="text-center md:text-left">
                 <div className="flex items-baseline justify-center md:justify-start">
                   <span className="text-8xl font-bold text-gray-900">
@@ -236,7 +263,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                     /5
                   </span>
                 </div>
-                <p className="text-gray-500 font-bold text-lg mt-2">
+                <p className="text-gray-500 font-bold text-lg mt-2 tracking-tight">
                   ({totalCount} Total Reviews)
                 </p>
               </div>
@@ -256,7 +283,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                     <div className="flex-1 h-2 bg-gray-100 rounded-full relative overflow-hidden">
                       <div
                         className="absolute left-0 top-0 h-full bg-black rounded-full"
-                        style={{ width: `${stars === 5 ? 85 : 10}%` }}
+                        style={{ width: `${stars === 5 ? 85 : 5}%` }}
                       />
                     </div>
                   </div>
@@ -268,9 +295,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               <div className="flex justify-end">
                 <button
                   onClick={() => setShowReviewForm(true)}
-                  className="px-8 h-14 bg-[#1D3583] text-white rounded-full font-bold flex items-center gap-2 hover:brightness-110 transition-all cursor-pointer"
+                  className="px-10 h-14 bg-[#1D3583] text-white rounded-full font-bold uppercase text-[12px] tracking-widest flex items-center gap-2 hover:brightness-110 transition-all cursor-pointer shadow-none"
                 >
-                  <FiEdit3 /> Write a Review
+                  <FiEdit3 /> Post Feedback
                 </button>
               </div>
             )}
@@ -288,15 +315,15 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
             )}
 
             <div className="space-y-8">
-              <h3 className="text-2xl font-bold text-gray-900">
-                Recent User Feedback
+              <h3 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">
+                Recent Feedback
               </h3>
               {loading ? (
                 <div className="py-10 flex justify-center">
                   <div className="w-8 h-8 border-4 border-gray-100 border-t-black rounded-full animate-spin" />
                 </div>
               ) : reviews.length > 0 ? (
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 gap-6">
                   {reviews.map(review => (
                     <ReviewCard key={review.id} review={review} />
                   ))}
@@ -304,8 +331,8 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               ) : (
                 <div className="py-20 text-center bg-gray-50/50 rounded-[32px] border border-dashed border-gray-200">
                   <FiStar className="mx-auto text-gray-300 mb-4" size={48} />
-                  <h4 className="text-lg font-bold text-gray-900">
-                    No reviews yet for this product.
+                  <h4 className="text-lg font-bold text-gray-900 uppercase tracking-widest">
+                    No existing reviews
                   </h4>
                 </div>
               )}
@@ -313,8 +340,8 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               {/* Pagination */}
               <div className="pt-10 flex flex-col sm:flex-row items-center justify-between gap-6 border-t border-gray-50">
                 <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">
-                  Showing{' '}
-                  {totalCount > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0} to{' '}
+                  Displaying{' '}
+                  {totalCount > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0} -{' '}
                   {Math.min(currentPage * PAGE_SIZE, totalCount)} of{' '}
                   {totalCount}
                 </p>
@@ -322,7 +349,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
-                    className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
+                    className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 cursor-pointer shadow-none"
                   >
                     <FiChevronLeft />
                   </button>
@@ -331,7 +358,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                       <button
                         key={p}
                         onClick={() => handlePageChange(p)}
-                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer ${currentPage === p ? 'bg-black text-white' : 'hover:bg-gray-50 text-gray-600'}`}
+                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer shadow-none ${currentPage === p ? 'bg-black text-white' : 'hover:bg-gray-50 text-gray-600'}`}
                       >
                         {p}
                       </button>
@@ -340,7 +367,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                   <button
                     onClick={() => handlePageChange(currentPage + 1)}
                     disabled={currentPage === totalPages}
-                    className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 cursor-pointer"
+                    className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-30 cursor-pointer shadow-none"
                   >
                     <FiChevronRight />
                   </button>
