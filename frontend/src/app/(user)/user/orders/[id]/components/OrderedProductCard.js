@@ -25,7 +25,7 @@ export default function OrderedProductCard({ item, productInfo }) {
     item.product_description ||
     'Generic Information';
   const unitLabel =
-    productInfo?.unit_label || item.product_unit_label || 'Standard Pack';
+    productInfo?.unit_name || item.product_unit_name || 'Standard Pack';
   const displayDosage =
     item.dosage || item.product_dosage || productInfo?.dosage;
 

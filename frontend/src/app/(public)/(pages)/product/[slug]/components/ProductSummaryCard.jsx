@@ -83,24 +83,21 @@ const ProductSummaryCard = ({ product }) => {
 
   /**
    * Logic to determine the display unit (e.g., Strip, Bottle, Box)
-   * derived from the backend unit_label.
+   * derived from the backend unit_name.
    */
   const unitName = useMemo(() => {
-    const label = product?.unit_label || '';
-    if (label.includes('(') && label.includes(')')) {
-      const match = label.match(/\(([^)]+)\)/);
-      if (match) return match[1].replace(/\d+/g, '').trim();
-    }
-    return label.split(' ').pop() || 'Unit';
-  }, [product?.unit_label]);
+    const label = product?.unit_name || '';
+    // Extract the packaging type (first word) e.g. 'Strip' from 'Strip of 10 Tablets'
+    return label.split(' ')[0] || 'Unit';
+  }, [product?.unit_name]);
 
   const quantitySubtext = useMemo(() => {
     const unitsPerPackage = parseInt(
-      product?.unit_label?.match(/\d+/)?.[0] || 1,
+      product?.unit_name?.match(/\d+/)?.[0] || 1,
     );
     const pluralUnit = quantity > 1 ? `${unitName}s` : unitName;
     return `${quantity} ${pluralUnit} (${quantity * unitsPerPackage} Total Units)`;
-  }, [quantity, product?.unit_label, unitName]);
+  }, [quantity, product?.unit_name, unitName]);
 
   return (
     <div className="bg-white rounded-[32px] border border-gray-100 p-5 lg:p-5 xl:p-8 w-full space-y-4 lg:space-y-4 xl:space-y-7 shadow-none transition-all">
@@ -164,7 +161,7 @@ const ProductSummaryCard = ({ product }) => {
           )}
         </div>
         <p className="text-[11px] lg:text-[13px] xl:text-[18px] text-gray-500 font-bold uppercase tracking-tight">
-          Per {product?.unit_label || 'Unit'}
+          {product?.unit_name || 'Unit'}
         </p>
       </div>
 

@@ -197,6 +197,42 @@ class Ingredient(models.Model):
         super().save(*args, **kwargs)
 
 
+class Unit(models.Model):
+    """Medicine packaging unit (e.g. 'Strip of 10 Tablets', 'Bottle of 80ml Syrup')."""
+    unit_type = models.CharField(
+        max_length=100,
+        help_text="Packaging type e.g. 'Strip', 'Bottle', 'Vial', 'Box', 'Tube', 'Sachet'.",
+    )
+    content_type = models.CharField(
+        max_length=100,
+        help_text="What the package contains e.g. 'Tablets', 'Capsules', 'ml Syrup', 'gm Cream'.",
+    )
+    quantity = models.PositiveIntegerField(
+        help_text="Number of items or volume e.g. 10, 20, 80.",
+    )
+    slug = models.SlugField(max_length=200, unique=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "core_unit"
+        ordering = ["unit_type", "content_type", "quantity"]
+        unique_together = [("unit_type", "content_type", "quantity")]
+
+    @property
+    def name(self):
+        return f"{self.quantity} {self.content_type} (1 {self.unit_type})"
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, related_name="products")
     brand = models.ForeignKey(
@@ -237,10 +273,14 @@ class Product(models.Model):
     low_stock_threshold = models.PositiveIntegerField(default=5)
     is_active = models.BooleanField(default=True)
     # Medicine-specific: packaging and dosage
-    unit_label = models.CharField(
-        max_length=120,
+    unit = models.ForeignKey(
+        "Unit",
+        on_delete=models.SET_NULL,
+        null=True,
         blank=True,
-        help_text="e.g. '10 Tablets (1 Strip)', '20 Tablets (2 Strip)'.",
+        related_name="products",
+        db_index=True,
+        help_text="Packaging unit e.g. 'Strip of 10 Tablets'.",
     )
     dosage = models.CharField(
         max_length=50,

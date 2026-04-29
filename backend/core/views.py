@@ -35,7 +35,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
+from .models import Brand, Category, DeliveryDuration, Ingredient, Unit, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -43,6 +43,7 @@ from .serializers import (
     CategoryMenuSerializer,
     CategorySelectionUpdateSerializer,
     IngredientSerializer,
+    UnitSerializer,
     ProductListSerializer,
     ProductDetailSerializer,
     ProductWriteSerializer,
@@ -559,6 +560,22 @@ class IngredientViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
 
+# ---- Unit (medicine packaging: strip, bottle, etc.). List: any; write: Pharmacy Admin / Super ----
+class UnitViewSet(viewsets.ModelViewSet):
+    queryset = Unit.objects.all()
+    serializer_class = UnitSerializer
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_fields = ["is_active"]
+    search_fields = ["name", "slug"]
+    lookup_field = "slug"
+    lookup_url_kwarg = "slug"
+
+    def get_permissions(self):
+        if self.action in ("list", "retrieve"):
+            return [AllowAnyIncludingGuest()]
+        return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
+
+
 # ---- Product (catalog search & filter per PRODUCT_CATALOG.md). Inventory = quantity_in_stock ----
 @extend_schema_view(
     list=extend_schema(
@@ -589,7 +606,7 @@ class IngredientViewSet(viewsets.ModelViewSet):
     ),
 )
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related("category", "brand", "ingredient").prefetch_related("images", "dosage_options").all()
+    queryset = Product.objects.select_related("category", "brand", "ingredient", "unit").prefetch_related("images", "dosage_options").all()
     filterset_class = ProductFilter
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
@@ -1442,7 +1459,7 @@ class CartItemViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         cart = get_or_create_cart(self.request.user)
-        return CartItem.objects.filter(cart=cart).select_related("product")
+        return CartItem.objects.filter(cart=cart).select_related("product", "product__unit")
 
     def partial_update(self, request, pk=None):
         item = self.get_object()

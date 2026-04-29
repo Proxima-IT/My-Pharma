@@ -15,6 +15,7 @@ import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
 import { useBrands } from '@/app/(pharmacy-owner)/hooks/useBrands';
 import { useCategories } from '@/app/(pharmacy-owner)/hooks/useCategories';
 import { useIngredientAdmin } from '@/app/(admin)/hooks/useIngredientAdmin';
+import { useUnitAdmin } from '@/app/(admin)/hooks/useUnitAdmin';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 // Modular Tab Imports
@@ -38,6 +39,7 @@ function NewProductContent() {
   const { brands, getBrands } = useBrands();
   const { categories, getCategories } = useCategories();
   const { ingredients, fetchIngredients } = useIngredientAdmin();
+  const { units, fetchUnits } = useUnitAdmin();
 
   // 1. Core Form State
   const [activeTab, setActiveTab] = useState('GENERAL');
@@ -62,6 +64,7 @@ function NewProductContent() {
     requires_prescription: false,
     is_active: true,
     is_generic: false,
+    unit: '',
     indications: '',
     therapeutic_class: '',
     pharmacology: '',
@@ -84,7 +87,8 @@ function NewProductContent() {
     getBrands(token);
     getCategories(token);
     fetchIngredients({ page_size: 200 });
-  }, [getBrands, getCategories, fetchIngredients]);
+    fetchUnits({ page_size: 200 });
+  }, [getBrands, getCategories, fetchIngredients, fetchUnits]);
 
   // --- Handlers ---
   const handleInputChange = e => {
@@ -125,6 +129,8 @@ function NewProductContent() {
           .map(d => d.trim())
           .filter(Boolean)
           .forEach(v => data.append('dosages', v));
+      } else if (key === 'unit') {
+        if (formData.unit) data.append('unit', formData.unit);
       } else {
         data.append(key, formData[key]);
       }
@@ -207,6 +213,7 @@ function NewProductContent() {
             brands={brands}
             categories={categories}
             ingredients={ingredients}
+            units={units}
           />
         )}
         {activeTab === 'PRICING' && (

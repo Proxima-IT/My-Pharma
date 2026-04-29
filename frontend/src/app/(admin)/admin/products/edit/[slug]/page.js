@@ -15,6 +15,7 @@ import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
 import { useBrands } from '@/app/(pharmacy-owner)/hooks/useBrands';
 import { useCategories } from '@/app/(pharmacy-owner)/hooks/useCategories';
 import { useIngredientAdmin } from '@/app/(admin)/hooks/useIngredientAdmin';
+import { useUnitAdmin } from '@/app/(admin)/hooks/useUnitAdmin';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
@@ -57,6 +58,7 @@ function EditProductContent({ slug }) {
   const { brands, getBrands } = useBrands();
   const { categories, getCategories } = useCategories();
   const { ingredients, fetchIngredients } = useIngredientAdmin();
+  const { units, fetchUnits } = useUnitAdmin();
 
   // 1. Core Component States
   const [activeTab, setActiveTab] = useState('GENERAL');
@@ -82,6 +84,7 @@ function EditProductContent({ slug }) {
     requires_prescription: false,
     is_active: true,
     is_generic: false,
+    unit: '',
     indications: '',
     therapeutic_class: '',
     pharmacology: '',
@@ -105,8 +108,9 @@ function EditProductContent({ slug }) {
     getBrands(token);
     getCategories(token);
     fetchIngredients({ page_size: 100 });
+    fetchUnits({ page_size: 200 });
     if (slug) fetchProductBySlug(slug);
-  }, [slug, getBrands, getCategories, fetchIngredients, fetchProductBySlug]);
+  }, [slug, getBrands, getCategories, fetchIngredients, fetchUnits, fetchProductBySlug]);
 
   // Sync state with fetched product details
   useEffect(() => {
@@ -127,6 +131,7 @@ function EditProductContent({ slug }) {
         requires_prescription: productDetails.requires_prescription || false,
         is_active: productDetails.is_active || true,
         is_generic: productDetails.is_generic || false,
+        unit: productDetails.unit || '',
         indications: productDetails.indications || '',
         therapeutic_class: productDetails.therapeutic_class || '',
         pharmacology: productDetails.pharmacology || '',
@@ -323,6 +328,7 @@ function EditProductContent({ slug }) {
             brands={brands}
             categories={categories}
             ingredients={ingredients}
+            units={units}
           />
         )}
         {activeTab === 'PRICING' && (

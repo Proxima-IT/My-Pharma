@@ -81,6 +81,7 @@ const AdminSidebar = () => {
           href: '/admin/ingredients',
         },
         { name: 'Company Registry', icon: <FiAward />, href: '/admin/brands' },
+        { name: 'Unit Types', icon: <FiPackage />, href: '/admin/units' },
         {
           name: 'Sub-categories',
           icon: <FiGrid />,

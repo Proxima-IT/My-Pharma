@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import RichTextEditor from '../RichTextEditor';
 
 // Tailwind style constants for industrial "Sharp" design
@@ -19,7 +19,39 @@ export default function BasicInfoTab({
   brands,
   categories,
   ingredients,
+  units,
 }) {
+  // ── Cascading Unit Selection ─────────────────────────────────────────
+  const [selectedUnitType, setSelectedUnitType] = useState('');
+
+  // Derive unique unit types from available units
+  const unitTypes = useMemo(() => {
+    if (!units?.results) return [];
+    const types = [...new Set(units.results.map(u => u.unit_type))];
+    return types.sort();
+  }, [units]);
+
+  // Filter units by selected type
+  const filteredUnits = useMemo(() => {
+    if (!units?.results || !selectedUnitType) return [];
+    return units.results.filter(u => u.unit_type === selectedUnitType);
+  }, [units, selectedUnitType]);
+
+  // On edit: auto-select the unit type when formData.unit is pre-filled
+  useEffect(() => {
+    if (formData.unit && units?.results && !selectedUnitType) {
+      const match = units.results.find(u => u.id === Number(formData.unit));
+      if (match) setSelectedUnitType(match.unit_type);
+    }
+  }, [formData.unit, units, selectedUnitType]);
+
+  const handleUnitTypeChange = e => {
+    const newType = e.target.value;
+    setSelectedUnitType(newType);
+    // Reset the unit selection when type changes
+    handleInputChange({ target: { name: 'unit', value: '' } });
+  };
+
   /**
    * Adapts the RichTextEditor's direct value change to the parent's
    * generic handleInputChange event-based logic.
@@ -104,6 +136,58 @@ export default function BasicInfoTab({
               </option>
             ))}
           </select>
+        </div>
+
+        {/* ── Cascading Unit Selection ─────────────────────────────── */}
+        {/* Step 1: Unit Type */}
+        <div>
+          <label className={labelClass}>Packaging Type</label>
+          <select
+            className={inputClass}
+            value={selectedUnitType}
+            onChange={handleUnitTypeChange}
+          >
+            <option value="">Select Type (Optional)</option>
+            {unitTypes.map(type => (
+              <option key={type} value={type}>
+                {type.toUpperCase()}
+              </option>
+            ))}
+          </select>
+          <p className="text-[9px] font-bold text-gray-300 mt-2 uppercase tracking-widest">
+            E.g. Strip, Bottle, Tube, Inhaler, Vial
+          </p>
+        </div>
+
+        {/* Step 2: Specific Unit (filtered by type) */}
+        <div>
+          <label className={labelClass}>Unit Quantity</label>
+          <select
+            name="unit"
+            className={`${inputClass} ${!selectedUnitType ? 'opacity-40 pointer-events-none' : ''}`}
+            value={formData.unit}
+            onChange={handleInputChange}
+            disabled={!selectedUnitType}
+          >
+            <option value="">
+              {selectedUnitType
+                ? `Select ${selectedUnitType} Variant`
+                : 'Select Type First'}
+            </option>
+            {filteredUnits.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.quantity} {u.content_type.toUpperCase()}
+              </option>
+            ))}
+          </select>
+          {formData.unit && units?.results && (
+            <p className="text-[9px] font-bold text-green-600 mt-2 uppercase tracking-widest">
+              ✓{' '}
+              {units.results
+                .find(u => u.id === Number(formData.unit))
+                ?.name?.toUpperCase() || ''}
+            </p>
+          )}
         </div>
       </div>
 

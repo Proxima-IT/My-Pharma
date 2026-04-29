@@ -13,6 +13,7 @@ from .models import (
     Category,
     DeliveryDuration,
     Ingredient,
+    Unit,
     Product,
     ProductImage,
     ProductDosage,
@@ -299,6 +300,19 @@ class IngredientSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "slug", "created_at", "updated_at")
 
 
+# ---- Unit (medicine packaging) ----
+class UnitSerializer(serializers.ModelSerializer):
+    name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Unit
+        fields = ("id", "unit_type", "content_type", "quantity", "name", "slug", "is_active", "created_at", "updated_at")
+        read_only_fields = ("id", "name", "slug", "created_at", "updated_at")
+
+    def get_name(self, obj):
+        return obj.name
+
+
 # ---- Product ----
 def _product_image_urls(product, request=None):
     """Return list of absolute image URLs for product.images (ordered)."""
@@ -316,6 +330,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
+    unit_name = serializers.SerializerMethodField()
     is_low_stock = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
@@ -328,11 +343,14 @@ class ProductListSerializer(serializers.ModelSerializer):
             "ingredient", "ingredient_name", "requires_prescription", "is_generic",
             "price", "original_price", "discount_percentage", "image",
             "images",
-            "unit_label", "dosage", "dosages",
+            "unit", "unit_name", "dosage", "dosages",
             "rating_avg", "review_count",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
             "created_at", "updated_at",
         )
+
+    def get_unit_name(self, obj):
+        return obj.unit.name if obj.unit else None
 
     def get_images(self, obj):
         return _product_image_urls(obj, self.context.get("request"))
@@ -347,6 +365,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
+    unit_name = serializers.SerializerMethodField()
     is_low_stock = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)
     images = serializers.SerializerMethodField()
@@ -360,7 +379,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "ingredient", "ingredient_name", "requires_prescription", "is_generic",
             "description", "price", "original_price", "discount_percentage", "image",
             "images",
-            "unit_label", "dosage", "dosages",
+            "unit", "unit_name", "dosage", "dosages",
             "rating_avg", "review_count",
             "key_benefits", "specifications",
             "indications", "therapeutic_class", "pharmacology", "dosage_administration",
@@ -371,6 +390,9 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "generic_alternatives",
             "created_at", "updated_at",
         )
+
+    def get_unit_name(self, obj):
+        return obj.unit.name if obj.unit else None
 
     def get_images(self, obj):
         return _product_image_urls(obj, self.context.get("request"))
@@ -418,7 +440,7 @@ class ProductWriteSerializer(serializers.ModelSerializer):
         fields = (
             "name", "slug", "category", "brand", "ingredient", "requires_prescription", "is_generic",
             "description", "price", "original_price", "image",
-            "unit_label", "dosage",
+            "unit", "dosage",
             "rating_avg", "review_count",
             "key_benefits", "specifications",
             "indications", "therapeutic_class", "pharmacology", "dosage_administration",
@@ -801,7 +823,7 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_slug = serializers.CharField(source="product.slug", read_only=True)
     product_description = serializers.CharField(source="product.description", read_only=True)
     product_original_price = serializers.DecimalField(source="product.original_price", max_digits=12, decimal_places=2, read_only=True, allow_null=True)
-    product_unit_label = serializers.CharField(source="product.unit_label", read_only=True)
+    product_unit_name = serializers.SerializerMethodField()
     product_dosage = serializers.CharField(source="product.dosage", read_only=True)
     image_url = serializers.SerializerMethodField()
     current_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
@@ -818,7 +840,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_slug",
             "product_description",
             "product_original_price",
-            "product_unit_label",
+            "product_unit_name",
             "product_dosage",
             "dosage",
             "image_url",
@@ -835,7 +857,7 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_slug",
             "product_description",
             "product_original_price",
-            "product_unit_label",
+            "product_unit_name",
             "product_dosage",
             "image_url",
             "current_price",
@@ -845,6 +867,9 @@ class CartItemSerializer(serializers.ModelSerializer):
 
     def get_image_url(self, obj):
         return _product_image_url(obj.product, self.context.get("request"))
+
+    def get_product_unit_name(self, obj):
+        return obj.product.unit.name if obj.product and obj.product.unit else None
 
 
 class AddToCartSerializer(serializers.Serializer):

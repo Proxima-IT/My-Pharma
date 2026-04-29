@@ -71,7 +71,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       { label: 'Category', value: product.category_name || 'N/A' },
       { label: 'Therapeutic Class', value: product.therapeutic_class || 'N/A' },
       { label: 'Storage', value: product.storage_conditions || 'N/A' },
-      { label: 'Unit / Pack Size', value: product.unit_label || 'N/A' },
+      { label: 'Unit / Pack Size', value: product.unit_name || 'N/A' },
     ];
     const customSpecs = Object.entries(product.specifications || {}).map(
       ([key, val]) => ({

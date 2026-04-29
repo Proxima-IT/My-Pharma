@@ -31,7 +31,7 @@ export default function OrderedProductCard({ item }) {
           {item.product_name}
         </h3>
         <p className="text-xs text-(--color-text-secondary) font-bold uppercase tracking-wide mb-4">
-          {item.product_unit_label || 'Standard Unit'}
+          {item.product_unit_name || 'Standard Unit'}
         </p>
 
         <div className="flex flex-wrap gap-4 font-mono text-[11px] font-bold text-(--color-text-secondary) uppercase">

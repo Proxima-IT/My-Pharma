@@ -128,7 +128,7 @@ const DealsSection = () => {
                     </p>
                   </div>
                   <p className="text-[11px] text-gray-400 font-bold uppercase mt-2 tracking-widest">
-                    {product.unit_label || 'Standard Pack'}
+                    {product.unit_name || 'Standard Pack'}
                   </p>
                 </div>
 
