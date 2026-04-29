@@ -42,7 +42,7 @@ from .serializers import (
     CategoryTreeSerializer,
     CategoryMenuSerializer,
     CategorySelectionUpdateSerializer,
-    CategoryLinkProductsSerializer,
+    ProductLinkCategorySerializer,
     IngredientSerializer,
     UnitSerializer,
     ProductListSerializer,
@@ -529,32 +529,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
             return self._list_featured_categories(request)
         return self._replace_featured_categories(request)
 
-    @extend_schema(
-        methods=["POST"],
-        tags=["Categories"],
-        summary="Link specific products to this category",
-        request=CategoryLinkProductsSerializer,
-        responses={200: "Products linked successfully"}
-    )
-    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="link-products")
-    def link_products(self, request, slug=None):
-        """
-        Link a list of specific products to this category from the admin panel.
-        """
-        category = self.get_object()
-        serializer = CategoryLinkProductsSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        product_ids = serializer.validated_data["product_ids"]
-        
-        # Update the category of these products
-        Product.objects.filter(id__in=product_ids).update(category=category, updated_at=timezone.now())
-        
-        return Response(
-            {"detail": f"Successfully linked {len(product_ids)} products to category {category.name}."}, 
-            status=status.HTTP_200_OK
-        )
-
-
 # ---- Brand (autocomplete for product search). List: any; write: Pharmacy Admin / Super ----
 class BrandViewSet(viewsets.ModelViewSet):
     queryset = Brand.objects.all()
@@ -689,6 +663,31 @@ class ProductViewSet(viewsets.ModelViewSet):
     def partial_update(self, request, *args, **kwargs):
         kwargs["partial"] = True
         return self.update(request, *args, **kwargs)
+
+    @extend_schema(
+        methods=["POST"],
+        tags=["Products"],
+        summary="Link this product to a specific category",
+        request=ProductLinkCategorySerializer,
+        responses={200: "Category linked successfully"}
+    )
+    @action(detail=True, methods=["post"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="link-category")
+    def link_category(self, request, slug=None):
+        """
+        Link this product to a specific category from the admin panel.
+        """
+        product = self.get_object()
+        serializer = ProductLinkCategorySerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_id = serializer.validated_data["category_id"]
+        
+        product.category_id = category_id
+        product.save(update_fields=["category", "updated_at"])
+        
+        return Response(
+            {"detail": f"Successfully linked product {product.name} to category ID {category_id}."}, 
+            status=status.HTTP_200_OK
+        )
 
     @action(detail=True, methods=["get", "post"], permission_classes=[IsAuthenticated, IsPharmacyAdminOrSuper], url_path="images")
     def images(self, request, slug=None):

@@ -210,20 +210,17 @@ class CategorySelectionUpdateSerializer(serializers.Serializer):
         return deduped
 
 
-class CategoryLinkProductsSerializer(serializers.Serializer):
-    """Assign a list of products to a specific category."""
-    product_ids = serializers.ListField(
-        child=serializers.IntegerField(min_value=1),
-        allow_empty=False,
-        help_text="List of product IDs to link to this category.",
+class ProductLinkCategorySerializer(serializers.Serializer):
+    """Assign a specific category to a product."""
+    category_id = serializers.IntegerField(
+        min_value=1,
+        help_text="ID of the category to link to this product.",
     )
 
-    def validate_product_ids(self, value):
-        from .models import Product
-        existing_ids = set(Product.objects.filter(id__in=value).values_list("id", flat=True))
-        missing_ids = [pid for pid in value if pid not in existing_ids]
-        if missing_ids:
-            raise serializers.ValidationError(f"Products not found for ids: {missing_ids}")
+    def validate_category_id(self, value):
+        from .models import Category
+        if not Category.objects.filter(id=value).exists():
+            raise serializers.ValidationError(f"Category not found for id: {value}")
         return value
 
 
