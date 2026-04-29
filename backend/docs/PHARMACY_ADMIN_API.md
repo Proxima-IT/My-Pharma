@@ -46,6 +46,7 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 | POST | `/api/categories/` | Create category. |
 | PUT / PATCH | `/api/categories/{slug}/` | Update category. |
 | DELETE | `/api/categories/{slug}/` | Delete category. |
+| POST | `/api/categories/{slug}/link-products/` | Link a list of specific products to this category (admin). |
 
 **Response fields:** `id`, `parent`, `sidebar_category`, `sidebar_category_title`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only), `created_at`, `updated_at`.
 
@@ -58,6 +59,15 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 ```
 
 Categories are saved in the given order (`sidebar_order` / `featured_order`).
+
+**Link Products body (`POST /{slug}/link-products/`):**
+
+```json
+{
+  "product_ids": [15, 42, 8]
+}
+```
+Assigns the listed products to this category.
 
 **Create/Update:** Use **multipart/form-data** when sending `image`; otherwise **application/json** is fine.
 

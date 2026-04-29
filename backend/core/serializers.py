@@ -209,6 +209,23 @@ class CategorySelectionUpdateSerializer(serializers.Serializer):
         return deduped
 
 
+class CategoryLinkProductsSerializer(serializers.Serializer):
+    """Assign a list of products to a specific category."""
+    product_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+        help_text="List of product IDs to link to this category.",
+    )
+
+    def validate_product_ids(self, value):
+        from .models import Product
+        existing_ids = set(Product.objects.filter(id__in=value).values_list("id", flat=True))
+        missing_ids = [pid for pid in value if pid not in existing_ids]
+        if missing_ids:
+            raise serializers.ValidationError(f"Products not found for ids: {missing_ids}")
+        return value
+
+
 # ---- Sidebar category (left sidebar: image + title) ----
 class SidebarCategorySerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
