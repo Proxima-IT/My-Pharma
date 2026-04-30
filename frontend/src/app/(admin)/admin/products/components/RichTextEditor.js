@@ -346,16 +346,6 @@ const RichTextEditor = ({
         editor={editor}
         className="border-2 border-gray-100 border-t-0"
       />
-
-      {/* Registry Metadata */}
-      <div className="mt-2 flex justify-between items-center px-1">
-        <span className="font-mono text-[9px] font-black text-gray-300 uppercase tracking-widest">
-          Engine: TipTap_React_19_Optimized
-        </span>
-        <span className="font-mono text-[9px] font-black text-[#3A5A40] uppercase tracking-widest bg-[#E8F0EA] px-2 py-0.5">
-          Output: Verified_HTML_Advanced
-        </span>
-      </div>
     </div>
   );
 };

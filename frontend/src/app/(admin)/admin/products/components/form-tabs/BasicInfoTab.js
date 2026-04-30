@@ -133,7 +133,7 @@ export default function BasicInfoTab({
             onChange={handleInputChange}
             required
           >
-            <option value="">Select DNA Match</option>
+            <option value="">Select Ingredient</option>
             {ingredients?.results?.map(ing => (
               <option key={ing.id} value={ing.id}>
                 {ing.name.toUpperCase()}

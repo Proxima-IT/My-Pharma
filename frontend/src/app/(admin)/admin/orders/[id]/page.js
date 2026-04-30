@@ -18,7 +18,7 @@ import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 /**
  * AdminOrderDetailsPage
  * Strictly follows the Super Admin "Sharp" design system.
- * Updated: Included Delivery Type and Extra Charge breakdown in the financial ledger.
+ * Updated: Displaying RAW database shipping address record directly in the address card.
  */
 export default function AdminOrderDetailsPage({ params }) {
   const router = useRouter();
@@ -245,13 +245,13 @@ export default function AdminOrderDetailsPage({ params }) {
             </div>
           </div>
 
-          {/* 4. Shipping Address */}
+          {/* 4. Shipping Address (RAW DATA) */}
           <div className="bg-white border border-gray-100 p-8">
             <h3 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2 mb-4">
-              <FiMapPin className="text-[#3A5A40]" /> Delivery Address
+              <FiMapPin className="text-[#3A5A40]" /> Shipping Address
             </h3>
             <p className="text-sm text-[#1B1B1B] leading-relaxed font-bold uppercase tracking-tight">
-              {parsedInfo.address}
+              {orderDetails.shipping_address}
             </p>
           </div>
         </div>

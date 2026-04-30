@@ -167,28 +167,6 @@ const ProductSummaryCard = ({ product }) => {
 
       <div className="h-px bg-gray-100 w-full" />
 
-      {/* 6. Dosage Selection */}
-      <div className="space-y-2 lg:space-y-3 xl:space-y-4">
-        <p className="text-sm lg:text-[15px] xl:text-[18px] font-bold text-gray-900 uppercase">
-          Available Dosage
-        </p>
-        <div className="flex gap-2 xl:gap-3 flex-wrap">
-          {availableDosages.map(dose => (
-            <button
-              key={dose}
-              onClick={() => setSelectedDosage(dose)}
-              className={`h-9 lg:h-10 xl:h-[54px] px-4 lg:px-5 xl:px-8 rounded-full text-[11px] lg:text-[13px] xl:text-[16px] font-bold border transition-all cursor-pointer shadow-none ${
-                selectedDosage === dose
-                  ? 'bg-[#EEF2FF] text-[#1D3583] border-[#EEF2FF]'
-                  : 'bg-white text-gray-900 border-gray-100 hover:border-gray-300'
-              }`}
-            >
-              {dose}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* 7. Quantity Selector */}
       <div className="space-y-2 lg:space-y-3 xl:space-y-4">
         <p className="text-sm lg:text-[15px] xl:text-[18px] font-bold text-gray-900 uppercase">

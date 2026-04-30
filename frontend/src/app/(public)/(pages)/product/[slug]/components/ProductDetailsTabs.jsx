@@ -21,6 +21,7 @@ import ReviewCard from './ReviewCard';
  * ProductDetailsTabs Component
  * Refactored: Integrated rehype-raw with react-markdown to support embedded HTML (like colored spans).
  * Features: Structured Medical Guide, Dynamic Specifications, and FAQ Parsing.
+ * Fix: Corrected property name from unit_label to unit_name to match Backend API response.
  */
 const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const [activeTab, setActiveTab] = useState('Description');
@@ -77,7 +78,8 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       { label: 'Category', value: product.category_name || 'N/A' },
       { label: 'Therapeutic Class', value: product.therapeutic_class || 'N/A' },
       { label: 'Storage', value: product.storage_conditions || 'N/A' },
-      { label: 'Unit / Pack Size', value: product.unit_label || 'N/A' },
+      // FIXED: Switched from unit_label to unit_name as per API Audit
+      { label: 'Unit / Pack Size', value: product.unit_name || 'N/A' },
     ];
     const customSpecs = Object.entries(product.specifications || {}).map(
       ([key, val]) => ({ label: key, value: val }),
@@ -360,7 +362,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                       <button
                         key={p}
                         onClick={() => handlePageChange(p)}
-                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer shadow-none ${currentPage === p ? 'bg-black text-white' : 'hover:bg-gray-50 text-gray-600 shadow-none'}`}
+                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer ${currentPage === p ? 'bg-black text-white' : 'hover:bg-gray-50 text-gray-600 shadow-none'}`}
                       >
                         {p}
                       </button>

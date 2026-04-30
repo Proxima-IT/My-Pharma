@@ -19,7 +19,8 @@ import OrderedProductCard from './components/OrderedProductCard';
 
 /**
  * OrderDetailsPage (Order Tracking)
- * Updated: Implemented detailed delivery fee breakdown (Base + Option Charge) in Summary.
+ * Updated: Fixed Address Parsing logic to handle dynamic commas in the street address.
+ * Logic: Maps District/Thana using fixed indices from the start of the string instead of the end.
  * Design: White background, 1px Borders, Black text, Thin labels, Rounded-[32px].
  */
 export default function OrderDetailsPage({ params }) {
@@ -38,6 +39,13 @@ export default function OrderDetailsPage({ params }) {
     if (resolvedParams?.id) loadOrderDetails(resolvedParams.id);
   }, [resolvedParams?.id, loadOrderDetails]);
 
+  /**
+   * addressDetails
+   * Robust Parsing Logic:
+   * Expects: [0]Name, [1]Email, [2]Phone, [3]District, [4]Thana, [5+]Street Address
+   * Using fixed indices from the start prevents extra commas in the 'Address' field from
+   * shifting the District/Thana values.
+   */
   const addressDetails = useMemo(() => {
     if (!orderDetails?.shipping_address)
       return {
@@ -49,15 +57,18 @@ export default function OrderDetailsPage({ params }) {
         thana: 'N/A',
         cleanAddress: 'N/A',
       };
+
     const parts = orderDetails.shipping_address.split(',').map(p => p.trim());
+
     return {
       fullName: parts[0] || 'N/A',
       email: parts[1] || 'N/A',
       phone: parts[2] || 'N/A',
-      gender: 'Male',
-      district: parts[parts.length - 2] || 'N/A',
-      thana: parts[parts.length - 3] || 'N/A',
-      cleanAddress: parts.slice(3).join(', ') || 'N/A',
+      district: parts[3] || 'N/A',
+      thana: parts[4] || 'N/A',
+      gender: 'Male', // Maintained from original logic
+      // Slice from index 5 onwards to capture full street address regardless of internal commas
+      cleanAddress: parts.slice(5).join(', ') || 'N/A',
     };
   }, [orderDetails]);
 
@@ -93,7 +104,6 @@ export default function OrderDetailsPage({ params }) {
   const activeIndex = steps.findIndex(s => s.status === currentStatus);
   const isCancelled = currentStatus === 'CANCELLED';
 
-  // Fallback subtotal calculation for older orders
   const subtotalCalculated = useMemo(() => {
     return (
       orderDetails?.items?.reduce(
@@ -141,15 +151,25 @@ export default function OrderDetailsPage({ params }) {
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-6 md:gap-10 lg:gap-16 w-full lg:w-auto">
             <div className="text-left sm:text-center md:text-right">
               {(() => {
-                const ps = (orderDetails.payment_status || 'PENDING').toUpperCase();
-                if (isCancelled) return (
-                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-red-50 text-red-600">Cancelled</span>
-                );
-                if (ps === 'PAID') return (
-                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-[#F0FDF4] text-[#10B981]">Paid</span>
-                );
+                const ps = (
+                  orderDetails.payment_status || 'PENDING'
+                ).toUpperCase();
+                if (isCancelled)
+                  return (
+                    <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-red-50 text-red-600">
+                      Cancelled
+                    </span>
+                  );
+                if (ps === 'PAID')
+                  return (
+                    <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-[#F0FDF4] text-[#10B981]">
+                      Paid
+                    </span>
+                  );
                 return (
-                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-amber-50 text-amber-700">Unpaid</span>
+                  <span className="px-4 py-1.5 text-[11px] md:text-[13px] font-bold rounded-full uppercase bg-amber-50 text-amber-700">
+                    Unpaid
+                  </span>
                 );
               })()}
               <p className="text-[10px] md:text-[12px] font-light uppercase tracking-widest mt-2">
@@ -158,7 +178,11 @@ export default function OrderDetailsPage({ params }) {
             </div>
             <div className="text-left sm:text-center md:text-right">
               <span className="px-4 py-1.5 bg-gray-50 text-black text-[11px] md:text-[13px] font-bold rounded-full uppercase">
-                {orderDetails.payment_method === 'ONLINE' ? 'Online' : orderDetails.payment_method === 'COD' ? 'Cash on Delivery' : (orderDetails.payment_method || 'COD')}
+                {orderDetails.payment_method === 'ONLINE'
+                  ? 'Online'
+                  : orderDetails.payment_method === 'COD'
+                    ? 'Cash on Delivery'
+                    : orderDetails.payment_method || 'COD'}
               </span>
               <p className="text-[10px] md:text-[12px] font-light uppercase tracking-widest mt-2">
                 Payment Type
@@ -276,15 +300,16 @@ export default function OrderDetailsPage({ params }) {
                   </div>
                 )}
 
-                {/* Delivery Fee - single row */}
                 <div className="flex justify-between text-sm md:text-[17px] font-bold">
                   <span className="text-black font-light uppercase tracking-widest">
                     {orderDetails.duration_name || 'Delivery Fee'}
                   </span>
                   <span className="font-bold">
-                    {parseFloat(orderDetails.delivery_fee) > 0
-                      ? formatCurrency(orderDetails.delivery_fee)
-                      : <span className="text-emerald-500">FREE</span>}
+                    {parseFloat(orderDetails.delivery_fee) > 0 ? (
+                      formatCurrency(orderDetails.delivery_fee)
+                    ) : (
+                      <span className="text-emerald-500">FREE</span>
+                    )}
                   </span>
                 </div>
 
@@ -296,31 +321,37 @@ export default function OrderDetailsPage({ params }) {
                   </span>
                 </div>
 
-                {/* Pay Now button for unpaid online orders */}
-                {(orderDetails.payment_status || 'PENDING').toUpperCase() !== 'PAID' &&
-                  (orderDetails.payment_method || '').toUpperCase() === 'ONLINE' &&
+                {(orderDetails.payment_status || 'PENDING').toUpperCase() !==
+                  'PAID' &&
+                  (orderDetails.payment_method || '').toUpperCase() ===
+                    'ONLINE' &&
                   !isCancelled && (
-                  <button
-                    onClick={async () => {
-                      setPayLoading(true);
-                      try {
-                        const token = localStorage.getItem('access_token');
-                        const data = await orderApi.payOrder(token, orderDetails.id);
-                        if (data.gateway_url) {
-                          window.location.href = data.gateway_url;
+                    <button
+                      onClick={async () => {
+                        setPayLoading(true);
+                        try {
+                          const token = localStorage.getItem('access_token');
+                          const data = await orderApi.payOrder(
+                            token,
+                            orderDetails.id,
+                          );
+                          if (data.gateway_url) {
+                            window.location.href = data.gateway_url;
+                          }
+                        } catch (err) {
+                          alert(
+                            err.message || 'Payment failed. Please try again.',
+                          );
+                        } finally {
+                          setPayLoading(false);
                         }
-                      } catch (err) {
-                        alert(err.message || 'Payment failed. Please try again.');
-                      } finally {
-                        setPayLoading(false);
-                      }
-                    }}
-                    disabled={payLoading}
-                    className="w-full mt-4 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-2xl transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {payLoading ? 'Initializing Payment...' : '💳 Pay Now'}
-                  </button>
-                )}
+                      }}
+                      disabled={payLoading}
+                      className="w-full mt-4 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg rounded-2xl transition-all disabled:opacity-50 cursor-pointer"
+                    >
+                      {payLoading ? 'Initializing Payment...' : '💳 Pay Now'}
+                    </button>
+                  )}
               </div>
             </div>
           </div>

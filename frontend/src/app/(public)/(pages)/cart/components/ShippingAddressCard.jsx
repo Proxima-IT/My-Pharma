@@ -110,7 +110,7 @@ const ShippingAddressCard = ({ onAddressSelect }) => {
       <div className="w-full space-y-4 px-2 sm:px-4">
         <DetailRow label="PHONE NUMBER" value={currentAddress.phone} />
         <DetailRow label="GENDER" value={currentAddress.gender} />
-        <DetailRow label="DEISTIC" value={currentAddress.deistic} />
+        <DetailRow label="DISTRICT" value={currentAddress.deistic} />
         <DetailRow label="THANA" value={currentAddress.thana} />
         <DetailRow label="FULL ADDRESS" value={currentAddress.fullAddress} />
       </div>

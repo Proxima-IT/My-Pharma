@@ -28,6 +28,17 @@ export default function StockPriceTab({ formData, handleInputChange }) {
       {/* Price and Stock Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div>
+          <label className={labelClass}>Original Price (৳)</label>
+          <input
+            name="original_price"
+            type="number"
+            step="0.01"
+            className={inputClass}
+            value={formData.original_price}
+            onChange={handleInputChange}
+          />
+        </div>
+        <div>
           <label className={labelClass}>Discounted Price (৳)</label>
           <input
             name="price"
@@ -37,17 +48,6 @@ export default function StockPriceTab({ formData, handleInputChange }) {
             value={formData.price}
             onChange={handleInputChange}
             required
-          />
-        </div>
-        <div>
-          <label className={labelClass}>Original Price (৳)</label>
-          <input
-            name="original_price"
-            type="number"
-            step="0.01"
-            className={inputClass}
-            value={formData.original_price}
-            onChange={handleInputChange}
           />
         </div>
         <div>
