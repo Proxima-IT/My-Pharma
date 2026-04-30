@@ -243,7 +243,7 @@ Product `rating_avg` and `review_count` are updated automatically when reviews a
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/products/` | Paginated list. Query: `category`, `is_active`, `brand_id`, `ingredient_id`, `price_min`, `price_max`, `requires_prescription`, `search`, `ordering`. |
+| GET | `/api/products/` | Paginated list. Query: `category`, `is_active`, `is_in_homepage`, `brand_id`, `ingredient_id`, `price_min`, `price_max`, `requires_prescription`, `search`, `ordering`. |
 | GET | `/api/products/{slug}/` | Product detail by slug. |
 | POST | `/api/products/{slug}/link-category/` | Link this product to a specific category (admin). |
 
@@ -297,6 +297,7 @@ Use **multipart/form-data** if you send `image`; otherwise **application/json** 
 | quantity_in_stock | int | No | Default 0. |
 | low_stock_threshold | int | No | Default 5. |
 | is_active | boolean | No | Default true. |
+| is_in_homepage | boolean | No | Default false. |
 
 **Response (201):** Full product object (detail shape).
 

@@ -46,7 +46,7 @@ class ProductFilter(FilterSet):
 
     class Meta:
         model = Product
-        fields = ["is_active", "brand_id", "ingredient_id", "requires_prescription", "is_generic"]
+        fields = ["is_active", "is_in_homepage", "brand_id", "ingredient_id", "requires_prescription", "is_generic"]
 
     def filter_category(self, queryset, name, value):
         if not value or not str(value).strip():

@@ -360,7 +360,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "unit", "unit_name", "dosage", "dosages",
             "rating_avg", "review_count",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
-            "created_at", "updated_at",
+            "is_in_homepage", "created_at", "updated_at",
         )
 
     def get_unit_name(self, obj):
@@ -401,7 +401,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             "precautions_warnings", "overdose_effects", "storage_conditions", "mode_of_action",
             "drug_classes", "pregnancy", "alternative_products", "faq",
             "quantity_in_stock", "low_stock_threshold", "is_low_stock", "is_active",
-            "generic_alternatives",
+            "is_in_homepage", "generic_alternatives",
             "created_at", "updated_at",
         )
 
@@ -461,7 +461,7 @@ class ProductWriteSerializer(serializers.ModelSerializer):
             "interaction", "contraindications", "side_effects", "pregnancy_lactation",
             "precautions_warnings", "overdose_effects", "storage_conditions", "mode_of_action",
             "drug_classes", "pregnancy", "alternative_products", "faq",
-            "quantity_in_stock", "low_stock_threshold", "is_active",
+            "quantity_in_stock", "low_stock_threshold", "is_active", "is_in_homepage",
             "dosages",
         )
         extra_kwargs = {"slug": {"required": False}}

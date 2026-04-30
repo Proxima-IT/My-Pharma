@@ -272,6 +272,11 @@ class Product(models.Model):
     quantity_in_stock = models.PositiveIntegerField(default=0)
     low_stock_threshold = models.PositiveIntegerField(default=5)
     is_active = models.BooleanField(default=True)
+    is_in_homepage = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Show this product in the homepage featured section.",
+    )
     # Medicine-specific: packaging and dosage
     unit = models.ForeignKey(
         "Unit",
