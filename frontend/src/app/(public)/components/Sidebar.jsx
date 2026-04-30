@@ -19,21 +19,23 @@ import {
 
 /**
  * Sidebar Component
- * Refactored: Implements Method B (Custom Menus) as parents for Method A (Product Categories).
+ * Refactored: Uses Category Tree API for recursive nesting of all product categories.
  * Logic:
- * 1. Method B items act as Top-Level navigation headers.
- * 2. Method A categories are nested inside Method B items based on 'sidebar_category' ID.
- * 3. Supports recursive children for Method A.
+ * 1. Root categories (parent === null) act as top-level menu items.
+ * 2. Sub-categories are nested recursively within their parents.
+ * 3. Standard Sidebar Menu (Method B) logic removed.
+ * Design: No shadows, reduced spacing, images enabled for all depths.
  */
 const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Extract slug from URL to determine active state (matches top-level category)
   const currentCategorySlug = pathname.startsWith('/category/')
     ? pathname.replace('/category/', '').split('/')[0]
     : '';
 
-  const [categoriesA, setCategoriesA] = useState([]); // Product Category Tree
-  const [categoriesB, setCategoriesB] = useState([]); // Custom Sidebar Items
+  const [categories, setCategories] = useState([]); // All categories in tree format
   const [allProducts, setAllProducts] = useState([]);
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,22 +45,20 @@ const Sidebar = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resA, resB, adsRes, prodRes] = await Promise.all([
+        const [resA, adsRes, prodRes] = await Promise.all([
           fetch(`${API_BASE_URL}/categories/tree/`),
-          fetch(`${API_BASE_URL}/sidebar-categories/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
           fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
         ]);
 
-        const [dataA, dataB, adsData, prodData] = await Promise.all([
+        const [dataA, adsData, prodData] = await Promise.all([
           parseJsonResponse(resA, []),
-          parseJsonResponse(resB, { results: [] }),
           parseJsonResponse(adsRes, { results: [] }),
           parseJsonResponse(prodRes, { results: [] }),
         ]);
 
-        setCategoriesA(Array.isArray(dataA) ? dataA : dataA.results || []);
-        setCategoriesB(Array.isArray(dataB) ? dataB : dataB.results || []);
+        // dataA is the tree representation from backend
+        setCategories(Array.isArray(dataA) ? dataA : dataA.results || []);
         setAds(Array.isArray(adsData) ? adsData : adsData.results || []);
         setAllProducts(
           Array.isArray(prodData) ? prodData : prodData.results || [],
@@ -81,27 +81,6 @@ const Sidebar = () => {
     return counts;
   }, [allProducts]);
 
-  /**
-   * Organizing Method A inside Method B
-   */
-  const unifiedNavigation = useMemo(() => {
-    // 1. Create a map of Method B items as primary containers
-    const menuStructure = categoriesB.map(customItem => ({
-      ...customItem,
-      isCustomMenu: true,
-      children: categoriesA.filter(
-        cat => cat.sidebar_category === customItem.id,
-      ),
-    }));
-
-    // 2. Identify standalone Method A categories (marked for sidebar but no Method B parent)
-    const standalone = categoriesA.filter(
-      cat => cat.show_in_sidebar && !cat.sidebar_category,
-    );
-
-    return { grouped: menuStructure, standalone };
-  }, [categoriesA, categoriesB]);
-
   const handleSearch = e => {
     if (e.key === 'Enter' && searchTerm.trim()) {
       router.push(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
@@ -117,67 +96,56 @@ const Sidebar = () => {
   const isAllProductsActive = pathname === '/products' && !currentCategorySlug;
   const activeAd = ads.length > 0 ? ads[0] : null;
 
-  const NavItem = ({ item, isCustomMenu = false, depth = 0 }) => {
-    const title = isCustomMenu ? item.title : item.name;
-    const isActive = !isCustomMenu && currentCategorySlug === item.slug;
+  const NavItem = ({ item, depth = 0 }) => {
+    const title = item.name;
+    const isActive = currentCategorySlug === item.slug;
     const hasChildren =
       Array.isArray(item.children) && item.children.length > 0;
-    const isOpen = !!openMenus[item.id + (isCustomMenu ? '-custom' : '-tree')];
+    const isOpen = !!openMenus[item.id];
     const count = categoryCounts[title] || 0;
-
-    const href = isCustomMenu ? '#' : `/category/${item.slug}`;
 
     return (
       <div className="flex flex-col w-full">
         <div
           className={`flex items-center w-full group ${depth > 0 ? 'pl-3' : ''}`}
         >
-          <div
-            onClick={e => isCustomMenu && toggleMenu(e, item.id + '-custom')}
-            className="flex-1 flex items-center"
+          <Link
+            href={`/category/${item.slug}`}
+            className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all ${
+              isActive
+                ? 'bg-[#233b8c] text-white shadow-none'
+                : 'text-gray-500 hover:bg-gray-50 shadow-none'
+            }`}
           >
-            <Link
-              href={href}
-              className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all ${
-                isActive
-                  ? 'bg-[#233b8c] text-white shadow-none'
-                  : 'text-gray-500 hover:bg-gray-50 shadow-none'
-              } ${isCustomMenu ? 'cursor-pointer' : ''}`}
-            >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-5 h-5 relative shrink-0">
-                  <Image
-                    src={
-                      getMediaUrl(item.image_url || item.image) ||
-                      '/assets/images/applogo.png'
-                    }
-                    alt={title}
-                    fill
-                    className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
-                    unoptimized
-                  />
-                </div>
-                <span
-                  className={`text-[14px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
-                >
-                  {title}
-                </span>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-5 h-5 relative shrink-0">
+                <Image
+                  src={
+                    getMediaUrl(item.image_url || item.image) ||
+                    '/assets/images/applogo.png'
+                  }
+                  alt={title}
+                  fill
+                  className={`object-contain ${isActive ? 'brightness-0 invert' : ''}`}
+                  unoptimized
+                />
               </div>
-              {!isCustomMenu && (
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
-                >
-                  {count}
-                </span>
-              )}
-            </Link>
-          </div>
+              <span
+                className={`text-[14px] tracking-tight truncate ${isActive ? 'font-bold' : 'font-medium group-hover:text-gray-900'}`}
+              >
+                {title}
+              </span>
+            </div>
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
+            >
+              {count}
+            </span>
+          </Link>
 
           {hasChildren && (
             <button
-              onClick={e =>
-                toggleMenu(e, item.id + (isCustomMenu ? '-custom' : '-tree'))
-              }
+              onClick={e => toggleMenu(e, item.id)}
               className={`p-2 ml-1 rounded-full transition-all cursor-pointer shadow-none ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
             >
               <FiChevronDown size={16} />
@@ -200,7 +168,7 @@ const Sidebar = () => {
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-700">
       <div className="bg-white border border-gray-100 rounded-[32px] p-6 shadow-none">
         <h2 className="text-[20px] font-bold text-gray-900 mb-4 tracking-tight">
-          All Product Category
+          Product Categories
         </h2>
 
         <div className="relative mb-4">
@@ -210,7 +178,7 @@ const Sidebar = () => {
           />
           <input
             type="text"
-            placeholder="Search categories..."
+            placeholder="Search..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             onKeyDown={handleSearch}
@@ -247,30 +215,11 @@ const Sidebar = () => {
               <div className="w-5 h-5 border-2 border-gray-200 border-t-(--color-primary-500) rounded-full animate-spin" />
             </div>
           ) : (
-            <>
-              {/* Custom Menus with assigned Product Categories */}
-              <div className="space-y-0.5">
-                {unifiedNavigation.grouped.map(menu => (
-                  <NavItem
-                    key={`menu-b-${menu.id}`}
-                    item={menu}
-                    isCustomMenu={true}
-                  />
-                ))}
-              </div>
-
-              {/* Standalone Product Categories */}
-              {unifiedNavigation.standalone.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-gray-50 space-y-0.5">
-                  <span className="px-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest block mb-1">
-                    Direct Categories
-                  </span>
-                  {unifiedNavigation.standalone.map(cat => (
-                    <NavItem key={`standalone-a-${cat.id}`} item={cat} />
-                  ))}
-                </div>
-              )}
-            </>
+            <div className="space-y-0.5">
+              {categories.map(cat => (
+                <NavItem key={`cat-tree-${cat.id}`} item={cat} />
+              ))}
+            </div>
           )}
         </nav>
       </div>

@@ -221,9 +221,9 @@ const ProductSummaryCard = ({ product }) => {
               />
             </button>
           </div>
-          <p className="text-[11px] lg:text-[12px] xl:text-[15px] text-gray-500 font-bold uppercase pl-1 tracking-tight">
+          {/* <p className="text-[11px] lg:text-[12px] xl:text-[15px] text-gray-500 font-bold uppercase pl-1 tracking-tight">
             {quantitySubtext}
-          </p>
+          </p> */}
         </div>
       </div>
 

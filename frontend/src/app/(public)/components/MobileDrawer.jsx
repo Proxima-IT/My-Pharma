@@ -6,7 +6,7 @@ import { AiOutlineMenu } from 'react-icons/ai';
 import { FiGrid, FiCheckCircle, FiTruck, FiChevronDown } from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   API_BASE_URL,
   getMediaUrl,
@@ -16,20 +16,22 @@ import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 
 /**
  * MobileDrawer Component
- * Refactored: Uses Method B (Main Category) as roots and Method A (Sub-categories) as children.
- * Spacing and hierarchical logic synced with the Public Sidebar.
+ * Refactored: Uses Category Tree API for recursive nesting of all product categories.
+ * Logic synced with Sidebar.jsx:
+ * 1. Root categories act as top-level menu items.
+ * 2. Sub-categories are nested recursively.
+ * 3. All shadows removed, consistent spacing and image visibility.
  */
 const MobileDrawer = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+
   const currentCategorySlug = pathname.startsWith('/category/')
     ? pathname.replace('/category/', '').split('/')[0]
     : '';
 
   const [open, setOpen] = useState(false);
-  const [categoriesA, setCategoriesA] = useState([]); // Product Category Tree
-  const [categoriesB, setCategoriesB] = useState([]); // Custom Main Categories
+  const [categories, setCategories] = useState([]); // Tree representation
   const [allProducts, setAllProducts] = useState([]);
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,22 +47,19 @@ const MobileDrawer = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resA, resB, adsRes, prodRes] = await Promise.all([
+        const [resA, adsRes, prodRes] = await Promise.all([
           fetch(`${API_BASE_URL}/categories/tree/`),
-          fetch(`${API_BASE_URL}/sidebar-categories/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
           fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
         ]);
 
-        const [dataA, dataB, adsData, prodData] = await Promise.all([
+        const [dataA, adsData, prodData] = await Promise.all([
           parseJsonResponse(resA, []),
-          parseJsonResponse(resB, { results: [] }),
           parseJsonResponse(adsRes, { results: [] }),
           parseJsonResponse(prodRes, { results: [] }),
         ]);
 
-        setCategoriesA(Array.isArray(dataA) ? dataA : dataA.results || []);
-        setCategoriesB(Array.isArray(dataB) ? dataB : dataB.results || []);
+        setCategories(Array.isArray(dataA) ? dataA : dataA.results || []);
         setAds(Array.isArray(adsData) ? adsData : adsData.results || []);
         setAllProducts(
           Array.isArray(prodData) ? prodData : prodData.results || [],
@@ -83,25 +82,6 @@ const MobileDrawer = () => {
     return counts;
   }, [allProducts]);
 
-  /**
-   * Organizing Method A inside Method B (Hierarchy Logic)
-   */
-  const unifiedNavigation = useMemo(() => {
-    const menuStructure = categoriesB.map(customItem => ({
-      ...customItem,
-      isCustomMenu: true,
-      children: categoriesA.filter(
-        cat => cat.sidebar_category === customItem.id,
-      ),
-    }));
-
-    const standalone = categoriesA.filter(
-      cat => cat.show_in_sidebar && !cat.sidebar_category,
-    );
-
-    return { grouped: menuStructure, standalone };
-  }, [categoriesA, categoriesB]);
-
   const toggleMenu = (e, id) => {
     e.preventDefault();
     e.stopPropagation();
@@ -112,15 +92,13 @@ const MobileDrawer = () => {
   const activeAd = ads.length > 0 ? ads[0] : null;
 
   // Navigation Item Component for Recursion
-  const NavItem = ({ item, isCustomMenu = false, depth = 0 }) => {
-    const title = isCustomMenu ? item.title : item.name;
-    const isActive = !isCustomMenu && currentCategorySlug === item.slug;
+  const NavItem = ({ item, depth = 0 }) => {
+    const title = item.name;
+    const isActive = currentCategorySlug === item.slug;
     const hasChildren =
       Array.isArray(item.children) && item.children.length > 0;
-    const isOpen = !!openMenus[item.id + (isCustomMenu ? '-custom' : '-tree')];
+    const isOpen = !!openMenus[item.id];
     const count = categoryCounts[title] || 0;
-
-    const href = isCustomMenu ? '#' : `/category/${item.slug}`;
 
     return (
       <div className="flex flex-col w-full">
@@ -128,17 +106,8 @@ const MobileDrawer = () => {
           className={`flex items-center w-full group ${depth > 0 ? 'pl-3' : ''}`}
         >
           <Link
-            href={href}
-            onClick={() => {
-              if (isCustomMenu) {
-                setOpenMenus(prev => ({
-                  ...prev,
-                  [item.id + '-custom']: !prev[item.id + '-custom'],
-                }));
-              } else {
-                setOpen(false);
-              }
-            }}
+            href={`/category/${item.slug}`}
+            onClick={() => setOpen(false)}
             className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all border border-transparent ${
               isActive
                 ? 'bg-[#233b8c] text-white shadow-none'
@@ -164,24 +133,23 @@ const MobileDrawer = () => {
                 {title}
               </span>
             </div>
-
-            {!isCustomMenu && (
-              <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isActive ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-100 text-gray-400'}`}
-              >
-                {count}
-              </span>
-            )}
+            <span
+              className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                isActive
+                  ? 'bg-white/10 border-white/20 text-white'
+                  : 'bg-gray-50 border-gray-100 text-gray-400'
+              }`}
+            >
+              {count}
+            </span>
           </Link>
 
           {hasChildren && (
             <button
-              onClick={e =>
-                toggleMenu(e, item.id + (isCustomMenu ? '-custom' : '-tree'))
-              }
-              className={`p-2 ml-1 rounded-full transition-all ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
+              onClick={e => toggleMenu(e, item.id)}
+              className={`p-2 ml-1 rounded-full transition-all cursor-pointer shadow-none ${isOpen ? 'rotate-180 text-(--color-primary-500)' : 'text-gray-300'}`}
             >
-              <FiChevronDown size={16} />
+              <FiChevronDown size={18} />
             </button>
           )}
         </div>
@@ -257,28 +225,11 @@ const MobileDrawer = () => {
                     <div className="w-6 h-6 border-2 border-gray-200 border-t-(--color-primary-500) rounded-full animate-spin" />
                   </div>
                 ) : (
-                  <>
-                    <div className="space-y-0.5">
-                      {unifiedNavigation.grouped.map(menu => (
-                        <NavItem
-                          key={`menu-b-${menu.id}`}
-                          item={menu}
-                          isCustomMenu={true}
-                        />
-                      ))}
-                    </div>
-
-                    {unifiedNavigation.standalone.length > 0 && (
-                      <div className="mt-4 pt-4 border-t border-gray-100 space-y-0.5">
-                        <span className="px-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest block mb-1">
-                          Direct Categories
-                        </span>
-                        {unifiedNavigation.standalone.map(cat => (
-                          <NavItem key={`standalone-a-${cat.id}`} item={cat} />
-                        ))}
-                      </div>
-                    )}
-                  </>
+                  <div className="space-y-0.5">
+                    {categories.map(cat => (
+                      <NavItem key={`mobile-tree-${cat.id}`} item={cat} />
+                    ))}
+                  </div>
                 )}
               </nav>
             </div>

@@ -3,15 +3,15 @@ import React, { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
 import { useCategoryAdmin } from '@/app/(admin)/hooks/useCategoryAdmin';
-import { useSidebarAdmin } from '@/app/(admin)/hooks/useSidebarAdmin';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminEditCategoryPage
- * Super Admin Zone: Handles category updates and organization.
- * Fixed: Explicitly handles 'parent' and 'sidebar_category' clearing logic
- * to ensure updates persist correctly on the backend.
+ * Super Admin Zone: Simplified Edit flow.
+ * Feature: Removed manual hierarchy/sidebar selection fields.
+ * Categorization is managed via the Visual Organizer.
+ * Design: Strictly rounded-none, industrial feel.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -29,43 +29,27 @@ function EditCategoryContent({ slug }) {
   const {
     categoryDetails,
     fetchCategoryBySlug,
-    fetchCategoryTree,
-    categoryTree,
     updateCategory,
     isUpdating,
     loading: fetchLoading,
   } = useCategoryAdmin();
-
-  const { sidebarItems, fetchSidebarItems } = useSidebarAdmin();
 
   const imageInputRef = useRef(null);
 
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    parent: '',
-    sidebar_category: '',
     is_active: true,
     image: null,
   });
 
-  // Load necessary data: Hierarchy tree, Custom Sidebar items, and Target category details
+  // Load existing data for the target category
   useEffect(() => {
     const loadData = async () => {
-      // Fetch Method B items for the organization dropdown
-      await Promise.all([
-        fetchCategoryTree(),
-        fetchSidebarItems({ page_size: 200 }),
-      ]);
-
       const data = await fetchCategoryBySlug(slug);
       if (data) {
         setFormData({
           name: data.name || '',
-          // Ensure we extract the ID if parent/sidebar_category come as objects
-          parent: data.parent?.id || data.parent || '',
-          sidebar_category:
-            data.sidebar_category?.id || data.sidebar_category || '',
           is_active: data.is_active ?? true,
           image: null,
         });
@@ -75,7 +59,7 @@ function EditCategoryContent({ slug }) {
       }
     };
     if (slug) loadData();
-  }, [slug, fetchCategoryBySlug, fetchCategoryTree, fetchSidebarItems]);
+  }, [slug, fetchCategoryBySlug]);
 
   const handleImageChange = e => {
     const file = e.target.files[0];
@@ -85,23 +69,6 @@ function EditCategoryContent({ slug }) {
     }
   };
 
-  // Helper to render nested product category options (Method A)
-  const renderCategoryOptions = (nodes, depth = 0) => {
-    if (!nodes || !Array.isArray(nodes)) return null;
-    return nodes.map(node => (
-      <React.Fragment key={node.id}>
-        {node.slug !== slug && (
-          <option value={node.id}>
-            {'\u00A0'.repeat(depth * 4)}
-            {depth > 0 ? '↳ ' : ''}
-            {node.name.toUpperCase()}
-          </option>
-        )}
-        {node.children && renderCategoryOptions(node.children, depth + 1)}
-      </React.Fragment>
-    ));
-  };
-
   const handleSubmit = async e => {
     e.preventDefault();
 
@@ -109,13 +76,6 @@ function EditCategoryContent({ slug }) {
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
-
-    // FIX: Always append 'parent'. If empty string, it clears the parent in DRF.
-    // This allows moving a category from "Child" back to "Root".
-    data.append('parent', formData.parent || '');
-
-    // FIX: Always append 'sidebar_category'. If empty, it unassigns from Custom Menu.
-    data.append('sidebar_category', formData.sidebar_category || '');
 
     if (formData.image) {
       data.append('image', formData.image);
@@ -149,7 +109,7 @@ function EditCategoryContent({ slug }) {
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-black transition-all cursor-pointer group border border-transparent rounded-none"
+          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-black transition-all cursor-pointer group border border-transparent rounded-none shadow-none"
         >
           <FiArrowLeft
             size={16}
@@ -165,7 +125,7 @@ function EditCategoryContent({ slug }) {
             Edit Category
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
-            Manage classification and sidebar organization for:{' '}
+            Update identity and assets for:{' '}
             <span className="text-[#3A5A40] font-bold underline">
               {categoryDetails?.name}
             </span>
@@ -173,16 +133,16 @@ function EditCategoryContent({ slug }) {
         </div>
       </div>
 
-      {/* Form Container - Full Width */}
-      <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none">
+      {/* Form Container */}
+      <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none shadow-none">
         <div className="mb-10 border-b border-gray-50 pb-6">
           <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
-            Organization & Assets
+            Identity & Asset Configuration
           </h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-10">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
             {/* Category Name */}
             <div>
               <label className={labelClass}>Category Title</label>
@@ -196,46 +156,9 @@ function EditCategoryContent({ slug }) {
                 required
               />
             </div>
-
-            {/* Hierarchical Parent (Method A) */}
-            <div>
-              <label className={labelClass}>Sub-Category Of? (Optional)</label>
-              <select
-                className={inputClass + ' cursor-pointer appearance-none'}
-                value={formData.parent}
-                onChange={e =>
-                  setFormData({ ...formData, parent: e.target.value })
-                }
-              >
-                <option value="">NONE (THIS IS A ROOT CATEGORY)</option>
-                {renderCategoryOptions(categoryTree)}
-              </select>
-            </div>
-
-            {/* Sidebar Custom Menu Parent (Method B) */}
-            <div>
-              <label className={labelClass}>Assign to Sidebar Menu?</label>
-              <select
-                className={
-                  inputClass +
-                  ' cursor-pointer appearance-none border-[#3A5A40]/30'
-                }
-                value={formData.sidebar_category}
-                onChange={e =>
-                  setFormData({ ...formData, sidebar_category: e.target.value })
-                }
-              >
-                <option value="">STANDALONE (NO CUSTOM MENU PARENT)</option>
-                {sidebarItems.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.title.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
-          {/* Image Asset */}
+          {/* Image Asset Section */}
           <div className="space-y-4">
             <label className={labelClass}>Category Icon</label>
             <div

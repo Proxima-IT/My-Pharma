@@ -1,32 +1,49 @@
 'use client';
-import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useRef, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
 import { useCategoryAdmin } from '../../../hooks/useCategoryAdmin';
-import { useSidebarAdmin } from '../../../hooks/useSidebarAdmin';
+import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
+/**
+ * AdminNewCategoryPage
+ * Super Admin Zone: Simplified creation flow.
+ * Logic: Parent is automatically assigned via URL query parameter (from details page).
+ * Design: Strictly rounded-none, industrial feel.
+ */
 export default function AdminNewCategoryPage() {
+  return (
+    <AuthGuard allowedRoles={['SUPER_ADMIN']}>
+      <Suspense
+        fallback={
+          <div className="p-20 font-mono uppercase animate-pulse">
+            Initializing_Form...
+          </div>
+        }
+      >
+        <NewCategoryContent />
+      </Suspense>
+    </AuthGuard>
+  );
+}
+
+function NewCategoryContent() {
   const router = useRouter();
-  const { createCategory, fetchCategoryTree, categoryTree, isUpdating, error } =
-    useCategoryAdmin();
-  const { sidebarItems, fetchSidebarItems } = useSidebarAdmin();
+  const searchParams = useSearchParams();
+
+  // Extract parent ID from URL if creating from a Detail Page
+  const autoParentId = searchParams.get('parent');
+
+  const { createCategory, isUpdating, error } = useCategoryAdmin();
 
   const imageInputRef = useRef(null);
 
   const [previewImage, setPreviewImage] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    parent: '',
-    sidebar_category: '',
     is_active: true,
     image: null,
   });
-
-  // ড্রপডাউনের জন্য গ্রুপের তালিকা লোড করা
-  useEffect(() => {
-    fetchCategoryTree();
-    fetchSidebarItems({ page_size: 200 });
-  }, [fetchCategoryTree, fetchSidebarItems]);
 
   const handleImageChange = e => {
     const file = e.target.files[0];
@@ -36,39 +53,38 @@ export default function AdminNewCategoryPage() {
     }
   };
 
-  // গ্রুপের হায়ারার্কি দেখানোর জন্য ফাংশন
-  const renderOptions = (nodes, depth = 0) => {
-    if (!nodes || !Array.isArray(nodes)) return null;
-    return nodes.map(node => (
-      <React.Fragment key={node.id}>
-        <option value={node.id}>
-          {'\u00A0'.repeat(depth * 4)}
-          {depth > 0 ? '↳ ' : ''}
-          {node.name.toUpperCase()}
-        </option>
-        {node.children && renderOptions(node.children, depth + 1)}
-      </React.Fragment>
-    ));
-  };
-
   const handleSubmit = async e => {
     e.preventDefault();
-    const payload = {
-      ...formData,
-      parent: formData.parent === '' ? null : parseInt(formData.parent),
-      sidebar_category:
-        formData.sidebar_category === ''
-          ? null
-          : parseInt(formData.sidebar_category),
-    };
-    const success = await createCategory(payload);
-    if (success) router.push('/admin/categories');
+
+    // Construct FormData for multipart submission
+    const data = new FormData();
+    data.append('name', formData.name);
+    data.append('is_active', formData.is_active);
+
+    // Automatically set parent if provided in URL
+    if (autoParentId) {
+      data.append('parent', autoParentId);
+    }
+
+    if (formData.image) {
+      data.append('image', formData.image);
+    }
+
+    const success = await createCategory(data);
+    if (success) {
+      // Return to parent category details or main list
+      if (autoParentId) {
+        window.history.back();
+      } else {
+        router.push('/admin/categories');
+      }
+    }
   };
 
   const labelClass =
     'font-mono text-[11px] font-bold text-[#8A8A78] uppercase mb-2 block tracking-widest';
   const inputClass =
-    'w-full h-12 px-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all uppercase placeholder:text-gray-300';
+    'w-full h-12 px-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all uppercase placeholder:text-gray-300 text-[#1B1B1B]';
 
   return (
     <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
@@ -76,7 +92,7 @@ export default function AdminNewCategoryPage() {
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer group border border-transparent"
+          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-[#F59E0B] transition-all cursor-pointer group border border-transparent rounded-none shadow-none"
         >
           <FiArrowLeft
             size={16}
@@ -98,8 +114,8 @@ export default function AdminNewCategoryPage() {
         </div>
       </div>
 
-      {/* Form Container - Full Width */}
-      <div className="bg-white border border-gray-100 p-8 md:p-12 w-full">
+      {/* Form Container */}
+      <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none shadow-none">
         <div className="mb-10 border-b border-gray-50 pb-6">
           <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
             Category Details
@@ -107,10 +123,10 @@ export default function AdminNewCategoryPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
             {/* Category Name */}
             <div>
-              <label className={labelClass}>Category Name / Type</label>
+              <label className={labelClass}>Category Name</label>
               <input
                 type="text"
                 placeholder="E.G. TABLETS OR SYRUP"
@@ -122,44 +138,6 @@ export default function AdminNewCategoryPage() {
                 required
               />
             </div>
-
-            {/* Parent Selection */}
-            <div>
-              <label className={labelClass}>
-                Under Which Category? (Optional)
-              </label>
-              <select
-                className={inputClass + ' cursor-pointer appearance-none'}
-                value={formData.parent}
-                onChange={e =>
-                  setFormData({ ...formData, parent: e.target.value })
-                }
-              >
-                <option value="">NONE (THIS IS A MAIN CATEGORY)</option>
-                {renderOptions(categoryTree)}
-              </select>
-            </div>
-
-            {/* Sidebar Menu Parent */}
-            <div>
-              <label className={labelClass}>
-                Sidebar Menu Parent (Optional)
-              </label>
-              <select
-                className={inputClass + ' cursor-pointer appearance-none'}
-                value={formData.sidebar_category}
-                onChange={e =>
-                  setFormData({ ...formData, sidebar_category: e.target.value })
-                }
-              >
-                <option value="">NONE (NO SIDEBAR MENU PARENT)</option>
-                {sidebarItems.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.title.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
           {/* Image Upload Section */}
@@ -167,7 +145,7 @@ export default function AdminNewCategoryPage() {
             <label className={labelClass}>Category Icon / Image</label>
             <div
               onClick={() => imageInputRef.current.click()}
-              className="aspect-square max-w-[200px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative rounded-none"
+              className="aspect-square max-w-[200px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative rounded-none shadow-none"
             >
               {previewImage ? (
                 <img
@@ -200,7 +178,7 @@ export default function AdminNewCategoryPage() {
           </div>
 
           {/* Status Toggle */}
-          <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100">
+          <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none">
             <div className="flex flex-col gap-1">
               <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
                 Active Status
@@ -223,7 +201,7 @@ export default function AdminNewCategoryPage() {
           <button
             type="submit"
             disabled={isUpdating}
-            className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer disabled:opacity-50"
+            className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-black transition-all duration-300 cursor-pointer disabled:opacity-50 rounded-none border-none shadow-none"
           >
             {isUpdating ? (
               'SAVING...'
@@ -235,7 +213,7 @@ export default function AdminNewCategoryPage() {
           </button>
 
           {error && (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center">
+            <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center rounded-none">
               Error: {error}
             </div>
           )}
@@ -244,7 +222,7 @@ export default function AdminNewCategoryPage() {
 
       {/* Footer */}
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        Status: Awaiting_Input
+        Status: Awaiting_Registry_Entry
       </div>
     </div>
   );

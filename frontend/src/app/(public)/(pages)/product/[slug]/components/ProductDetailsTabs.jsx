@@ -11,15 +11,16 @@ import {
   FiLayers,
   FiHelpCircle,
 } from 'react-icons/fi';
+import ReactMarkdown from 'react-markdown';
 import { useReviews } from '../../../../hooks/useReviews';
 import ReviewForm from './ReviewForm';
 import ReviewCard from './ReviewCard';
 
 /**
  * ProductDetailsTabs Component
- * Refactored: Enhanced RAW HTML rendering with forced vertical rhythm.
- * Fix: Added explicit margin utilities ([&_p]:mb-6, etc.) to override CSS resets and ensure
- * spacing between headings and paragraphs is rendered prominently.
+ * Refactored: High-fidelity Markdown rendering using react-markdown.
+ * Features: Structured Medical Guide, Dynamic Specifications, and FAQ Parsing.
+ * Fix: Removed dangerouslySetInnerHTML and restored ReactMarkdown for secure and perfectly formatted output.
  */
 const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const [activeTab, setActiveTab] = useState('Description');
@@ -31,7 +32,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     product?.id,
   );
 
-  // 1. FAQ Parsing Logic
+  // 1. FAQ Parsing Logic (Stored as JSON string in Backend)
   const parsedFaqs = useMemo(() => {
     if (!product?.faq) return [];
     try {
@@ -44,7 +45,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     }
   }, [product?.faq]);
 
-  // 2. Medical Info Mapping
+  // 2. Medical Info Mapping (Markdown Fields)
   const medicalInfo = useMemo(() => {
     if (!product) return [];
     const fields = [
@@ -120,9 +121,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     </button>
   );
 
-  // Unified Spacing Class for HTML content
-  const htmlContainerClass =
-    'prose prose-slate max-w-none text-gray-600 leading-relaxed [&_p]:mb-6 [&_h2]:mt-10 [&_h2]:mb-4 [&_h2]:text-gray-900 [&_h3]:mt-8 [&_h3]:mb-4 [&_h3]:text-gray-800 [&_ul]:mb-6 [&_ul]:list-disc [&_ul]:pl-5 [&_li]:mb-2';
+  // Markdown Styling Wrapper
+  const markdownClass =
+    'prose prose-slate max-w-none text-gray-600 leading-relaxed [&_p]:mb-6 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-4 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-6 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-6 [&_strong]:text-black [&_strong]:font-bold';
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700">
@@ -154,14 +155,13 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
         {activeTab === 'Description' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <h2 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">
-              Product Overview
+              Medicine Overview
             </h2>
-            <div
-              className={htmlContainerClass}
-              dangerouslySetInnerHTML={{
-                __html: product.description || 'No description available.',
-              }}
-            />
+            <div className={markdownClass}>
+              <ReactMarkdown>
+                {product.description || 'No description available.'}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
 
@@ -181,10 +181,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                     <span className="w-2 h-2 bg-(--color-primary-500) rounded-full"></span>
                     {info.label}
                   </h4>
-                  <div
-                    className={htmlContainerClass}
-                    dangerouslySetInnerHTML={{ __html: info.value }}
-                  />
+                  <div className={markdownClass}>
+                    <ReactMarkdown>{info.value}</ReactMarkdown>
+                  </div>
                 </div>
               ))}
             </div>
@@ -225,10 +224,10 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               {parsedFaqs.map((faq, idx) => (
                 <div
                   key={idx}
-                  className="bg-gray-50/50 rounded-[24px] p-8 border border-gray-100 space-y-4"
+                  className="bg-gray-50/50 rounded-[24px] p-8 border border-gray-100 space-y-4 shadow-none"
                 >
                   <div className="flex gap-4">
-                    <span className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center font-black text-(--color-primary-500) shrink-0">
+                    <span className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center font-black text-(--color-primary-500) shrink-0 shadow-none">
                       Q
                     </span>
                     <h4 className="text-lg font-bold text-gray-900 pt-1">
@@ -236,13 +235,12 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                     </h4>
                   </div>
                   <div className="flex gap-4">
-                    <span className="w-10 h-10 rounded-full bg-(--color-primary-50) flex items-center justify-center font-black text-(--color-primary-600) shrink-0 opacity-0 md:opacity-100 text-sm">
+                    <span className="w-10 h-10 rounded-full bg-(--color-primary-50) flex items-center justify-center font-black text-(--color-primary-600) shrink-0 opacity-0 md:opacity-100 text-sm shadow-none">
                       A
                     </span>
-                    <div
-                      className={htmlContainerClass + ' pt-1'}
-                      dangerouslySetInnerHTML={{ __html: faq.answer }}
-                    />
+                    <div className={markdownClass + ' pt-1'}>
+                      <ReactMarkdown>{faq.answer}</ReactMarkdown>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -280,9 +278,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                         {stars}
                       </span>
                     </div>
-                    <div className="flex-1 h-2 bg-gray-100 rounded-full relative overflow-hidden">
+                    <div className="flex-1 h-2 bg-gray-100 rounded-full relative overflow-hidden shadow-none">
                       <div
-                        className="absolute left-0 top-0 h-full bg-black rounded-full"
+                        className="absolute left-0 top-0 h-full bg-black rounded-full shadow-none"
                         style={{ width: `${stars === 5 ? 85 : 5}%` }}
                       />
                     </div>
@@ -320,7 +318,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               </h3>
               {loading ? (
                 <div className="py-10 flex justify-center">
-                  <div className="w-8 h-8 border-4 border-gray-100 border-t-black rounded-full animate-spin" />
+                  <div className="w-8 h-8 border-4 border-gray-100 border-t-black rounded-full animate-spin shadow-none" />
                 </div>
               ) : reviews.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6">
@@ -329,7 +327,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                   ))}
                 </div>
               ) : (
-                <div className="py-20 text-center bg-gray-50/50 rounded-[32px] border border-dashed border-gray-200">
+                <div className="py-20 text-center bg-gray-50/50 rounded-[32px] border border-dashed border-gray-200 shadow-none">
                   <FiStar className="mx-auto text-gray-300 mb-4" size={48} />
                   <h4 className="text-lg font-bold text-gray-900 uppercase tracking-widest">
                     No existing reviews
@@ -358,7 +356,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                       <button
                         key={p}
                         onClick={() => handlePageChange(p)}
-                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer shadow-none ${currentPage === p ? 'bg-black text-white' : 'hover:bg-gray-50 text-gray-600'}`}
+                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer shadow-none ${currentPage === p ? 'bg-black text-white shadow-none' : 'hover:bg-gray-50 text-gray-600 shadow-none'}`}
                       >
                         {p}
                       </button>
