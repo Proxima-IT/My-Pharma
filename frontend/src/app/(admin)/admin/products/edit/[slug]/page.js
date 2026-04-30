@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect, use } from 'react';
+import React, { useState, useEffect, use, useRef, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiArrowLeft,
@@ -29,9 +29,9 @@ import AdvancedTab from '../../components/form-tabs/AdvancedTab';
 
 /**
  * AdminEditProductPage
- * Modular Refactor: Uses centralized Tab components for medicine registry management.
- * Features: High-fidelity Markdown support, Dynamic Specification & FAQ builders.
- * Design: Strictly rounded-none, industrial contrast.
+ * Super Admin Zone: Handles medicine registry updates.
+ * Fixed: Integrated homepage section linking logic within the update flow.
+ * Design: Strictly rounded-none, industrial feel, business-friendly labels.
  */
 export default function AdminEditProductPage({ params }) {
   const resolvedParams = use(params);
@@ -39,7 +39,15 @@ export default function AdminEditProductPage({ params }) {
 
   return (
     <AuthGuard allowedRoles={['SUPER_ADMIN']}>
-      <EditProductContent slug={slug} />
+      <Suspense
+        fallback={
+          <div className="p-20 font-mono uppercase animate-pulse text-black">
+            Syncing_Registry...
+          </div>
+        }
+      >
+        <EditProductContent slug={slug} />
+      </Suspense>
     </AuthGuard>
   );
 }
@@ -50,9 +58,9 @@ function EditProductContent({ slug }) {
     productDetails,
     fetchProductBySlug,
     updateProduct,
-    isUpdating,
+    isUpdating: hookIsUpdating,
     loading: productLoading,
-    error,
+    error: hookError,
   } = useProductAdmin();
 
   const { brands, getBrands } = useBrands();
@@ -60,7 +68,11 @@ function EditProductContent({ slug }) {
   const { ingredients, fetchIngredients } = useIngredientAdmin();
   const { units, fetchUnits } = useUnitAdmin();
 
-  // 1. Core Component States
+  // Internal processing state for sequential API orchestration
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localError, setLocalError] = useState(null);
+
+  // 1. Core Form States
   const [activeTab, setActiveTab] = useState('GENERAL');
   const [newMainImage, setNewMainImage] = useState(null);
   const [newGalleryImages, setNewGalleryImages] = useState([]);
@@ -84,6 +96,7 @@ function EditProductContent({ slug }) {
     requires_prescription: false,
     is_active: true,
     is_generic: false,
+    is_featured_home: false, // Flag to trigger section linking
     unit: '',
     indications: '',
     therapeutic_class: '',
@@ -102,15 +115,22 @@ function EditProductContent({ slug }) {
     alternative_products: '',
   });
 
-  // Load Registry Data
+  // Load necessary registry and metadata
   useEffect(() => {
     const token = localStorage.getItem('access_token');
     getBrands(token);
     getCategories(token);
-    fetchIngredients({ page_size: 100 });
+    fetchIngredients({ page_size: 200 });
     fetchUnits({ page_size: 200 });
     if (slug) fetchProductBySlug(slug);
-  }, [slug, getBrands, getCategories, fetchIngredients, fetchUnits, fetchProductBySlug]);
+  }, [
+    slug,
+    getBrands,
+    getCategories,
+    fetchIngredients,
+    fetchUnits,
+    fetchProductBySlug,
+  ]);
 
   // Sync state with fetched product details
   useEffect(() => {
@@ -131,6 +151,7 @@ function EditProductContent({ slug }) {
         requires_prescription: productDetails.requires_prescription || false,
         is_active: productDetails.is_active || true,
         is_generic: productDetails.is_generic || false,
+        is_featured_home: productDetails.is_featured_home || false,
         unit: productDetails.unit || '',
         indications: productDetails.indications || '',
         therapeutic_class: productDetails.therapeutic_class || '',
@@ -151,7 +172,6 @@ function EditProductContent({ slug }) {
 
       setExistingGallery(productDetails.images_data || []);
 
-      // Parse Specifications
       if (productDetails.specifications) {
         const parsedSpecs = Object.entries(productDetails.specifications).map(
           ([key, value]) => ({ key, value }),
@@ -161,7 +181,6 @@ function EditProductContent({ slug }) {
         );
       }
 
-      // Parse FAQ (Stored as JSON string in DB)
       if (productDetails.faq) {
         try {
           const parsedFaqs = JSON.parse(productDetails.faq);
@@ -177,7 +196,7 @@ function EditProductContent({ slug }) {
     }
   }, [productDetails]);
 
-  // --- Handlers ---
+  // Handlers
   const handleInputChange = e => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -195,7 +214,6 @@ function EditProductContent({ slug }) {
     }
   };
 
-  // Dynamic Builder Logic
   const addSpecField = () => setSpecs([...specs, { key: '', value: '' }]);
   const removeSpecField = i => setSpecs(specs.filter((_, idx) => idx !== i));
   const updateSpec = (i, field, val) => {
@@ -212,11 +230,19 @@ function EditProductContent({ slug }) {
     setFaqs(newFaqs);
   };
 
+  /**
+   * handleSubmit
+   * Logic: Updates Product -> Links/Unlinks Home Section -> Uploads New Gallery Images
+   */
   const handleSubmit = async e => {
     e.preventDefault();
+    setIsProcessing(true);
+    setLocalError(null);
+
+    const token = localStorage.getItem('access_token');
     const data = new FormData();
 
-    // 1. Serialize Standard Fields
+    // 1. Map fields to FormData
     Object.keys(formData).forEach(key => {
       if (key === 'dosages') {
         formData.dosages
@@ -224,35 +250,54 @@ function EditProductContent({ slug }) {
           .map(d => d.trim())
           .filter(Boolean)
           .forEach(v => data.append('dosages', v));
-      } else if (formData[key] !== '' && formData[key] !== null) {
+      } else if (key !== 'is_featured_home') {
+        // Let the dedicated endpoint handle linking logic
         data.append(key, formData[key]);
       }
     });
 
-    // 2. Serialize Specifications
     const specObj = {};
     specs.forEach(s => {
       if (s.key.trim()) specObj[s.key.trim()] = s.value;
     });
     data.append('specifications', JSON.stringify(specObj));
 
-    // 3. Serialize FAQs
     const validFaqs = faqs.filter(f => f.question.trim());
     data.append('faq', JSON.stringify(validFaqs));
 
     if (newMainImage?.file) data.append('image', newMainImage.file);
 
-    const success = await updateProduct(slug, data);
+    try {
+      // Step A: Commit standard field changes
+      const success = await updateProduct(slug, data);
 
-    // 4. Handle New Gallery Uploads
-    if (success && newGalleryImages.length > 0) {
-      const token = localStorage.getItem('access_token');
-      for (const img of newGalleryImages) {
-        await productAdminApi.uploadGalleryImage(token, slug, img.file);
+      if (success) {
+        // Step B: Link Product to Home Section (Main Category) if checked
+        if (formData.is_featured_home && formData.category) {
+          await productAdminApi.linkProductToCategory(token, slug, {
+            category_id: parseInt(formData.category),
+          });
+        }
+
+        // Step C: Upload any new gallery assets
+        if (newGalleryImages.length > 0) {
+          for (const img of newGalleryImages) {
+            await productAdminApi.uploadGalleryImage(token, slug, img.file);
+          }
+        }
+        router.push('/admin/products');
       }
+    } catch (err) {
+      console.error('Update failed:', err);
+      setLocalError(
+        err.detail ||
+          (typeof err === 'object'
+            ? JSON.stringify(err)
+            : 'Failed to update registry.'),
+      );
+    } finally {
+      setIsProcessing(false);
     }
-
-    if (success) router.push('/admin/products');
   };
 
   if (productLoading && !productDetails) {
@@ -271,8 +316,11 @@ function EditProductContent({ slug }) {
     { id: 'ADVANCED', label: 'Structure', icon: <FiSettings /> },
   ];
 
+  const activeUpdating = hookIsUpdating || isProcessing;
+  const activeError = hookError || localError;
+
   return (
-    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20">
+    <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20 text-black">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b-2 border-black pb-8">
         <div className="flex items-center gap-6">
@@ -293,11 +341,11 @@ function EditProductContent({ slug }) {
         </div>
         <button
           onClick={handleSubmit}
-          disabled={isUpdating}
-          className="h-16 px-10 bg-[#3A5A40] text-white font-black uppercase tracking-[0.2em] text-sm flex items-center gap-4 hover:bg-black transition-all disabled:opacity-30 cursor-pointer rounded-none shadow-none border-none"
+          disabled={activeUpdating}
+          className="h-16 px-10 bg-[#3A5A40] text-white font-black uppercase tracking-[0.2em] text-sm flex items-center gap-4 hover:bg-black transition-all disabled:opacity-30 cursor-pointer rounded-none"
         >
-          {isUpdating ? (
-            'COMMITTING_CHANGES...'
+          {activeUpdating ? (
+            'COMMITTING...'
           ) : (
             <>
               <FiCheck size={20} /> UPDATE REGISTRY
@@ -306,7 +354,7 @@ function EditProductContent({ slug }) {
         </button>
       </div>
 
-      {/* Tab Navigation */}
+      {/* Tab Controls */}
       <div className="flex flex-wrap bg-gray-50 p-1 border border-gray-100">
         {tabs.map(tab => (
           <button
@@ -319,7 +367,7 @@ function EditProductContent({ slug }) {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Main Tab Content Container */}
       <div className="bg-white border-2 border-gray-100 p-10 shadow-none">
         {activeTab === 'GENERAL' && (
           <BasicInfoTab
@@ -371,12 +419,14 @@ function EditProductContent({ slug }) {
         )}
       </div>
 
-      {error && (
+      {activeError && (
         <div className="p-6 bg-red-50 border-l-4 border-red-600 flex gap-4">
           <FiAlertCircle className="text-red-600 shrink-0" size={24} />
           <p className="text-xs font-black text-red-700 uppercase tracking-widest">
             Update_Error:{' '}
-            {typeof error === 'string' ? error : 'Validation failed'}
+            {typeof activeError === 'string'
+              ? activeError
+              : 'Registry update failed'}
           </p>
         </div>
       )}

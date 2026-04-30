@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   FiArrowLeft,
@@ -16,6 +16,7 @@ import { useBrands } from '@/app/(pharmacy-owner)/hooks/useBrands';
 import { useCategories } from '@/app/(pharmacy-owner)/hooks/useCategories';
 import { useIngredientAdmin } from '@/app/(admin)/hooks/useIngredientAdmin';
 import { useUnitAdmin } from '@/app/(admin)/hooks/useUnitAdmin';
+import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 // Modular Tab Imports
@@ -25,21 +26,38 @@ import MedicalGuideTab from '../components/form-tabs/MedicalGuideTab';
 import AssetsTab from '../components/form-tabs/AssetsTab';
 import AdvancedTab from '../components/form-tabs/AdvancedTab';
 
+/**
+ * AdminNewProductPage
+ * Super Admin Zone: Medicine Registry Creation.
+ * Updated: Orchestrates product creation, gallery uploads, and homepage section linking.
+ */
 export default function AdminNewProductPage() {
   return (
     <AuthGuard allowedRoles={['SUPER_ADMIN']}>
-      <NewProductContent />
+      <Suspense
+        fallback={
+          <div className="p-20 font-mono uppercase animate-pulse">
+            Initializing Form...
+          </div>
+        }
+      >
+        <NewProductContent />
+      </Suspense>
     </AuthGuard>
   );
 }
 
 function NewProductContent() {
   const router = useRouter();
-  const { createProductWithImages, isUpdating, error } = useProductAdmin();
+  const { isUpdating: hookIsUpdating, error: hookError } = useProductAdmin();
   const { brands, getBrands } = useBrands();
   const { categories, getCategories } = useCategories();
   const { ingredients, fetchIngredients } = useIngredientAdmin();
   const { units, fetchUnits } = useUnitAdmin();
+
+  // Internal Loading State for orchestration
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localError, setLocalError] = useState(null);
 
   // 1. Core Form State
   const [activeTab, setActiveTab] = useState('GENERAL');
@@ -48,7 +66,7 @@ function NewProductContent() {
 
   // 2. Dynamic Builders State
   const [specs, setSpecs] = useState([{ key: '', value: '' }]);
-  const [faqs, setFaqs] = useState([{ question: '', answer: '' }]); // FAQ State added here
+  const [faqs, setFaqs] = useState([{ question: '', answer: '' }]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -64,6 +82,7 @@ function NewProductContent() {
     requires_prescription: false,
     is_active: true,
     is_generic: false,
+    show_on_home: false, // New Field to trigger link-category
     unit: '',
     indications: '',
     therapeutic_class: '',
@@ -99,7 +118,6 @@ function NewProductContent() {
     }));
   };
 
-  // Specification Handlers
   const addSpecField = () => setSpecs([...specs, { key: '', value: '' }]);
   const removeSpecField = i => setSpecs(specs.filter((_, idx) => idx !== i));
   const updateSpec = (i, field, val) => {
@@ -108,7 +126,6 @@ function NewProductContent() {
     setSpecs(newSpecs);
   };
 
-  // FAQ Handlers (Fixed: Now implemented in parent)
   const addFaqField = () => setFaqs([...faqs, { question: '', answer: '' }]);
   const removeFaqField = i => setFaqs(faqs.filter((_, idx) => idx !== i));
   const updateFaq = (i, field, val) => {
@@ -117,11 +134,19 @@ function NewProductContent() {
     setFaqs(newFaqs);
   };
 
+  /**
+   * handleSubmit
+   * Orchestrates 3 API calls: Create Product -> (Optional) Link to Section -> Upload Gallery
+   */
   const handleSubmit = async e => {
     e.preventDefault();
+    setIsProcessing(true);
+    setLocalError(null);
+
+    const token = localStorage.getItem('access_token');
     const data = new FormData();
 
-    // Serialize Standard Fields
+    // 1. Prepare Product Data
     Object.keys(formData).forEach(key => {
       if (key === 'dosages') {
         formData.dosages
@@ -131,28 +156,58 @@ function NewProductContent() {
           .forEach(v => data.append('dosages', v));
       } else if (key === 'unit') {
         if (formData.unit) data.append('unit', formData.unit);
-      } else {
+      } else if (key !== 'show_on_home') {
+        // Don't send the UI flag to the main create endpoint
         data.append(key, formData[key]);
       }
     });
 
-    // Serialize Specifications (JSON)
     const specObj = {};
     specs.forEach(s => {
       if (s.key.trim()) specObj[s.key.trim()] = s.value;
     });
     data.append('specifications', JSON.stringify(specObj));
 
-    // Serialize FAQs (JSON stringified into the single 'faq' string field)
     const validFaqs = faqs.filter(f => f.question.trim());
     data.append('faq', JSON.stringify(validFaqs));
 
-    // Assets
     if (mainImage?.file) data.append('image', mainImage.file);
-    const galleryFiles = galleryImages.map(img => img.file);
 
-    const success = await createProductWithImages(data, galleryFiles);
-    if (success) router.push('/admin/products');
+    try {
+      // Step A: Create the Product
+      const newProduct = await productAdminApi.createProduct(token, data);
+
+      // Step B: If "Feature on Home Page" is checked, call link-category endpoint
+      if (formData.show_on_home && formData.category) {
+        await productAdminApi.linkProductToCategory(token, newProduct.slug, {
+          category_id: parseInt(formData.category),
+        });
+      }
+
+      // Step C: Handle Gallery Images
+      const galleryFiles = galleryImages.map(img => img.file);
+      if (galleryFiles.length > 0) {
+        for (const file of galleryFiles) {
+          await productAdminApi.uploadGalleryImage(
+            token,
+            newProduct.slug,
+            file,
+          );
+        }
+      }
+
+      router.push('/admin/products');
+    } catch (err) {
+      console.error('Submission Failed:', err);
+      setLocalError(
+        err.detail ||
+          (typeof err === 'object'
+            ? JSON.stringify(err)
+            : 'Failed to save product registry.'),
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const tabs = [
@@ -162,6 +217,9 @@ function NewProductContent() {
     { id: 'ASSETS', label: 'Photos', icon: <FiImage /> },
     { id: 'ADVANCED', label: 'Advanced', icon: <FiSettings /> },
   ];
+
+  const activeUpdating = hookIsUpdating || isProcessing;
+  const activeError = hookError || localError;
 
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-500 pb-20">
@@ -179,11 +237,11 @@ function NewProductContent() {
         </div>
         <button
           onClick={handleSubmit}
-          disabled={isUpdating}
+          disabled={activeUpdating}
           className="h-16 px-10 bg-[#3A5A40] text-white font-black uppercase tracking-[0.2em] text-sm flex items-center gap-4 hover:bg-black transition-all disabled:opacity-30 cursor-pointer rounded-none"
         >
-          {isUpdating ? (
-            'SAVING...'
+          {activeUpdating ? (
+            'PROCESSING_REGISTRY...'
           ) : (
             <>
               <FiCheck size={20} /> SAVE MEDICINE
@@ -192,7 +250,6 @@ function NewProductContent() {
         </button>
       </div>
 
-      {/* Tab Switcher */}
       <div className="flex flex-wrap bg-gray-50 p-1 border border-gray-100">
         {tabs.map(tab => (
           <button
@@ -252,11 +309,11 @@ function NewProductContent() {
         )}
       </div>
 
-      {error && (
+      {activeError && (
         <div className="p-6 bg-red-50 border-l-4 border-red-600 flex gap-4">
           <FiAlertCircle className="text-red-600 shrink-0" size={24} />
           <p className="text-xs font-black text-red-700 uppercase tracking-widest">
-            {error}
+            {activeError}
           </p>
         </div>
       )}

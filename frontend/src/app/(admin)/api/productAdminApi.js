@@ -7,7 +7,7 @@ import {
 /**
  * My Pharma - Super Admin Product Management API
  * Refactored: Uses fetchWithAuth interceptor for session persistence.
- * Supports extended medical metadata including Indications, Pharmacology, Side Effects, etc.
+ * Supports extended medical metadata and specialized linking endpoints.
  */
 export const productAdminApi = {
   /**
@@ -40,10 +40,6 @@ export const productAdminApi = {
   /**
    * POST /api/products/
    * Supports full medical metadata via FormData.
-   * Fields: indications, therapeutic_class, pharmacology, dosage_administration,
-   * interaction, contraindications, side_effects, pregnancy_lactation,
-   * precautions_warnings, overdose_effects, storage_conditions, mode_of_action,
-   * drug_classes, pregnancy, alternative_products, faq.
    */
   createProduct: async (token, formData) => {
     const res = await fetchWithAuth(`${API_BASE_URL}/products/`, {
@@ -58,6 +54,28 @@ export const productAdminApi = {
       throw data;
     }
     return data;
+  },
+
+  /**
+   * POST /api/products/{slug}/link-category/
+   * Links a product to a specific category for homepage sectioning.
+   * @param {string} token - Admin token
+   * @param {string} slug - Product slug
+   * @param {Object} data - { category_id: number }
+   */
+  linkProductToCategory: async (token, slug, data) => {
+    const res = await fetchWithAuth(
+      `${API_BASE_URL}/products/${slug}/link-category/`,
+      {
+        method: 'POST',
+        body: JSON.stringify(data),
+      },
+    );
+    const result = await parseJsonResponse(res);
+    if (!res.ok) {
+      throw result;
+    }
+    return result;
   },
 
   /**
@@ -94,7 +112,7 @@ export const productAdminApi = {
 
   /**
    * PATCH /api/products/{slug}/
-   * Partial update for all product fields including medical metadata.
+   * Partial update for all product fields.
    */
   updateProduct: async (token, slug, formData) => {
     const res = await fetchWithAuth(`${API_BASE_URL}/products/${slug}/`, {

@@ -1,13 +1,31 @@
 'use client';
 import React from 'react';
 
+/**
+ * StockPriceTab Component
+ * Industrial "Sharp" design for managing product financials and inventory levels.
+ * Fixed: Updated flag name to 'is_featured_home' to match the backend data property
+ * so that existing "Home Page" status is correctly reflected in Edit mode.
+ */
+
 // Tailwind style constants
-const inputClass = 'w-full h-14 px-5 bg-white border-2 border-gray-100 rounded-none text-sm font-mono focus:outline-none focus:border-black transition-all uppercase placeholder:text-gray-200';
-const labelClass = 'block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3';
+const inputClass =
+  'w-full h-14 px-5 bg-white border-2 border-gray-100 rounded-none text-sm font-mono focus:outline-none focus:border-black transition-all uppercase placeholder:text-gray-200 text-black';
+const labelClass =
+  'block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3';
 
 export default function StockPriceTab({ formData, handleInputChange }) {
+  // Use 'is_featured_home' to sync with the backend property provided in the product detail response
+  const flags = [
+    'is_generic',
+    'requires_prescription',
+    'is_active',
+    'is_featured_home',
+  ];
+
   return (
-    <div className="space-y-10 animate-in slide-in-from-left-2">
+    <div className="space-y-10 animate-in slide-in-from-left-2 text-black">
+      {/* Price and Stock Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div>
           <label className={labelClass}>Discounted Price (৳)</label>
@@ -54,27 +72,39 @@ export default function StockPriceTab({ formData, handleInputChange }) {
           />
         </div>
       </div>
-      <div className="p-8 bg-gray-50 border border-gray-100 flex flex-wrap gap-8">
-        {['is_generic', 'requires_prescription', 'is_active'].map(
-          flag => (
-            <label
-              key={flag}
-              className="flex items-center gap-4 cursor-pointer"
-            >
-              <input
-                name={flag}
-                type="checkbox"
-                className="w-6 h-6 accent-black"
-                checked={formData[flag]}
-                onChange={handleInputChange}
-              />
-              <span className="text-xs font-black uppercase tracking-widest">
-                {flag.replace(/_/g, ' ')}
-              </span>
-            </label>
-          ),
-        )}
+
+      {/* Product Visibility and Type Flags */}
+      <div className="p-8 bg-gray-50 border border-gray-100 flex flex-wrap gap-8 rounded-none">
+        {flags.map(flag => (
+          <label
+            key={flag}
+            className="flex items-center gap-4 cursor-pointer group"
+          >
+            <input
+              name={flag}
+              type="checkbox"
+              className="w-6 h-6 border-2 border-gray-200 rounded-none bg-white accent-black cursor-pointer shadow-none"
+              checked={!!formData[flag]} // Force boolean to ensure checkmark displays
+              onChange={handleInputChange}
+            />
+            <span className="text-[11px] font-black text-gray-500 group-hover:text-black uppercase tracking-widest transition-colors">
+              {flag === 'is_featured_home'
+                ? 'Feature on Home Page'
+                : flag.replace(/_/g, ' ')}
+            </span>
+          </label>
+        ))}
       </div>
+
+      {/* Dynamic Note */}
+      {formData.is_featured_home && (
+        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 animate-in fade-in slide-in-from-top-1">
+          <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest leading-relaxed">
+            Note: This product is currently marked for display on the landing
+            page sections.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

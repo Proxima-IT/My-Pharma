@@ -8,10 +8,8 @@ import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminEditCategoryPage
- * Super Admin Zone: Simplified Edit flow.
- * Feature: Removed manual hierarchy/sidebar selection fields.
- * Categorization is managed via the Visual Organizer.
- * Design: Strictly rounded-none, industrial feel.
+ * Super Admin Zone: Handles category updates including homepage visibility settings.
+ * Design: Strictly rounded-none, industrial contrast, business-friendly labels.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -40,10 +38,12 @@ function EditCategoryContent({ slug }) {
   const [formData, setFormData] = useState({
     name: '',
     is_active: true,
+    is_featured_home: false,
+    featured_order: 0,
     image: null,
   });
 
-  // Load existing data for the target category
+  // Load existing data from the database
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchCategoryBySlug(slug);
@@ -51,6 +51,8 @@ function EditCategoryContent({ slug }) {
         setFormData({
           name: data.name || '',
           is_active: data.is_active ?? true,
+          is_featured_home: data.is_featured_home ?? false,
+          featured_order: data.featured_order || 0,
           image: null,
         });
         if (data.image) {
@@ -72,10 +74,12 @@ function EditCategoryContent({ slug }) {
   const handleSubmit = async e => {
     e.preventDefault();
 
-    // Construct FormData for multipart submission
+    // Construct FormData for multipart/file submission
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
+    data.append('is_featured_home', formData.is_featured_home);
+    data.append('featured_order', formData.featured_order);
 
     if (formData.image) {
       data.append('image', formData.image);
@@ -91,7 +95,7 @@ function EditCategoryContent({ slug }) {
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin rounded-none" />
           <p className="font-mono text-xs font-bold uppercase tracking-widest text-[#8A8A78]">
-            Syncing_Registry...
+            Syncing Data...
           </p>
         </div>
       </div>
@@ -125,27 +129,18 @@ function EditCategoryContent({ slug }) {
             Edit Category
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
-            Update identity and assets for:{' '}
-            <span className="text-[#3A5A40] font-bold underline">
-              {categoryDetails?.name}
-            </span>
+            Manage how this category appears in your store and on the homepage.
           </p>
         </div>
       </div>
 
       {/* Form Container */}
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none shadow-none">
-        <div className="mb-10 border-b border-gray-50 pb-6">
-          <h2 className="font-mono text-sm font-bold text-[#1B1B1B] uppercase tracking-widest">
-            Identity & Asset Configuration
-          </h2>
-        </div>
-
         <form onSubmit={handleSubmit} className="space-y-10">
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Category Name */}
-            <div>
-              <label className={labelClass}>Category Title</label>
+            <div className="md:col-span-1">
+              <label className={labelClass}>Category Name</label>
               <input
                 type="text"
                 className={inputClass}
@@ -154,6 +149,19 @@ function EditCategoryContent({ slug }) {
                   setFormData({ ...formData, name: e.target.value })
                 }
                 required
+              />
+            </div>
+
+            {/* Featured Order */}
+            <div className="md:col-span-1">
+              <label className={labelClass}>Home Page Serial Order</label>
+              <input
+                type="number"
+                className={inputClass}
+                value={formData.featured_order}
+                onChange={e =>
+                  setFormData({ ...formData, featured_order: e.target.value })
+                }
               />
             </div>
           </div>
@@ -178,7 +186,7 @@ function EditCategoryContent({ slug }) {
                     className="text-gray-300 group-hover:text-[#3A5A40]"
                   />
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                    Upload Asset
+                    Upload Photo
                   </span>
                 </>
               )}
@@ -192,24 +200,50 @@ function EditCategoryContent({ slug }) {
             />
           </div>
 
-          {/* Visibility Toggle */}
-          <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none shadow-none">
-            <div className="flex flex-col gap-1">
-              <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
-                Active Store Status
-              </span>
-              <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                Should this category be visible to public users?
-              </span>
+          {/* Settings Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Store Status Toggle */}
+            <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none shadow-none">
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
+                  Active Status
+                </span>
+                <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
+                  Show this category in the public shop?
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
+                checked={formData.is_active}
+                onChange={e =>
+                  setFormData({ ...formData, is_active: e.target.checked })
+                }
+              />
             </div>
-            <input
-              type="checkbox"
-              className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
-              checked={formData.is_active}
-              onChange={e =>
-                setFormData({ ...formData, is_active: e.target.checked })
-              }
-            />
+
+            {/* Home Page Toggle */}
+            <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none shadow-none">
+              <div className="flex flex-col gap-1">
+                <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
+                  Show on Home Page
+                </span>
+                <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
+                  Highlight this category on the main landing page?
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
+                checked={formData.is_featured_home}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    is_featured_home: e.target.checked,
+                  })
+                }
+              />
+            </div>
           </div>
 
           {/* Action Button */}
@@ -219,10 +253,10 @@ function EditCategoryContent({ slug }) {
             className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-black transition-all duration-300 cursor-pointer disabled:opacity-50 rounded-none border-none shadow-none"
           >
             {isUpdating ? (
-              'PROCESSING...'
+              'UPDATING...'
             ) : (
               <>
-                <FiCheck size={20} /> COMMIT CHANGES
+                <FiCheck size={20} /> SAVE CATEGORY CHANGES
               </>
             )}
           </button>
