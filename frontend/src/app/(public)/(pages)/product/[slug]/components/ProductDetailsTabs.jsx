@@ -12,15 +12,15 @@ import {
   FiHelpCircle,
 } from 'react-icons/fi';
 import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { useReviews } from '../../../../hooks/useReviews';
 import ReviewForm from './ReviewForm';
 import ReviewCard from './ReviewCard';
 
 /**
  * ProductDetailsTabs Component
- * Refactored: High-fidelity Markdown rendering using react-markdown.
+ * Refactored: Integrated rehype-raw with react-markdown to support embedded HTML (like colored spans).
  * Features: Structured Medical Guide, Dynamic Specifications, and FAQ Parsing.
- * Fix: Removed dangerouslySetInnerHTML and restored ReactMarkdown for secure and perfectly formatted output.
  */
 const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const [activeTab, setActiveTab] = useState('Description');
@@ -45,7 +45,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     }
   }, [product?.faq]);
 
-  // 2. Medical Info Mapping (Markdown Fields)
+  // 2. Medical Info Mapping (Markdown Fields with HTML support)
   const medicalInfo = useMemo(() => {
     if (!product) return [];
     const fields = [
@@ -121,7 +121,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     </button>
   );
 
-  // Markdown Styling Wrapper
+  // Markdown Styling Wrapper with HTML Support via rehype-raw
   const markdownClass =
     'prose prose-slate max-w-none text-gray-600 leading-relaxed [&_p]:mb-6 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:mb-4 [&_h2]:text-xl [&_h2]:font-bold [&_h2]:mb-4 [&_h3]:text-lg [&_h3]:font-bold [&_h3]:mb-3 [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:mb-6 [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:mb-6 [&_strong]:text-black [&_strong]:font-bold';
 
@@ -158,7 +158,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               Medicine Overview
             </h2>
             <div className={markdownClass}>
-              <ReactMarkdown>
+              <ReactMarkdown rehypePlugins={[rehypeRaw]}>
                 {product.description || 'No description available.'}
               </ReactMarkdown>
             </div>
@@ -182,7 +182,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                     {info.label}
                   </h4>
                   <div className={markdownClass}>
-                    <ReactMarkdown>{info.value}</ReactMarkdown>
+                    <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                      {info.value}
+                    </ReactMarkdown>
                   </div>
                 </div>
               ))}
@@ -239,7 +241,9 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                       A
                     </span>
                     <div className={markdownClass + ' pt-1'}>
-                      <ReactMarkdown>{faq.answer}</ReactMarkdown>
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                        {faq.answer}
+                      </ReactMarkdown>
                     </div>
                   </div>
                 </div>
@@ -356,7 +360,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                       <button
                         key={p}
                         onClick={() => handlePageChange(p)}
-                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer shadow-none ${currentPage === p ? 'bg-black text-white shadow-none' : 'hover:bg-gray-50 text-gray-600 shadow-none'}`}
+                        className={`w-10 h-10 rounded-full font-bold text-sm transition-all cursor-pointer shadow-none ${currentPage === p ? 'bg-black text-white' : 'hover:bg-gray-50 text-gray-600 shadow-none'}`}
                       >
                         {p}
                       </button>

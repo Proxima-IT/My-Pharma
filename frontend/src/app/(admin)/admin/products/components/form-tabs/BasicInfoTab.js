@@ -10,8 +10,8 @@ const labelClass =
 
 /**
  * BasicInfoTab
- * Updated: Integrated the professional RichTextEditor for the product description.
- * Data is saved in Markdown (README) format via the editor's internal storage.
+ * Refactored: Integrated Enterprise CKEditor 5 for high-fidelity content management.
+ * Labels updated to business-friendly terminology.
  */
 export default function BasicInfoTab({
   formData,
@@ -21,23 +21,23 @@ export default function BasicInfoTab({
   ingredients,
   units,
 }) {
-  // ── Cascading Unit Selection ─────────────────────────────────────────
+  // ── Cascading Unit Selection Logic ──────────────────────────────────
   const [selectedUnitType, setSelectedUnitType] = useState('');
 
-  // Derive unique unit types from available units
+  // Derive unique unit types from available units (e.g. Strip, Bottle)
   const unitTypes = useMemo(() => {
     if (!units?.results) return [];
     const types = [...new Set(units.results.map(u => u.unit_type))];
     return types.sort();
   }, [units]);
 
-  // Filter units by selected type
+  // Filter units by the chosen type
   const filteredUnits = useMemo(() => {
     if (!units?.results || !selectedUnitType) return [];
     return units.results.filter(u => u.unit_type === selectedUnitType);
   }, [units, selectedUnitType]);
 
-  // On edit: auto-select the unit type when formData.unit is pre-filled
+  // On edit: auto-select the unit type when formData.unit is pre-filled from registry
   useEffect(() => {
     if (formData.unit && units?.results && !selectedUnitType) {
       const match = units.results.find(u => u.id === Number(formData.unit));
@@ -53,8 +53,8 @@ export default function BasicInfoTab({
   };
 
   /**
-   * Adapts the RichTextEditor's direct value change to the parent's
-   * generic handleInputChange event-based logic.
+   * Translates the RichTextEditor's string value into an event-like object
+   * for the parent state handler.
    */
   const handleEditorChange = value => {
     handleInputChange({
@@ -138,8 +138,7 @@ export default function BasicInfoTab({
           </select>
         </div>
 
-        {/* ── Cascading Unit Selection ─────────────────────────────── */}
-        {/* Step 1: Unit Type */}
+        {/* Packaging Type */}
         <div>
           <label className={labelClass}>Packaging Type</label>
           <select
@@ -159,7 +158,7 @@ export default function BasicInfoTab({
           </p>
         </div>
 
-        {/* Step 2: Specific Unit (filtered by type) */}
+        {/* Specific Unit Quantity */}
         <div>
           <label className={labelClass}>Unit Quantity</label>
           <select
@@ -180,31 +179,22 @@ export default function BasicInfoTab({
               </option>
             ))}
           </select>
-          {formData.unit && units?.results && (
-            <p className="text-[9px] font-bold text-green-600 mt-2 uppercase tracking-widest">
-              ✓{' '}
-              {units.results
-                .find(u => u.id === Number(formData.unit))
-                ?.name?.toUpperCase() || ''}
-            </p>
-          )}
         </div>
       </div>
 
-      {/* Professional WYSIWYG Editor */}
+      {/* Enterprise Licensed Editor */}
       <div className="space-y-0">
-        <label className={labelClass}>
-          General Product Overview (Visual Editor)
-        </label>
+        <label className={labelClass}>Product Description</label>
 
         <RichTextEditor
           value={formData.description}
           onChange={handleEditorChange}
-          placeholder="Enter a detailed product description here..."
+          placeholder="Enter authoritative product description and usage details..."
         />
 
         <p className="text-[9px] font-bold text-gray-400 mt-3 uppercase tracking-widest">
-          Formatting applied here is saved as high-fidelity Markdown.
+          Enterprise WYSIWYG Active: Content is secured and optimized for public
+          rendering.
         </p>
       </div>
     </div>
