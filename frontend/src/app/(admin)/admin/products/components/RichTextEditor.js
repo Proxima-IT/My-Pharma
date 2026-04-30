@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -63,6 +63,13 @@ const RichTextEditor = ({
     },
   });
 
+  useEffect(() => {
+    if (!editor) return;
+    if (typeof value === 'string' && value !== editor.getHTML()) {
+      editor.commands.setContent(value, false);
+    }
+  }, [editor, value]);
+
   if (!editor) {
     return (
       <div className="w-full h-[300px] bg-gray-50 border-2 border-gray-100 flex items-center justify-center">
@@ -88,6 +95,76 @@ const RichTextEditor = ({
 
   return (
     <div className="w-full tiptap-wrapper">
+      <style jsx>{`
+        .ProseMirror h1 {
+          font-size: 2rem;
+          font-weight: 800;
+          margin: 0.5rem 0;
+          line-height: 1.2;
+        }
+        .ProseMirror h2 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          margin: 0.5rem 0;
+          line-height: 1.3;
+        }
+        .ProseMirror h3 {
+          font-size: 1.25rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+          line-height: 1.4;
+        }
+        .ProseMirror h4 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+        }
+        .ProseMirror h5 {
+          font-size: 1rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+        }
+        .ProseMirror h6 {
+          font-size: 0.875rem;
+          font-weight: 600;
+          margin: 0.5rem 0;
+        }
+        .ProseMirror blockquote {
+          border-left: 4px solid #d1d5db;
+          padding-left: 1rem;
+          margin: 1rem 0;
+          color: #6b7280;
+          font-style: italic;
+        }
+        .ProseMirror ul,
+        .ProseMirror ol {
+          margin: 0.5rem 0;
+          padding-left: 2rem;
+        }
+        .ProseMirror li {
+          margin: 0.25rem 0;
+        }
+        .ProseMirror code {
+          background-color: #f3f4f6;
+          padding: 0.2rem 0.4rem;
+          border-radius: 0.25rem;
+          font-family: monospace;
+          font-size: 0.9em;
+        }
+        .ProseMirror pre {
+          background-color: #1f2937;
+          color: #f3f4f6;
+          padding: 1rem;
+          border-radius: 0.25rem;
+          overflow-x: auto;
+          margin: 0.5rem 0;
+        }
+        .ProseMirror pre code {
+          background-color: transparent;
+          color: inherit;
+          padding: 0;
+        }
+      `}</style>
       {/* Toolbar */}
       <div className="flex flex-wrap gap-1 p-2 bg-gray-50 border-2 border-gray-100 border-b-0">
         <ToolbarButton
@@ -129,6 +206,23 @@ const RichTextEditor = ({
         <div className="w-px h-6 bg-gray-300 mx-1" />
 
         <select
+          value={
+            editor.isActive('paragraph')
+              ? '0'
+              : editor.isActive('heading', { level: 1 })
+                ? '1'
+                : editor.isActive('heading', { level: 2 })
+                  ? '2'
+                  : editor.isActive('heading', { level: 3 })
+                    ? '3'
+                    : editor.isActive('heading', { level: 4 })
+                      ? '4'
+                      : editor.isActive('heading', { level: 5 })
+                        ? '5'
+                        : editor.isActive('heading', { level: 6 })
+                          ? '6'
+                          : '0'
+          }
           onChange={e => {
             const level = parseInt(e.target.value);
             if (level === 0) {

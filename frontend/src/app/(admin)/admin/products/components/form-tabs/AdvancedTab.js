@@ -36,7 +36,7 @@ export default function AdvancedTab({
         <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
           <FiSettings className="text-[#3A5A40]" />
           <h3 className="text-sm font-black uppercase tracking-widest text-black">
-            Technical Specifications
+            Specifications
           </h3>
         </div>
         <div className="space-y-4">

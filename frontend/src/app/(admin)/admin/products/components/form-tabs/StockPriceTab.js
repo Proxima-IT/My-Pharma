@@ -10,7 +10,7 @@ export default function StockPriceTab({ formData, handleInputChange }) {
     <div className="space-y-10 animate-in slide-in-from-left-2">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
         <div>
-          <label className={labelClass}>Selling Price (৳)</label>
+          <label className={labelClass}>Discounted Price (৳)</label>
           <input
             name="price"
             type="number"
@@ -22,7 +22,7 @@ export default function StockPriceTab({ formData, handleInputChange }) {
           />
         </div>
         <div>
-          <label className={labelClass}>MRP / Original Price (৳)</label>
+          <label className={labelClass}>Original Price (৳)</label>
           <input
             name="original_price"
             type="number"
@@ -44,7 +44,7 @@ export default function StockPriceTab({ formData, handleInputChange }) {
           />
         </div>
         <div>
-          <label className={labelClass}>Low Stock Threshold</label>
+          <label className={labelClass}>Low Stock Alert</label>
           <input
             name="low_stock_threshold"
             type="number"

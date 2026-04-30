@@ -10,8 +10,8 @@ const labelClass =
 
 /**
  * BasicInfoTab
- * Refactored: Integrated Enterprise CKEditor 5 for high-fidelity content management.
- * Labels updated to business-friendly terminology.
+ * Updated: Implemented cascading category selection (Main Category -> Optional Sub-category).
+ * Logic: Parent ID is sent if no sub-category is selected; otherwise, Sub-category ID is sent.
  */
 export default function BasicInfoTab({
   formData,
@@ -21,23 +21,75 @@ export default function BasicInfoTab({
   ingredients,
   units,
 }) {
+  // ── Cascading Category Logic ────────────────────────────────────────
+  const [selectedParentId, setSelectedParentId] = useState('');
+  const [selectedChildId, setSelectedChildId] = useState('');
+
+  // Main categories (where parent is null)
+  const mainCategories = useMemo(() => {
+    if (!categories?.results) return [];
+    return categories.results.filter(c => c.parent === null);
+  }, [categories]);
+
+  // Sub-categories based on the selected main category
+  const subCategories = useMemo(() => {
+    if (!categories?.results || !selectedParentId) return [];
+    return categories.results.filter(
+      c => String(c.parent) === String(selectedParentId),
+    );
+  }, [categories, selectedParentId]);
+
+  // Handle Edit Mode: Initialize parent/child based on the assigned category ID
+  useEffect(() => {
+    if (formData.category && categories?.results && !selectedParentId) {
+      const currentCat = categories.results.find(
+        c => c.id === Number(formData.category),
+      );
+      if (currentCat) {
+        if (currentCat.parent) {
+          // Assigned category is a child
+          setSelectedParentId(String(currentCat.parent));
+          setSelectedChildId(String(currentCat.id));
+        } else {
+          // Assigned category is a main category
+          setSelectedParentId(String(currentCat.id));
+          setSelectedChildId('');
+        }
+      }
+    }
+  }, [formData.category, categories, selectedParentId]);
+
+  const handleParentChange = e => {
+    const val = e.target.value;
+    setSelectedParentId(val);
+    setSelectedChildId(''); // Reset child on parent change
+
+    // Immediately update parent state: send Parent ID to database
+    handleInputChange({ target: { name: 'category', value: val } });
+  };
+
+  const handleChildChange = e => {
+    const val = e.target.value;
+    setSelectedChildId(val);
+
+    // If a child is selected, send its ID; if cleared, revert to Parent ID
+    const finalId = val || selectedParentId;
+    handleInputChange({ target: { name: 'category', value: finalId } });
+  };
+
   // ── Cascading Unit Selection Logic ──────────────────────────────────
   const [selectedUnitType, setSelectedUnitType] = useState('');
 
-  // Derive unique unit types from available units (e.g. Strip, Bottle)
   const unitTypes = useMemo(() => {
     if (!units?.results) return [];
-    const types = [...new Set(units.results.map(u => u.unit_type))];
-    return types.sort();
+    return [...new Set(units.results.map(u => u.unit_type))].sort();
   }, [units]);
 
-  // Filter units by the chosen type
   const filteredUnits = useMemo(() => {
     if (!units?.results || !selectedUnitType) return [];
     return units.results.filter(u => u.unit_type === selectedUnitType);
   }, [units, selectedUnitType]);
 
-  // On edit: auto-select the unit type when formData.unit is pre-filled from registry
   useEffect(() => {
     if (formData.unit && units?.results && !selectedUnitType) {
       const match = units.results.find(u => u.id === Number(formData.unit));
@@ -48,21 +100,11 @@ export default function BasicInfoTab({
   const handleUnitTypeChange = e => {
     const newType = e.target.value;
     setSelectedUnitType(newType);
-    // Reset the unit selection when type changes
     handleInputChange({ target: { name: 'unit', value: '' } });
   };
 
-  /**
-   * Translates the RichTextEditor's string value into an event-like object
-   * for the parent state handler.
-   */
   const handleEditorChange = value => {
-    handleInputChange({
-      target: {
-        name: 'description',
-        value: value,
-      },
-    });
+    handleInputChange({ target: { name: 'description', value: value } });
   };
 
   return (
@@ -83,7 +125,7 @@ export default function BasicInfoTab({
 
         {/* Ingredient Selection */}
         <div>
-          <label className={labelClass}>Generic / Active Ingredient</label>
+          <label className={labelClass}>Ingredient</label>
           <select
             name="ingredient"
             className={inputClass}
@@ -102,7 +144,7 @@ export default function BasicInfoTab({
 
         {/* Brand Selection */}
         <div>
-          <label className={labelClass}>Company Brand</label>
+          <label className={labelClass}>Brand</label>
           <select
             name="brand"
             className={inputClass}
@@ -119,24 +161,42 @@ export default function BasicInfoTab({
           </select>
         </div>
 
-        {/* Category Selection */}
+        {/* Main Category Selection */}
         <div>
-          <label className={labelClass}>Group / Category</label>
+          <label className={labelClass}>Main Category</label>
           <select
-            name="category"
-            className={inputClass}
-            value={formData.category}
-            onChange={handleInputChange}
+            value={selectedParentId}
+            onChange={handleParentChange}
             required
+            className={inputClass}
           >
             <option value="">Select Category</option>
-            {categories?.results?.map(c => (
+            {mainCategories.map(c => (
               <option key={c.id} value={c.id}>
                 {c.name.toUpperCase()}
               </option>
             ))}
           </select>
         </div>
+
+        {/* Sub-Category Selection (Conditional) */}
+        {selectedParentId && subCategories.length > 0 && (
+          <div>
+            <label className={labelClass}>Sub-Category (Optional)</label>
+            <select
+              value={selectedChildId}
+              onChange={handleChildChange}
+              className={inputClass}
+            >
+              <option value="">No Sub-Category (Keep as Main)</option>
+              {subCategories.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* Packaging Type */}
         <div>
@@ -153,9 +213,6 @@ export default function BasicInfoTab({
               </option>
             ))}
           </select>
-          <p className="text-[9px] font-bold text-gray-300 mt-2 uppercase tracking-widest">
-            E.g. Strip, Bottle, Tube, Inhaler, Vial
-          </p>
         </div>
 
         {/* Specific Unit Quantity */}
@@ -182,20 +239,14 @@ export default function BasicInfoTab({
         </div>
       </div>
 
-      {/* Enterprise Licensed Editor */}
+      {/* Enterprise WYSIWYG Editor */}
       <div className="space-y-0">
         <label className={labelClass}>Product Description</label>
-
         <RichTextEditor
           value={formData.description}
           onChange={handleEditorChange}
-          placeholder="Enter authoritative product description and usage details..."
+          placeholder="Enter authoritative product description..."
         />
-
-        <p className="text-[9px] font-bold text-gray-400 mt-3 uppercase tracking-widest">
-          Enterprise WYSIWYG Active: Content is secured and optimized for public
-          rendering.
-        </p>
       </div>
     </div>
   );
