@@ -69,7 +69,7 @@ REST API for the admin panel, aligned with [RBAC](RBAC.md) (User Hierarchy & Rol
 | PUT / PATCH | `/api/categories/{slug}/` | Update category |
 | DELETE | `/api/categories/{slug}/` | Delete category |
 
-**Fields:** `name`, `parent`, `sidebar_category`, `sidebar_category_title` (read-only), `image` (optional), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only). Use multipart/form-data when uploading `image`.
+**Fields:** `name`, `parent`, `sidebar_category`, `sidebar_category_title` (read-only), `image` (optional), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `is_home_categoery`, `featured_order`, `product_count` (read-only). Use multipart/form-data when uploading `image`.
 
 `sidebar_category` links a product category to a custom sidebar menu item (`/api/sidebar-categories/{id}/`) so the category appears as a child under that specific sidebar menu on the public sidebar.
 

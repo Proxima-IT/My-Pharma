@@ -1617,6 +1617,10 @@ paths:
         name: is_featured_home
         schema:
           type: boolean
+      - in: query
+        name: is_home_categoery
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -2936,6 +2940,86 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationBroadcastResult'
           description: ''
+  /api/notifications/campaigns/:
+    get:
+      operationId: notifications_campaigns_list
+      summary: List/create notification campaigns (admin)
+      parameters:
+      - in: query
+        name: is_read
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Notifications
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedNotificationCampaignList'
+          description: ''
+    post:
+      operationId: notifications_campaigns_create
+      summary: List/create notification campaigns (admin)
+      tags:
+      - Notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationCampaignCreate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationCampaignCreate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationCampaignCreate'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationBroadcastResult'
+          description: ''
+  /api/notifications/campaigns/{campaign_id}/:
+    get:
+      operationId: notifications_campaigns_retrieve
+      summary: Notification campaign details with delivery logs (admin)
+      parameters:
+      - in: path
+        name: campaign_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Notifications
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationCampaign'
+          description: ''
+  /api/notifications/health/:
+    get:
+      operationId: notifications_health_retrieve
+      summary: Notification system health snapshot (admin)
+      tags:
+      - Notifications
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationHealth'
+          description: ''
   /api/notifications/permission/:
     get:
       operationId: notifications_permission_retrieve
@@ -3043,6 +3127,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/NotificationRemovedCount'
           description: ''
+  /api/notifications/test-send/:
+    post:
+      operationId: notifications_test_send_create
+      summary: Send test notification to current admin user
+      tags:
+      - Notifications
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationTestSend'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/NotificationTestSend'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/NotificationTestSend'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationBroadcastResult'
+          description: ''
   /api/orders/:
     get:
       operationId: orders_list
@@ -3132,6 +3241,40 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/orders/{id}/pay/:
+    post:
+      operationId: orders_pay_create
+      description: |-
+        POST /api/orders/<id>/pay/ – Create a new SSLCommerz session for an unpaid online order.
+        Body: { payment_method?: str }  (optional, defaults to ONLINE)
+        Returns { gateway_url, tran_id } so the frontend can redirect to the payment page.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Order'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Order'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
   /api/pages/:
     get:
       operationId: pages_list
@@ -3560,6 +3703,10 @@ paths:
           type: boolean
         description: true => generic/unbranded product row
       - in: query
+        name: is_in_homepage
+        schema:
+          type: boolean
+      - in: query
         name: max_price
         schema:
           type: number
@@ -3889,6 +4036,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ProductWrite'
+          description: ''
+  /api/products/{slug}/link-category/:
+    post:
+      operationId: products_link_category_create
+      description: Link this product to a specific category from the admin panel.
+      summary: Link this product to a specific category
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - Products
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductLinkCategory'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductLinkCategory'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductLinkCategory'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+                description: Unspecified response body
           description: ''
   /api/products/inventory-list/:
     get:
@@ -4367,6 +4548,146 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/units/:
+    get:
+      operationId: units_list
+      parameters:
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - units
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUnitList'
+          description: ''
+    post:
+      operationId: units_create
+      tags:
+      - units
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Unit'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Unit'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Unit'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+          description: ''
+  /api/units/{slug}/:
+    get:
+      operationId: units_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - units
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+          description: ''
+    put:
+      operationId: units_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - units
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Unit'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Unit'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Unit'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+          description: ''
+    patch:
+      operationId: units_partial_update
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - units
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUnit'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUnit'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUnit'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+          description: ''
+    delete:
+      operationId: units_destroy
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - units
+      responses:
+        '204':
+          description: No response body
 components:
   schemas:
     Ad:
@@ -4425,6 +4746,7 @@ components:
           maxLength: 200
         message:
           type: string
+          maxLength: 2000
         target_url:
           type: string
           format: uri
@@ -4432,6 +4754,18 @@ components:
           type: boolean
           default: false
           description: When true, send only to users who enabled notification permission.
+        audience_mode:
+          allOf:
+          - $ref: '#/components/schemas/AudienceModeEnum'
+          default: ALL_ACTIVE
+        user_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        role_filter:
+          type: string
+          maxLength: 32
       required:
       - message
       - title
@@ -4467,6 +4801,18 @@ components:
       - image_url
       - slug
       - updated_at
+    AudienceModeEnum:
+      enum:
+      - ALL_ACTIVE
+      - OPTED_IN_ONLY
+      - USER_IDS
+      - ROLE_BASED
+      type: string
+      description: |-
+        * `ALL_ACTIVE` - All active users
+        * `OPTED_IN_ONLY` - Opted-in users only
+        * `USER_IDS` - Specific user ids
+        * `ROLE_BASED` - Role-based segment
     B2BCommissionEntry:
       type: object
       properties:
@@ -4740,7 +5086,7 @@ components:
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           readOnly: true
           nullable: true
-        product_unit_label:
+        product_unit_name:
           type: string
           readOnly: true
         product_dosage:
@@ -4790,7 +5136,7 @@ components:
       - product_name
       - product_original_price
       - product_slug
-      - product_unit_label
+      - product_unit_name
       - quantity_in_stock
     Category:
       type: object
@@ -4836,6 +5182,9 @@ components:
         is_featured_home:
           type: boolean
           description: When true, this category is shown in home featured categories.
+        is_home_categoery:
+          type: boolean
+          description: Additional boolean field for home category (per user request).
         featured_order:
           type: integer
           maximum: 65535
@@ -4968,6 +5317,9 @@ components:
         is_featured_home:
           type: boolean
           description: When true, this category is shown in home featured categories.
+        is_home_categoery:
+          type: boolean
+          description: Additional boolean field for home category (per user request).
         featured_order:
           type: integer
           maximum: 65535
@@ -5481,7 +5833,11 @@ components:
           minimum: 0
         push_async:
           type: boolean
+        campaign_id:
+          type: integer
+          minimum: 1
       required:
+      - campaign_id
       - detail
       - push_async
       - push_attempted
@@ -5492,6 +5848,175 @@ components:
       - sent_count
       - target_url
       - title
+    NotificationCampaign:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          readOnly: true
+        message:
+          type: string
+          readOnly: true
+        target_url:
+          type: string
+          format: uri
+          readOnly: true
+        audience_mode:
+          allOf:
+          - $ref: '#/components/schemas/AudienceModeEnum'
+          readOnly: true
+        role_filter:
+          type: string
+          readOnly: true
+          description: Optional role when audience_mode=ROLE_BASED.
+        source:
+          type: string
+          readOnly: true
+          description: 'Origin of this campaign: admin, order_event, prescription_event,
+            payment_event, etc.'
+        status:
+          allOf:
+          - $ref: '#/components/schemas/NotificationCampaignStatusEnum'
+          readOnly: true
+        dedupe_key:
+          type: string
+          readOnly: true
+          description: Optional idempotency key for event-driven notifications.
+        metadata:
+          readOnly: true
+        recipient_count:
+          type: integer
+          readOnly: true
+        push_attempted:
+          type: integer
+          readOnly: true
+        push_succeeded:
+          type: integer
+          readOnly: true
+        push_failed:
+          type: integer
+          readOnly: true
+        push_deactivated:
+          type: integer
+          readOnly: true
+        requested_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        requested_by_email:
+          type: string
+          format: email
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - audience_mode
+      - created_at
+      - dedupe_key
+      - id
+      - message
+      - metadata
+      - push_attempted
+      - push_deactivated
+      - push_failed
+      - push_succeeded
+      - recipient_count
+      - requested_by
+      - requested_by_email
+      - role_filter
+      - source
+      - status
+      - target_url
+      - title
+      - updated_at
+    NotificationCampaignCreate:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        message:
+          type: string
+          maxLength: 2000
+        target_url:
+          type: string
+          format: uri
+        send_to_opted_in_only:
+          type: boolean
+          default: false
+        audience_mode:
+          allOf:
+          - $ref: '#/components/schemas/AudienceModeEnum'
+          default: ALL_ACTIVE
+        user_ids:
+          type: array
+          items:
+            type: integer
+            minimum: 1
+        role_filter:
+          type: string
+          maxLength: 32
+        dedupe_key:
+          type: string
+          maxLength: 200
+      required:
+      - message
+      - title
+    NotificationCampaignStatusEnum:
+      enum:
+      - DRAFT
+      - QUEUED
+      - PARTIAL
+      - COMPLETED
+      - FAILED
+      type: string
+      description: |-
+        * `DRAFT` - Draft
+        * `QUEUED` - Queued
+        * `PARTIAL` - Partially delivered
+        * `COMPLETED` - Completed
+        * `FAILED` - Failed
+    NotificationHealth:
+      type: object
+      properties:
+        firebase_initialized:
+          type: boolean
+        firebase_credential_source:
+          type: string
+        firebase_init_error:
+          type: string
+        celery_task_always_eager:
+          type: boolean
+        redis_enabled:
+          type: boolean
+        active_subscriptions:
+          type: integer
+          minimum: 0
+        inactive_subscriptions:
+          type: integer
+          minimum: 0
+        recently_deactivated_7d:
+          type: integer
+          minimum: 0
+      required:
+      - active_subscriptions
+      - celery_task_always_eager
+      - firebase_credential_source
+      - firebase_init_error
+      - firebase_initialized
+      - inactive_subscriptions
+      - recently_deactivated_7d
+      - redis_enabled
     NotificationMarkedCount:
       type: object
       properties:
@@ -5508,6 +6033,21 @@ components:
           minimum: 0
       required:
       - removed_count
+    NotificationTestSend:
+      type: object
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        message:
+          type: string
+          maxLength: 2000
+        target_url:
+          type: string
+          format: uri
+      required:
+      - message
+      - title
     NullEnum:
       enum:
       - null
@@ -5543,6 +6083,14 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/Status657Enum'
+        payment_status:
+          type: string
+          readOnly: true
+          default: PENDING
+        payment_method:
+          type: string
+          readOnly: true
+          default: COD
         subtotal_before_discount:
           type: string
           format: decimal
@@ -5601,6 +6149,8 @@ components:
       - id
       - images
       - items
+      - payment_method
+      - payment_status
       - status_history
       - total
       - updated_at
@@ -6106,6 +6656,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Ingredient'
+    PaginatedNotificationCampaignList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationCampaign'
     PaginatedOrderList:
       type: object
       properties:
@@ -6246,6 +6816,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SidebarCategory'
+    PaginatedUnitList:
+      type: object
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Unit'
     PaginatedUserAddressList:
       type: object
       properties:
@@ -6552,7 +7142,7 @@ components:
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           readOnly: true
           nullable: true
-        product_unit_label:
+        product_unit_name:
           type: string
           readOnly: true
         product_dosage:
@@ -6633,6 +7223,9 @@ components:
         is_featured_home:
           type: boolean
           description: When true, this category is shown in home featured categories.
+        is_home_categoery:
+          type: boolean
+          description: Additional boolean field for home category (per user request).
         featured_order:
           type: integer
           maximum: 65535
@@ -6939,10 +7532,10 @@ components:
           type: string
           format: uri
           nullable: true
-        unit_label:
-          type: string
-          description: e.g. '10 Tablets (1 Strip)', '20 Tablets (2 Strip)'.
-          maxLength: 120
+        unit:
+          type: integer
+          nullable: true
+          description: Packaging unit e.g. 'Strip of 10 Tablets'.
         dosage:
           type: string
           description: Strength e.g. '50mg', '500mg', '5ml' for display and dosage
@@ -6964,6 +7557,38 @@ components:
         specifications:
           description: 'Key-value pairs for Specification tab (e.g. {''Dosage Form'':
             ''Oral Tablet''}).'
+        indications:
+          type: string
+        therapeutic_class:
+          type: string
+        pharmacology:
+          type: string
+        dosage_administration:
+          type: string
+        interaction:
+          type: string
+        contraindications:
+          type: string
+        side_effects:
+          type: string
+        pregnancy_lactation:
+          type: string
+        precautions_warnings:
+          type: string
+        overdose_effects:
+          type: string
+        storage_conditions:
+          type: string
+        mode_of_action:
+          type: string
+        drug_classes:
+          type: string
+        pregnancy:
+          type: string
+        alternative_products:
+          type: string
+        faq:
+          type: string
         quantity_in_stock:
           type: integer
           maximum: 4294967295
@@ -6976,6 +7601,9 @@ components:
           format: int64
         is_active:
           type: boolean
+        is_in_homepage:
+          type: boolean
+          description: Show this product in the homepage featured section.
         dosages:
           type: array
           items:
@@ -7000,6 +7628,45 @@ components:
         title:
           type: string
           maxLength: 100
+    PatchedUnit:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        unit_type:
+          type: string
+          description: Packaging type e.g. 'Strip', 'Bottle', 'Vial', 'Box', 'Tube',
+            'Sachet'.
+          maxLength: 100
+        content_type:
+          type: string
+          description: What the package contains e.g. 'Tablets', 'Capsules', 'ml Syrup',
+            'gm Cream'.
+          maxLength: 100
+        quantity:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+          description: Number of items or volume e.g. 10, 20, 80.
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
     PatchedUserAddress:
       type: object
       description: 'Read/write serializer for user address. Fields: full_name, email,
@@ -7527,10 +8194,13 @@ components:
         images:
           type: string
           readOnly: true
-        unit_label:
+        unit:
+          type: integer
+          nullable: true
+          description: Packaging unit e.g. 'Strip of 10 Tablets'.
+        unit_name:
           type: string
-          description: e.g. '10 Tablets (1 Strip)', '20 Tablets (2 Strip)'.
-          maxLength: 120
+          readOnly: true
         dosage:
           type: string
           description: Strength e.g. '50mg', '500mg', '5ml' for display and dosage
@@ -7555,6 +8225,38 @@ components:
         specifications:
           description: 'Key-value pairs for Specification tab (e.g. {''Dosage Form'':
             ''Oral Tablet''}).'
+        indications:
+          type: string
+        therapeutic_class:
+          type: string
+        pharmacology:
+          type: string
+        dosage_administration:
+          type: string
+        interaction:
+          type: string
+        contraindications:
+          type: string
+        side_effects:
+          type: string
+        pregnancy_lactation:
+          type: string
+        precautions_warnings:
+          type: string
+        overdose_effects:
+          type: string
+        storage_conditions:
+          type: string
+        mode_of_action:
+          type: string
+        drug_classes:
+          type: string
+        pregnancy:
+          type: string
+        alternative_products:
+          type: string
+        faq:
+          type: string
         quantity_in_stock:
           type: integer
           maximum: 4294967295
@@ -7570,6 +8272,9 @@ components:
           readOnly: true
         is_active:
           type: boolean
+        is_in_homepage:
+          type: boolean
+          description: Show this product in the homepage featured section.
         generic_alternatives:
           type: string
           readOnly: true
@@ -7595,7 +8300,22 @@ components:
       - name
       - price
       - slug
+      - unit_name
       - updated_at
+    ProductLinkCategory:
+      type: object
+      description: Assign a specific category to a product.
+      properties:
+        category_id:
+          type: integer
+          minimum: 1
+          description: ID of the category to link to this product.
+        is_home_page_category:
+          type: boolean
+          default: false
+          description: Whether this product should be featured on the homepage.
+      required:
+      - category_id
     ProductList:
       type: object
       properties:
@@ -7657,10 +8377,13 @@ components:
         images:
           type: string
           readOnly: true
-        unit_label:
+        unit:
+          type: integer
+          nullable: true
+          description: Packaging unit e.g. 'Strip of 10 Tablets'.
+        unit_name:
           type: string
-          description: e.g. '10 Tablets (1 Strip)', '20 Tablets (2 Strip)'.
-          maxLength: 120
+          readOnly: true
         dosage:
           type: string
           description: Strength e.g. '50mg', '500mg', '5ml' for display and dosage
@@ -7695,6 +8418,9 @@ components:
           readOnly: true
         is_active:
           type: boolean
+        is_in_homepage:
+          type: boolean
+          description: Show this product in the homepage featured section.
         created_at:
           type: string
           format: date-time
@@ -7716,6 +8442,7 @@ components:
       - name
       - price
       - slug
+      - unit_name
       - updated_at
     ProductReview:
       type: object
@@ -7849,10 +8576,10 @@ components:
           type: string
           format: uri
           nullable: true
-        unit_label:
-          type: string
-          description: e.g. '10 Tablets (1 Strip)', '20 Tablets (2 Strip)'.
-          maxLength: 120
+        unit:
+          type: integer
+          nullable: true
+          description: Packaging unit e.g. 'Strip of 10 Tablets'.
         dosage:
           type: string
           description: Strength e.g. '50mg', '500mg', '5ml' for display and dosage
@@ -7874,6 +8601,38 @@ components:
         specifications:
           description: 'Key-value pairs for Specification tab (e.g. {''Dosage Form'':
             ''Oral Tablet''}).'
+        indications:
+          type: string
+        therapeutic_class:
+          type: string
+        pharmacology:
+          type: string
+        dosage_administration:
+          type: string
+        interaction:
+          type: string
+        contraindications:
+          type: string
+        side_effects:
+          type: string
+        pregnancy_lactation:
+          type: string
+        precautions_warnings:
+          type: string
+        overdose_effects:
+          type: string
+        storage_conditions:
+          type: string
+        mode_of_action:
+          type: string
+        drug_classes:
+          type: string
+        pregnancy:
+          type: string
+        alternative_products:
+          type: string
+        faq:
+          type: string
         quantity_in_stock:
           type: integer
           maximum: 4294967295
@@ -7886,6 +8645,9 @@ components:
           format: int64
         is_active:
           type: boolean
+        is_in_homepage:
+          type: boolean
+          description: Show this product in the homepage featured section.
         dosages:
           type: array
           items:
@@ -7980,6 +8742,54 @@ components:
       required:
       - access
       - refresh
+    Unit:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        unit_type:
+          type: string
+          description: Packaging type e.g. 'Strip', 'Bottle', 'Vial', 'Box', 'Tube',
+            'Sachet'.
+          maxLength: 100
+        content_type:
+          type: string
+          description: What the package contains e.g. 'Tablets', 'Capsules', 'ml Syrup',
+            'gm Cream'.
+          maxLength: 100
+        quantity:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+          description: Number of items or volume e.g. 10, 20, 80.
+        name:
+          type: string
+          readOnly: true
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - content_type
+      - created_at
+      - id
+      - name
+      - quantity
+      - slug
+      - unit_type
+      - updated_at
     UserAddress:
       type: object
       description: 'Read/write serializer for user address. Fields: full_name, email,

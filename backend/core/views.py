@@ -336,7 +336,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
         product_count=Count("products", filter=Q(products__is_active=True), distinct=True)
     ).all()
     serializer_class = CategorySerializer
-    filterset_fields = ["is_active", "parent", "show_in_sidebar", "is_featured_home"]
+    filterset_fields = ["is_active", "parent", "show_in_sidebar", "is_featured_home", "is_home_categoery"]
     search_fields = ["name", "slug"]
     lookup_field = "slug"
     lookup_url_kwarg = "slug"

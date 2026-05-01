@@ -47,7 +47,7 @@ Manage product categories (hierarchy: parent/children). List and tree are public
 | PUT / PATCH | `/api/categories/{slug}/` | Update category. |
 | DELETE | `/api/categories/{slug}/` | Delete category. |
 
-**Response fields:** `id`, `parent`, `sidebar_category`, `sidebar_category_title`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `featured_order`, `product_count` (read-only), `created_at`, `updated_at`.
+**Response fields:** `id`, `parent`, `sidebar_category`, `sidebar_category_title`, `name`, `slug`, `image`, `image_url` (absolute URL), `is_active`, `show_in_sidebar`, `sidebar_order`, `is_featured_home`, `is_home_categoery`, `featured_order`, `product_count` (read-only), `created_at`, `updated_at`.
 
 **Bulk selection body (`PUT /sidebar-category/` and `PUT /featured-category/`):**
 

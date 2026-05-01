@@ -50,6 +50,11 @@ class Category(models.Model):
         default=0,
         help_text="Home featured display order; lower values appear first.",
     )
+    is_home_categoery = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Additional boolean field for home category (per user request).",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
