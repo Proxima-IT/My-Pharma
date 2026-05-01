@@ -13,7 +13,10 @@ import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 /**
  * Home Page Controller
  * Refactored: Uses Sidebar Category endpoint to drive the main product sections.
- * Logic: Fetches categories intended for the sidebar and renders them as dynamic homepage sections.
+ * Logic:
+ * 1. Fetches categories from the sidebar-category API.
+ * 2. Filters for top-level categories (no parent) to create main homepage sections.
+ * 3. Respects manual placement of promotional banners.
  */
 export default function Home() {
   const [sections, setSections] = useState([]);
@@ -22,12 +25,12 @@ export default function Home() {
   useEffect(() => {
     const fetchHomeSections = async () => {
       try {
-        // Method A categories that are selected for the sidebar/navigation
+        // Fetch categories designated for navigation/sidebar to use as big sections
         const res = await fetch(`${API_BASE_URL}/categories/sidebar-category/`);
         const data = await parseJsonResponse(res, []);
 
-        // Filter to ensure only top-level categories that have products appear as sections
-        // and sort them by sidebar_order
+        // Filter: Only show top-level categories as sections (children stay in dropdowns)
+        // Sort: Follow the sidebar_order defined in the Admin Category Manager
         const sorted = (Array.isArray(data) ? data : data.results || [])
           .filter(cat => !cat.parent)
           .sort((a, b) => (a.sidebar_order || 0) - (b.sidebar_order || 0));
@@ -46,12 +49,12 @@ export default function Home() {
     <div className="flex flex-col gap-10 lg:gap-16">
       <HeroCarousel />
 
-      {/* Circle Icon Slider (Uses is_featured_home internally) */}
+      {/* Dynamic Circle Icons (Driven by is_featured_home) */}
       <FeaturedCategory />
 
       {/* 
-        First Batch of Dynamic Sections (Indices 0, 1, 2)
-        Interjected between the Hero/Categories and the Prescription Banner
+        First Group of Sections (Indices 0, 1, 2)
+        Equivalent to: Popular Products, Natura Care, Unilever Deals
       */}
       {!isLoading &&
         sections
@@ -66,33 +69,20 @@ export default function Home() {
 
       <UploadPrescriptionBanner />
 
-      {/* 
-        Second Batch of Dynamic Sections (Index 3 and onwards)
-        Interjected between the Prescription and Booking banners
-      */}
-      {!isLoading &&
-        sections
-          .slice(3, 4)
-          .map((category, index) => (
-            <DynamicProductSection
-              key={category.id}
-              category={category}
-              index={index + 3}
-            />
-          ))}
-
       <BookTestBanner />
 
+      {/* 
+        Remaining Sections (Index 3 and onwards)
+        Equivalent to: Boost & Balance and any future added sections
+      */}
       {!isLoading &&
-        sections
-          .slice(4)
-          .map((category, index) => (
-            <DynamicProductSection
-              key={category.id}
-              category={category}
-              index={index + 4}
-            />
-          ))}
+        sections.slice(3).map((category, index) => (
+          <DynamicProductSection
+            key={category.id}
+            category={category}
+            index={index + 3} // Offset to maintain color rotation
+          />
+        ))}
 
       <SmartHealthBundle />
       <DealsSection />

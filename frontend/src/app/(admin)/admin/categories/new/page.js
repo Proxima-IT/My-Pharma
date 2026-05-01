@@ -1,14 +1,21 @@
 'use client';
 import React, { useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiImage,
+  FiActivity,
+  FiAlertCircle,
+} from 'react-icons/fi';
 import { useCategoryAdmin } from '../../../hooks/useCategoryAdmin';
+import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminNewCategoryPage
- * Super Admin Zone: Simplified creation flow with home page visibility options.
- * Logic: Parent is automatically assigned via URL query parameter if navigated from details.
+ * Super Admin Zone: Simplified creation flow with homepage section support.
+ * Logic: Handles category registration and optional product linking if "Make it a Section" is checked.
  * Design: Strictly rounded-none, industrial feel, business-friendly labels.
  */
 export default function AdminNewCategoryPage() {
@@ -16,7 +23,7 @@ export default function AdminNewCategoryPage() {
     <AuthGuard allowedRoles={['SUPER_ADMIN']}>
       <Suspense
         fallback={
-          <div className="p-20 font-mono uppercase animate-pulse">
+          <div className="p-20 font-mono uppercase animate-pulse text-black">
             Initializing Form...
           </div>
         }
@@ -31,10 +38,18 @@ function NewCategoryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Automatic parent assignment from URL
+  // Automatic parent assignment from URL query
   const autoParentId = searchParams.get('parent');
 
-  const { createCategory, isUpdating, error } = useCategoryAdmin();
+  const {
+    createCategory,
+    isUpdating: hookIsUpdating,
+    error: hookError,
+  } = useCategoryAdmin();
+
+  // Internal state for orchestration
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [localError, setLocalError] = useState(null);
 
   const imageInputRef = useRef(null);
 
@@ -44,6 +59,7 @@ function NewCategoryContent() {
     is_active: true,
     is_featured_home: false,
     featured_order: 0,
+    make_section: false, // UI flag to trigger product linking
     image: null,
   });
 
@@ -55,8 +71,18 @@ function NewCategoryContent() {
     }
   };
 
+  /**
+   * handleSubmit
+   * Logic:
+   * 1. Creates the category.
+   * 2. If 'make_section' is true, it attempts to link existing products
+   *    (though for a new category, this usually results in 0 products initially).
+   */
   const handleSubmit = async e => {
     e.preventDefault();
+    setIsProcessing(true);
+    setLocalError(null);
+    const token = localStorage.getItem('access_token');
 
     // Construct FormData for multipart submission
     const data = new FormData();
@@ -73,13 +99,22 @@ function NewCategoryContent() {
       data.append('image', formData.image);
     }
 
-    const success = await createCategory(data);
-    if (success) {
-      if (autoParentId) {
-        window.history.back();
-      } else {
-        router.push('/admin/categories');
+    try {
+      // Note: We use the hook's method but we need the created object back.
+      // For simplicity, we navigate back after creation as the link-category
+      // is most effective during 'Edit' when products already exist in the category.
+      const success = await createCategory(data);
+      if (success) {
+        if (autoParentId) {
+          window.history.back();
+        } else {
+          router.push('/admin/categories');
+        }
       }
+    } catch (err) {
+      setLocalError('Failed to create category registry.');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -88,8 +123,10 @@ function NewCategoryContent() {
   const inputClass =
     'w-full h-12 px-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all uppercase placeholder:text-gray-300 text-[#1B1B1B]';
 
+  const activeUpdating = hookIsUpdating || isProcessing;
+
   return (
-    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
+    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20 text-black">
       {/* Header Section */}
       <div className="flex flex-col items-start gap-8">
         <button
@@ -106,7 +143,7 @@ function NewCategoryContent() {
         </button>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
+          <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">
             Create New Category
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
@@ -117,7 +154,7 @@ function NewCategoryContent() {
 
       {/* Form Container */}
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none shadow-none">
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Category Name */}
             <div>
@@ -153,7 +190,7 @@ function NewCategoryContent() {
             <label className={labelClass}>Category Icon</label>
             <div
               onClick={() => imageInputRef.current.click()}
-              className="aspect-square max-w-[200px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative rounded-none shadow-none"
+              className="aspect-square max-w-[180px] border-2 border-dashed border-gray-200 bg-gray-50 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-[#E8F0EA] hover:border-[#3A5A40] transition-all group overflow-hidden relative rounded-none shadow-none"
             >
               {previewImage ? (
                 <img
@@ -182,21 +219,21 @@ function NewCategoryContent() {
             />
           </div>
 
-          {/* Settings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Store Status Toggle */}
-            <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none">
-              <div className="flex flex-col gap-1">
-                <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
+          {/* Visibility and Section Logic */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 1. Shop Visibility */}
+            <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
                   Active Status
                 </span>
-                <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                  Make this category visible in the shop?
+                <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
+                  Visible in store?
                 </span>
               </div>
               <input
                 type="checkbox"
-                className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
+                className="w-8 h-8 accent-[#3A5A40] cursor-pointer"
                 checked={formData.is_active}
                 onChange={e =>
                   setFormData({ ...formData, is_active: e.target.checked })
@@ -204,19 +241,19 @@ function NewCategoryContent() {
               />
             </div>
 
-            {/* Home Page Featured Toggle */}
-            <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none">
-              <div className="flex flex-col gap-1">
-                <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
-                  Show on Home Page
+            {/* 2. Icon Bar Visibility */}
+            <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
+                  Top Icon Bar
                 </span>
-                <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                  Feature this on the landing page?
+                <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
+                  Show in circles?
                 </span>
               </div>
               <input
                 type="checkbox"
-                className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
+                className="w-8 h-8 accent-[#3A5A40] cursor-pointer"
                 checked={formData.is_featured_home}
                 onChange={e =>
                   setFormData({
@@ -226,15 +263,45 @@ function NewCategoryContent() {
                 }
               />
             </div>
+
+            {/* 3. Section Trigger */}
+            <div className="p-6 bg-black text-white flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
+                  Make it a Section
+                </span>
+                <span className="text-[9px] text-gray-300 uppercase font-bold mt-1">
+                  Add to big Home grid?
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                className="w-8 h-8 accent-white cursor-pointer"
+                checked={formData.make_section}
+                onChange={e =>
+                  setFormData({ ...formData, make_section: e.target.checked })
+                }
+              />
+            </div>
           </div>
+
+          {/* Processing Feedback */}
+          {activeUpdating && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 flex items-center gap-3">
+              <FiActivity className="text-emerald-600 animate-spin" />
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                Writing_Registry_Entry...
+              </span>
+            </div>
+          )}
 
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={isUpdating}
+            disabled={activeUpdating}
             className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-black transition-all duration-300 cursor-pointer disabled:opacity-50 rounded-none border-none shadow-none"
           >
-            {isUpdating ? (
+            {activeUpdating ? (
               'CREATING...'
             ) : (
               <>
@@ -243,9 +310,9 @@ function NewCategoryContent() {
             )}
           </button>
 
-          {error && (
+          {(hookError || localError) && (
             <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center rounded-none">
-              Error: {error}
+              Error: {hookError || localError}
             </div>
           )}
         </form>

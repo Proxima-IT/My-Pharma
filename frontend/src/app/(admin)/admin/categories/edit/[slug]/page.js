@@ -1,15 +1,23 @@
 'use client';
 import React, { useState, useEffect, use, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiCheck, FiImage } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiImage,
+  FiAlertCircle,
+  FiActivity,
+} from 'react-icons/fi';
 import { useCategoryAdmin } from '@/app/(admin)/hooks/useCategoryAdmin';
+import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminEditCategoryPage
- * Super Admin Zone: Handles category updates including homepage visibility settings.
- * Design: Strictly rounded-none, industrial contrast, business-friendly labels.
+ * Super Admin Zone: Handles category updates and homepage section organization.
+ * Feature: Integrated "Make it a Section" logic to curate products into big home grids.
+ * Design: Strictly rounded-none, industrial contrast, simple wording.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -35,15 +43,18 @@ function EditCategoryContent({ slug }) {
   const imageInputRef = useRef(null);
 
   const [previewImage, setPreviewImage] = useState(null);
+  const [isLinking, setIsLinking] = useState(false);
+
   const [formData, setFormData] = useState({
     name: '',
     is_active: true,
     is_featured_home: false,
     featured_order: 0,
+    make_section: false, // UI trigger for product-to-category linking
     image: null,
   });
 
-  // Load existing data from the database
+  // Load category details from registry
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchCategoryBySlug(slug);
@@ -53,6 +64,7 @@ function EditCategoryContent({ slug }) {
           is_active: data.is_active ?? true,
           is_featured_home: data.is_featured_home ?? false,
           featured_order: data.featured_order || 0,
+          make_section: false,
           image: null,
         });
         if (data.image) {
@@ -71,10 +83,16 @@ function EditCategoryContent({ slug }) {
     }
   };
 
+  /**
+   * handleSubmit
+   * 1. Updates category basic info and visibility flags.
+   * 2. If 'Make it a Section' is checked, fetches direct products and links them via API.
+   */
   const handleSubmit = async e => {
     e.preventDefault();
+    const token = localStorage.getItem('access_token');
 
-    // Construct FormData for multipart/file submission
+    // Prepare Category Data
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
@@ -86,18 +104,40 @@ function EditCategoryContent({ slug }) {
     }
 
     const success = await updateCategory(slug, data);
-    if (success) router.push('/admin/categories');
+
+    if (success) {
+      // Logic: If user wants to create/refresh a section, link all direct products
+      if (formData.make_section && categoryDetails?.id) {
+        setIsLinking(true);
+        try {
+          // Fetch products belonging to this category
+          const productsRes = await productAdminApi.getProducts(token, {
+            category: categoryDetails.id,
+            page_size: 100, // Linking only first 100 direct products
+          });
+
+          const productList = productsRes.results || [];
+
+          // Call link-category for each direct product
+          for (const product of productList) {
+            await productAdminApi.linkProductToCategory(token, product.slug, {
+              category_id: categoryDetails.id,
+            });
+          }
+        } catch (err) {
+          console.error('Section linking failed', err);
+        } finally {
+          setIsLinking(false);
+        }
+      }
+      router.push('/admin/categories');
+    }
   };
 
   if (fetchLoading && !categoryDetails) {
     return (
       <div className="flex items-center justify-center py-40">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin rounded-none" />
-          <p className="font-mono text-xs font-bold uppercase tracking-widest text-[#8A8A78]">
-            Syncing Data...
-          </p>
-        </div>
+        <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin rounded-none" />
       </div>
     );
   }
@@ -108,12 +148,12 @@ function EditCategoryContent({ slug }) {
     'w-full h-12 px-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all uppercase placeholder:text-gray-300 text-[#1B1B1B]';
 
   return (
-    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
-      {/* Header Section */}
+    <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20 text-black">
+      {/* Top Header */}
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-black transition-all cursor-pointer group border border-transparent rounded-none shadow-none"
+          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-black transition-all cursor-pointer group border border-transparent rounded-none"
         >
           <FiArrowLeft
             size={16}
@@ -125,21 +165,20 @@ function EditCategoryContent({ slug }) {
         </button>
 
         <div className="space-y-2">
-          <h1 className="text-4xl font-black text-[#1B1B1B] tracking-tighter uppercase leading-none">
+          <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">
             Edit Category
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
-            Manage how this category appears in your store and on the homepage.
+            Configure identity, visibility, and homepage section settings.
           </p>
         </div>
       </div>
 
-      {/* Form Container */}
+      {/* Form Area */}
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none shadow-none">
-        <form onSubmit={handleSubmit} className="space-y-10">
+        <form onSubmit={handleSubmit} className="space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Category Name */}
-            <div className="md:col-span-1">
+            <div>
               <label className={labelClass}>Category Name</label>
               <input
                 type="text"
@@ -151,10 +190,8 @@ function EditCategoryContent({ slug }) {
                 required
               />
             </div>
-
-            {/* Featured Order */}
-            <div className="md:col-span-1">
-              <label className={labelClass}>Home Page Serial Order</label>
+            <div>
+              <label className={labelClass}>Order on Home Page</label>
               <input
                 type="number"
                 className={inputClass}
@@ -166,7 +203,7 @@ function EditCategoryContent({ slug }) {
             </div>
           </div>
 
-          {/* Image Asset Section */}
+          {/* Photo Upload */}
           <div className="space-y-4">
             <label className={labelClass}>Category Icon</label>
             <div
@@ -200,21 +237,21 @@ function EditCategoryContent({ slug }) {
             />
           </div>
 
-          {/* Settings Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Store Status Toggle */}
-            <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none shadow-none">
-              <div className="flex flex-col gap-1">
-                <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
+          {/* Visibility and Section Logic */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 1. Shop Visibility */}
+            <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
                   Active Status
                 </span>
-                <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                  Show this category in the public shop?
+                <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
+                  Visible in store?
                 </span>
               </div>
               <input
                 type="checkbox"
-                className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
+                className="w-8 h-8 accent-[#3A5A40] cursor-pointer"
                 checked={formData.is_active}
                 onChange={e =>
                   setFormData({ ...formData, is_active: e.target.checked })
@@ -222,19 +259,19 @@ function EditCategoryContent({ slug }) {
               />
             </div>
 
-            {/* Home Page Toggle */}
-            <div className="flex items-center justify-between p-6 bg-gray-50 border border-gray-100 rounded-none shadow-none">
-              <div className="flex flex-col gap-1">
-                <span className="font-mono text-[13px] font-bold text-[#1B1B1B] uppercase">
-                  Show on Home Page
+            {/* 2. Icon Bar Visibility (is_featured_home) */}
+            <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
+                  Top Icon Bar
                 </span>
-                <span className="font-mono text-[10px] text-[#8A8A78] uppercase">
-                  Highlight this category on the main landing page?
+                <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
+                  Show in circles?
                 </span>
               </div>
               <input
                 type="checkbox"
-                className="w-8 h-8 border-gray-300 accent-[#3A5A40] cursor-pointer"
+                className="w-8 h-8 accent-[#3A5A40] cursor-pointer"
                 checked={formData.is_featured_home}
                 onChange={e =>
                   setFormData({
@@ -244,19 +281,49 @@ function EditCategoryContent({ slug }) {
                 }
               />
             </div>
+
+            {/* 3. Section Trigger (Make it a Section) */}
+            <div className="p-6 bg-black text-white flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
+                  Make it a Section
+                </span>
+                <span className="text-[9px] text-gray-300 uppercase font-bold mt-1">
+                  Add to big Home grid?
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                className="w-8 h-8 accent-white cursor-pointer"
+                checked={formData.make_section}
+                onChange={e =>
+                  setFormData({ ...formData, make_section: e.target.checked })
+                }
+              />
+            </div>
           </div>
 
-          {/* Action Button */}
+          {/* User Feedback for linking */}
+          {(isLinking || isUpdating) && (
+            <div className="p-4 bg-emerald-50 border border-emerald-100 flex items-center gap-3">
+              <FiActivity className="text-emerald-600 animate-spin" />
+              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
+                Processing_Registry_Changes_And_Section_Links...
+              </span>
+            </div>
+          )}
+
+          {/* Save Button */}
           <button
             type="submit"
-            disabled={isUpdating}
-            className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-black transition-all duration-300 cursor-pointer disabled:opacity-50 rounded-none border-none shadow-none"
+            disabled={isUpdating || isLinking}
+            className="w-full h-16 bg-black text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#3A5A40] transition-all duration-300 cursor-pointer disabled:opacity-30 rounded-none border-none shadow-none"
           >
-            {isUpdating ? (
-              'UPDATING...'
+            {isUpdating || isLinking ? (
+              'SYNCHRONIZING...'
             ) : (
               <>
-                <FiCheck size={20} /> SAVE CATEGORY CHANGES
+                <FiCheck size={20} /> EXECUTE SAVE
               </>
             )}
           </button>
