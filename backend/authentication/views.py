@@ -670,6 +670,39 @@ class UserManagementViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         instance.soft_delete()
 
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request):
+        """Export all non-deleted users to a CSV file. Restricted to SUPER_ADMIN."""
+        import csv
+        from django.http import HttpResponse
+
+        response = HttpResponse(content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="my_pharma_users.csv"'
+
+        writer = csv.writer(response)
+        # Header Row
+        writer.writerow([
+            "ID", "Username", "Email", "Phone", "Role", 
+            "Status", "Is Active", "Gender", "DOB", "Joined At"
+        ])
+
+        users = self.get_queryset()
+        for user in users:
+            writer.writerow([
+                user.id,
+                user.username or "N/A",
+                user.email,
+                user.phone or "N/A",
+                user.role,
+                user.status,
+                user.is_active,
+                user.get_gender_display() if user.gender else "N/A",
+                user.date_of_birth if user.date_of_birth else "N/A",
+                user.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            ])
+
+        return response
+
 
 class UserAddressViewSet(viewsets.ModelViewSet):
     """
