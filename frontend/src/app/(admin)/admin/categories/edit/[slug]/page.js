@@ -15,9 +15,9 @@ import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminEditCategoryPage
- * Super Admin Zone: Handles category updates and homepage section organization.
- * Feature: Integrated "Make it a Section" logic to curate products into big home grids.
- * Design: Strictly rounded-none, industrial contrast, simple wording.
+ * Super Admin Zone: Handles category updates and homepage section persistence.
+ * Updated: Uses the new 'is_home_categoery' database field to persist the "Section" status.
+ * Automation: Syncs the category's 'Section' status to all its direct products.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -48,13 +48,13 @@ function EditCategoryContent({ slug }) {
   const [formData, setFormData] = useState({
     name: '',
     is_active: true,
-    is_featured_home: false,
+    is_featured_home: false, // For circle icons
+    is_home_categoery: false, // Persistent field for Homepage Section
     featured_order: 0,
-    make_section: false, // UI trigger for product-to-category linking
     image: null,
   });
 
-  // Load category details from registry
+  // Load existing data from the database
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchCategoryBySlug(slug);
@@ -63,8 +63,8 @@ function EditCategoryContent({ slug }) {
           name: data.name || '',
           is_active: data.is_active ?? true,
           is_featured_home: data.is_featured_home ?? false,
+          is_home_categoery: data.is_home_categoery ?? false, // Maps to persistent DB column
           featured_order: data.featured_order || 0,
-          make_section: false,
           image: null,
         });
         if (data.image) {
@@ -85,18 +85,20 @@ function EditCategoryContent({ slug }) {
 
   /**
    * handleSubmit
-   * 1. Updates category basic info and visibility flags.
-   * 2. If 'Make it a Section' is checked, fetches direct products and links them via API.
+   * 1. Updates the category record in the database.
+   * 2. Automatically syncs the 'is_in_homepage' flag to all direct products
+   *    based on the 'is_home_categoery' selection.
    */
   const handleSubmit = async e => {
     e.preventDefault();
     const token = localStorage.getItem('access_token');
 
-    // Prepare Category Data
+    // 1. Update Category with persistence
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
     data.append('is_featured_home', formData.is_featured_home);
+    data.append('is_home_categoery', formData.is_home_categoery); // Save to DB
     data.append('featured_order', formData.featured_order);
 
     if (formData.image) {
@@ -106,26 +108,27 @@ function EditCategoryContent({ slug }) {
     const success = await updateCategory(slug, data);
 
     if (success) {
-      // Logic: If user wants to create/refresh a section, link all direct products
-      if (formData.make_section && categoryDetails?.id) {
+      // 2. Automated Product Syncing
+      if (categoryDetails?.id) {
         setIsLinking(true);
         try {
-          // Fetch products belonging to this category
+          // Fetch products directly linked to this category
           const productsRes = await productAdminApi.getProducts(token, {
             category: categoryDetails.id,
-            page_size: 100, // Linking only first 100 direct products
+            page_size: 200,
           });
 
           const productList = productsRes.results || [];
 
-          // Call link-category for each direct product
+          // Bulk update the homepage status of products to match the category section status
           for (const product of productList) {
             await productAdminApi.linkProductToCategory(token, product.slug, {
               category_id: categoryDetails.id,
+              is_home_page_category: formData.is_home_categoery,
             });
           }
         } catch (err) {
-          console.error('Section linking failed', err);
+          console.error('Section syncing failed:', err);
         } finally {
           setIsLinking(false);
         }
@@ -149,11 +152,11 @@ function EditCategoryContent({ slug }) {
 
   return (
     <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20 text-black">
-      {/* Top Header */}
+      {/* Header */}
       <div className="flex flex-col items-start gap-8">
         <button
           onClick={() => router.back()}
-          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-black transition-all cursor-pointer group border border-transparent rounded-none"
+          className="flex items-center gap-3 bg-[#3A5A40] text-white px-6 py-3 hover:bg-black transition-all cursor-pointer group border border-transparent rounded-none shadow-none"
         >
           <FiArrowLeft
             size={16}
@@ -169,12 +172,12 @@ function EditCategoryContent({ slug }) {
             Edit Category
           </h1>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
-            Configure identity, visibility, and homepage section settings.
+            Manage identity and homepage section settings for your store.
           </p>
         </div>
       </div>
 
-      {/* Form Area */}
+      {/* Main Container */}
       <div className="bg-white border border-gray-100 p-8 md:p-12 w-full rounded-none shadow-none">
         <form onSubmit={handleSubmit} className="space-y-12">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -203,7 +206,7 @@ function EditCategoryContent({ slug }) {
             </div>
           </div>
 
-          {/* Photo Upload */}
+          {/* Photo Section */}
           <div className="space-y-4">
             <label className={labelClass}>Category Icon</label>
             <div
@@ -237,16 +240,16 @@ function EditCategoryContent({ slug }) {
             />
           </div>
 
-          {/* Visibility and Section Logic */}
+          {/* Status Settings */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* 1. Shop Visibility */}
+            {/* Store Visibility */}
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-[12px] uppercase">
                   Active Status
                 </span>
-                <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
-                  Visible in store?
+                <span className="text-[9px] text-gray-400 font-bold mt-1 uppercase">
+                  Visible in shop?
                 </span>
               </div>
               <input
@@ -259,14 +262,14 @@ function EditCategoryContent({ slug }) {
               />
             </div>
 
-            {/* 2. Icon Bar Visibility (is_featured_home) */}
+            {/* Icon Bar (Circles) */}
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-[12px] uppercase">
                   Top Icon Bar
                 </span>
-                <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
-                  Show in circles?
+                <span className="text-[9px] text-gray-400 font-bold mt-1 uppercase">
+                  Show in circle menu?
                 </span>
               </div>
               <input
@@ -282,38 +285,41 @@ function EditCategoryContent({ slug }) {
               />
             </div>
 
-            {/* 3. Section Trigger (Make it a Section) */}
+            {/* Homepage Section Switch (Persistent) */}
             <div className="p-6 bg-black text-white flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-[12px] uppercase">
                   Make it a Section
                 </span>
-                <span className="text-[9px] text-gray-300 uppercase font-bold mt-1">
-                  Add to big Home grid?
+                <span className="text-[9px] text-gray-300 font-bold mt-1 uppercase">
+                  Show big product grid?
                 </span>
               </div>
               <input
                 type="checkbox"
                 className="w-8 h-8 accent-white cursor-pointer"
-                checked={formData.make_section}
+                checked={formData.is_home_categoery}
                 onChange={e =>
-                  setFormData({ ...formData, make_section: e.target.checked })
+                  setFormData({
+                    ...formData,
+                    is_home_categoery: e.target.checked,
+                  })
                 }
               />
             </div>
           </div>
 
-          {/* User Feedback for linking */}
+          {/* User Feedback for background tasks */}
           {(isLinking || isUpdating) && (
             <div className="p-4 bg-emerald-50 border border-emerald-100 flex items-center gap-3">
               <FiActivity className="text-emerald-600 animate-spin" />
               <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
-                Processing_Registry_Changes_And_Section_Links...
+                Synchronizing Registry and Section Linkages...
               </span>
             </div>
           )}
 
-          {/* Save Button */}
+          {/* Action Button */}
           <button
             type="submit"
             disabled={isUpdating || isLinking}
@@ -323,7 +329,7 @@ function EditCategoryContent({ slug }) {
               'SYNCHRONIZING...'
             ) : (
               <>
-                <FiCheck size={20} /> EXECUTE SAVE
+                <FiCheck size={20} /> SAVE CATEGORY CHANGES
               </>
             )}
           </button>

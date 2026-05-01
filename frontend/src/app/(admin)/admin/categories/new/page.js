@@ -15,7 +15,7 @@ import AuthGuard from '@/app/(shared)/components/AuthGuard';
 /**
  * AdminNewCategoryPage
  * Super Admin Zone: Simplified creation flow with homepage section support.
- * Logic: Handles category registration and optional product linking if "Make it a Section" is checked.
+ * Updated: Uses the persistent 'is_home_categoery' database field for section status.
  * Design: Strictly rounded-none, industrial feel, business-friendly labels.
  */
 export default function AdminNewCategoryPage() {
@@ -58,8 +58,8 @@ function NewCategoryContent() {
     name: '',
     is_active: true,
     is_featured_home: false,
+    is_home_categoery: false, // Persistent field for Homepage Section
     featured_order: 0,
-    make_section: false, // UI flag to trigger product linking
     image: null,
   });
 
@@ -74,21 +74,20 @@ function NewCategoryContent() {
   /**
    * handleSubmit
    * Logic:
-   * 1. Creates the category.
-   * 2. If 'make_section' is true, it attempts to link existing products
-   *    (though for a new category, this usually results in 0 products initially).
+   * 1. Creates the category record with the persistent 'is_home_categoery' flag.
+   * 2. Redirects to the main category registry.
    */
   const handleSubmit = async e => {
     e.preventDefault();
     setIsProcessing(true);
     setLocalError(null);
-    const token = localStorage.getItem('access_token');
 
     // Construct FormData for multipart submission
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
     data.append('is_featured_home', formData.is_featured_home);
+    data.append('is_home_categoery', formData.is_home_categoery); // Save to persistent DB column
     data.append('featured_order', formData.featured_order);
 
     if (autoParentId) {
@@ -100,9 +99,6 @@ function NewCategoryContent() {
     }
 
     try {
-      // Note: We use the hook's method but we need the created object back.
-      // For simplicity, we navigate back after creation as the link-category
-      // is most effective during 'Edit' when products already exist in the category.
       const success = await createCategory(data);
       if (success) {
         if (autoParentId) {
@@ -219,7 +215,7 @@ function NewCategoryContent() {
             />
           </div>
 
-          {/* Visibility and Section Logic */}
+          {/* Configuration Settings */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* 1. Shop Visibility */}
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
@@ -228,7 +224,7 @@ function NewCategoryContent() {
                   Active Status
                 </span>
                 <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
-                  Visible in store?
+                  Visible in shop?
                 </span>
               </div>
               <input
@@ -245,7 +241,7 @@ function NewCategoryContent() {
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-[12px] uppercase">
-                  Top Icon Bar
+                  Home Icon Bar
                 </span>
                 <span className="text-[9px] text-gray-400 uppercase font-bold mt-1">
                   Show in circles?
@@ -264,22 +260,25 @@ function NewCategoryContent() {
               />
             </div>
 
-            {/* 3. Section Trigger */}
+            {/* 3. Section Trigger (Persistent) */}
             <div className="p-6 bg-black text-white flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-[12px] uppercase">
                   Make it a Section
                 </span>
                 <span className="text-[9px] text-gray-300 uppercase font-bold mt-1">
-                  Add to big Home grid?
+                  Show big product grid?
                 </span>
               </div>
               <input
                 type="checkbox"
                 className="w-8 h-8 accent-white cursor-pointer"
-                checked={formData.make_section}
+                checked={formData.is_home_categoery}
                 onChange={e =>
-                  setFormData({ ...formData, make_section: e.target.checked })
+                  setFormData({
+                    ...formData,
+                    is_home_categoery: e.target.checked,
+                  })
                 }
               />
             </div>
@@ -299,7 +298,7 @@ function NewCategoryContent() {
           <button
             type="submit"
             disabled={activeUpdating}
-            className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-black transition-all duration-300 cursor-pointer disabled:opacity-50 rounded-none border-none shadow-none"
+            className="w-full h-16 bg-black text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#3A5A40] transition-all duration-300 cursor-pointer disabled:opacity-50 rounded-none border-none shadow-none"
           >
             {activeUpdating ? (
               'CREATING...'
@@ -311,7 +310,7 @@ function NewCategoryContent() {
           </button>
 
           {(hookError || localError) && (
-            <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center rounded-none">
+            <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-[10px] font-bold uppercase text-center rounded-none shadow-none">
               Error: {hookError || localError}
             </div>
           )}
