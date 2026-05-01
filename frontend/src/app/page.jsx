@@ -12,11 +12,8 @@ import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Home Page Controller
- * Updated: Section creation logic now uses the dedicated 'is_home_section' flag on Categories.
- * Logic:
- * 1. Fetches categories from the main registry.
- * 2. Filters for categories explicitly marked as homepage sections.
- * 3. Maintains manual positioning of promotional banners.
+ * Refactored: Replaced static sections with dynamic category-driven sections.
+ * Logic: Fetches featured categories and renders them while respecting the manual banner placement.
  */
 export default function Home() {
   const [sections, setSections] = useState([]);
@@ -26,9 +23,9 @@ export default function Home() {
     const fetchHomeSections = async () => {
       try {
         // Fetch all categories with the home section filter
-        // Note: Using is_home_section=true as the new flag on the category table
+        // FIX: Using the correct backend field name 'is_home_categoery' to ensure filtering works.
         const res = await fetch(
-          `${API_BASE_URL}/categories/?is_home_section=true&is_active=true`,
+          `${API_BASE_URL}/categories/?is_home_categoery=true&is_active=true`,
         );
         const data = await parseJsonResponse(res, { results: [] });
 
@@ -41,7 +38,7 @@ export default function Home() {
 
         setSections(sorted);
       } catch (error) {
-        console.error('Failed to fetch dynamic home sections:', error);
+        console.error('Failed to fetch home sections:', error);
       } finally {
         setIsLoading(false);
       }
@@ -56,9 +53,11 @@ export default function Home() {
       {/* Circle Icon Bar (Driven by is_featured_home flag) */}
       <FeaturedCategory />
 
+      <UploadPrescriptionBanner />
+
       {/* 
-        Group 1: Top 3 Sections
-        Placed before the first major promotional banner.
+        First Batch of Dynamic Sections (Indices 0, 1, 2)
+        Interjected between the Hero/Categories and the Prescription Banner
       */}
       {!isLoading &&
         sections
@@ -71,13 +70,12 @@ export default function Home() {
             />
           ))}
 
-      <UploadPrescriptionBanner />
-
-      <BookTestBanner />
+      <SmartHealthBundle />
+      <DealsSection />
 
       {/* 
-        Group 2: Remaining Sections
-        Placed after the middle banners.
+        Second Batch of Dynamic Sections (Index 3 and onwards)
+        Interjected between the Prescription and Booking banners
       */}
       {!isLoading &&
         sections
@@ -89,9 +87,6 @@ export default function Home() {
               index={index + 3}
             />
           ))}
-
-      <SmartHealthBundle />
-      <DealsSection />
     </div>
   );
 }

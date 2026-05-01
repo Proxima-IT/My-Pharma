@@ -8,7 +8,12 @@ import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
  * PrescriptionCard Component
  * Updated: Intelligently handles both single-file uploads and multi-image prescription orders.
  */
-export default function PrescriptionCard({ item, isSelected, onSelect }) {
+export default function PrescriptionCard({
+  item,
+  isSelected,
+  onSelect,
+  onPreview,
+}) {
   // Determine the best preview image from available data sources
   const previewImage =
     item.file ||
@@ -34,7 +39,13 @@ export default function PrescriptionCard({ item, isSelected, onSelect }) {
       )}
 
       {/* Image Container */}
-      <div className="aspect-[4/3] bg-gray-50 relative overflow-hidden rounded-[11px]">
+      <div
+        className="aspect-[4/3] bg-gray-50 relative overflow-hidden rounded-[11px]"
+        onClick={e => {
+          e.stopPropagation();
+          if (onPreview) onPreview();
+        }}
+      >
         {previewImage ? (
           <img
             src={getMediaUrl(previewImage)}

@@ -63,7 +63,6 @@ class CategorySerializer(serializers.ModelSerializer):
         read_only=True,
         allow_null=True,
     )
-    is_home_categoery = serializers.BooleanField(source="is_featured_home", required=False)
 
     class Meta:
         model = Category

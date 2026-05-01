@@ -2,9 +2,11 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiArrowRight } from 'react-icons/fi';
+import { FiArrowLeft, FiArrowRight, FiX } from 'react-icons/fi';
+import { IoCloseSharp } from 'react-icons/io5';
 import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { uploadPrescriptionApi } from '../../api/prescriptionApi';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import PrescriptionCard from './components/PrescriptionCard';
 import UploadCard from './components/UploadCard';
 import UiButton from '@/app/(public)/components/UiButton';
@@ -18,6 +20,7 @@ export default function MyPrescriptionsPage() {
   const { prescriptions, isLoading, error, refresh } = usePrescriptions();
   const [isUploading, setIsUploading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
 
   const handleDirectUpload = async file => {
     if (!file) return;
@@ -83,6 +86,7 @@ export default function MyPrescriptionsPage() {
               item={item}
               isSelected={selectedId === item.id}
               onSelect={() => handleToggleSelect(item.id)}
+              onPreview={() => setPreviewImage(item.image || item.file)}
             />
           ))}
 
@@ -113,6 +117,26 @@ export default function MyPrescriptionsPage() {
           </div>
         )}
       </div>
+
+      {/* Full Screen Image Preview Popup */}
+      {previewImage && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300 p-4 md:p-10">
+          <button
+            onClick={() => setPreviewImage(null)}
+            className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all cursor-pointer z-[10001]"
+          >
+            <IoCloseSharp size={32} />
+          </button>
+
+          <div className="relative w-full h-full flex items-center justify-center">
+            <img
+              src={getMediaUrl(previewImage)}
+              alt="Prescription Preview"
+              className="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-300"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

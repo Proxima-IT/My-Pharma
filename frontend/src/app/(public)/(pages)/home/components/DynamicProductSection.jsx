@@ -8,21 +8,19 @@ import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 /**
  * DynamicProductSection Component
- * Renders a curated product grid for a specific category on the homepage.
- * Updated: Fetches products based on the persistent 'is_in_homepage' flag.
- * This flag is synced when the Admin checks "Make it a Section" on a category.
+ * Renders a product grid for a specific category on the homepage.
+ * Updated: Fetches products directly by category slug, bypassing the curated flag
+ * to ensure all direct products of the section appear automatically.
  */
 const DynamicProductSection = ({ category, index }) => {
   /**
    * Fetch products for this section.
    * Logic:
    * - category: Filter by the current category slug.
-   * - is_in_homepage: Filter for products curated for the homepage.
    * - available: Ensure items are in stock.
    */
   const { isLoading, products } = useProductData({
     category: category.slug,
-    is_in_homepage: 'true',
     available: 'true',
     page_size: 4,
   });
@@ -61,7 +59,7 @@ const DynamicProductSection = ({ category, index }) => {
     );
   }
 
-  // If the category has no products curated for the homepage, do not render the section
+  // If the category has no products, do not render the section
   if (!products || products.length === 0) return null;
 
   return (

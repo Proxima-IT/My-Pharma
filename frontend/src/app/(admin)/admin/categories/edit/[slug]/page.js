@@ -5,19 +5,17 @@ import {
   FiArrowLeft,
   FiCheck,
   FiImage,
-  FiAlertCircle,
-  FiActivity,
 } from 'react-icons/fi';
 import { useCategoryAdmin } from '@/app/(admin)/hooks/useCategoryAdmin';
-import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminEditCategoryPage
  * Super Admin Zone: Handles category updates and homepage section persistence.
- * Updated: Uses the new 'is_home_categoery' database field to persist the "Section" status.
- * Automation: Syncs the category's 'Section' status to all its direct products.
+ * Updated: Removed redundant product-linking logic. Now relies strictly on 
+ * the category's persistent 'is_home_categoery' flag to drive sections.
+ * Design: Strictly rounded-none, industrial contrast, simple wording.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -43,7 +41,6 @@ function EditCategoryContent({ slug }) {
   const imageInputRef = useRef(null);
 
   const [previewImage, setPreviewImage] = useState(null);
-  const [isLinking, setIsLinking] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -54,7 +51,7 @@ function EditCategoryContent({ slug }) {
     image: null,
   });
 
-  // Load existing data from the database
+  // Load existing category details
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchCategoryBySlug(slug);
@@ -63,7 +60,7 @@ function EditCategoryContent({ slug }) {
           name: data.name || '',
           is_active: data.is_active ?? true,
           is_featured_home: data.is_featured_home ?? false,
-          is_home_categoery: data.is_home_categoery ?? false, // Maps to persistent DB column
+          is_home_categoery: data.is_home_categoery ?? false,
           featured_order: data.featured_order || 0,
           image: null,
         });
@@ -85,20 +82,18 @@ function EditCategoryContent({ slug }) {
 
   /**
    * handleSubmit
-   * 1. Updates the category record in the database.
-   * 2. Automatically syncs the 'is_in_homepage' flag to all direct products
-   *    based on the 'is_home_categoery' selection.
+   * Updates the category record in the database.
+   * Product sections on the homepage now filter automatically based on this category flag.
    */
   const handleSubmit = async e => {
     e.preventDefault();
-    const token = localStorage.getItem('access_token');
 
-    // 1. Update Category with persistence
+    // Construct FormData for multipart/file submission
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
     data.append('is_featured_home', formData.is_featured_home);
-    data.append('is_home_categoery', formData.is_home_categoery); // Save to DB
+    data.append('is_home_categoery', formData.is_home_categoery);
     data.append('featured_order', formData.featured_order);
 
     if (formData.image) {
@@ -108,31 +103,6 @@ function EditCategoryContent({ slug }) {
     const success = await updateCategory(slug, data);
 
     if (success) {
-      // 2. Automated Product Syncing
-      if (categoryDetails?.id) {
-        setIsLinking(true);
-        try {
-          // Fetch products directly linked to this category
-          const productsRes = await productAdminApi.getProducts(token, {
-            category: categoryDetails.id,
-            page_size: 200,
-          });
-
-          const productList = productsRes.results || [];
-
-          // Bulk update the homepage status of products to match the category section status
-          for (const product of productList) {
-            await productAdminApi.linkProductToCategory(token, product.slug, {
-              category_id: categoryDetails.id,
-              is_home_page_category: formData.is_home_categoery,
-            });
-          }
-        } catch (err) {
-          console.error('Section syncing failed:', err);
-        } finally {
-          setIsLinking(false);
-        }
-      }
       router.push('/admin/categories');
     }
   };
@@ -141,6 +111,9 @@ function EditCategoryContent({ slug }) {
     return (
       <div className="flex items-center justify-center py-40">
         <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin rounded-none" />
+        <p className="font-mono text-xs font-bold uppercase tracking-widest text-[#8A8A78] ml-4">
+          Syncing Data...
+        </p>
       </div>
     );
   }
@@ -194,7 +167,7 @@ function EditCategoryContent({ slug }) {
               />
             </div>
             <div>
-              <label className={labelClass}>Order on Home Page</label>
+              <label className={labelClass}>Home Page Serial Order</label>
               <input
                 type="number"
                 className={inputClass}
@@ -240,7 +213,7 @@ function EditCategoryContent({ slug }) {
             />
           </div>
 
-          {/* Status Settings */}
+          {/* Configuration Settings */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Store Visibility */}
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
@@ -266,7 +239,7 @@ function EditCategoryContent({ slug }) {
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
               <div className="flex flex-col">
                 <span className="font-bold text-[12px] uppercase">
-                  Top Icon Bar
+                  Home Icon Bar
                 </span>
                 <span className="text-[9px] text-gray-400 font-bold mt-1 uppercase">
                   Show in circle menu?
@@ -309,24 +282,14 @@ function EditCategoryContent({ slug }) {
             </div>
           </div>
 
-          {/* User Feedback for background tasks */}
-          {(isLinking || isUpdating) && (
-            <div className="p-4 bg-emerald-50 border border-emerald-100 flex items-center gap-3">
-              <FiActivity className="text-emerald-600 animate-spin" />
-              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
-                Synchronizing Registry and Section Linkages...
-              </span>
-            </div>
-          )}
-
           {/* Action Button */}
           <button
             type="submit"
-            disabled={isUpdating || isLinking}
+            disabled={isUpdating}
             className="w-full h-16 bg-black text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#3A5A40] transition-all duration-300 cursor-pointer disabled:opacity-30 rounded-none border-none shadow-none"
           >
-            {isUpdating || isLinking ? (
-              'SYNCHRONIZING...'
+            {isUpdating ? (
+              'SAVING_CHANGES...'
             ) : (
               <>
                 <FiCheck size={20} /> SAVE CATEGORY CHANGES

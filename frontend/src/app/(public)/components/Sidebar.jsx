@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FiSearch,
   FiGrid,
@@ -29,6 +29,7 @@ import {
 const Sidebar = () => {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // Extract slug from URL to determine active state (matches top-level category)
   const currentCategorySlug = pathname.startsWith('/category/')
@@ -41,6 +42,16 @@ const Sidebar = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [openMenus, setOpenMenus] = useState({});
+
+  // Sync search term with URL query parameter
+  useEffect(() => {
+    const query = searchParams.get('search');
+    if (query) {
+      setSearchTerm(query);
+    } else {
+      setSearchTerm('');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -82,8 +93,14 @@ const Sidebar = () => {
   }, [allProducts]);
 
   const handleSearch = e => {
-    if (e.key === 'Enter' && searchTerm.trim()) {
-      router.push(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+    if (e.key === 'Enter') {
+      if (searchTerm.trim()) {
+        router.push(
+          `/products?search=${encodeURIComponent(searchTerm.trim())}`,
+        );
+      } else {
+        router.push('/products');
+      }
     }
   };
 
@@ -93,7 +110,8 @@ const Sidebar = () => {
     setOpenMenus(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const isAllProductsActive = pathname === '/products' && !currentCategorySlug;
+  const isAllProductsActive =
+    pathname === '/products' && !searchParams.get('category');
   const activeAd = ads.length > 0 ? ads[0] : null;
 
   const NavItem = ({ item, depth = 0 }) => {

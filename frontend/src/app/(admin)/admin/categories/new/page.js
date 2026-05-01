@@ -9,13 +9,13 @@ import {
   FiAlertCircle,
 } from 'react-icons/fi';
 import { useCategoryAdmin } from '../../../hooks/useCategoryAdmin';
-import { productAdminApi } from '@/app/(admin)/api/productAdminApi';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 
 /**
  * AdminNewCategoryPage
  * Super Admin Zone: Simplified creation flow with homepage section support.
  * Updated: Uses the persistent 'is_home_categoery' database field for section status.
+ * Logic: Bypasses product-level linking as sections are now driven by category flags.
  * Design: Strictly rounded-none, industrial feel, business-friendly labels.
  */
 export default function AdminNewCategoryPage() {
@@ -75,7 +75,7 @@ function NewCategoryContent() {
    * handleSubmit
    * Logic:
    * 1. Creates the category record with the persistent 'is_home_categoery' flag.
-   * 2. Redirects to the main category registry.
+   * 2. Bypasses manual product linking as homepage sections now filter by category status.
    */
   const handleSubmit = async e => {
     e.preventDefault();

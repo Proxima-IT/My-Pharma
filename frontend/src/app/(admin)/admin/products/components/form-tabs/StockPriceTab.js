@@ -4,8 +4,7 @@ import React from 'react';
 /**
  * StockPriceTab Component
  * Industrial "Sharp" design for managing product financials and inventory levels.
- * Fixed: Updated flag name to 'is_featured_home' to match the backend data property
- * so that existing "Home Page" status is correctly reflected in Edit mode.
+ * Updated: Added "show_on_home" flag to trigger homepage section linking.
  */
 
 // Tailwind style constants
@@ -16,12 +15,7 @@ const labelClass =
 
 export default function StockPriceTab({ formData, handleInputChange }) {
   // Use 'is_featured_home' to sync with the backend property provided in the product detail response
-  const flags = [
-    'is_generic',
-    'requires_prescription',
-    'is_active',
-    'is_featured_home',
-  ];
+  const flags = ['is_generic', 'requires_prescription', 'is_active'];
 
   return (
     <div className="space-y-10 animate-in slide-in-from-left-2 text-black">
@@ -88,23 +82,11 @@ export default function StockPriceTab({ formData, handleInputChange }) {
               onChange={handleInputChange}
             />
             <span className="text-[11px] font-black text-gray-500 group-hover:text-black uppercase tracking-widest transition-colors">
-              {flag === 'is_featured_home'
-                ? 'Feature on Home Page'
-                : flag.replace(/_/g, ' ')}
+              {flag.replace(/_/g, ' ')}
             </span>
           </label>
         ))}
       </div>
-
-      {/* Dynamic Note */}
-      {formData.is_featured_home && (
-        <div className="p-4 bg-blue-50 border-l-4 border-blue-400 animate-in fade-in slide-in-from-top-1">
-          <p className="text-[10px] font-bold text-blue-700 uppercase tracking-widest leading-relaxed">
-            Note: This product is currently marked for display on the landing
-            page sections.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

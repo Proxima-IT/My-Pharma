@@ -16,10 +16,13 @@ export default function UserManagementPage() {
   const { users, loading, fetchUsers, deleteUser } = useUserAdmin();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [activeTab, setActiveTab] = useState('NORMAL');
 
   useEffect(() => {
-    fetchUsers({ page, search });
-  }, [page, search, fetchUsers]);
+    // Determine role filter based on active tab
+    const roleFilter = activeTab === 'NORMAL' ? 'REGISTERED_USER' : '';
+    fetchUsers({ page, search, role: roleFilter });
+  }, [page, search, fetchUsers, activeTab]);
 
   const handleDelete = async (id, name) => {
     if (confirm(`Are you sure you want to remove access for ${name}?`)) {
@@ -36,6 +39,12 @@ export default function UserManagementPage() {
     };
     return styles[role] || styles.REGISTERED_USER;
   };
+
+  // Filter results for System Users tab to exclude REGISTERED_USER since we fetch all when role is empty
+  const displayedUsers =
+    activeTab === 'NORMAL'
+      ? users.results
+      : users.results.filter(u => u.role !== 'REGISTERED_USER');
 
   return (
     <div className="w-full space-y-8 animate-in fade-in duration-500">
@@ -56,23 +65,48 @@ export default function UserManagementPage() {
         </Link>
       </div>
 
-      {/* Search Bar */}
-      <div className="max-w-md bg-white border border-gray-100 p-1">
-        <div className="relative">
-          <FiSearch
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A8A78]"
-            size={16}
-          />
-          <input
-            type="text"
-            placeholder="SEARCH BY NAME OR EMAIL..."
-            className="w-full h-10 pl-10 pr-4 bg-transparent rounded-none text-sm font-mono focus:outline-none uppercase tracking-tight placeholder:text-gray-300"
-            value={search}
-            onChange={e => {
-              setSearch(e.target.value);
+      {/* Tabs and Search Bar Row */}
+      <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+        {/* Tabs Selection */}
+        <div className="flex bg-gray-50 p-1 border border-gray-100 rounded-none">
+          <button
+            onClick={() => {
+              setActiveTab('NORMAL');
               setPage(1);
             }}
-          />
+            className={`px-6 py-2 text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-none ${activeTab === 'NORMAL' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
+          >
+            Normal Users
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('SYSTEM');
+              setPage(1);
+            }}
+            className={`px-6 py-2 text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer rounded-none ${activeTab === 'SYSTEM' ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
+          >
+            System Users
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="max-w-md w-full bg-white border border-gray-100 p-1">
+          <div className="relative">
+            <FiSearch
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A8A78]"
+              size={16}
+            />
+            <input
+              type="text"
+              placeholder="SEARCH BY NAME OR EMAIL..."
+              className="w-full h-10 pl-10 pr-4 bg-transparent rounded-none text-sm font-mono focus:outline-none uppercase tracking-tight placeholder:text-gray-300"
+              value={search}
+              onChange={e => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
         </div>
       </div>
 
@@ -95,7 +129,7 @@ export default function UserManagementPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {loading && users.results.length === 0 ? (
+              {loading && displayedUsers.length === 0 ? (
                 <tr>
                   <td colSpan="4" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
@@ -103,7 +137,7 @@ export default function UserManagementPage() {
                     </div>
                   </td>
                 </tr>
-              ) : users.results.length === 0 ? (
+              ) : displayedUsers.length === 0 ? (
                 <tr>
                   <td
                     colSpan="4"
@@ -116,7 +150,7 @@ export default function UserManagementPage() {
                   </td>
                 </tr>
               ) : (
-                users.results.map(user => (
+                displayedUsers.map(user => (
                   <tr
                     key={user.id}
                     className="hover:bg-gray-50/50 transition-colors duration-200 group"
