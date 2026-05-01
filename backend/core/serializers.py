@@ -216,6 +216,11 @@ class ProductLinkCategorySerializer(serializers.Serializer):
         min_value=1,
         help_text="ID of the category to link to this product.",
     )
+    is_home_page_category = serializers.BooleanField(
+        required=False,
+        default=False,
+        help_text="Whether this product should be featured on the homepage.",
+    )
 
     def validate_category_id(self, value):
         from .models import Category

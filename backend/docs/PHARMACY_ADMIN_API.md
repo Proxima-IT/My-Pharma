@@ -250,7 +250,8 @@ Product `rating_avg` and `review_count` are updated automatically when reviews a
 **Link Category body (`POST /{slug}/link-category/`):**
 ```json
 {
-  "category_id": 5
+  "category_id": 5,
+  "is_home_page_category": true
 }
 ```
 

@@ -680,9 +680,11 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer = ProductLinkCategorySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         category_id = serializer.validated_data["category_id"]
+        is_home_page_category = serializer.validated_data.get("is_home_page_category", False)
         
         product.category_id = category_id
-        product.save(update_fields=["category", "updated_at"])
+        product.is_in_homepage = is_home_page_category
+        product.save(update_fields=["category", "is_in_homepage", "updated_at"])
         
         return Response(
             {"detail": f"Successfully linked product {product.name} to category ID {category_id}."}, 
