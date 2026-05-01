@@ -12,11 +12,11 @@ import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Home Page Controller
- * Refactored: Uses Sidebar Category endpoint to drive the main product sections.
+ * Updated: Section creation logic now uses the dedicated 'is_home_section' flag on Categories.
  * Logic:
- * 1. Fetches categories from the sidebar-category API.
- * 2. Filters for top-level categories (no parent) to create main homepage sections.
- * 3. Respects manual placement of promotional banners.
+ * 1. Fetches categories from the main registry.
+ * 2. Filters for categories explicitly marked as homepage sections.
+ * 3. Maintains manual positioning of promotional banners.
  */
 export default function Home() {
   const [sections, setSections] = useState([]);
@@ -25,19 +25,23 @@ export default function Home() {
   useEffect(() => {
     const fetchHomeSections = async () => {
       try {
-        // Fetch categories designated for navigation/sidebar to use as big sections
-        const res = await fetch(`${API_BASE_URL}/categories/sidebar-category/`);
-        const data = await parseJsonResponse(res, []);
+        // Fetch all categories with the home section filter
+        // Note: Using is_home_section=true as the new flag on the category table
+        const res = await fetch(
+          `${API_BASE_URL}/categories/?is_home_section=true&is_active=true`,
+        );
+        const data = await parseJsonResponse(res, { results: [] });
 
-        // Filter: Only show top-level categories as sections (children stay in dropdowns)
-        // Sort: Follow the sidebar_order defined in the Admin Category Manager
-        const sorted = (Array.isArray(data) ? data : data.results || [])
-          .filter(cat => !cat.parent)
-          .sort((a, b) => (a.sidebar_order || 0) - (b.sidebar_order || 0));
+        const categoryList = Array.isArray(data) ? data : data.results || [];
+
+        // Sort by the featured_order (or sidebar_order as fallback)
+        const sorted = categoryList.sort(
+          (a, b) => (a.featured_order || 0) - (b.featured_order || 0),
+        );
 
         setSections(sorted);
       } catch (error) {
-        console.error('Failed to fetch home sections:', error);
+        console.error('Failed to fetch dynamic home sections:', error);
       } finally {
         setIsLoading(false);
       }
@@ -46,15 +50,15 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-10 lg:gap-16">
+    <div className="flex flex-col gap-10 lg:gap-16 bg-white">
       <HeroCarousel />
 
-      {/* Dynamic Circle Icons (Driven by is_featured_home) */}
+      {/* Circle Icon Bar (Driven by is_featured_home flag) */}
       <FeaturedCategory />
 
       {/* 
-        First Group of Sections (Indices 0, 1, 2)
-        Equivalent to: Popular Products, Natura Care, Unilever Deals
+        Group 1: Top 3 Sections
+        Placed before the first major promotional banner.
       */}
       {!isLoading &&
         sections
@@ -72,17 +76,19 @@ export default function Home() {
       <BookTestBanner />
 
       {/* 
-        Remaining Sections (Index 3 and onwards)
-        Equivalent to: Boost & Balance and any future added sections
+        Group 2: Remaining Sections
+        Placed after the middle banners.
       */}
       {!isLoading &&
-        sections.slice(3).map((category, index) => (
-          <DynamicProductSection
-            key={category.id}
-            category={category}
-            index={index + 3} // Offset to maintain color rotation
-          />
-        ))}
+        sections
+          .slice(3)
+          .map((category, index) => (
+            <DynamicProductSection
+              key={category.id}
+              category={category}
+              index={index + 3}
+            />
+          ))}
 
       <SmartHealthBundle />
       <DealsSection />

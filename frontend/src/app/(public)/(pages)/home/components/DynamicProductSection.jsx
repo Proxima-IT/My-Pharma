@@ -8,55 +8,60 @@ import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 /**
  * DynamicProductSection Component
- * A generic component that renders a product grid for a specific category.
- * Props:
- * - category: The category object { name, slug }
- * - index: The loop index to determine background color
+ * Renders a curated product grid for a specific category on the homepage.
+ * Updated: Fetches products based on the persistent 'is_in_homepage' flag.
+ * This flag is synced when the Admin checks "Make it a Section" on a category.
  */
 const DynamicProductSection = ({ category, index }) => {
-  // Fetch first 4 available products for this specific category slug
+  /**
+   * Fetch products for this section.
+   * Logic:
+   * - category: Filter by the current category slug.
+   * - is_in_homepage: Filter for products curated for the homepage.
+   * - available: Ensure items are in stock.
+   */
   const { isLoading, products } = useProductData({
     category: category.slug,
+    is_in_homepage: 'true',
     available: 'true',
     page_size: 4,
   });
 
-  // Pre-defined color combinations for business branding
+  // Theme configuration for section branding
   const colorThemes = [
     {
       bg: 'bg-[#E9EBF4]',
       text: 'text-(--color-primary-500)',
       btn: 'hover:border-(--color-primary-500)',
-    }, // Default/Popular
+    },
     {
       bg: 'bg-[#B0E5C799]',
       text: 'text-[#009C42]',
       btn: 'hover:border-[#009C42]',
-    }, // Natura Care Style
+    },
     {
       bg: 'bg-[#E0F6FA]',
       text: 'text-[#4CCBE0]',
       btn: 'hover:border-[#4CCBE0]',
-    }, // Unilever Style
+    },
     {
       bg: 'bg-[#F9E6D5]',
       text: 'text-[#E2822C]',
       btn: 'hover:border-[#E2822C]',
-    }, // Boost & Balance Style
+    },
   ];
 
-  // Cycle through themes based on index
   const theme = colorThemes[index % colorThemes.length];
 
   if (isLoading) {
     return (
-      <div className="w-full py-10 flex items-center justify-center bg-gray-50 rounded-[32px]">
-        <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin" />
+      <div className="w-full py-10 flex items-center justify-center bg-gray-50 rounded-[32px] shadow-none">
+        <div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin shadow-none" />
       </div>
     );
   }
 
-  // Only show section if products exist
+  // If the category has no products curated for the homepage, do not render the section
   if (!products || products.length === 0) return null;
 
   return (
