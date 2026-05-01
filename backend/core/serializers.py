@@ -63,6 +63,7 @@ class CategorySerializer(serializers.ModelSerializer):
         read_only=True,
         allow_null=True,
     )
+    is_home_categoery = serializers.BooleanField(source="is_featured_home", required=False)
 
     class Meta:
         model = Category
@@ -79,6 +80,7 @@ class CategorySerializer(serializers.ModelSerializer):
             "show_in_sidebar",
             "sidebar_order",
             "is_featured_home",
+            "is_home_categoery",
             "featured_order",
             "product_count",
             "created_at",
@@ -116,6 +118,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
+    is_home_categoery = serializers.BooleanField(source="is_featured_home", required=False)
 
     class Meta:
         model = Category
@@ -131,6 +134,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
             "show_in_sidebar",
             "sidebar_order",
             "is_featured_home",
+            "is_home_categoery",
             "featured_order",
             "product_count",
             "children",
