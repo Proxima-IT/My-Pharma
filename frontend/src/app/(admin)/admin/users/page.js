@@ -9,8 +9,10 @@ import {
   FiUser,
   FiChevronLeft,
   FiChevronRight,
+  FiDownload,
 } from 'react-icons/fi';
 import { useUserAdmin } from '../../hooks/useUserAdmin';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 export default function UserManagementPage() {
   const { users, loading, fetchUsers, deleteUser } = useUserAdmin();
@@ -27,6 +29,35 @@ export default function UserManagementPage() {
   const handleDelete = async (id, name) => {
     if (confirm(`Are you sure you want to remove access for ${name}?`)) {
       await deleteUser(id);
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const response = await fetch(
+        `${API_BASE_URL}/auth/admin/users/export-csv/`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (!response.ok) throw new Error('Export failed');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users_export_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message || 'Failed to export user data.');
     }
   };
 
@@ -58,11 +89,19 @@ export default function UserManagementPage() {
             Control who can access and manage the pharmacy system.
           </p>
         </div>
-        <Link href="/admin/users/new">
-          <button className="bg-[#3A5A40] text-white px-8 py-3.5 rounded-none font-bold text-xs tracking-widest flex items-center gap-2 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer uppercase border border-transparent">
-            <FiPlus size={18} /> Add New User
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExportCSV}
+            className="bg-white text-black px-6 py-3.5 rounded-none font-bold text-xs tracking-widest flex items-center gap-2 hover:bg-gray-50 transition-all duration-300 cursor-pointer uppercase border border-gray-200"
+          >
+            <FiDownload size={18} /> Export CSV
           </button>
-        </Link>
+          <Link href="/admin/users/new">
+            <button className="bg-[#3A5A40] text-white px-8 py-3.5 rounded-none font-bold text-xs tracking-widest flex items-center gap-2 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer uppercase border border-transparent">
+              <FiPlus size={18} /> Add New User
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Tabs and Search Bar Row */}
@@ -182,13 +221,13 @@ export default function UserManagementPage() {
                     <td className="px-8 py-6">
                       <div className="flex items-center justify-end gap-2">
                         <Link href={`/admin/users/edit/${user.id}`}>
-                          <button className="w-9 h-9 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-[#3A5A40] hover:text-white transition-all duration-300 cursor-pointer">
+                          <button className="w-9 h-9 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-[#3A5A40] hover:text-white transition-all duration-300 cursor-pointer shadow-none">
                             <FiEdit2 size={14} />
                           </button>
                         </Link>
                         <button
                           onClick={() => handleDelete(user.id, user.username)}
-                          className="w-9 h-9 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-red-600 hover:text-white transition-all duration-300 cursor-pointer"
+                          className="w-9 h-9 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-red-600 hover:text-white transition-all duration-300 cursor-pointer shadow-none"
                         >
                           <FiTrash2 size={14} />
                         </button>
@@ -207,21 +246,21 @@ export default function UserManagementPage() {
         <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase">
           Total Records: <span className="text-[#1B1B1B]">{users.count}</span>
         </p>
-        <div className="flex items-center gap-0 border border-gray-200 bg-white">
+        <div className="flex items-center gap-0 border border-gray-200 bg-white shadow-none">
           <button
             disabled={page === 1 || loading}
             onClick={() => setPage(p => p - 1)}
-            className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
+            className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer rounded-none"
           >
             <FiChevronLeft size={18} />
           </button>
-          <div className="px-4 font-mono text-xs font-bold text-[#1B1B1B]">
+          <div className="px-4 font-mono text-xs font-bold text-[#1B1B1B] flex items-center h-10">
             PAGE {page}
           </div>
           <button
             disabled={users.results.length < 10 || loading}
             onClick={() => setPage(p => p + 1)}
-            className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
+            className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer rounded-none"
           >
             <FiChevronRight size={18} />
           </button>
