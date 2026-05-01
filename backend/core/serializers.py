@@ -118,7 +118,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
-    is_home_categoery = serializers.BooleanField(source="is_featured_home", required=False)
+    is_home_categoery = serializers.BooleanField(required=False)
 
     class Meta:
         model = Category
