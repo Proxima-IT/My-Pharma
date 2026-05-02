@@ -94,7 +94,7 @@ const AdminSidebar = () => {
       items: [
         { name: 'Ads Management', icon: <FiImage />, href: '/admin/ads' },
         {
-          name: 'Combo Management',
+          name: 'Combo Products',
           icon: <FiPackage />,
           href: '/admin/combos',
         },

@@ -6,9 +6,12 @@ import { comboAdminApi } from '../api/comboAdminApi';
 /**
  * My Pharma - Super Admin Combo Management Hook
  * Manages state and operations for product bundles/combos.
+ * Updated: Supports product linking state and hierarchical detail fetching.
  */
 export const useComboAdmin = () => {
   const [combos, setCombos] = useState({ results: [], count: 0 });
+  const [comboDetails, setComboDetails] = useState(null);
+  const [selectedProductIds, setSelectedProductIds] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [error, setError] = useState(null);
@@ -36,6 +39,35 @@ export const useComboAdmin = () => {
       setLoading(false);
     }
   }, []);
+
+  const fetchComboById = useCallback(async id => {
+    setLoading(true);
+    setError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      if (!token) return;
+
+      const data = await comboAdminApi.getComboById(token, id);
+      setComboDetails(data);
+      // Initialize selected products state from existing data
+      if (data.products) {
+        setSelectedProductIds(data.products.map(p => p.id));
+      }
+      return data;
+    } catch (err) {
+      setError(err.message || 'Failed to load combo details');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const toggleProductSelection = productId => {
+    setSelectedProductIds(prev =>
+      prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId],
+    );
+  };
 
   const addCombo = async formData => {
     setIsUpdating(true);
@@ -107,11 +139,16 @@ export const useComboAdmin = () => {
 
   return {
     combos,
+    comboDetails,
+    selectedProductIds,
+    setSelectedProductIds,
+    toggleProductSelection,
     loading,
     isUpdating,
     error,
     pagination,
     fetchCombos,
+    fetchComboById,
     addCombo,
     updateCombo,
     deleteCombo,

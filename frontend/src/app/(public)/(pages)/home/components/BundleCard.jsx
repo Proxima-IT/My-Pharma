@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import React from 'react';
 import { FiChevronRight } from 'react-icons/fi';
 import { TbCurrencyTaka } from 'react-icons/tb';
@@ -25,6 +26,20 @@ const BundleCard = ({ bundle }) => {
           <p className="text-sm sm:text-lg text-gray-600 font-medium opacity-80">
             {bundle.description}
           </p>
+
+          {/* Render list of products associated with this combo bundle */}
+          {bundle.products && bundle.products.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {bundle.products.map(product => (
+                <span
+                  key={product.id}
+                  className="px-3 py-1 bg-white/30 backdrop-blur-md rounded-full text-[11px] font-bold text-gray-900 uppercase border border-white/20"
+                >
+                  {product.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Pricing Section */}
@@ -42,10 +57,12 @@ const BundleCard = ({ bundle }) => {
         </div>
 
         {/* Action Button */}
-        <button className="relative z-10 mt-6 bg-white rounded-full px-8 py-4 text-(--color-primary-500) flex items-center gap-2 text-sm sm:text-base font-bold cursor-pointer hover:bg-gray-50 transition-all border border-transparent">
-          <span>See Package</span>
-          <FiChevronRight size={20} strokeWidth={3} />
-        </button>
+        <Link href={`/combo/${bundle.id}`}>
+          <button className="relative z-10 mt-6 bg-white rounded-full px-8 py-4 text-(--color-primary-500) flex items-center gap-2 text-sm sm:text-base font-bold cursor-pointer hover:bg-gray-50 transition-all border border-transparent">
+            <span>Add Bundle</span>
+            <FiChevronRight size={20} strokeWidth={3} />
+          </button>
+        </Link>
       </div>
 
       {/* 2. Full-Width Dynamic Image Section */}

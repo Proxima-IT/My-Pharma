@@ -1,35 +1,49 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiSave, FiUpload, FiX, FiImage } from 'react-icons/fi';
+import {
+  FiArrowLeft,
+  FiSave,
+  FiUpload,
+  FiX,
+  FiImage,
+  FiPlus,
+  FiBox,
+} from 'react-icons/fi';
 import { useComboAdmin } from '@/app/(admin)/hooks/useComboAdmin';
+import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
 import Image from 'next/image';
 import Link from 'next/link';
 
 /**
  * Super Admin - Create New Combo Page
  * Design: Sharp & Authoritative, rounded-none, border-2, high contrast.
- * Updated: Synchronized field name to 'bg_color' to match backend implementation.
+ * Updated: Replaced External Link with Product Selection UI as per client requirement.
  */
 export default function NewComboPage() {
   const router = useRouter();
   const { addCombo, isUpdating, error } = useComboAdmin();
+  const { products: availableProducts, fetchProducts } = useProductAdmin();
   const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    link: '',
     price: '',
     original_price: '',
-    bg_color: '#B0E5C7', // Updated from color to bg_color
+    bg_color: '#B0E5C7',
     order: 0,
     is_active: true,
   });
 
+  const [selectedProducts, setSelectedProducts] = useState([]);
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+
+  useEffect(() => {
+    fetchProducts({ page_size: 1000, is_active: true });
+  }, [fetchProducts]);
 
   const handleInputChange = e => {
     const { name, value, type, checked } = e.target;
@@ -37,6 +51,22 @@ export default function NewComboPage() {
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+  };
+
+  const handleProductSelect = e => {
+    const productId = parseInt(e.target.value);
+    if (!productId) return;
+
+    const product = availableProducts?.results?.find(p => p.id === productId);
+    if (product && !selectedProducts.find(p => p.id === productId)) {
+      setSelectedProducts(prev => [...prev, product]);
+    }
+    // Reset dropdown
+    e.target.value = '';
+  };
+
+  const removeProduct = id => {
+    setSelectedProducts(prev => prev.filter(p => p.id !== id));
   };
 
   const handleFileChange = e => {
@@ -57,6 +87,12 @@ export default function NewComboPage() {
       Object.keys(formData).forEach(key => {
         data.append(key, formData[key]);
       });
+
+      // Append selected product IDs for the ManyToMany relation
+      selectedProducts.forEach(p => {
+        data.append('product_ids', p.id);
+      });
+
       if (imageFile) {
         data.append('image', imageFile);
       }
@@ -76,7 +112,7 @@ export default function NewComboPage() {
     'w-full p-4 bg-white border border-gray-200 rounded-none text-sm font-mono focus:outline-none focus:border-[#3A5A40] transition-all uppercase placeholder:text-gray-300 text-[#1B1B1B] min-h-[120px]';
 
   return (
-    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 text-black">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-gray-100 pb-6">
         <div className="flex items-center gap-4">
@@ -110,7 +146,7 @@ export default function NewComboPage() {
       >
         {/* Left Column: Primary Data */}
         <div className="lg:col-span-2 space-y-8">
-          <div className="bg-white border border-gray-100 p-8 space-y-6">
+          <div className="bg-white border border-gray-100 p-8 space-y-6 shadow-none">
             <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6 flex items-center gap-2">
               <span className="w-2 h-2 bg-[#3A5A40]"></span> General Information
             </h3>
@@ -137,20 +173,79 @@ export default function NewComboPage() {
                 onChange={handleInputChange}
               />
             </div>
+          </div>
 
-            <div>
-              <label className={labelClass}>External Link (Optional)</label>
-              <input
-                name="link"
-                className={inputClass}
-                placeholder="HTTPS://MYPHARMA.COM/PROMO/..."
-                value={formData.link}
-                onChange={handleInputChange}
-              />
+          {/* Product Selection Section */}
+          <div className="bg-white border border-gray-100 p-8 space-y-6 shadow-none">
+            <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 bg-[#3A5A40]"></span> Included Products
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+              {/* Dropdown Selection */}
+              <div className="space-y-4">
+                <label className={labelClass}>Search & Select Medicines</label>
+                <select
+                  className={inputClass + ' cursor-pointer'}
+                  onChange={handleProductSelect}
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Choose a product to add...
+                  </option>
+                  {availableProducts?.results?.map(product => (
+                    <option key={product.id} value={product.id}>
+                      {product.name.toUpperCase()} (
+                      {product.brand_name?.toUpperCase()})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] font-mono text-[#8A8A78] uppercase leading-tight">
+                  Add multiple products that belong to this combo package.
+                </p>
+              </div>
+
+              {/* Selected List */}
+              <div className="space-y-4">
+                <label className={labelClass}>
+                  Selected Items ({selectedProducts.length})
+                </label>
+                <div className="border border-gray-100 min-h-[150px] bg-gray-50/50 p-2 space-y-2">
+                  {selectedProducts.length === 0 ? (
+                    <div className="h-32 flex flex-col items-center justify-center text-gray-300 gap-2">
+                      <FiBox size={24} />
+                      <span className="text-[10px] font-bold uppercase tracking-widest">
+                        No Products Assigned
+                      </span>
+                    </div>
+                  ) : (
+                    selectedProducts.map(product => (
+                      <div
+                        key={product.id}
+                        className="flex items-center justify-between bg-white p-3 border border-gray-100 group animate-in slide-in-from-right-2"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <span className="w-1.5 h-1.5 bg-[#3A5A40] shrink-0"></span>
+                          <span className="text-[11px] font-bold text-gray-700 uppercase truncate">
+                            {product.name}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeProduct(product.id)}
+                          className="text-gray-300 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                        >
+                          <FiX size={14} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white border border-gray-100 p-8 space-y-6">
+          <div className="bg-white border border-gray-100 p-8 space-y-6 shadow-none">
             <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6 flex items-center gap-2">
               <span className="w-2 h-2 bg-[#3A5A40]"></span> Pricing & Logic
             </h3>
@@ -182,7 +277,6 @@ export default function NewComboPage() {
                 />
               </div>
 
-              {/* Color Selection Field */}
               <div>
                 <label className={labelClass}>
                   Container Color (Public Card)
@@ -217,7 +311,7 @@ export default function NewComboPage() {
               </div>
 
               <div className="flex items-end">
-                <label className="flex items-center gap-3 cursor-pointer h-12 px-4 bg-gray-50 border border-gray-100 w-full">
+                <label className="flex items-center gap-3 cursor-pointer h-12 px-4 bg-gray-50 border border-gray-100 w-full shadow-none">
                   <input
                     type="checkbox"
                     name="is_active"
@@ -236,14 +330,14 @@ export default function NewComboPage() {
 
         {/* Right Column: Media & Submission */}
         <div className="space-y-8">
-          <div className="bg-white border border-gray-100 p-8">
+          <div className="bg-white border border-gray-100 p-8 shadow-none">
             <h3 className="font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-6 flex items-center gap-2">
               <span className="w-2 h-2 bg-[#3A5A40]"></span> Media Asset
             </h3>
 
             <div
               onClick={() => fileInputRef.current.click()}
-              className="w-full aspect-square border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 transition-all relative overflow-hidden group"
+              className="w-full aspect-square border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-3 cursor-pointer hover:bg-gray-50 transition-all relative overflow-hidden group shadow-none"
             >
               {previewUrl ? (
                 <>
@@ -252,6 +346,7 @@ export default function NewComboPage() {
                     alt="Preview"
                     fill
                     className="object-cover"
+                    unoptimized
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                     <FiUpload className="text-white" size={32} />
@@ -284,7 +379,7 @@ export default function NewComboPage() {
                   setImageFile(null);
                   setPreviewUrl(null);
                 }}
-                className="w-full mt-4 py-2 text-[10px] font-mono font-bold text-red-400 uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-50 transition-colors"
+                className="w-full mt-4 py-2 text-[10px] font-mono font-bold text-red-400 uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-50 transition-colors cursor-pointer"
               >
                 <FiX /> Remove Image
               </button>
@@ -294,20 +389,20 @@ export default function NewComboPage() {
           <button
             type="submit"
             disabled={isUpdating}
-            className="w-full h-20 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#1B1B1B] transition-all duration-300 disabled:opacity-50 cursor-pointer"
+            className="w-full h-20 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#1B1B1B] transition-all duration-300 disabled:opacity-50 cursor-pointer shadow-none border-none"
           >
             {isUpdating ? (
               'INITIALIZING...'
             ) : (
               <>
-                <FiSave size={20} /> DEPLOY COMBO
+                <FiPlus size={20} /> CREATE COMBO
               </>
             )}
           </button>
 
           <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
-            Note: The selected color will be applied to the background of the
-            card on the public website.
+            Note: All products added to this combo will be automatically bundled
+            at the specified price.
           </div>
         </div>
       </form>

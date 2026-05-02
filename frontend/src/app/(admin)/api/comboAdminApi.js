@@ -43,7 +43,7 @@ export const comboAdminApi = {
   /**
    * Create a new combo
    * @param {string} token
-   * @param {FormData} formData - Includes title, description, image, link, price, original_price, order, is_active
+   * @param {FormData} formData - Includes title, description, image, product_ids, price, original_price, order, is_active
    */
   createCombo: async (token, formData) => {
     const response = await fetch(`${API_BASE_URL}/combos/`, {
