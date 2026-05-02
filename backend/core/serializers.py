@@ -277,33 +277,7 @@ class AdSerializer(serializers.ModelSerializer):
         return obj.image.url if obj.image else None
 
 
-# ---- Combo (combo packages: image + price + link) ----
-class ComboSerializer(serializers.ModelSerializer):
-    image_url = serializers.SerializerMethodField()
 
-    class Meta:
-        model = Combo
-        fields = (
-            "id",
-            "title",
-            "description",
-            "image",
-            "image_url",
-            "link",
-            "price",
-            "original_price",
-            "bg_color",
-            "order",
-            "is_active",
-            "created_at",
-            "updated_at",
-        )
-        read_only_fields = ("id", "image_url", "created_at", "updated_at")
-
-    def get_image_url(self, obj):
-        if obj.image and self.context.get("request"):
-            return self.context["request"].build_absolute_uri(obj.image.url)
-        return obj.image.url if obj.image else None
 
 
 # ---- Brand (autocomplete) ----
@@ -381,6 +355,44 @@ class ProductListSerializer(serializers.ModelSerializer):
         if hasattr(obj, "dosage_options"):
             return [d.dosage_label for d in obj.dosage_options.all()]
         return []
+
+
+# ---- Combo (combo packages: image + products + price) ----
+class ComboSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    products = ProductListSerializer(many=True, read_only=True)
+    product_ids = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        many=True,
+        write_only=True,
+        source="products",
+        required=False,
+    )
+
+    class Meta:
+        model = Combo
+        fields = (
+            "id",
+            "title",
+            "description",
+            "image",
+            "image_url",
+            "products",
+            "product_ids",
+            "price",
+            "original_price",
+            "bg_color",
+            "order",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "image_url", "created_at", "updated_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):

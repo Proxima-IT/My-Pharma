@@ -113,7 +113,7 @@ Backward-compatible aliases are still available:
 
 **Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
 
-**Combos (combo packages: image + price + link):**  
+**Combos (combo packages: image + price + products):**  
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/combos/` | List combos (public: active only; auth: filter by `is_active`) |
@@ -122,7 +122,7 @@ Backward-compatible aliases are still available:
 | PUT / PATCH | `/api/combos/{id}/` | Update combo (Pharmacy/Super only) |
 | DELETE | `/api/combos/{id}/` | Delete combo (Pharmacy/Super only) |
 
-**Fields:** Include `title`, `description`, `image`, `link`, `price`, `original_price`, `bg_color`, `order`, `is_active`.
+**Fields:** Include `title`, `description`, `image`, `products`, `product_ids`, `price`, `original_price`, `bg_color`, `order`, `is_active`.
 
 **Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
 

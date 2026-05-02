@@ -119,7 +119,7 @@ Promotional ads: image and destination link. List and retrieve are public (only 
 
 ## 2c. Combo packages (cards)
 
-Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. with image, link, and price. List and retrieve are public (only active combos for guests); create/update/delete require Pharmacy Admin.
+Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. with image, products, and price. List and retrieve are public (only active combos for guests); create/update/delete require Pharmacy Admin.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -129,14 +129,14 @@ Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. wi
 | PUT / PATCH | `/api/combos/{id}/` | Update combo (admin). |
 | DELETE | `/api/combos/{id}/` | Delete combo (admin). |
 
-**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `link`, `price`, `original_price`, `bg_color`, `order`, `is_active`, `created_at`, `updated_at`.
+**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `products`, `product_ids`, `price`, `original_price`, `bg_color`, `order`, `is_active`, `created_at`, `updated_at`.
 
 **Create/Update (multipart for image):**
 
 - `title` (string, required) – e.g. "Health Combo Packages"
 - `description` (string, optional) – short tagline for the card
 - `image` (file, optional on update; required if you want an image)
-- `link` (URL, optional) – where the CTA goes
+- `product_ids` (array of integers, optional) – Select products to include in this combo
 - `price` (decimal, required) – combo price to display on card
 - `original_price` (decimal, optional) – crossed-out price for discount
 - `bg_color` (string, optional) – background color (e.g. `#F3F4FF` or a CSS/Tailwind class)

@@ -109,10 +109,11 @@ class Combo(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to="combos/%Y/%m/", blank=True, null=True)
-    link = models.URLField(
-        max_length=500,
+    products = models.ManyToManyField(
+        "Product",
         blank=True,
-        help_text="Destination URL when combo card is clicked (e.g. product list or CMS page).",
+        related_name="combos",
+        help_text="Select products for this combo.",
     )
     price = models.DecimalField(max_digits=12, decimal_places=2)
     original_price = models.DecimalField(
