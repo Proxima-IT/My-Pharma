@@ -29,6 +29,7 @@ class AuditAction(models.TextChoices):
     PASSWORD_RESET_COMPLETE = "PASSWORD_RESET_COMPLETE", "Password Reset Complete"
     REGISTER_PHONE = "REGISTER_PHONE", "Register via Phone"
     REGISTER_EMAIL = "REGISTER_EMAIL", "Register via Email"
+    REGISTER_GOOGLE = "REGISTER_GOOGLE", "Register via Google"
     REGISTER_COMPLETE = "REGISTER_COMPLETE", "Registration Completed (phone flow)"
     ACCOUNT_LOCKED = "ACCOUNT_LOCKED", "Account Locked"
 

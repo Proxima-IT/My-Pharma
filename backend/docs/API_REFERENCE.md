@@ -101,6 +101,7 @@ Endpoints that return tokens return:
 | POST   | `/api/auth/register/phone/`    | No   | 3/hour per phone | Request OTP phone only (legacy)                                               |
 | POST   | `/api/auth/register/email/`    | No   | —                | Register with email + password (one step)                                     |
 | POST   | `/api/auth/login/`             | No   | 5/min per IP     | Login (email or phone + password)                                             |
+| POST   | `/api/auth/google/`            | No   | 5/min per IP     | Sign up/sign in with Google using Firebase `id_token`                         |
 | POST   | `/api/auth/token/refresh/`     | No   | —                | Get new access + refresh                                                      |
 | POST   | `/api/auth/logout/`            | Yes  | —                | Logout (blacklist tokens)                                                     |
 | POST   | `/api/auth/password-reset/`    | No   | —                | Send password reset link to registered email                                  |
@@ -282,6 +283,42 @@ Login with **email or phone** (the same identifier used at registration) and pas
 | 401    | `invalid_credentials` | Wrong email/phone or password                                     |
 | 423    | `account_locked`      | Account locked after 5 failed attempts (30 minutes)               |
 | 429    | —                     | Too many login attempts                                           |
+
+---
+
+### 3.6A POST `/api/auth/google/`
+
+Sign up/sign in with Google using Firebase authentication.
+Frontend should send Firebase `id_token` after Google auth success.
+
+**Auth:** None  
+**Throttle:** 5 requests per minute per IP.
+
+**Request body:**
+
+```json
+{
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+}
+```
+
+| Field      | Type   | Required | Validation |
+| ---------- | ------ | -------- | ---------- |
+| `id_token` | string | Yes      | Firebase ID token from Google provider |
+
+**Success (200):** Token response (access, refresh, user).
+
+**Errors:**
+
+| Status | Code | Condition |
+| ------ | ---- | --------- |
+| 400 | `invalid_google_provider` | Token provider is not Google |
+| 400 | `google_email_missing` | Email missing in token claims |
+| 400 | `google_email_not_verified` | Email is not verified and strict mode is enabled |
+| 401 | `invalid_firebase_token` | Token is invalid or expired |
+| 401 | `firebase_project_mismatch` | Token `aud` does not match configured project |
+| 423 | `account_locked` | Account is locked |
+| 503 | `firebase_not_configured` | Firebase credentials are not configured on backend |
 
 ---
 
@@ -548,6 +585,7 @@ Broadcast response is `201 Created` and includes delivery counters:
 | `POST /api/auth/register/phone/` | 3 per hour per phone |
 | `POST /api/auth/verify-otp/`     | 10 per minute per IP |
 | `POST /api/auth/login/`          | 5 per minute per IP  |
+| `POST /api/auth/google/`         | 5 per minute per IP  |
 | Generic auth (default throttle)  | 10 per minute per IP |
 
 When exceeded → **429** with body like `{"detail": "...", "code": "..."}`.

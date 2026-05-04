@@ -119,6 +119,16 @@ class LoginRequestSerializer(serializers.Serializer):
         return attrs
 
 
+class GoogleAuthRequestSerializer(serializers.Serializer):
+    id_token = serializers.CharField(write_only=True, trim_whitespace=True)
+
+    def validate_id_token(self, value):
+        token = (value or "").strip()
+        if not token:
+            raise serializers.ValidationError("id_token is required.")
+        return token
+
+
 class RegisterCompleteRequestSerializer(serializers.Serializer):
     """Payload to complete registration: username, password, email or phone (the one not verified), profile_picture. Add addresses after login via /api/auth/addresses/."""
     registration_token = serializers.CharField()
@@ -438,3 +448,8 @@ class TokenResponseSerializer(serializers.Serializer):
 class MessageResponseSerializer(serializers.Serializer):
     message = serializers.CharField()
     detail = serializers.CharField(required=False)
+
+
+class ErrorResponseSerializer(serializers.Serializer):
+    detail = serializers.CharField()
+    code = serializers.CharField(required=False)

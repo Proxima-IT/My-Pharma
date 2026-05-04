@@ -461,6 +461,13 @@ def _init_firebase():
         return False
 
 FIREBASE_INITIALIZED = _init_firebase()
+FIREBASE_AUTH_PROJECT_ID = os.environ.get(
+    "FIREBASE_AUTH_PROJECT_ID",
+    os.environ.get("NEXT_PUBLIC_FIREBASE_PROJECT_ID", ""),
+).strip()
+FIREBASE_AUTH_REQUIRE_EMAIL_VERIFIED = os.environ.get(
+    "FIREBASE_AUTH_REQUIRE_EMAIL_VERIFIED", "true"
+).lower() in ("true", "1", "yes")
 
 # ------------------------------------------------------------------------------
 # LOGGING

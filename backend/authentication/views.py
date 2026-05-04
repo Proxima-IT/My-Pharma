@@ -10,6 +10,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+from drf_spectacular.utils import extend_schema, OpenApiResponse
 
 from .constants import AuditAction, BD_DISTRICTS
 from .exceptions import AccountLockedError, InvalidOTPError, InvalidRegistrationTokenError, OTPRateLimitError
@@ -22,6 +23,7 @@ from .serializers import (
     RegisterCompleteRequestSerializer,
     RegisterEmailRequestSerializer,
     LoginRequestSerializer,
+    GoogleAuthRequestSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
     ChangeEmailRequestSerializer,
@@ -32,6 +34,8 @@ from .serializers import (
     UserProfileUpdateSerializer,
     UserManagementSerializer,
     UserAddressSerializer,
+    ErrorResponseSerializer,
+    TokenResponseSerializer,
 )
 from .services import (
     request_otp_for_phone,
@@ -50,6 +54,7 @@ from .services import (
     build_password_reset_link,
     reset_password_with_token,
     normalize_phone,
+    login_or_register_with_google,
 )
 from . import utils
 from .throttling import LoginRateThrottle, OTPSendRateThrottle, OTPVerifyRateThrottle
@@ -268,6 +273,101 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
         create_audit_log(user.id, AuditAction.LOGIN, request=request)
+        return _token_response_for_user(user, request=request)
+
+
+class GoogleAuthView(APIView):
+    """POST /api/auth/google/ - Sign up or sign in with Google via Firebase ID token."""
+    permission_classes = [AllowAny]
+    throttle_classes = [LoginRateThrottle]
+
+    @extend_schema(
+        request=GoogleAuthRequestSerializer,
+        responses={
+            200: TokenResponseSerializer,
+            400: OpenApiResponse(response=ErrorResponseSerializer, description="Validation or provider/email mismatch."),
+            401: OpenApiResponse(response=ErrorResponseSerializer, description="Invalid/expired Firebase token."),
+            423: OpenApiResponse(response=ErrorResponseSerializer, description="Account is temporarily locked."),
+            503: OpenApiResponse(response=ErrorResponseSerializer, description="Firebase is not configured on server."),
+        },
+        tags=["auth"],
+    )
+    def post(self, request):
+        ser = GoogleAuthRequestSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        try:
+            user, created, claims = login_or_register_with_google(ser.validated_data["id_token"])
+        except AccountLockedError as exc:
+            return Response(
+                {"detail": str(exc.detail), "code": "account_locked"},
+                status=status.HTTP_423_LOCKED,
+            )
+        except ValueError as exc:
+            error_code = str(exc)
+            error_map = {
+                "firebase_not_configured": (
+                    status.HTTP_503_SERVICE_UNAVAILABLE,
+                    "Google sign-in is not configured on the server.",
+                    "firebase_not_configured",
+                ),
+                "provider_mismatch": (
+                    status.HTTP_400_BAD_REQUEST,
+                    "The provided Firebase token is not for Google sign-in.",
+                    "invalid_google_provider",
+                ),
+                "project_mismatch": (
+                    status.HTTP_401_UNAUTHORIZED,
+                    "Firebase token project does not match server configuration.",
+                    "firebase_project_mismatch",
+                ),
+                "email_missing": (
+                    status.HTTP_400_BAD_REQUEST,
+                    "Google account email was not found in token claims.",
+                    "google_email_missing",
+                ),
+                "email_not_verified": (
+                    status.HTTP_400_BAD_REQUEST,
+                    "Google account email is not verified.",
+                    "google_email_not_verified",
+                ),
+                "email_unavailable": (
+                    status.HTTP_400_BAD_REQUEST,
+                    "This email is unavailable for sign-in. Please contact support.",
+                    "google_email_unavailable",
+                ),
+                "invalid_token": (
+                    status.HTTP_401_UNAUTHORIZED,
+                    "Invalid or expired Firebase ID token.",
+                    "invalid_firebase_token",
+                ),
+            }
+            mapped = error_map.get(
+                error_code,
+                (
+                    status.HTTP_401_UNAUTHORIZED,
+                    "Invalid or expired Firebase ID token.",
+                    "invalid_firebase_token",
+                ),
+            )
+            return Response(
+                {"detail": mapped[1], "code": mapped[2]},
+                status=mapped[0],
+            )
+
+        if created:
+            create_audit_log(
+                user.id,
+                AuditAction.REGISTER_GOOGLE,
+                request=request,
+                metadata={"provider": claims.get("provider", "google.com")},
+            )
+        create_audit_log(
+            user.id,
+            AuditAction.LOGIN,
+            request=request,
+            metadata={"method": "google", "provider": claims.get("provider", "google.com")},
+        )
         return _token_response_for_user(user, request=request)
 
 

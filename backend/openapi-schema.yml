@@ -583,6 +583,57 @@ paths:
       responses:
         '200':
           description: No response body
+  /api/auth/google/:
+    post:
+      operationId: auth_google_create
+      description: POST /api/auth/google/ - Sign up or sign in with Google via Firebase ID token.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/GoogleAuthRequest'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GoogleAuthTokenResponse'
+          description: ''
+        '400':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Validation or provider/email mismatch.
+        '401':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Invalid or expired Firebase token.
+        '423':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Account is temporarily locked.
+        '503':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+          description: Firebase is not configured on server.
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
@@ -8731,6 +8782,34 @@ components:
         * `APPROVED` - Approved
         * `REJECTED` - Rejected
         * `USED` - Used
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - detail
+    GoogleAuthRequest:
+      type: object
+      properties:
+        id_token:
+          type: string
+      required:
+      - id_token
+    GoogleAuthTokenResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        user:
+          type: object
+      required:
+      - access
+      - refresh
     TokenRefresh:
       type: object
       properties:

@@ -15,6 +15,7 @@ urlpatterns = [
     path("register/complete/", views.RegisterCompleteView.as_view(), name="auth_register_complete"),
     path("register/email/", views.RegisterEmailView.as_view(), name="auth_register_email"),
     path("login/", views.LoginView.as_view(), name="auth_login"),
+    path("google/", views.GoogleAuthView.as_view(), name="auth_google"),
     path("token/refresh/", views.TokenRefreshViewCustom.as_view(), name="token_refresh"),
     path("logout/", views.LogoutView.as_view(), name="auth_logout"),
     path("password-reset/", views.PasswordResetView.as_view(), name="auth_password_reset"),

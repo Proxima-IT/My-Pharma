@@ -305,6 +305,55 @@ Rate limit (e.g. 5 login attempts per minute per IP).
 
 ---
 
+## 5.1 Google Sign Up / Sign In (Firebase)
+
+**Endpoint:** `POST /api/auth/google/`
+
+**Description:** Accepts a Firebase `id_token` generated after Google login on frontend. Backend verifies the token using Firebase Admin SDK, then either:
+- logs in an existing user matched by email, or
+- creates a new `REGISTERED_USER` account and logs them in.
+
+**Request body:**
+
+```json
+{
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI6..."
+}
+```
+
+| Field      | Type   | Required | Description |
+| ---------- | ------ | -------- | ----------- |
+| `id_token` | string | Yes      | Firebase ID token from Google auth result |
+
+**Response - 200 OK**
+
+Returns normal token payload (`access`, `refresh`, `user`) like `/api/auth/login/`.
+
+**Possible errors**
+
+| Status | Code | Meaning |
+| ------ | ---- | ------- |
+| 400 | `invalid_google_provider` | Token was not issued for Google provider |
+| 400 | `google_email_missing` | Email not present in token claims |
+| 400 | `google_email_not_verified` | Email is not verified (when strict mode enabled) |
+| 401 | `invalid_firebase_token` | Invalid/expired token |
+| 401 | `firebase_project_mismatch` | Token project does not match `FIREBASE_AUTH_PROJECT_ID` |
+| 423 | `account_locked` | Account is temporarily locked |
+| 503 | `firebase_not_configured` | Firebase admin credentials are missing/invalid on server |
+
+**Backend env required**
+
+Set one of:
+- `FIREBASE_SERVICE_ACCOUNT_FILE`
+- `FIREBASE_SERVICE_ACCOUNT_JSON`
+- `GOOGLE_APPLICATION_CREDENTIALS`
+
+Optional hardening:
+- `FIREBASE_AUTH_PROJECT_ID=<your-firebase-project-id>`
+- `FIREBASE_AUTH_REQUIRE_EMAIL_VERIFIED=true`
+
+---
+
 ## 6. Refresh Token
 
 **Endpoint:** `POST /api/auth/token/refresh/`

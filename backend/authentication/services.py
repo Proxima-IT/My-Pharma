@@ -40,6 +40,23 @@ def validate_password_strength(password: str) -> tuple[bool, str]:
     return True, ""
 
 
+def _build_unique_username(seed: str) -> str:
+    """
+    Build a unique username for social sign-in accounts.
+    Uses a conservative character set and appends numeric suffixes when needed.
+    """
+    cleaned = re.sub(r"[^A-Za-z0-9_.]+", "_", (seed or "").strip()).strip("_.")
+    base = cleaned[:150] or "google_user"
+    candidate = base
+    suffix = 1
+    while User.objects.filter(username__iexact=candidate).exists():
+        suffix_text = f"_{suffix}"
+        max_base_len = max(1, 150 - len(suffix_text))
+        candidate = f"{base[:max_base_len]}{suffix_text}"
+        suffix += 1
+    return candidate
+
+
 def request_otp_for_phone(phone: str, ip: str = "", user_agent: str = "") -> None:
     """Validate resend limit, generate OTP, store in Redis, enqueue Celery send. Raises OTPRateLimitError."""
     normalized = normalize_phone(phone)
@@ -269,6 +286,109 @@ def register_with_email(email: str, password: str) -> User:
     user.status = UserStatus.PENDING_VERIFICATION
     user.save(update_fields=["status"])
     return user
+
+
+def verify_google_firebase_id_token(id_token: str) -> dict:
+    """
+    Verify Firebase ID token for Google sign-in and return normalized claims.
+    Raises ValueError with one of:
+    firebase_not_configured, invalid_token, provider_mismatch, project_mismatch,
+    email_missing, email_not_verified
+    """
+    if not getattr(settings, "FIREBASE_INITIALIZED", False):
+        raise ValueError("firebase_not_configured")
+
+    try:
+        from firebase_admin import auth as firebase_auth
+    except Exception:
+        raise ValueError("firebase_not_configured")
+
+    try:
+        decoded = firebase_auth.verify_id_token(id_token, check_revoked=False)
+    except Exception as exc:
+        logger.warning("Firebase ID token verification failed: %s", exc)
+        raise ValueError("invalid_token")
+
+    provider = ((decoded.get("firebase") or {}).get("sign_in_provider") or "").strip()
+    if provider != "google.com":
+        raise ValueError("provider_mismatch")
+
+    expected_project_id = (getattr(settings, "FIREBASE_AUTH_PROJECT_ID", "") or "").strip()
+    token_project_id = (decoded.get("aud") or "").strip()
+    if expected_project_id and token_project_id and token_project_id != expected_project_id:
+        raise ValueError("project_mismatch")
+
+    email = (decoded.get("email") or "").strip().lower()
+    if not email:
+        raise ValueError("email_missing")
+
+    require_verified_email = bool(getattr(settings, "FIREBASE_AUTH_REQUIRE_EMAIL_VERIFIED", True))
+    if require_verified_email and not bool(decoded.get("email_verified")):
+        raise ValueError("email_not_verified")
+
+    return {
+        "uid": (decoded.get("uid") or decoded.get("user_id") or "").strip(),
+        "email": email,
+        "email_verified": bool(decoded.get("email_verified")),
+        "name": (decoded.get("name") or "").strip(),
+        "picture": (decoded.get("picture") or "").strip(),
+        "provider": provider,
+    }
+
+
+def login_or_register_with_google(id_token: str) -> tuple[User, bool, dict]:
+    """
+    Verify Google Firebase token and return (user, created, claims).
+    Creates a new REGISTERED_USER when email does not exist.
+    """
+    claims = verify_google_firebase_id_token(id_token)
+    email = claims["email"]
+
+    user = User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).first()
+    created = False
+
+    if user:
+        check_login_lockout(user)
+    else:
+        if User.objects.filter(email__iexact=email, deleted_at__isnull=False).exists():
+            raise ValueError("email_unavailable")
+        username_seed = claims.get("name") or email.split("@")[0]
+        user = User.objects.create_user(
+            email=email,
+            password=secrets.token_urlsafe(24),
+            role=UserRole.REGISTERED_USER,
+            username=_build_unique_username(username_seed),
+        )
+        created = True
+
+    update_fields = []
+    if user.status != UserStatus.ACTIVE:
+        user.status = UserStatus.ACTIVE
+        update_fields.append("status")
+    if not user.email_verified:
+        user.email_verified = True
+        update_fields.append("email_verified")
+    if created and not user.username:
+        user.username = _build_unique_username(email.split("@")[0])
+        update_fields.append("username")
+    if user.failed_login_count != 0:
+        user.failed_login_count = 0
+        update_fields.append("failed_login_count")
+    if user.last_failed_login_at is not None:
+        user.last_failed_login_at = None
+        update_fields.append("last_failed_login_at")
+    if user.locked_until is not None:
+        user.locked_until = None
+        update_fields.append("locked_until")
+    if update_fields:
+        update_fields.append("updated_at")
+        user.save(update_fields=update_fields)
+
+    ident = user.email or user.phone
+    if ident:
+        utils.lockout_clear(ident)
+
+    return user, created, claims
 
 
 def get_lockout_minutes() -> int:
