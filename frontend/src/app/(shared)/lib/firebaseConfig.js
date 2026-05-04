@@ -6,6 +6,7 @@
 
 import { initializeApp, getApps } from 'firebase/app';
 import { getMessaging, isSupported } from 'firebase/messaging';
+import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -28,6 +29,19 @@ export async function getFirebaseMessaging() {
   const supported = await isSupported();
   if (!supported) return null;
   return getMessaging(app);
+}
+
+/**
+ * Sign in with Google via Firebase popup.
+ * Returns the Firebase ID token string to be sent to the backend.
+ */
+export async function signInWithGoogle() {
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  const result = await signInWithPopup(auth, provider);
+  const idToken = await result.user.getIdToken();
+  return idToken;
 }
 
 export default app;

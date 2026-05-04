@@ -59,7 +59,7 @@ const BundleCard = ({ bundle }) => {
         {/* Action Button */}
         <Link href={`/combo/${bundle.id}`}>
           <button className="relative z-10 mt-6 bg-white rounded-full px-8 py-4 text-(--color-primary-500) flex items-center gap-2 text-sm sm:text-base font-bold cursor-pointer hover:bg-gray-50 transition-all border border-transparent">
-            <span>Add Bundle</span>
+            <span>See Bundle</span>
             <FiChevronRight size={20} strokeWidth={3} />
           </button>
         </Link>

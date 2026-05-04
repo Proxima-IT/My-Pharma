@@ -54,6 +54,7 @@ export const API_BASE_URL = isBrowser
 export const AUTH_ENDPOINTS = {
   ME: `${API_BASE_URL}/auth/me/`,
   LOGIN: `${API_BASE_URL}/auth/login/`,
+  GOOGLE: `${API_BASE_URL}/auth/google/`,
   REFRESH: `${API_BASE_URL}/auth/token/refresh/`,
   LOGOUT: `${API_BASE_URL}/auth/logout/`,
   REGISTER: `${API_BASE_URL}/auth/register/`,
