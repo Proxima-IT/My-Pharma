@@ -1,101 +1,82 @@
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { API_BASE_URL, fetchWithAuth, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * My Pharma - Super Admin Combo Management API
  * Handles CRUD operations for product bundles/combos.
- * Uses FormData to support image uploads.
+ * Uses fetchWithAuth interceptor for session persistence.
  */
-
 export const comboAdminApi = {
   /**
    * List all combos with optional filtering
-   * @param {string} token - Admin access token
-   * @param {Object} params - { page, is_active }
    */
   getCombos: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_BASE_URL}/combos/?${query}`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/combos/?${query}`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     });
-    if (!response.ok) throw new Error('Failed to fetch combos list');
-    return response.json();
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.detail || 'Failed to fetch combos list');
+    return data;
   },
 
   /**
    * Get a single combo by ID
-   * @param {string} token
-   * @param {number} id
    */
   getComboById: async (token, id) => {
-    const response = await fetch(`${API_BASE_URL}/combos/${id}/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/combos/${id}/`, {
       method: 'GET',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     });
-    if (!response.ok) throw new Error('Failed to fetch combo details');
-    return response.json();
+    const data = await parseJsonResponse(res);
+    if (!res.ok) throw new Error(data.detail || 'Failed to fetch combo details');
+    return data;
   },
 
   /**
    * Create a new combo
-   * @param {string} token
-   * @param {FormData} formData - Includes title, description, image, product_ids, price, original_price, order, is_active
    */
   createCombo: async (token, formData) => {
-    const response = await fetch(`${API_BASE_URL}/combos/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/combos/`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        // Content-Type is automatically set by the browser for FormData
-      },
       body: formData,
+      headers: {
+        'Content-Type': null, // Let browser set boundary for multipart
+      },
     });
-    if (!response.ok) {
-      const err = await response.json();
-      throw err;
+    const data = await parseJsonResponse(res);
+    if (!res.ok) {
+      throw data;
     }
-    return response.json();
+    return data;
   },
 
   /**
    * Update an existing combo (Partial Update)
-   * @param {string} token
-   * @param {number} id
-   * @param {FormData} formData
    */
   updateCombo: async (token, id, formData) => {
-    const response = await fetch(`${API_BASE_URL}/combos/${id}/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/combos/${id}/`, {
       method: 'PATCH',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
       body: formData,
+      headers: {
+        'Content-Type': null, // Let browser set boundary for multipart
+      },
     });
-    if (!response.ok) {
-      const err = await response.json();
-      throw err;
+    const data = await parseJsonResponse(res);
+    if (!res.ok) {
+      throw data;
     }
-    return response.json();
+    return data;
   },
 
   /**
    * Delete a combo
-   * @param {string} token
-   * @param {number} id
    */
   deleteCombo: async (token, id) => {
-    const response = await fetch(`${API_BASE_URL}/combos/${id}/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/combos/${id}/`, {
       method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
     });
-    if (!response.ok && response.status !== 204) {
-      throw new Error('Failed to delete combo');
+    if (!res.ok && res.status !== 204) {
+      const data = await parseJsonResponse(res);
+      throw new Error(data.detail || 'Failed to delete combo');
     }
     return true;
   },
