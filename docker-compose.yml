@@ -32,7 +32,6 @@ services:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
       - backend_logs:/app/logs
-      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
     depends_on:
       - mysql
       - redis
@@ -102,8 +101,6 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - USE_REDIS=true
       - FIREBASE_SERVICE_ACCOUNT_FILE=/app/serviceAccountKey.json
-    volumes:
-      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
     command: >
       bash -c "celery -A my_pharma worker -l info"
     depends_on:

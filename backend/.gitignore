@@ -9,6 +9,7 @@ __pycache__/
 .env.local
 .env.*
 *.env
+serviceAccountKey.json
 
 # Logs
 logs/
