@@ -385,11 +385,15 @@ SSLCOMMERZ_FRONTEND_BASE_URL = os.environ.get("SSLCOMMERZ_FRONTEND_BASE_URL", ""
 # FIREBASE CLOUD MESSAGING (FCM)
 # ------------------------------------------------------------------------------
 # Initialize Firebase Admin SDK for sending push notifications.
-# Provide service account credentials via FIREBASE_SERVICE_ACCOUNT_JSON env var
-# (the raw JSON string) or GOOGLE_APPLICATION_CREDENTIALS env var (file path).
+# Credential priority:
+#   1) FIREBASE_SERVICE_ACCOUNT_FILE — path to service-account JSON file
+#      (relative to project root or absolute; best for Docker volume mounts).
+#   2) FIREBASE_SERVICE_ACCOUNT_JSON — raw JSON string in env var.
+#   3) GOOGLE_APPLICATION_CREDENTIALS — standard Google ADC file path.
 import json as _json
 
 FIREBASE_SERVICE_ACCOUNT_JSON = os.environ.get("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
+FIREBASE_SERVICE_ACCOUNT_FILE = os.environ.get("FIREBASE_SERVICE_ACCOUNT_FILE", "").strip()
 FIREBASE_CREDENTIAL_SOURCE = "none"
 FIREBASE_INIT_ERROR = ""
 
@@ -403,6 +407,31 @@ def _init_firebase():
             FIREBASE_CREDENTIAL_SOURCE = "existing_app"
             FIREBASE_INIT_ERROR = ""
             return True  # Already initialized
+
+        # Priority 1: File path (relative to BASE_DIR.parent or absolute)
+        if FIREBASE_SERVICE_ACCOUNT_FILE:
+            file_path = Path(FIREBASE_SERVICE_ACCOUNT_FILE)
+            if not file_path.is_absolute():
+                # Try relative to project root first, then BASE_DIR (backend/)
+                for base in (BASE_DIR.parent, BASE_DIR):
+                    candidate = base / file_path
+                    if candidate.exists():
+                        file_path = candidate
+                        break
+            if file_path.exists():
+                cred = credentials.Certificate(str(file_path))
+                firebase_admin.initialize_app(cred)
+                FIREBASE_CREDENTIAL_SOURCE = f"service_account_file:{file_path}"
+                FIREBASE_INIT_ERROR = ""
+                return True
+            else:
+                import logging
+                logging.getLogger(__name__).warning(
+                    "FIREBASE_SERVICE_ACCOUNT_FILE=%s not found, trying other methods.",
+                    FIREBASE_SERVICE_ACCOUNT_FILE,
+                )
+
+        # Priority 2: Inline JSON string
         if FIREBASE_SERVICE_ACCOUNT_JSON:
             cred_dict = _json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
             cred = credentials.Certificate(cred_dict)
@@ -410,13 +439,19 @@ def _init_firebase():
             FIREBASE_CREDENTIAL_SOURCE = "service_account_json"
             FIREBASE_INIT_ERROR = ""
             return True
-        elif os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+
+        # Priority 3: Google Application Default Credentials
+        if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
             firebase_admin.initialize_app()
             FIREBASE_CREDENTIAL_SOURCE = "google_application_credentials"
             FIREBASE_INIT_ERROR = ""
             return True
+
         FIREBASE_CREDENTIAL_SOURCE = "none"
-        FIREBASE_INIT_ERROR = "Missing FIREBASE_SERVICE_ACCOUNT_JSON and GOOGLE_APPLICATION_CREDENTIALS."
+        FIREBASE_INIT_ERROR = (
+            "Missing FIREBASE_SERVICE_ACCOUNT_FILE, FIREBASE_SERVICE_ACCOUNT_JSON, "
+            "and GOOGLE_APPLICATION_CREDENTIALS."
+        )
         return False
     except Exception as exc:
         import logging

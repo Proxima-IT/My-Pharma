@@ -36,46 +36,58 @@ self.addEventListener('message', (event) => {
 });
 
 // Handle background push messages (when tab is not focused)
-// Firebase SDK automatically shows the notification using the "notification" payload.
-// For data-only messages, we handle them here:
+// Firebase SDK automatically shows the notification when a "notification" payload is present.
+// We only manually show for data-only messages (no "notification" key in payload).
 self.addEventListener('push', function (event) {
   if (!event.data) return;
   console.log('[sw] push event received.');
 
-  let data = {
-    title: 'My Pharma Update',
-    message: 'You have a new notification.',
-    target_url: '/',
-  };
-
+  let payload = {};
   try {
-    const payload = event.data.json();
-    // FCM wraps data in a "data" key or "notification" key
-    const notif = payload.notification || payload.data || payload;
-    data.title = notif.title || data.title;
-    data.message = notif.body || notif.message || data.message;
-    data.target_url = (payload.data && payload.data.target_url) || payload.fcmOptions?.link || data.target_url;
+    payload = event.data.json();
   } catch (e) {
-    console.warn('[sw] push payload is not JSON; falling back to text payload.');
-    data.message = event.data.text();
+    // Not JSON — show a generic notification from text
+    const textBody = event.data.text();
+    const options = {
+      body: textBody,
+      icon: NOTIFICATION_ICON,
+      badge: NOTIFICATION_ICON,
+      vibrate: [100, 50, 100],
+      data: { url: '/' },
+      tag: 'my-pharma-notification',
+      requireInteraction: true,
+    };
+    event.waitUntil(self.registration.showNotification('My Pharma Update', options));
+    return;
   }
 
-  // Only show notification if Firebase SDK didn't already show one
-  // (Firebase auto-shows when "notification" key is present in the payload)
+  // If FCM sends a "notification" key, the SDK handles display automatically.
+  // Only show manually for data-only messages (no "notification" key).
+  if (payload.notification) {
+    console.log('[sw] FCM notification payload detected — SDK will auto-display.');
+    return;
+  }
+
+  // Data-only message: extract fields and show notification manually
+  const data = payload.data || payload;
+  const title = data.title || 'My Pharma Update';
+  const message = data.body || data.message || 'You have a new notification.';
+  const targetUrl = data.target_url || payload.fcmOptions?.link || '/';
+
   const options = {
-    body: data.message,
+    body: message,
     icon: NOTIFICATION_ICON,
     badge: NOTIFICATION_ICON,
     vibrate: [100, 50, 100],
     data: {
-      url: data.target_url,
+      url: targetUrl,
     },
     tag: 'my-pharma-notification',
     requireInteraction: true,
   };
 
-  event.waitUntil(self.registration.showNotification(data.title, options));
-  console.log('[sw] notification shown with target:', data.target_url);
+  event.waitUntil(self.registration.showNotification(title, options));
+  console.log('[sw] data-only notification shown with target:', targetUrl);
 });
 
 self.addEventListener('notificationclick', function (event) {

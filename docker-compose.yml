@@ -20,6 +20,7 @@ services:
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - USE_REDIS=true
       - SERVE_MEDIA=true
+      - FIREBASE_SERVICE_ACCOUNT_FILE=/app/serviceAccountKey.json
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
@@ -31,6 +32,7 @@ services:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
       - backend_logs:/app/logs
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
     depends_on:
       - mysql
       - redis
@@ -99,6 +101,9 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - USE_REDIS=true
+      - FIREBASE_SERVICE_ACCOUNT_FILE=/app/serviceAccountKey.json
+    volumes:
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json:ro
     command: >
       bash -c "celery -A my_pharma worker -l info"
     depends_on:

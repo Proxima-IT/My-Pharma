@@ -1,5 +1,6 @@
 .env.dev
-.cursor
+/.cursor    
 docker-compose.dev.yml
 docker-compose.override.yml
+serviceAccountKey.json
 
