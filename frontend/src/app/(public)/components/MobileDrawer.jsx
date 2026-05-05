@@ -3,7 +3,13 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { IoCloseSharp } from 'react-icons/io5';
 import { AiOutlineMenu } from 'react-icons/ai';
-import { FiGrid, FiCheckCircle, FiTruck, FiChevronDown } from 'react-icons/fi';
+import {
+  FiGrid,
+  FiPackage,
+  FiCheckCircle,
+  FiTruck,
+  FiChevronDown,
+} from 'react-icons/fi';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
@@ -89,6 +95,8 @@ const MobileDrawer = () => {
   };
 
   const isAllProductsActive = pathname === '/products' && !currentCategorySlug;
+  const isAllCombosActive =
+    pathname === '/combos' || pathname.startsWith('/combo/');
   const activeAd = ads.length > 0 ? ads[0] : null;
 
   // Navigation Item Component for Recursion
@@ -216,6 +224,19 @@ const MobileDrawer = () => {
                   >
                     {allProducts.length}
                   </span>
+                </Link>
+
+                <Link
+                  href="/combos"
+                  onClick={() => setOpen(false)}
+                  className={`flex items-center justify-between px-4 py-3 rounded-full transition-all border border-transparent ${isAllCombosActive ? 'bg-[#233b8c] text-white shadow-none' : 'bg-white text-gray-500 border-gray-50 shadow-none'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <FiPackage size={18} />
+                    <span className="text-[14px] font-bold tracking-tight">
+                      All Combos
+                    </span>
+                  </div>
                 </Link>
 
                 <div className="h-px bg-gray-100 my-1 w-full opacity-50" />

@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import {
   FiSearch,
   FiGrid,
+  FiPackage,
   FiCheckCircle,
   FiTruck,
   FiChevronDown,
@@ -112,6 +113,8 @@ const Sidebar = () => {
 
   const isAllProductsActive =
     pathname === '/products' && !searchParams.get('category');
+  const isAllCombosActive =
+    pathname === '/combos' || pathname.startsWith('/combo/');
   const activeAd = ads.length > 0 ? ads[0] : null;
 
   const NavItem = ({ item, depth = 0 }) => {
@@ -239,6 +242,24 @@ const Sidebar = () => {
               ))}
             </div>
           )}
+
+          <div className="h-px bg-gray-50 my-1 w-full" />
+
+          <Link
+            href="/combos"
+            className={`flex items-center justify-between px-4 py-3 rounded-full transition-all ${
+              isAllCombosActive
+                ? 'bg-[#233b8c] text-white shadow-none'
+                : 'text-gray-500 hover:bg-gray-50 shadow-none'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <FiPackage size={18} />
+              <span className="text-[14px] font-bold tracking-tight">
+                All Combos
+              </span>
+            </div>
+          </Link>
         </nav>
       </div>
 
