@@ -68,7 +68,7 @@ export default function AdminOrderDetailsPage({ params }) {
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-[#3A5A40] border-t-transparent animate-spin" />
           <p className="font-mono text-xs font-bold uppercase tracking-widest text-[#8A8A78]">
-            Loading_Details...
+            Loading Details...
           </p>
         </div>
       </div>
@@ -113,7 +113,7 @@ export default function AdminOrderDetailsPage({ params }) {
             Order Details
           </h1>
           <div className="font-mono text-sm font-bold text-[#8A8A78] uppercase tracking-widest">
-            Order_ID: <span className="text-[#1B1B1B]">#{orderDetails.id}</span>
+            Order ID: <span className="text-[#1B1B1B]">#{orderDetails.id}</span>
           </div>
           <p className="text-[13px] text-[#6B6B5E] font-medium">
             Customer:{' '}

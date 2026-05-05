@@ -135,7 +135,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
   if (loading || !prescriptionDetails) {
     return (
       <div className="p-20 text-center font-mono text-[11px] font-bold uppercase tracking-[0.3em] text-[#8A8A78]">
-        FETCHING_PRESCRIPTION_CORE_DATA...
+        FETCHING PRESCRIPTION CORE DATA...
       </div>
     );
   }
@@ -154,7 +154,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
             onClick={() => router.back()}
             className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[#8A8A78] hover:text-[#1B1B1B] transition-colors cursor-pointer"
           >
-            <FiArrowLeft /> Return_To_Logistics
+            <FiArrowLeft /> Return To Logistics
           </button>
           <h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-[#1B1B1B]">
             Review Prescription
@@ -211,7 +211,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
                     target="_blank"
                     className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[#1B1B1B] font-mono text-[10px] font-bold uppercase tracking-widest transition-all"
                   >
-                    Open_Full_Resolution
+                    Open Full Resolution
                   </a>
                 </div>
               ))}
@@ -228,7 +228,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
                 <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A8A78]" />
                 <input
                   type="text"
-                  placeholder="SEARCH_CATALOG_BY_NAME..."
+                  placeholder="SEARCH CATALOG BY NAME..."
                   className={inputClass + ' pl-12 h-14'}
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -259,9 +259,9 @@ export default function AdminPrescriptionDetailPage({ params }) {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="text-[#8A8A78] font-mono text-[10px] uppercase tracking-widest border-b border-gray-100">
-                    <th className="py-4 font-bold">Medicine_Identifier</th>
+                    <th className="py-4 font-bold">Medicine Identifier</th>
                     <th className="py-4 text-center font-bold">Qty</th>
-                    <th className="py-4 text-right font-bold">Unit_Price</th>
+                    <th className="py-4 text-right font-bold">Unit Price</th>
                     <th className="py-4 text-right font-bold">Subtotal</th>
                     <th className="py-4 text-right w-10"></th>
                   </tr>
@@ -313,7 +313,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
                         colSpan="3"
                         className="py-6 px-4 font-mono text-[11px] font-bold uppercase tracking-widest text-[#1B1B1B]"
                       >
-                        Total_Order_Value
+                        Total Order Value
                       </td>
                       <td className="py-6 text-right px-4 font-mono text-sm font-black text-[#3A5A40]">
                         {formatCurrency(totalValue)}
@@ -336,19 +336,19 @@ export default function AdminPrescriptionDetailPage({ params }) {
             </h3>
             <div className="space-y-5">
               <div className="space-y-1">
-                <label className={labelClass}>Customer_Name</label>
+                <label className={labelClass}>Customer Name</label>
                 <p className="font-bold uppercase text-xs text-[#1B1B1B]">
                   {address.name}
                 </p>
               </div>
               <div className="space-y-1">
-                <label className={labelClass}>Contact_Number</label>
+                <label className={labelClass}>Contact Number</label>
                 <p className="font-mono font-bold text-xs text-[#1B1B1B]">
                   {address.phone}
                 </p>
               </div>
               <div className="space-y-1">
-                <label className={labelClass}>Delivery_Destination</label>
+                <label className={labelClass}>Delivery Destination</label>
                 <p className="font-bold text-[11px] leading-relaxed uppercase text-[#1B1B1B]">
                   {address.full}
                 </p>
@@ -363,7 +363,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
             </h3>
             <div className="space-y-5">
               <div>
-                <label className={labelClass}>Doctor_Credential_Name</label>
+                <label className={labelClass}>Doctor Credential Name</label>
                 <input
                   className={inputClass}
                   value={doctorInfo.name}
@@ -373,7 +373,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
                 />
               </div>
               <div>
-                <label className={labelClass}>Registration_Identifier</label>
+                <label className={labelClass}>Registration Identifier</label>
                 <input
                   className={inputClass}
                   value={doctorInfo.reg}
@@ -383,7 +383,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
                 />
               </div>
               <div>
-                <label className={labelClass}>Internal_Audit_Notes</label>
+                <label className={labelClass}>Internal Audit Notes</label>
                 <textarea
                   className={inputClass + ' h-28 py-3 resize-none normal-case'}
                   value={adminNotes}

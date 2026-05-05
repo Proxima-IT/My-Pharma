@@ -67,7 +67,7 @@ function SettlementDetailContent({ id }) {
   }, [token, id]);
 
   const handleDeposit = async () => {
-    if (!cashRef) return alert('REFERENCE_REQUIRED');
+    if (!cashRef) return alert('REFERENCE REQUIRED');
     try {
       await recordDeposit(id, {
         cash_deposit_reference: cashRef,
@@ -80,7 +80,7 @@ function SettlementDetailContent({ id }) {
   };
 
   const handlePayout = async () => {
-    if (!payoutRef) return alert('TRANSACTION_ID_REQUIRED');
+    if (!payoutRef) return alert('TRANSACTION ID REQUIRED');
     try {
       await recordPayout(id, {
         payout_reference: payoutRef,
@@ -96,7 +96,7 @@ function SettlementDetailContent({ id }) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="font-mono text-sm font-bold animate-pulse text-[#3A5A40] uppercase tracking-widest">
-          Syncing_Transaction_Data_#{id}...
+          Syncing Transaction Data #{id}...
         </div>
       </div>
     );
@@ -126,7 +126,7 @@ function SettlementDetailContent({ id }) {
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
             <h1 className="text-3xl font-black text-[#1B1B1B] tracking-tighter uppercase">
-              TRANSACTION_ID: #{data.id}
+              TRANSACTION ID: #{data.id}
             </h1>
             <p className="text-[13px] text-[#6B6B5E] mt-1 font-medium flex items-center gap-2">
               <FiHash /> Linked Order Reference:{' '}
@@ -252,7 +252,7 @@ function SettlementDetailContent({ id }) {
                   </span>
                 </div>
                 <span className="font-mono text-[10px] text-gray-500">
-                  {data.cash_deposited_at || 'NOT_VERIFIED'}
+                  {data.cash_deposited_at || 'NOT VERIFIED'}
                 </span>
               </div>
               <div className="flex items-center justify-between p-4 bg-white">
@@ -267,7 +267,7 @@ function SettlementDetailContent({ id }) {
                   </span>
                 </div>
                 <span className="font-mono text-[10px] text-gray-500">
-                  {data.settled_at || 'NOT_SETTLED'}
+                  {data.settled_at || 'NOT SETTLED'}
                 </span>
               </div>
             </div>
@@ -293,7 +293,7 @@ function SettlementDetailContent({ id }) {
               <div className="space-y-4">
                 <input
                   type="text"
-                  placeholder="DEPOSIT_REF_NUMBER"
+                  placeholder="DEPOSIT REF NUMBER"
                   className="w-full h-11 px-4 border border-gray-200 text-[11px] font-mono uppercase tracking-tight outline-none focus:border-black rounded-none"
                   value={cashRef}
                   onChange={e => setCashRef(e.target.value)}
@@ -327,7 +327,7 @@ function SettlementDetailContent({ id }) {
               <div className="space-y-4">
                 <input
                   type="text"
-                  placeholder="PAYOUT_TRANSACTION_ID"
+                  placeholder="PAYOUT TRANSACTION ID"
                   className="w-full h-11 px-4 border border-gray-200 text-[11px] font-mono uppercase tracking-tight outline-none focus:border-[#3A5A40] rounded-none"
                   value={payoutRef}
                   onChange={e => setPayoutRef(e.target.value)}
@@ -346,10 +346,10 @@ function SettlementDetailContent({ id }) {
           {/* Context Card */}
           <div className="bg-gray-50 border border-gray-100 p-6 font-mono text-[10px] text-[#8A8A78] space-y-2">
             <p className="font-bold text-black uppercase mb-3 flex items-center gap-2 border-b border-gray-200 pb-2">
-              <FiAlertCircle /> Registry_Notes
+              <FiAlertCircle /> Registry Notes
             </p>
-            <p>DEP_ID: {data.cash_deposit_reference || 'NULL'}</p>
-            <p>PAY_ID: {data.payout_reference || 'NULL'}</p>
+            <p>DEP ID: {data.cash_deposit_reference || 'NULL'}</p>
+            <p>PAY ID: {data.payout_reference || 'NULL'}</p>
             <p className="mt-4 pt-4 border-t border-gray-200 italic leading-loose">
               Settlements are terminal once state is [SETTLED]. Ensure all
               transaction references are verified before release.

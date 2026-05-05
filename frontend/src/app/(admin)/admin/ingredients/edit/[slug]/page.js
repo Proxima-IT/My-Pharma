@@ -142,7 +142,7 @@ export default function AdminEditIngredientPage({ params }) {
 
       {/* Footer */}
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        Generic_ID: {ingredient?.id}
+        Generic ID: {ingredient?.id}
       </div>
     </div>
   );

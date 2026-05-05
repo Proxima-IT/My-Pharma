@@ -221,7 +221,7 @@ export default function AdminEditUnitPage({ params }) {
       </div>
 
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        Unit_ID: {unit?.id}
+        Unit ID: {unit?.id}
       </div>
     </div>
   );

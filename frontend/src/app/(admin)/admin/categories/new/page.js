@@ -289,7 +289,7 @@ function NewCategoryContent() {
             <div className="p-4 bg-emerald-50 border border-emerald-100 flex items-center gap-3">
               <FiActivity className="text-emerald-600 animate-spin" />
               <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">
-                Writing_Registry_Entry...
+                Writing Registry Entry...
               </span>
             </div>
           )}

@@ -241,7 +241,7 @@ function NewProductContent() {
           className="h-16 px-10 bg-[#3A5A40] text-white font-black uppercase tracking-[0.2em] text-sm flex items-center gap-4 hover:bg-black transition-all disabled:opacity-30 cursor-pointer rounded-none"
         >
           {activeUpdating ? (
-            'PROCESSING_REGISTRY...'
+            'PROCESSING REGISTRY...'
           ) : (
             <>
               <FiCheck size={20} /> SAVE MEDICINE

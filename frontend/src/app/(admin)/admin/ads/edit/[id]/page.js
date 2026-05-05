@@ -211,19 +211,19 @@ export default function AdminEditAdPage({ params }) {
           </div>
 
           <div className="lg:col-span-2 pt-4">
-            <button
-              type="submit"
-              disabled={isUpdating}
-              className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer disabled:opacity-50 border border-transparent rounded-none"
-            >
-              {isUpdating ? (
-                'SAVING...'
-              ) : (
-                <>
-                  <FiCheck size={20} /> SAVE CHANGES
-                </>
-              )}
-            </button>
+          <button
+            type="submit"
+            disabled={isUpdating}
+            className="w-full h-16 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#F59E0B] transition-all duration-300 cursor-pointer disabled:opacity-50 border border-transparent rounded-none"
+          >
+            {isUpdating ? (
+              'SAVING...'
+            ) : (
+              <>
+                <FiCheck size={20} /> SAVE CHANGES
+              </>
+            )}
+          </button>
           </div>
 
           {updateError && (
@@ -235,7 +235,7 @@ export default function AdminEditAdPage({ params }) {
       </div>
 
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        System_Ad_ID: #{id}
+        System Ad ID: #{id}
       </div>
     </div>
   );

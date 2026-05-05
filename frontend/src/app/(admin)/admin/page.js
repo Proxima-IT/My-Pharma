@@ -21,28 +21,28 @@ export default function AdminDashboardPage() {
   // Dynamic stats based on API data
   const dynamicStats = [
     {
-      label: 'TOTAL_USERS',
+      label: 'TOTAL USERS',
       value: isLoading ? '...' : stats.totalUsers.toLocaleString(),
       change: '+12%',
       icon: <FiUsers />,
       color: 'text-blue-600',
     },
     {
-      label: 'PHARMACY_PARTNERS',
+      label: 'PHARMACY PARTNERS',
       value: isLoading ? '...' : stats.pharmacyPartners.toString(),
       change: '+4',
       icon: <FiDatabase />,
       color: 'text-[#3A5A40]',
     },
     {
-      label: 'SYSTEM_REVENUE',
+      label: 'SYSTEM REVENUE',
       value: isLoading ? '...' : `৳ ${stats.systemRevenue.toLocaleString()}`,
       change: '+18%',
       icon: <FiShoppingBag />,
       color: 'text-amber-600',
     },
     {
-      label: 'ACTIVE_DOCTORS',
+      label: 'ACTIVE DOCTORS',
       value: isLoading ? '...' : stats.activeDoctors.toString(),
       change: '+2',
       icon: <FiShield />,
@@ -85,7 +85,7 @@ export default function AdminDashboardPage() {
               ? 'Error'
               : isLoading
                 ? 'Loading...'
-                : 'Live_Status: Operational'}
+                : 'Live Status: Operational'}
           </div>
         </div>
       </div>
@@ -123,7 +123,7 @@ export default function AdminDashboardPage() {
         <div className="lg:col-span-2 bg-white border border-gray-100 flex flex-col">
           <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
             <h2 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2">
-              <FiActivity className="text-[#3A5A40]" /> Recent_Activity_Log
+              <FiActivity className="text-[#3A5A40]" /> Recent Activity Log
             </h2>
             <div className="flex items-center gap-2">
               <button
@@ -137,7 +137,7 @@ export default function AdminDashboardPage() {
                 Refresh
               </button>
               <button className="text-[10px] font-bold text-[#3A5A40] hover:underline uppercase tracking-tighter">
-                View_All_Logs
+                View All Logs
               </button>
             </div>
           </div>
@@ -198,7 +198,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white p-6 flex flex-col gap-6 border border-gray-100">
             {/* REMOVED THE VERTICAL BAR (|) HERE */}
             <h3 className="text-[#1B1B1B] text-xs font-bold uppercase tracking-widest">
-              Quick_Actions
+              Quick Actions
             </h3>
             <div className="flex flex-col gap-2">
               <Link
@@ -224,12 +224,12 @@ export default function AdminDashboardPage() {
 
           <div className="bg-white border border-gray-100 p-6 space-y-4">
             <h3 className="text-[11px] font-bold text-[#8A8A78] uppercase tracking-widest">
-              Resource_Usage
+              Resource Usage
             </h3>
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <div className="flex justify-between font-mono text-[10px] font-bold uppercase">
-                  <span>Database_Load</span>
+                  <span>Database Load</span>
                   <span>24%</span>
                 </div>
                 <div className="w-full h-1 bg-gray-100">
@@ -241,7 +241,7 @@ export default function AdminDashboardPage() {
               </div>
               <div className="space-y-1.5">
                 <div className="flex justify-between font-mono text-[10px] font-bold uppercase">
-                  <span>Server_Storage</span>
+                  <span>Server Storage</span>
                   <span>68%</span>
                 </div>
                 <div className="w-full h-1 bg-gray-100">

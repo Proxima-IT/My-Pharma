@@ -100,10 +100,10 @@ export default function AdminBlogCreatePage() {
             href="/admin/blogs"
             className="flex items-center gap-2 font-mono text-[10px] font-bold uppercase tracking-widest text-[#8A8A78] hover:text-[#1B1B1B] transition-colors"
           >
-            <FiArrowLeft /> Return_To_Archive
+            <FiArrowLeft /> Return To Archive
           </Link>
           <h1 className="text-4xl font-black tracking-tighter uppercase leading-none text-[#1B1B1B]">
-            Draft_New_Article
+            Draft New Article
           </h1>
         </div>
         <button
@@ -112,10 +112,10 @@ export default function AdminBlogCreatePage() {
           className="h-14 px-10 bg-[#1B1B1B] text-white font-black uppercase tracking-[0.2em] text-xs flex items-center gap-3 hover:bg-[#3A5A40] transition-all cursor-pointer disabled:opacity-50"
         >
           {isUpdating ? (
-            'SYNCING_CORE...'
+            'SYNCING CORE...'
           ) : (
             <>
-              <FiSave size={18} /> Deploy_Article
+              <FiSave size={18} /> Deploy Article
             </>
           )}
         </button>
@@ -123,8 +123,8 @@ export default function AdminBlogCreatePage() {
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-xs uppercase">
-          System_Error:{' '}
-          {typeof error === 'object' ? 'Validation_Failed' : error}
+          System Error:{' '}
+          {typeof error === 'object' ? 'Validation Failed' : error}
         </div>
       )}
 
@@ -133,29 +133,29 @@ export default function AdminBlogCreatePage() {
         <div className="lg:col-span-8 space-y-8">
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest border-b border-gray-50 pb-4 flex items-center gap-2 text-[#1B1B1B]">
-              <FiType className="text-[#3A5A40]" /> Editorial_Content
+              <FiType className="text-[#3A5A40]" /> Editorial Content
             </h3>
 
             <div className="space-y-6">
               <div>
-                <label className={labelClass}>Article_Headline</label>
+                <label className={labelClass}>Article Headline</label>
                 <input
                   name="title"
                   required
                   className={inputClass + ' text-lg font-bold h-14'}
-                  placeholder="ENTER_TITLE_HERE..."
+                  placeholder="ENTER TITLE HERE..."
                   value={formData.title}
                   onChange={handleInputChange}
                 />
               </div>
 
               <div>
-                <label className={labelClass}>Short_Teaser_Description</label>
+                <label className={labelClass}>Short Teaser Description</label>
                 <textarea
                   name="short_description"
                   rows="3"
                   className={textareaClass + ' uppercase'}
-                  placeholder="BRIEF_SUMMARY_FOR_CARDS..."
+                  placeholder="BRIEF SUMMARY FOR CARDS..."
                   value={formData.short_description}
                   onChange={handleInputChange}
                 />
@@ -163,14 +163,14 @@ export default function AdminBlogCreatePage() {
 
               <div>
                 <label className={labelClass}>
-                  Main_Body_Content (HTML_SUPPORTED)
+                  Main Body Content (HTML SUPPORTED)
                 </label>
                 <textarea
                   name="content"
                   required
                   rows="15"
                   className={textareaClass}
-                  placeholder="WRITE_ARTICLE_MARKUP_HERE..."
+                  placeholder="WRITE ARTICLE MARKUP HERE..."
                   value={formData.content}
                   onChange={handleInputChange}
                 />
@@ -184,12 +184,12 @@ export default function AdminBlogCreatePage() {
           {/* Publication Settings */}
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest border-b border-gray-50 pb-4 flex items-center gap-2 text-[#1B1B1B]">
-              <FiEye className="text-[#3A5A40]" /> Meta_Configuration
+              <FiEye className="text-[#3A5A40]" /> Meta Configuration
             </h3>
 
             <div className="space-y-6">
               <div>
-                <label className={labelClass}>URL_Slug_Identifier</label>
+                <label className={labelClass}>URL Slug Identifier</label>
                 <input
                   name="slug"
                   required
@@ -201,7 +201,7 @@ export default function AdminBlogCreatePage() {
               </div>
 
               <div>
-                <label className={labelClass}>Content_Category</label>
+                <label className={labelClass}>Content Category</label>
                 <select
                   name="category"
                   required
@@ -209,7 +209,7 @@ export default function AdminBlogCreatePage() {
                   value={formData.category}
                   onChange={handleInputChange}
                 >
-                  <option value="">SELECT_CATEGORY</option>
+                  <option value="">SELECT CATEGORY</option>
                   {categories.results?.map(cat => (
                     <option key={cat.id} value={cat.id}>
                       {cat.name.toUpperCase()}
@@ -228,7 +228,7 @@ export default function AdminBlogCreatePage() {
                     onChange={handleInputChange}
                   />
                   <span className="font-mono text-[11px] font-bold text-[#1B1B1B] uppercase tracking-widest group-hover:text-[#3A5A40] transition-colors">
-                    Publish_Immediately
+                    Publish Immediately
                   </span>
                 </label>
               </div>
@@ -238,7 +238,7 @@ export default function AdminBlogCreatePage() {
           {/* Featured Image */}
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest border-b border-gray-50 pb-4 flex items-center gap-2 text-[#1B1B1B]">
-              <FiImage className="text-[#3A5A40]" /> Cover_Asset
+              <FiImage className="text-[#3A5A40]" /> Cover Asset
             </h3>
 
             <div
@@ -261,7 +261,7 @@ export default function AdminBlogCreatePage() {
                 <div className="text-center p-4">
                   <FiUpload className="mx-auto text-gray-300 mb-2" size={24} />
                   <p className="font-mono text-[9px] font-bold text-gray-400 uppercase">
-                    Click_To_Upload_Hero_Image
+                    Click To Upload Hero Image
                   </p>
                 </div>
               )}
@@ -282,7 +282,7 @@ export default function AdminBlogCreatePage() {
                 }}
                 className="w-full py-2 font-mono text-[9px] font-bold text-red-400 uppercase tracking-widest hover:text-red-600 transition-colors"
               >
-                Remove_Asset
+                Remove Asset
               </button>
             )}
           </div>

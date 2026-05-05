@@ -95,7 +95,7 @@ export default function AdminUnitListPage() {
                 <tr>
                   <td colSpan="6" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      LOADING_UNITS...
+                      LOADING UNITS...
                     </div>
                   </td>
                 </tr>

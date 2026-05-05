@@ -111,7 +111,7 @@ export default function EditCouponPage({ params }) {
       <div className="w-full h-96 flex flex-col items-center justify-center space-y-4">
         <FiRefreshCw className="animate-spin text-[#3A5A40]" size={32} />
         <span className="font-mono text-[10px] font-bold uppercase tracking-[0.3em] text-[#8A8A78]">
-          Accessing_Registry_Data...
+          Accessing Registry Data...
         </span>
       </div>
     );
@@ -139,7 +139,7 @@ export default function EditCouponPage({ params }) {
             </h1>
             <div className="flex gap-4 font-mono text-[10px] font-bold text-[#8A8A78] mt-2 uppercase tracking-widest">
               <span className="flex items-center gap-1">
-                <FiHash /> Record_ID: {couponId}
+                <FiHash /> Record ID: {couponId}
               </span>
               <span>•</span>
               <span>Status: {formData.is_active ? 'Active' : 'Offline'}</span>
@@ -150,7 +150,7 @@ export default function EditCouponPage({ params }) {
 
       {(hookError || fetchError) && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-xs uppercase">
-          System_Error:{' '}
+          System Error:{' '}
           {fetchError ||
             (typeof hookError === 'object' ? 'Update Failed' : hookError)}
         </div>
@@ -164,12 +164,12 @@ export default function EditCouponPage({ params }) {
         <div className="lg:col-span-2 space-y-8">
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-4 flex items-center gap-2 text-black">
-              <FiTag className="text-[#3A5A40]" /> Identity_Configuration
+              <FiTag className="text-[#3A5A40]" /> Identity Configuration
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="md:col-span-2">
-                <label className={labelClass}>Code_Identifier</label>
+                <label className={labelClass}>Code Identifier</label>
                 <input
                   required
                   name="code"
@@ -180,7 +180,7 @@ export default function EditCouponPage({ params }) {
               </div>
 
               <div>
-                <label className={labelClass}>Discount_Type</label>
+                <label className={labelClass}>Discount Type</label>
                 <select
                   name="discount_type"
                   className={inputClass}
@@ -195,8 +195,8 @@ export default function EditCouponPage({ params }) {
               <div>
                 <label className={labelClass}>
                   {formData.discount_type === 'PERCENT'
-                    ? 'Percentage_Value'
-                    : 'Fixed_Amount'}
+                    ? 'Percentage Value'
+                    : 'Fixed Amount'}
                 </label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 font-mono text-xs">
@@ -218,12 +218,12 @@ export default function EditCouponPage({ params }) {
 
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-4 flex items-center gap-2 text-black">
-              <FiDollarSign className="text-[#3A5A40]" /> Usage_Constraints
+              <FiDollarSign className="text-[#3A5A40]" /> Usage Constraints
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={labelClass}>Min_Order_Threshold (৳)</label>
+                <label className={labelClass}>Min Order Threshold (৳)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -234,7 +234,7 @@ export default function EditCouponPage({ params }) {
                 />
               </div>
               <div>
-                <label className={labelClass}>Max_Redemption_Limit</label>
+                <label className={labelClass}>Max Redemption Limit</label>
                 <input
                   type="number"
                   name="max_uses"
@@ -252,11 +252,11 @@ export default function EditCouponPage({ params }) {
         <div className="space-y-8">
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold text-[#1B1B1B] uppercase tracking-widest border-b border-gray-50 pb-4 mb-4 flex items-center gap-2 text-black">
-              <FiCalendar className="text-[#3A5A40]" /> Campaign_Validity
+              <FiCalendar className="text-[#3A5A40]" /> Campaign Validity
             </h3>
 
             <div>
-              <label className={labelClass}>Activation_Time</label>
+              <label className={labelClass}>Activation Time</label>
               <input
                 type="datetime-local"
                 name="valid_from"
@@ -267,7 +267,7 @@ export default function EditCouponPage({ params }) {
             </div>
 
             <div>
-              <label className={labelClass}>Expiration_Time</label>
+              <label className={labelClass}>Expiration Time</label>
               <input
                 type="datetime-local"
                 name="valid_until"
@@ -287,7 +287,7 @@ export default function EditCouponPage({ params }) {
                   onChange={handleInputChange}
                 />
                 <span className="font-mono text-[11px] font-bold text-[#1B1B1B] uppercase tracking-widest group-hover:text-[#3A5A40] transition-colors">
-                  Operational_Status: Active
+                  Operational Status: Active
                 </span>
               </label>
             </div>
@@ -299,7 +299,7 @@ export default function EditCouponPage({ params }) {
             className="w-full h-20 bg-[#1B1B1B] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#3A5A40] transition-all duration-300 disabled:opacity-50 cursor-pointer"
           >
             {isUpdating ? (
-              'UPDATING_CORE...'
+              'UPDATING CORE...'
             ) : (
               <>
                 <FiSave size={20} /> Patch Record

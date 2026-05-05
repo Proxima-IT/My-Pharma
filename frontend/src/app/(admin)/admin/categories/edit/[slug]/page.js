@@ -289,7 +289,7 @@ function EditCategoryContent({ slug }) {
             className="w-full h-16 bg-black text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#3A5A40] transition-all duration-300 cursor-pointer disabled:opacity-30 rounded-none border-none shadow-none"
           >
             {isUpdating ? (
-              'SAVING_CHANGES...'
+              'SAVING CHANGES...'
             ) : (
               <>
                 <FiCheck size={20} /> SAVE CATEGORY CHANGES

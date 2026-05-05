@@ -79,7 +79,7 @@ export default function CouponListPage() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="border border-gray-100 p-6 bg-white">
           <span className="block font-mono text-[10px] font-bold text-[#8A8A78] uppercase tracking-widest mb-1">
-            Total_Registry
+            Total Registry
           </span>
           <span className="text-2xl font-black text-[#1B1B1B] font-mono">
             {coupons.count}
@@ -87,7 +87,7 @@ export default function CouponListPage() {
         </div>
         <div className="border border-gray-100 p-6 bg-white">
           <span className="block font-mono text-[10px] font-bold text-[#8A8A78] uppercase tracking-widest mb-1">
-            Active_Now
+            Active Now
           </span>
           <span className="text-2xl font-black text-[#3A5A40] font-mono">
             {coupons.results.filter(c => c.is_active).length}
@@ -95,7 +95,7 @@ export default function CouponListPage() {
         </div>
         <div className="border border-gray-100 p-6 bg-white">
           <span className="block font-mono text-[10px] font-bold text-[#8A8A78] uppercase tracking-widest mb-1">
-            Total_Redemptions
+            Total Redemptions
           </span>
           <span className="text-2xl font-black text-[#1B1B1B] font-mono">
             {coupons.results.reduce((acc, curr) => acc + curr.times_used, 0)}
@@ -103,7 +103,7 @@ export default function CouponListPage() {
         </div>
         <div className="border border-gray-100 p-6 bg-[#F1F1E6]">
           <span className="block font-mono text-[10px] font-bold text-[#8A8A78] uppercase tracking-widest mb-1">
-            System_Status
+            System Status
           </span>
           <span className="text-[11px] font-bold text-[#1B1B1B] uppercase flex items-center gap-2">
             <FiActivity className="text-green-600" /> Operational
@@ -149,16 +149,16 @@ export default function CouponListPage() {
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
                 <th className="p-5 font-mono text-[10px] font-black text-[#8A8A78] uppercase tracking-widest">
-                  Code_Identifier
+                  Code Identifier
                 </th>
                 <th className="p-5 font-mono text-[10px] font-black text-[#8A8A78] uppercase tracking-widest">
-                  Discount_Value
+                  Discount Value
                 </th>
                 <th className="p-5 font-mono text-[10px] font-black text-[#8A8A78] uppercase tracking-widest">
-                  Usage_Metrics
+                  Usage Metrics
                 </th>
                 <th className="p-5 font-mono text-[10px] font-black text-[#8A8A78] uppercase tracking-widest">
-                  Validity_Period
+                  Validity Period
                 </th>
                 <th className="p-5 font-mono text-[10px] font-black text-[#8A8A78] uppercase tracking-widest text-center">
                   Status
@@ -175,7 +175,7 @@ export default function CouponListPage() {
                     colSpan="6"
                     className="p-20 text-center font-mono text-xs text-gray-400 uppercase tracking-widest animate-pulse"
                   >
-                    Accessing_Secure_Vault...
+                    Accessing Secure Vault...
                   </td>
                 </tr>
               ) : coupons.results.length === 0 ? (
@@ -184,7 +184,7 @@ export default function CouponListPage() {
                     colSpan="6"
                     className="p-20 text-center font-mono text-xs text-gray-400 uppercase tracking-widest"
                   >
-                    Zero_Coupons_Found
+                    Zero Coupons Found
                   </td>
                 </tr>
               ) : (
@@ -242,7 +242,7 @@ export default function CouponListPage() {
                           <FiClock size={10} />{' '}
                           {coupon.valid_until
                             ? formatDate(coupon.valid_until)
-                            : 'NO_EXPIRY'}
+                            : 'NO EXPIRY'}
                         </span>
                       </div>
                     </td>

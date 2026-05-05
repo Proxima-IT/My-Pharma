@@ -234,7 +234,7 @@ export default function ComboListPage() {
       <div className="flex items-center justify-between font-mono text-[9px] text-[#8A8A78] uppercase tracking-widest pt-4">
         <div className="flex items-center gap-4">
           <span>Sync Status: Real-time</span>
-          <span>Database: Combos_v1</span>
+          <span>Database: Combos v1</span>
         </div>
         <div>Last Updated: {new Date().toLocaleTimeString()}</div>
       </div>

@@ -72,7 +72,7 @@ export default function AdminAdsListPage() {
                 <tr>
                   <td colSpan="5" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      LOADING_BANNERS...
+                      LOADING BANNERS...
                     </div>
                   </td>
                 </tr>

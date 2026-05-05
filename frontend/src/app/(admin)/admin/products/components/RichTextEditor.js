@@ -74,7 +74,7 @@ const RichTextEditor = ({
     return (
       <div className="w-full h-[300px] bg-gray-50 border-2 border-gray-100 flex items-center justify-center">
         <span className="font-mono text-xs font-bold text-gray-400 uppercase animate-pulse">
-          Loading_TipTap_Editor...
+          Loading TipTap Editor...
         </span>
       </div>
     );

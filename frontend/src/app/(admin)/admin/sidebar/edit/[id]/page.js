@@ -210,7 +210,7 @@ export default function AdminEditSidebarItemPage({ params }) {
         </div>
 
         <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-          System_ID: #SID_{id}
+          System ID: #SID_{id}
         </div>
       </div>
     </AuthGuard>

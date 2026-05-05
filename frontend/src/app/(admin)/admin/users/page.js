@@ -172,7 +172,7 @@ export default function UserManagementPage() {
                 <tr>
                   <td colSpan="4" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      SYNCING_DATABASE...
+                      SYNCING DATABASE...
                     </div>
                   </td>
                 </tr>

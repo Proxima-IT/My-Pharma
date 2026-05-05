@@ -104,7 +104,7 @@ function NotificationBroadcastContent() {
         <div className="flex items-center gap-2 border border-gray-100 p-3 bg-gray-50/50">
           <FiInfo className="text-gray-400" />
           <span className="font-mono text-[10px] font-bold text-gray-500 uppercase tracking-tighter">
-            Protocol: FCM_TOKEN_ACTIVE
+            Protocol: FCM TOKEN ACTIVE
           </span>
         </div>
       </div>
@@ -119,7 +119,7 @@ function NotificationBroadcastContent() {
                 type="text"
                 required
                 maxLength={200}
-                placeholder="E.G. SYSTEM_MAINTENANCE_NOTICE"
+                placeholder="E.G. SYSTEM MAINTENANCE NOTICE"
                 className={inputClass}
                 value={formData.title}
                 onChange={e => {
@@ -183,7 +183,7 @@ function NotificationBroadcastContent() {
 
             {success && (
               <div className="flex items-center gap-3 font-mono text-[11px] font-bold uppercase text-green-600">
-                <FiCheckCircle /> BROADCAST_QUEUED_SUCCESSFULLY
+                <FiCheckCircle /> BROADCAST QUEUED SUCCESSFULLY
               </div>
             )}
 
@@ -200,7 +200,7 @@ function NotificationBroadcastContent() {
           <div className="border border-gray-100 p-6 space-y-3 bg-white">
             <h4 className={labelClass}>Delivery Health</h4>
             <p className="font-mono text-[11px] text-gray-600">
-              Firebase: {health?.firebase_initialized ? 'READY' : 'NOT_READY'}
+              Firebase: {health?.firebase_initialized ? 'READY' : 'NOT READY'}
             </p>
             <p className="font-mono text-[11px] text-gray-600">
               Credentials: {health?.firebase_credential_source || '-'}

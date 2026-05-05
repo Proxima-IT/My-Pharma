@@ -100,7 +100,7 @@ export default function AdminNewIngredientPage() {
 
       {/* Decorative Footer */}
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        System: Ready_for_input
+        System: Ready for input
       </div>
     </div>
   );

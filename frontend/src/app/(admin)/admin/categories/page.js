@@ -108,7 +108,7 @@ export default function AdminCategoryListPage() {
                     colSpan="3"
                     className="px-8 py-20 text-center font-mono text-sm animate-pulse text-[#3A5A40] uppercase"
                   >
-                    Syncing_Registry_Data...
+                    Syncing Registry Data...
                   </td>
                 </tr>
               ) : rootCategories.length === 0 ? (

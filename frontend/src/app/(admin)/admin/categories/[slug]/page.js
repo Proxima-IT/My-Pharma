@@ -107,7 +107,7 @@ function CategoryDetailContent({ slug }) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-gray-50 border border-gray-100 p-6">
         <div className="space-y-1">
           <span className="block font-mono text-[9px] font-bold text-[#8A8A78] uppercase tracking-widest">
-            System_ID
+            System ID
           </span>
           <span className="font-bold text-[#1B1B1B]">
             #{currentCategory?.id}
@@ -115,7 +115,7 @@ function CategoryDetailContent({ slug }) {
         </div>
         <div className="space-y-1">
           <span className="block font-mono text-[9px] font-bold text-[#8A8A78] uppercase tracking-widest">
-            Slug_Reference
+            Slug Reference
           </span>
           <span className="font-mono text-sm font-bold text-[#1B1B1B]">
             {currentCategory?.slug}
@@ -144,7 +144,7 @@ function CategoryDetailContent({ slug }) {
             <FiSearch className="mx-3 text-[#8A8A78]" size={14} />
             <input
               type="text"
-              placeholder="FILTER_SUBS..."
+              placeholder="FILTER SUBS..."
               className="w-full h-8 bg-transparent rounded-none text-xs font-mono focus:outline-none uppercase tracking-tight placeholder:text-gray-300 text-[#1B1B1B]"
               value={search}
               onChange={e => {
@@ -176,7 +176,7 @@ function CategoryDetailContent({ slug }) {
                       colSpan="3"
                       className="px-8 py-20 text-center font-mono text-sm animate-pulse text-[#3A5A40] uppercase"
                     >
-                      Scanning_Child_Nodes...
+                      Scanning Child Nodes...
                     </td>
                   </tr>
                 ) : subCategories.results.length === 0 ? (

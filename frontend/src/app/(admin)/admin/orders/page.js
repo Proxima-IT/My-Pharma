@@ -163,7 +163,7 @@ export default function AdminOrdersPage() {
                     colSpan="6"
                     className="px-8 py-20 text-center font-mono text-sm animate-pulse text-[#3A5A40]"
                   >
-                    FETCHING_DATA...
+                    FETCHING DATA...
                   </td>
                 </tr>
               ) : currentData.results.length === 0 ? (

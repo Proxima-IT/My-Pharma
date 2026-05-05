@@ -114,7 +114,7 @@ export default function AdminProductListPage() {
                 <tr>
                   <td colSpan="5" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      SYNCING_INVENTORY...
+                      SYNCING INVENTORY...
                     </div>
                   </td>
                 </tr>

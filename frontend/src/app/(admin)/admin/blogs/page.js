@@ -139,16 +139,16 @@ export default function AdminBlogPage() {
             <thead>
               <tr className="bg-gray-50 text-[#1B1B1B] text-[11px] uppercase tracking-[0.2em] font-bold border-b border-gray-100">
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  ID_REF
+                  ID REF
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  {activeTab === 'Articles' ? 'Article_Title' : 'Category_Name'}
+                  {activeTab === 'Articles' ? 'Article Title' : 'Category Name'}
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  {activeTab === 'Articles' ? 'Category' : 'Slug_Identifier'}
+                  {activeTab === 'Articles' ? 'Category' : 'Slug Identifier'}
                 </th>
                 <th className="px-8 py-4 text-left border-r border-gray-100">
-                  {activeTab === 'Articles' ? 'Status' : 'Display_Order'}
+                  {activeTab === 'Articles' ? 'Status' : 'Display Order'}
                 </th>
                 <th className="px-8 py-4 text-right">Actions</th>
               </tr>
@@ -160,7 +160,7 @@ export default function AdminBlogPage() {
                     colSpan="5"
                     className="px-8 py-20 text-center font-mono text-sm animate-pulse text-[#3A5A40]"
                   >
-                    FETCHING_CONTENT...
+                    FETCHING CONTENT...
                   </td>
                 </tr>
               ) : currentData.results.length === 0 ? (
@@ -264,7 +264,7 @@ export default function AdminBlogPage() {
       {/* Pagination Footer */}
       <div className="flex items-center justify-between px-2">
         <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase tracking-widest">
-          Total_Count:{' '}
+          Total Count:{' '}
           <span className="text-[#1B1B1B]">{currentData.count}</span>
         </p>
         <div className="flex items-center gap-0 border border-gray-100 bg-white">

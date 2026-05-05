@@ -87,7 +87,7 @@ export default function AdminBrandListPage() {
                 <tr>
                   <td colSpan="3" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40]">
-                      LOADING_COMPANIES...
+                      LOADING COMPANIES...
                     </div>
                   </td>
                 </tr>

@@ -87,7 +87,7 @@ function SettlementListContent() {
           </span>
           <span className="font-mono text-[10px] font-bold text-[#3A5A40] uppercase">
             {' '}
-            Financial_Admin{' '}
+            Financial Admin{' '}
           </span>
         </div>
       </div>
@@ -162,7 +162,7 @@ function SettlementListContent() {
                 <tr>
                   <td colSpan="7" className="px-8 py-20 text-center">
                     <div className="font-mono text-sm animate-pulse text-[#3A5A40] uppercase">
-                      FETCHING_LEDGER_DATA...
+                      FETCHING LEDGER DATA...
                     </div>
                   </td>
                 </tr>

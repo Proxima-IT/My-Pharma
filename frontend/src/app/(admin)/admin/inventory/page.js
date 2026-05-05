@@ -68,7 +68,7 @@ export default function InventoryManagementPage() {
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[10px] font-bold uppercase tracking-widest">
           <div className="w-1.5 h-1.5 bg-[#3A5A40] animate-pulse" />
-          Live_Logistics_Sync
+          Live Logistics Sync
         </div>
       </div>
 
@@ -160,7 +160,7 @@ export default function InventoryManagementPage() {
                     colSpan="5"
                     className="px-8 py-20 text-center font-mono text-sm animate-pulse text-[#3A5A40]"
                   >
-                    SYNCING_LIVE_INVENTORY...
+                    SYNCING LIVE INVENTORY...
                   </td>
                 </tr>
               ) : (

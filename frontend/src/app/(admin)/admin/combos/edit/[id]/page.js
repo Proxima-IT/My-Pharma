@@ -397,7 +397,7 @@ export default function EditComboPage({ params }) {
             className="w-full h-20 bg-[#3A5A40] text-white font-black uppercase tracking-[0.3em] text-sm flex items-center justify-center gap-4 hover:bg-[#1B1B1B] transition-all duration-300 disabled:opacity-50 cursor-pointer border-none shadow-none"
           >
             {isUpdating ? (
-              'SYNCING_CHANGES...'
+              'SYNCING CHANGES...'
             ) : (
               <>
                 <FiSave size={20} /> UPDATE COMBO

@@ -155,7 +155,7 @@ export default function AdminEditBrandPage({ params }) {
       </div>
 
       <div className="font-mono text-[10px] text-[#B7B7A4] uppercase tracking-[0.2em]">
-        Company_ID: {brand?.id}
+        Company ID: {brand?.id}
       </div>
     </div>
   );

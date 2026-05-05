@@ -26,7 +26,7 @@ export default function AdminSettingsPage() {
           <div className="flex items-center gap-4">
             <div className="h-[2px] w-8 bg-[#3A5A40]"></div>
             <h2 className="font-mono text-[11px] font-black text-[#3A5A40] uppercase tracking-[0.3em]">
-              Identity & Branding
+              Identity and Branding
             </h2>
           </div>
           <LogoSettings />

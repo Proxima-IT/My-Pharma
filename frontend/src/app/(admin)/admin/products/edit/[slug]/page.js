@@ -42,7 +42,7 @@ export default function AdminEditProductPage({ params }) {
       <Suspense
         fallback={
           <div className="p-20 font-mono uppercase animate-pulse text-black">
-            Syncing_Registry...
+            Syncing Registry...
           </div>
         }
       >
@@ -335,7 +335,7 @@ function EditProductContent({ slug }) {
               Edit Medicine
             </h1>
             <p className="text-[10px] font-mono font-bold text-gray-400 mt-2 uppercase tracking-widest">
-              Registry_Slug: {slug}
+              Registry Slug: {slug}
             </p>
           </div>
         </div>
@@ -423,7 +423,7 @@ function EditProductContent({ slug }) {
         <div className="p-6 bg-red-50 border-l-4 border-red-600 flex gap-4">
           <FiAlertCircle className="text-red-600 shrink-0" size={24} />
           <p className="text-xs font-black text-red-700 uppercase tracking-widest">
-            Update_Error:{' '}
+            Update Error:{' '}
             {typeof activeError === 'string'
               ? activeError
               : 'Registry update failed'}

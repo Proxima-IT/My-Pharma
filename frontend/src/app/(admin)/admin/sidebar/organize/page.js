@@ -296,7 +296,7 @@ function OrganizerContent() {
                         {main.title}
                       </h4>
                       <span className="font-mono text-[9px] text-gray-400 uppercase tracking-widest font-bold">
-                        MAIN_MENU_ROOT
+                        MAIN MENU ROOT
                       </span>
                     </div>
                   </div>

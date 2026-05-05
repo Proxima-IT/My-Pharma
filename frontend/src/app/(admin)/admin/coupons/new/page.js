@@ -89,7 +89,7 @@ export default function NewCouponPage() {
 
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 text-red-600 font-mono text-xs uppercase">
-          System_Error:{' '}
+          System Error:{' '}
           {typeof error === 'object' ? 'Validation Failed' : error}
         </div>
       )}

@@ -45,7 +45,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
     <form onSubmit={handleSubmit} className="w-full flex flex-col gap-8">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
-          <label className={labelClass}>FULL NAME / USERNAME</label>
+          <label className={labelClass}>Full Name / Username</label>
           <input
             type="text"
             placeholder="E.G. ARIFUL ISLAM"
@@ -59,7 +59,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
         </div>
 
         <div>
-          <label className={labelClass}>EMAIL ADDRESS</label>
+          <label className={labelClass}>Email Address</label>
           <input
             type="email"
             placeholder="USER@EXAMPLE.COM"
@@ -71,7 +71,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
         </div>
 
         <div>
-          <label className={labelClass}>PHONE NUMBER</label>
+          <label className={labelClass}>Phone Number</label>
           <input
             type="text"
             placeholder="017XXXXXXXX"
@@ -84,8 +84,8 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
         <div>
           <label className={labelClass}>
             {initialData
-              ? 'NEW PASSWORD (LEAVE BLANK TO KEEP OLD)'
-              : 'SET PASSWORD'}
+              ? 'New Password (Leave blank to keep old)'
+              : 'Set Password'}
           </label>
           <input
             type="password"
@@ -99,7 +99,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
         </div>
 
         <div>
-          <label className={labelClass}>ACCESS LEVEL (ROLE)</label>
+          <label className={labelClass}>Access Level (Role)</label>
           <select
             className={inputClass + ' cursor-pointer'}
             value={formData.role}
@@ -115,7 +115,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
         <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-100">
           <div className="flex flex-col">
             <span className="font-mono text-[12px] font-bold text-[#1B1B1B] uppercase">
-              ACCOUNT ACTIVE?
+              Account Active?
             </span>
             <span className="text-[10px] text-[#8A8A78] uppercase">
               If off, the user cannot login
@@ -140,8 +140,8 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
         {isLoading
           ? 'PROCESSING...'
           : initialData
-            ? 'UPDATE ACCOUNT DETAILS'
-            : 'CREATE NEW ACCOUNT'}
+            ? 'Update Account Details'
+            : 'Create New Account'}
       </button>
     </form>
   );

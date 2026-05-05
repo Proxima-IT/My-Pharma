@@ -263,7 +263,7 @@ function NavigationManagerContent() {
                   </div>
                   {orderedSidebarIds.includes(cat.id) && (
                     <span className="font-mono text-[10px] font-bold text-[#3A5A40] bg-[#E8F0EA] px-2 py-1 rounded-none shadow-none">
-                      S_{orderedSidebarIds.indexOf(cat.id) + 1}
+                      S {orderedSidebarIds.indexOf(cat.id) + 1}
                     </span>
                   )}
                 </label>
@@ -303,7 +303,7 @@ function NavigationManagerContent() {
                   </div>
                   {orderedFeaturedIds.includes(cat.id) && (
                     <span className="font-mono text-[10px] font-bold text-white bg-black px-2 py-1 rounded-none shadow-none">
-                      F_{orderedFeaturedIds.indexOf(cat.id) + 1}
+                      F {orderedFeaturedIds.indexOf(cat.id) + 1}
                     </span>
                   )}
                 </label>

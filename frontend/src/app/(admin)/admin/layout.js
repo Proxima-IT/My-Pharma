@@ -116,7 +116,7 @@ export default function AdminLayout({ children }) {
             </div>
 
             <div className="font-mono text-[9px] md:text-[10px] border border-red-100 px-2 md:px-3 py-1 bg-red-50 font-bold text-red-600 uppercase tracking-widest">
-              <span className="hidden xs:inline">SUPER_ADMIN_MODE</span>
+              <span className="hidden xs:inline">SUPER ADMIN MODE</span>
               <span className="xs:hidden">ADMIN</span>
             </div>
           </header>
@@ -126,7 +126,7 @@ export default function AdminLayout({ children }) {
             <Suspense
               fallback={
                 <div className="font-mono text-sm p-10 animate-pulse text-[#3A5A40]">
-                  INITIALIZING_ADMIN_CORE...
+                  INITIALIZING ADMIN CORE...
                 </div>
               }
             >
