@@ -385,17 +385,25 @@ export default function PrescriptionOrderDetailsPage({ params }) {
                   <FiPackage className="text-gray-400" /> Medicines Provided
                 </h3>
                 <div className="space-y-4">
-                  {order.items.map(item => (
-                    <OrderedProductCard
-                      key={item.id}
-                      item={item}
-                      productInfo={
-                        Array.isArray(products)
-                          ? products.find(p => p.id === item.product)
-                          : products?.results?.find(p => p.id === item.product)
-                      }
-                    />
-                  ))}
+                  {order.items.map(item => {
+                    const productInfo = Array.isArray(products)
+                      ? products.find(p => p.id === item.product)
+                      : products?.results?.find(p => p.id === item.product);
+                    // Map prescription item fields to match OrderedProductCard's expected shape
+                    const mappedItem = {
+                      ...item,
+                      quantity: item.quantity || item.quantity_prescribed,
+                      price_at_order:
+                        item.price_at_order || productInfo?.price || 0,
+                    };
+                    return (
+                      <OrderedProductCard
+                        key={item.id}
+                        item={mappedItem}
+                        productInfo={productInfo}
+                      />
+                    );
+                  })}
                 </div>
               </div>
             )}

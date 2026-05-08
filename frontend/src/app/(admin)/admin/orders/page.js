@@ -214,6 +214,16 @@ export default function AdminOrdersPage() {
                     <td className="px-8 py-6 border-r border-gray-100 text-right font-mono font-bold text-[#1B1B1B]">
                       {item.total ? (
                         formatCurrency(item.total)
+                      ) : activeTab === 'Prescription' &&
+                        item.items?.length > 0 ? (
+                        <span className="text-[#3A5A40] text-[10px] font-bold uppercase tracking-widest">
+                          {item.items.length} Item
+                          {item.items.length > 1 ? 's' : ''} Assigned
+                        </span>
+                      ) : activeTab === 'Prescription' ? (
+                        <span className="text-amber-500 text-[10px] font-bold uppercase tracking-widest">
+                          Awaiting Review
+                        </span>
                       ) : (
                         <span className="text-gray-300 italic">TBD</span>
                       )}

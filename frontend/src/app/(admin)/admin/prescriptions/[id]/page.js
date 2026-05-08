@@ -19,7 +19,7 @@ import {
 import { usePrescriptionAdmin } from '../../../hooks/usePrescriptionAdmin';
 import { useProductAdmin } from '../../../hooks/useProductAdmin';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
-import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { API_BASE_URL, getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import { Document, Page as PdfPage, pdfjs } from 'react-pdf';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -50,7 +50,8 @@ export default function AdminPrescriptionDetailPage({ params }) {
   // Local States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
-    const [adminNotes, setAdminNotes] = useState('');
+  const [pendingQty, setPendingQty] = useState({});
+  const [adminNotes, setAdminNotes] = useState('');
   const [doctorInfo, setDoctorInfo] = useState({ name: '', reg: '' });
   const [hasSignature, setHasSignature] = useState(false);
   const [patientName, setPatientName] = useState('');
@@ -58,6 +59,61 @@ export default function AdminPrescriptionDetailPage({ params }) {
   useEffect(() => {
     if (id) fetchPrescriptionDetails(id);
   }, [id, fetchPrescriptionDetails]);
+
+  // Pre-populate form with existing data when viewing an already-verified prescription
+  useEffect(() => {
+    if (!prescriptionDetails) return;
+    if (prescriptionDetails.doctor_name)
+      setDoctorInfo(prev => ({
+        ...prev,
+        name: prescriptionDetails.doctor_name,
+      }));
+    if (prescriptionDetails.doctor_reg_number)
+      setDoctorInfo(prev => ({
+        ...prev,
+        reg: prescriptionDetails.doctor_reg_number,
+      }));
+    if (prescriptionDetails.has_signature) setHasSignature(true);
+    if (prescriptionDetails.patient_name_on_rx)
+      setPatientName(prescriptionDetails.patient_name_on_rx);
+    if (prescriptionDetails.notes) setAdminNotes(prescriptionDetails.notes);
+    if (prescriptionDetails.items?.length > 0) {
+      const items = prescriptionDetails.items.map(item => ({
+        id: item.product,
+        name: item.product_name,
+        price: 0,
+        quantity: item.quantity_prescribed,
+      }));
+      setSelectedItems(items);
+
+      // Fetch product prices to enrich items
+      const enrichPrices = async () => {
+        try {
+          const token = localStorage.getItem('access_token');
+          const ids = items.map(i => i.id);
+          const res = await fetch(
+            `${API_BASE_URL}/products/?page_size=100&is_active=true`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+          if (res.ok) {
+            const data = await res.json();
+            const productList = data.results || data || [];
+            setSelectedItems(prev =>
+              prev.map(item => {
+                const match = productList.find(p => p.id === item.id);
+                return match
+                  ? { ...item, price: parseFloat(match.price) }
+                  : item;
+              }),
+            );
+          }
+        } catch (err) {
+          console.error('Failed to enrich product prices:', err);
+        }
+      };
+      enrichPrices();
+    }
+  }, [prescriptionDetails]);
 
   useEffect(() => {
     if (searchQuery.length > 2) {
@@ -79,13 +135,14 @@ export default function AdminPrescriptionDetailPage({ params }) {
     return { name: parts[0], phone: parts[2], full: parts.slice(3).join(', ') };
   }, [prescriptionDetails]);
 
-  const addItem = product => {
+  const addItem = (product, qty) => {
+    const quantity = Math.max(1, qty || pendingQty[product.id] || 1);
     const exists = selectedItems.find(item => item.id === product.id);
     if (exists) {
       setSelectedItems(
         selectedItems.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: item.quantity + quantity }
             : item,
         ),
       );
@@ -96,10 +153,11 @@ export default function AdminPrescriptionDetailPage({ params }) {
           id: product.id,
           name: product.name,
           price: product.price,
-          quantity: 1,
+          quantity,
         },
       ]);
     }
+    setPendingQty(prev => ({ ...prev, [product.id]: 1 }));
     setSearchQuery('');
   };
 
@@ -117,7 +175,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
       return;
     }
 
-        const payload = {
+    const payload = {
       status: status,
       notes: adminNotes,
       doctor_name: doctorInfo.name,
@@ -154,6 +212,47 @@ export default function AdminPrescriptionDetailPage({ params }) {
 
   return (
     <div className="w-full space-y-10 animate-in fade-in duration-500 pb-20">
+      {/* Status Banner */}
+      {prescriptionDetails.status !== 'PENDING' && (
+        <div
+          className={`w-full p-6 flex items-center gap-4 ${
+            prescriptionDetails.status === 'APPROVED' ||
+            prescriptionDetails.status === 'USED'
+              ? 'bg-green-50 border border-green-100'
+              : prescriptionDetails.status === 'REJECTED'
+                ? 'bg-red-50 border border-red-100'
+                : 'bg-gray-50 border border-gray-100'
+          }`}
+        >
+          <div
+            className={`w-10 h-10 flex items-center justify-center ${
+              prescriptionDetails.status === 'APPROVED' ||
+              prescriptionDetails.status === 'USED'
+                ? 'text-green-600'
+                : prescriptionDetails.status === 'REJECTED'
+                  ? 'text-red-600'
+                  : 'text-gray-600'
+            }`}
+          >
+            {prescriptionDetails.status === 'REJECTED' ? (
+              <FiX size={24} strokeWidth={3} />
+            ) : (
+              <FiCheck size={24} strokeWidth={3} />
+            )}
+          </div>
+          <div>
+            <p className="font-mono text-[11px] font-bold uppercase tracking-widest">
+              This prescription has been {prescriptionDetails.status}
+            </p>
+            {prescriptionDetails.verified_at && (
+              <p className="font-mono text-[10px] text-[#8A8A78] mt-1">
+                Verified on {formatDate(prescriptionDetails.verified_at)}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-gray-100 pb-8">
         <div className="space-y-4">
@@ -174,28 +273,30 @@ export default function AdminPrescriptionDetailPage({ params }) {
             <span>{formatDate(prescriptionDetails.created_at)}</span>
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handleAction('REJECTED')}
-            disabled={isUpdating}
-            className="h-14 px-8 bg-white border border-red-100 text-red-600 font-bold uppercase text-[11px] tracking-widest hover:bg-red-50 transition-all cursor-pointer disabled:opacity-50"
-          >
-            Reject Request
-          </button>
-          <button
-            onClick={() => handleAction('APPROVED')}
-            disabled={isUpdating}
-            className="h-14 px-8 bg-[#1B1B1B] text-white font-bold uppercase text-[11px] tracking-widest hover:bg-[#3A5A40] transition-all cursor-pointer disabled:opacity-50"
-          >
-            {isUpdating ? 'INITIALIZING...' : 'Verify & Approve'}
-          </button>
-        </div>
+        {prescriptionDetails.status === 'PENDING' && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => handleAction('REJECTED')}
+              disabled={isUpdating}
+              className="h-14 px-8 bg-white border border-red-100 text-red-600 font-bold uppercase text-[11px] tracking-widest hover:bg-red-50 transition-all cursor-pointer disabled:opacity-50"
+            >
+              Reject Request
+            </button>
+            <button
+              onClick={() => handleAction('APPROVED')}
+              disabled={isUpdating}
+              className="h-14 px-8 bg-[#1B1B1B] text-white font-bold uppercase text-[11px] tracking-widest hover:bg-[#3A5A40] transition-all cursor-pointer disabled:opacity-50"
+            >
+              {isUpdating ? 'INITIALIZING...' : 'Verify & Approve'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
         {/* Main Column */}
         <div className="xl:col-span-8 space-y-10">
-                    {/* 0. Prescription Metadata */}
+          {/* 0. Prescription Metadata */}
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 text-[#1B1B1B]">
               <FiFileText className="text-[#3A5A40]" /> Prescription Details
@@ -203,42 +304,64 @@ export default function AdminPrescriptionDetailPage({ params }) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
                 <label className={labelClass}>Status</label>
-                <span className={`inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
-                  prescriptionDetails.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
-                  prescriptionDetails.status === 'APPROVED' ? 'bg-green-50 text-green-600' :
-                  prescriptionDetails.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
-                  'bg-gray-50 text-gray-600'
-                }`}>{prescriptionDetails.status}</span>
+                <span
+                  className={`inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                    prescriptionDetails.status === 'PENDING'
+                      ? 'bg-amber-50 text-amber-600'
+                      : prescriptionDetails.status === 'APPROVED'
+                        ? 'bg-green-50 text-green-600'
+                        : prescriptionDetails.status === 'REJECTED'
+                          ? 'bg-red-50 text-red-600'
+                          : 'bg-gray-50 text-gray-600'
+                  }`}
+                >
+                  {prescriptionDetails.status}
+                </span>
               </div>
               <div>
                 <label className={labelClass}>User Email</label>
-                <p className="font-mono font-bold text-xs text-[#1B1B1B] break-all">{prescriptionDetails.user_email || 'N/A'}</p>
+                <p className="font-mono font-bold text-xs text-[#1B1B1B] break-all">
+                  {prescriptionDetails.user_email || 'N/A'}
+                </p>
               </div>
               <div>
                 <label className={labelClass}>Supply Duration</label>
-                <p className="font-bold text-xs uppercase text-[#1B1B1B]">{prescriptionDetails.medicine_supply_duration?.replace('_', ' ') || 'N/A'}</p>
+                <p className="font-bold text-xs uppercase text-[#1B1B1B]">
+                  {prescriptionDetails.medicine_supply_duration?.replace(
+                    '_',
+                    ' ',
+                  ) || 'N/A'}
+                </p>
               </div>
               <div>
                 <label className={labelClass}>Issue Date</label>
-                <p className="font-mono font-bold text-xs text-[#1B1B1B]">{prescriptionDetails.issue_date || 'N/A'}</p>
+                <p className="font-mono font-bold text-xs text-[#1B1B1B]">
+                  {prescriptionDetails.issue_date || 'N/A'}
+                </p>
               </div>
             </div>
             {prescriptionDetails.patient_name_on_rx && (
               <div>
                 <label className={labelClass}>Patient Name on Rx</label>
-                <p className="font-bold text-xs uppercase text-[#1B1B1B]">{prescriptionDetails.patient_name_on_rx}</p>
+                <p className="font-bold text-xs uppercase text-[#1B1B1B]">
+                  {prescriptionDetails.patient_name_on_rx}
+                </p>
               </div>
             )}
             {prescriptionDetails.prescription_note && (
               <div className="p-5 bg-gray-50 border border-gray-100">
                 <label className={labelClass}>Prescription Note</label>
-                <p className="text-sm text-[#1B1B1B] font-medium leading-relaxed">{prescriptionDetails.prescription_note}</p>
+                <p className="text-sm text-[#1B1B1B] font-medium leading-relaxed">
+                  {prescriptionDetails.prescription_note}
+                </p>
               </div>
             )}
             {prescriptionDetails.additional_products_note && (
               <div className="p-5 bg-gray-50 border border-gray-100">
                 <label className={labelClass}>Additional Products Note</label>
-                <p className="text-sm text-[#1B1B1B] font-medium leading-relaxed">{prescriptionDetails.additional_products_note}</p>
+                <p className="text-sm text-[#1B1B1B] font-medium leading-relaxed">
+                  {prescriptionDetails.additional_products_note}
+                </p>
               </div>
             )}
           </div>
@@ -250,30 +373,51 @@ export default function AdminPrescriptionDetailPage({ params }) {
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {/* Primary file/image */}
-              {(prescriptionDetails.file || prescriptionDetails.image) && (() => {
-                const src = prescriptionDetails.file || prescriptionDetails.image;
-                const isPdf = src?.toLowerCase().endsWith('.pdf');
-                return (
-                  <div className="relative aspect-[3/4] border border-gray-50 overflow-hidden group bg-gray-50">
-                    {isPdf ? (
-                      <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
-                        <Document file={getMediaUrl(src)} loading={<FiFileText size={40} className="text-gray-300 animate-pulse" />}>
-                          <PdfPage pageNumber={1} width={250} renderTextLayer={false} renderAnnotationLayer={false} />
-                        </Document>
-                      </div>
-                    ) : (
-                      <Image src={getMediaUrl(src)} alt="Prescription" fill className="object-contain" unoptimized />
-                    )}
-                    <a
-                      href={getMediaUrl(src)}
-                      target="_blank"
-                      className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[#1B1B1B] font-mono text-[10px] font-bold uppercase tracking-widest transition-all z-10"
-                    >
-                      Open Full Resolution
-                    </a>
-                  </div>
-                );
-              })()}
+              {(prescriptionDetails.file || prescriptionDetails.image) &&
+                (() => {
+                  const src =
+                    prescriptionDetails.file || prescriptionDetails.image;
+                  const isPdf = src?.toLowerCase().endsWith('.pdf');
+                  return (
+                    <div className="relative aspect-[3/4] border border-gray-50 overflow-hidden group bg-gray-50">
+                      {isPdf ? (
+                        <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                          <Document
+                            file={getMediaUrl(src)}
+                            loading={
+                              <FiFileText
+                                size={40}
+                                className="text-gray-300 animate-pulse"
+                              />
+                            }
+                          >
+                            <PdfPage
+                              pageNumber={1}
+                              width={250}
+                              renderTextLayer={false}
+                              renderAnnotationLayer={false}
+                            />
+                          </Document>
+                        </div>
+                      ) : (
+                        <Image
+                          src={getMediaUrl(src)}
+                          alt="Prescription"
+                          fill
+                          className="object-contain"
+                          unoptimized
+                        />
+                      )}
+                      <a
+                        href={getMediaUrl(src)}
+                        target="_blank"
+                        className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[#1B1B1B] font-mono text-[10px] font-bold uppercase tracking-widest transition-all z-10"
+                      >
+                        Open Full Resolution
+                      </a>
+                    </div>
+                  );
+                })()}
 
               {/* Additional images */}
               {prescriptionDetails.images?.map(img => {
@@ -286,12 +430,31 @@ export default function AdminPrescriptionDetailPage({ params }) {
                   >
                     {isPdf ? (
                       <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
-                        <Document file={getMediaUrl(srcUrl)} loading={<FiFileText size={40} className="text-gray-300 animate-pulse" />}>
-                          <PdfPage pageNumber={1} width={250} renderTextLayer={false} renderAnnotationLayer={false} />
+                        <Document
+                          file={getMediaUrl(srcUrl)}
+                          loading={
+                            <FiFileText
+                              size={40}
+                              className="text-gray-300 animate-pulse"
+                            />
+                          }
+                        >
+                          <PdfPage
+                            pageNumber={1}
+                            width={250}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                          />
                         </Document>
                       </div>
                     ) : (
-                      <Image src={getMediaUrl(srcUrl)} alt="Prescription" fill className="object-contain" unoptimized />
+                      <Image
+                        src={getMediaUrl(srcUrl)}
+                        alt="Prescription"
+                        fill
+                        className="object-contain"
+                        unoptimized
+                      />
                     )}
                     <a
                       href={getMediaUrl(srcUrl)}
@@ -322,19 +485,39 @@ export default function AdminPrescriptionDetailPage({ params }) {
                   onChange={e => setSearchQuery(e.target.value)}
                 />
                 {searchQuery.length > 2 && (
-                  <div className="absolute top-full left-0 w-full bg-white border border-gray-100 z-50 max-h-64 overflow-y-auto border-t-0">
+                  <div className="absolute top-full left-0 w-full bg-white border border-gray-100 z-50 max-h-80 overflow-y-auto border-t-0">
                     {(products.results || []).map(p => (
                       <div
                         key={p.id}
-                        onClick={() => addItem(p)}
-                        className="p-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer flex justify-between items-center transition-colors"
+                        className="p-4 border-b border-gray-50 hover:bg-gray-50 flex items-center justify-between gap-4 transition-colors"
                       >
-                        <span className="font-bold text-xs uppercase text-[#1B1B1B]">
-                          {p.name}
-                        </span>
-                        <span className="font-mono text-[10px] font-bold text-[#3A5A40]">
-                          {formatCurrency(p.price)}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-bold text-xs uppercase text-[#1B1B1B] block truncate">
+                            {p.name}
+                          </span>
+                          <span className="font-mono text-[10px] font-bold text-[#3A5A40]">
+                            {formatCurrency(p.price)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <input
+                            type="number"
+                            min="1"
+                            className="w-14 h-9 text-center border border-gray-200 font-mono text-xs focus:border-[#3A5A40] outline-none"
+                            value={pendingQty[p.id] || 1}
+                            onClick={e => e.stopPropagation()}
+                            onChange={e => {
+                              const val = parseInt(e.target.value) || 1;
+                              setPendingQty(prev => ({ ...prev, [p.id]: val }));
+                            }}
+                          />
+                          <button
+                            onClick={() => addItem(p)}
+                            className="h-9 px-4 bg-[#1B1B1B] text-white font-mono text-[10px] font-bold uppercase tracking-widest hover:bg-[#3A5A40] transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <FiPlus size={12} strokeWidth={3} /> Add
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -470,7 +653,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
                   }
                 />
               </div>
-                            <div>
+              <div>
                 <label className={labelClass}>Patient Name on Rx</label>
                 <input
                   className={inputClass}
