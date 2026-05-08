@@ -90,7 +90,12 @@ function UploadPrescriptionContent() {
           // 2. "Blob Fetch" - Convert URLs to File objects for re-upload
           const filePromises = downloadUrls.map(async (url, index) => {
             // Ensure absolute URL to bypass potentially broken proxy
-            const fetchUrl = url.startsWith('http') ? url : `${API_BASE_URL.replace('/api', '')}${url}`;
+            let fetchUrl = url.startsWith('http') ? url : `${API_BASE_URL.replace('/api', '')}${url}`;
+            
+            // Force HTTPS if page is loaded over HTTPS to prevent Mixed Content blocking
+            if (window.location.protocol === 'https:' && fetchUrl.startsWith('http://')) {
+              fetchUrl = fetchUrl.replace('http://', 'https://');
+            }
             
             try {
               const response = await fetch(fetchUrl);
@@ -109,14 +114,17 @@ function UploadPrescriptionContent() {
                 'image/png': '.png',
                 'image/webp': '.webp',
                 'image/gif': '.gif',
+                'application/pdf': '.pdf',
               };
-              const ext = extMap[contentType] || '.jpg';
-              const mimeType = contentType.startsWith('image/') ? contentType : 'image/jpeg';
+              const ext = extMap[contentType] || (fetchUrl.endsWith('.pdf') ? '.pdf' : '.jpg');
+              let mimeType = contentType;
+              if (!mimeType || mimeType === 'application/octet-stream') {
+                mimeType = ext === '.pdf' ? 'application/pdf' : 'image/jpeg';
+              }
   
               return new File([blob], `library_rx_${index}${ext}`, { type: mimeType });
             } catch (err) {
               console.warn(`Failed to fetch library image ${index}:`, err);
-              // Fallback: if fetch fails, skip this file so order doesn't completely break
               return null;
             }
           });
@@ -145,8 +153,14 @@ function UploadPrescriptionContent() {
 
     const formData = new FormData();
 
-    // Append all files (Library + New Uploads) to the 'images' key
-    allFiles.forEach(file => formData.append('images', file));
+    // Append all files (Library + New Uploads) to the correct keys
+    allFiles.forEach(file => {
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        formData.append('file', file);
+      } else {
+        formData.append('images', file);
+      }
+    });
 
     // Keys synchronized with Official Schema
     formData.append('medicine_supply_duration', selectedDurationId);
