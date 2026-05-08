@@ -75,25 +75,52 @@ function UploadPrescriptionContent() {
           const data = await res.json();
 
           // 1. Handle Previews
-          let urls = [];
+          let previewUrls = [];
+          let downloadUrls = [];
           if (data.images?.length > 0) {
-            urls = data.images.map(img =>
-              getMediaUrl(img.image_url || img.image),
-            );
+            previewUrls = data.images.map(img => getMediaUrl(img.image_url || img.image));
+            downloadUrls = data.images.map(img => img.image_url || img.image || getMediaUrl(img.image));
           } else if (data.image || data.file) {
-            urls = [getMediaUrl(data.image || data.file)];
+            const src = data.image || data.file;
+            previewUrls = [getMediaUrl(src)];
+            downloadUrls = [src];
           }
-          setLibraryPreviews(urls);
+          setLibraryPreviews(previewUrls);
 
           // 2. "Blob Fetch" - Convert URLs to File objects for re-upload
-          const filePromises = urls.map(async (url, index) => {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            return new File([blob], `library_rx_${index}.jpg`, {
-              type: blob.type,
-            });
+          const filePromises = downloadUrls.map(async (url, index) => {
+            // Ensure absolute URL to bypass potentially broken proxy
+            const fetchUrl = url.startsWith('http') ? url : `${API_BASE_URL.replace('/api', '')}${url}`;
+            
+            try {
+              const response = await fetch(fetchUrl);
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const blob = await response.blob();
+              
+              // Prevent capturing 404 HTML pages
+              const contentType = blob.type || response.headers.get('content-type') || '';
+              if (contentType.includes('text/html')) {
+                throw new Error('Received HTML instead of image');
+              }
+              
+              // Map mime type to file extension
+              const extMap = {
+                'image/jpeg': '.jpg',
+                'image/png': '.png',
+                'image/webp': '.webp',
+                'image/gif': '.gif',
+              };
+              const ext = extMap[contentType] || '.jpg';
+              const mimeType = contentType.startsWith('image/') ? contentType : 'image/jpeg';
+  
+              return new File([blob], `library_rx_${index}${ext}`, { type: mimeType });
+            } catch (err) {
+              console.warn(`Failed to fetch library image ${index}:`, err);
+              // Fallback: if fetch fails, skip this file so order doesn't completely break
+              return null;
+            }
           });
-          const files = await Promise.all(filePromises);
+          const files = (await Promise.all(filePromises)).filter(Boolean);
           setLibraryFiles(files);
 
           if (data.prescription_note) setNote(data.prescription_note);
