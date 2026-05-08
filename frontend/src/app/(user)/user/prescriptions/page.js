@@ -7,7 +7,11 @@ import { IoCloseSharp } from 'react-icons/io5';
 import { usePrescriptions } from '../../hooks/usePrescriptions';
 import { uploadPrescriptionApi } from '../../api/prescriptionApi';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { Document, Page, pdfjs } from 'react-pdf';
 import PrescriptionCard from './components/PrescriptionCard';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 import UploadCard from './components/UploadCard';
 import UiButton from '@/app/(public)/components/UiButton';
 
@@ -129,11 +133,32 @@ export default function MyPrescriptionsPage() {
           </button>
 
           <div className="relative w-full h-full flex items-center justify-center">
-            <img
-              src={getMediaUrl(previewImage)}
-              alt="Prescription Preview"
-              className="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-300"
-            />
+            {previewImage?.toLowerCase().endsWith('.pdf') ? (
+              <div className="w-full h-full max-w-4xl overflow-auto bg-gray-900/50 rounded-2xl flex justify-center p-4 custom-scrollbar">
+                <Document
+                  file={getMediaUrl(previewImage)}
+                  loading={
+                    <div className="flex items-center justify-center h-full">
+                      <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  }
+                  className="flex flex-col gap-4"
+                >
+                  <Page
+                    pageNumber={1}
+                    renderTextLayer={false}
+                    renderAnnotationLayer={false}
+                    className="shadow-2xl rounded-lg overflow-hidden"
+                  />
+                </Document>
+              </div>
+            ) : (
+              <img
+                src={getMediaUrl(previewImage)}
+                alt="Prescription Preview"
+                className="max-w-full max-h-full object-contain shadow-2xl animate-in zoom-in-95 duration-300"
+              />
+            )}
           </div>
         </div>
       )}

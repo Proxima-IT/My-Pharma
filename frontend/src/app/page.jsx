@@ -47,7 +47,7 @@ export default function Home() {
   }, []);
 
   return (
-    <div className="flex flex-col gap-10 lg:gap-16 bg-white">
+    <div className="flex flex-col gap-10 lg:gap-16 bg-[#F2F3F5]">
       <HeroCarousel />
 
       {/* Circle Icon Bar (Driven by is_featured_home flag) */}

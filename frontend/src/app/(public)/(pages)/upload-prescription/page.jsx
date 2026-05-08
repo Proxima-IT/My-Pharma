@@ -24,11 +24,18 @@ function UploadPrescriptionContent() {
 
   const { addresses } = useAddress();
   const {
-    durations,
     placePrescriptionOrder,
     isPlacingOrder,
     error: orderError,
   } = useOrders();
+
+  // Hardcoded Medicine Supply Durations (Backend expects these specific keys)
+  const medicineDurations = [
+    { id: '7_DAYS', name: '7 Days' },
+    { id: '15_DAYS', name: '15 Days' },
+    { id: '1_MONTH', name: '1 Month' },
+    { id: '2_MONTHS', name: '2 Months' },
+  ];
 
   // Shared States
   const [images, setImages] = useState([]); // User uploaded files
@@ -106,12 +113,8 @@ function UploadPrescriptionContent() {
 
     if (allFiles.length === 0)
       return alert('Please upload or select a prescription.');
-    if (!selectedDurationId) return alert('Please select a duration.');
+    if (!selectedDurationId) return alert('Please select a supply duration.');
     if (!selectedAddress) return alert('Please select a shipping address.');
-
-    const durationObj = durations.find(d => d.id === selectedDurationId);
-    const durationEnum =
-      durationObj?.name.toUpperCase().replace(/\s+/g, '_') || '7_DAYS';
 
     const formData = new FormData();
 
@@ -119,7 +122,7 @@ function UploadPrescriptionContent() {
     allFiles.forEach(file => formData.append('images', file));
 
     // Keys synchronized with Official Schema
-    formData.append('medicine_supply_duration', durationEnum);
+    formData.append('medicine_supply_duration', selectedDurationId);
     formData.append('prescription_note', note);
     formData.append('shipping_address', selectedAddress.id);
 
@@ -160,7 +163,7 @@ function UploadPrescriptionContent() {
 
         <div className="lg:col-span-5">
           <PrescriptionOrderForm
-            durations={durations}
+            durations={medicineDurations}
             selectedDurationId={selectedDurationId}
             setSelectedDurationId={setSelectedDurationId}
             note={note}

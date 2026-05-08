@@ -44,16 +44,6 @@ const Sidebar = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [openMenus, setOpenMenus] = useState({});
 
-  // Sync search term with URL query parameter
-  useEffect(() => {
-    const query = searchParams.get('search');
-    if (query) {
-      setSearchTerm(query);
-    } else {
-      setSearchTerm('');
-    }
-  }, [searchParams]);
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -93,17 +83,46 @@ const Sidebar = () => {
     return counts;
   }, [allProducts]);
 
-  const handleSearch = e => {
-    if (e.key === 'Enter') {
-      if (searchTerm.trim()) {
-        router.push(
-          `/products?search=${encodeURIComponent(searchTerm.trim())}`,
-        );
-      } else {
-        router.push('/products');
-      }
+  // Filter categories tree based on search term
+  const filteredCategories = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return categories;
+
+    const filterTree = nodes => {
+      return nodes
+        .map(node => {
+          const filteredChildren = node.children
+            ? filterTree(node.children)
+            : [];
+          const isMatch = node.name.toLowerCase().includes(term);
+
+          if (isMatch || filteredChildren.length > 0) {
+            return { ...node, children: filteredChildren };
+          }
+          return null;
+        })
+        .filter(Boolean);
+    };
+
+    return filterTree(categories);
+  }, [categories, searchTerm]);
+
+  // Auto-expand categories when searching
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      const newOpenMenus = {};
+      const collectExpanded = nodes => {
+        nodes.forEach(node => {
+          if (node.children && node.children.length > 0) {
+            newOpenMenus[node.id] = true;
+            collectExpanded(node.children);
+          }
+        });
+      };
+      collectExpanded(filteredCategories);
+      setOpenMenus(prev => ({ ...prev, ...newOpenMenus }));
     }
-  };
+  }, [filteredCategories, searchTerm]);
 
   const toggleMenu = (e, id) => {
     e.preventDefault();
@@ -199,10 +218,9 @@ const Sidebar = () => {
           />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search categories..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            onKeyDown={handleSearch}
             className="w-full h-11 pl-11 pr-4 bg-white border border-gray-100 rounded-full text-sm focus:outline-none focus:border-(--color-primary-500) transition-all shadow-none"
           />
         </div>
@@ -237,9 +255,15 @@ const Sidebar = () => {
             </div>
           ) : (
             <div className="space-y-0.5">
-              {categories.map(cat => (
-                <NavItem key={`cat-tree-${cat.id}`} item={cat} />
-              ))}
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map(cat => (
+                  <NavItem key={`cat-tree-${cat.id}`} item={cat} />
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-gray-400 text-center italic">
+                  No categories found
+                </div>
+              )}
             </div>
           )}
 

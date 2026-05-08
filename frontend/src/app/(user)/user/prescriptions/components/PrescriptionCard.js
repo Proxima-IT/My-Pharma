@@ -1,8 +1,12 @@
 'use client';
-import React from 'react';
-import { FiCheck } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { FiCheck, FiFileText } from 'react-icons/fi';
 import { formatDate } from '../../../lib/formatters';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { Document, Page, pdfjs } from 'react-pdf';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 /**
  * PrescriptionCard Component
@@ -21,6 +25,9 @@ export default function PrescriptionCard({
       ? item.images[0].image_url || item.images[0].image
       : null) ||
     item.image;
+
+  const isPdf = previewImage?.toLowerCase().endsWith('.pdf');
+  const [numPages, setNumPages] = useState(null);
 
   return (
     <div
@@ -47,11 +54,41 @@ export default function PrescriptionCard({
         }}
       >
         {previewImage ? (
-          <img
-            src={getMediaUrl(previewImage)}
-            alt="Prescription Preview"
-            className="w-full h-full object-cover"
-          />
+          isPdf ? (
+            <div className="w-full h-full flex items-center justify-center bg-gray-50 overflow-hidden pointer-events-none">
+              <Document
+                file={getMediaUrl(previewImage)}
+                onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                loading={
+                  <div className="flex flex-col items-center gap-2 text-gray-400">
+                    <FiFileText
+                      size={40}
+                      strokeWidth={1.5}
+                      className="animate-pulse"
+                    />
+                  </div>
+                }
+              >
+                <Page
+                  pageNumber={1}
+                  width={250}
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              </Document>
+              <div className="absolute inset-0 bg-black/5 flex items-end p-2">
+                <span className="text-[9px] font-bold uppercase tracking-widest bg-white/90 px-2 py-0.5 rounded shadow-sm text-gray-500">
+                  PDF PREVIEW
+                </span>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={getMediaUrl(previewImage)}
+              alt="Prescription Preview"
+              className="w-full h-full object-cover"
+            />
+          )
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-200 font-bold text-xs uppercase tracking-widest">
             No Preview
