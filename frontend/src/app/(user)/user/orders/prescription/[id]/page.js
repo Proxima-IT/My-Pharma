@@ -286,20 +286,54 @@ export default function PrescriptionOrderDetailsPage({ params }) {
                 <FiFileText className="text-gray-400" /> Uploaded Prescription
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {order.images?.map(img => (
-                  <div
-                    key={img.id}
-                    className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-100"
-                  >
-                    <Image
-                      src={getMediaUrl(img.image_url || img.image)}
-                      alt="Prescription"
-                      fill
-                      className="object-cover"
-                      unoptimized
-                    />
+                {/* 1. Show primary file/image if it exists */}
+                {(order.file || order.image) && (
+                  <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center">
+                    {(order.file || order.image).toLowerCase().endsWith('.pdf') ? (
+                      <div className="flex flex-col items-center text-blue-500 z-10 p-4 text-center">
+                        <FiFileText size={48} />
+                        <span className="text-xs font-bold mt-2">PDF Document</span>
+                        <a href={getMediaUrl(order.file || order.image)} target="_blank" rel="noreferrer" className="absolute inset-0 cursor-pointer" title="View PDF"></a>
+                      </div>
+                    ) : (
+                      <Image
+                        src={getMediaUrl(order.file || order.image)}
+                        alt="Prescription"
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                    )}
                   </div>
-                ))}
+                )}
+                
+                {/* 2. Show additional images */}
+                {order.images?.map(img => {
+                  const srcUrl = img.image_url || img.image;
+                  const isPdf = srcUrl.toLowerCase().endsWith('.pdf');
+                  return (
+                    <div
+                      key={img.id}
+                      className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center"
+                    >
+                      {isPdf ? (
+                        <div className="flex flex-col items-center text-blue-500 z-10 p-4 text-center">
+                          <FiFileText size={48} />
+                          <span className="text-xs font-bold mt-2">PDF Document</span>
+                          <a href={getMediaUrl(srcUrl)} target="_blank" rel="noreferrer" className="absolute inset-0 cursor-pointer" title="View PDF"></a>
+                        </div>
+                      ) : (
+                        <Image
+                          src={getMediaUrl(srcUrl)}
+                          alt="Prescription"
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
               {order.prescription_note && (
                 <div className="p-5 bg-gray-50 rounded-[20px] border border-gray-100">

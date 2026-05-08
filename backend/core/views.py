@@ -1728,7 +1728,7 @@ class PrescriptionOrderViewSet(viewsets.GenericViewSet):
                     data[key] = val.lower() in ("true", "1", "yes")
         serializer = PrescriptionUploadSerializer(data=data, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        payload = {k: v for k, v in serializer.validated_data.items() if k != "file" or v is not None}
+        payload = {k: v for k, v in serializer.validated_data.items() if k not in ("file", "images") or (k == "file" and v is not None)}
         if not payload.get("file") and request.FILES.get("file"):
             payload["file"] = request.FILES["file"]
         prescription = Prescription.objects.create(user=request.user, status=Prescription.Status.PENDING, **payload)
