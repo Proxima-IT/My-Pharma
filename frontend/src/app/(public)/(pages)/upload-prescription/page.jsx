@@ -75,25 +75,60 @@ function UploadPrescriptionContent() {
           const data = await res.json();
 
           // 1. Handle Previews
-          let urls = [];
+          let previewUrls = [];
+          let downloadUrls = [];
           if (data.images?.length > 0) {
-            urls = data.images.map(img =>
-              getMediaUrl(img.image_url || img.image),
-            );
+            previewUrls = data.images.map(img => getMediaUrl(img.image_url || img.image));
+            downloadUrls = data.images.map(img => img.image_url || img.image || getMediaUrl(img.image));
           } else if (data.image || data.file) {
-            urls = [getMediaUrl(data.image || data.file)];
+            const src = data.image || data.file;
+            previewUrls = [getMediaUrl(src)];
+            downloadUrls = [src];
           }
-          setLibraryPreviews(urls);
+          setLibraryPreviews(previewUrls);
 
           // 2. "Blob Fetch" - Convert URLs to File objects for re-upload
-          const filePromises = urls.map(async (url, index) => {
-            const response = await fetch(url);
-            const blob = await response.blob();
-            return new File([blob], `library_rx_${index}.jpg`, {
-              type: blob.type,
-            });
+          const filePromises = downloadUrls.map(async (url, index) => {
+            // Ensure absolute URL to bypass potentially broken proxy
+            let fetchUrl = url.startsWith('http') ? url : `${API_BASE_URL.replace('/api', '')}${url}`;
+            
+            // Force HTTPS if page is loaded over HTTPS to prevent Mixed Content blocking
+            if (window.location.protocol === 'https:' && fetchUrl.startsWith('http://')) {
+              fetchUrl = fetchUrl.replace('http://', 'https://');
+            }
+            
+            try {
+              const response = await fetch(fetchUrl);
+              if (!response.ok) throw new Error(`HTTP ${response.status}`);
+              const blob = await response.blob();
+              
+              // Prevent capturing 404 HTML pages
+              const contentType = blob.type || response.headers.get('content-type') || '';
+              if (contentType.includes('text/html')) {
+                throw new Error('Received HTML instead of image');
+              }
+              
+              // Map mime type to file extension
+              const extMap = {
+                'image/jpeg': '.jpg',
+                'image/png': '.png',
+                'image/webp': '.webp',
+                'image/gif': '.gif',
+                'application/pdf': '.pdf',
+              };
+              const ext = extMap[contentType] || (fetchUrl.endsWith('.pdf') ? '.pdf' : '.jpg');
+              let mimeType = contentType;
+              if (!mimeType || mimeType === 'application/octet-stream') {
+                mimeType = ext === '.pdf' ? 'application/pdf' : 'image/jpeg';
+              }
+  
+              return new File([blob], `library_rx_${index}${ext}`, { type: mimeType });
+            } catch (err) {
+              console.warn(`Failed to fetch library image ${index}:`, err);
+              return null;
+            }
           });
-          const files = await Promise.all(filePromises);
+          const files = (await Promise.all(filePromises)).filter(Boolean);
           setLibraryFiles(files);
 
           if (data.prescription_note) setNote(data.prescription_note);
@@ -118,8 +153,14 @@ function UploadPrescriptionContent() {
 
     const formData = new FormData();
 
-    // Append all files (Library + New Uploads) to the 'images' key
-    allFiles.forEach(file => formData.append('images', file));
+    // Append all files (Library + New Uploads) to the correct keys
+    allFiles.forEach(file => {
+      if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+        formData.append('file', file);
+      } else {
+        formData.append('images', file);
+      }
+    });
 
     // Keys synchronized with Official Schema
     formData.append('medicine_supply_duration', selectedDurationId);
