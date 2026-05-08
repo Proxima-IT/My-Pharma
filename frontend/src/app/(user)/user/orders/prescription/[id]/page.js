@@ -19,6 +19,9 @@ import { useProductData } from '@/app/(public)/hooks/useProductData';
 import { formatDate, formatCurrency } from '../../../../lib/formatters';
 import OrderedProductCard from '../../[id]/components/OrderedProductCard';
 import { API_BASE_URL, getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { Document, Page as PdfPage, pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 /**
  * PrescriptionOrderDetailsPage
@@ -289,11 +292,26 @@ export default function PrescriptionOrderDetailsPage({ params }) {
                 {/* 1. Show primary file/image if it exists */}
                 {(order.file || order.image) && (
                   <div className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center">
-                    {(order.file || order.image).toLowerCase().endsWith('.pdf') ? (
-                      <div className="flex flex-col items-center text-blue-500 z-10 p-4 text-center">
-                        <FiFileText size={48} />
-                        <span className="text-xs font-bold mt-2">PDF Document</span>
-                        <a href={getMediaUrl(order.file || order.image)} target="_blank" rel="noreferrer" className="absolute inset-0 cursor-pointer" title="View PDF"></a>
+                    {(order.file || order.image)
+                      .toLowerCase()
+                      .endsWith('.pdf') ? (
+                      <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                        <Document
+                          file={getMediaUrl(order.file || order.image)}
+                          loading={
+                            <FiFileText
+                              size={40}
+                              className="text-gray-300 animate-pulse"
+                            />
+                          }
+                        >
+                          <PdfPage
+                            pageNumber={1}
+                            width={200}
+                            renderTextLayer={false}
+                            renderAnnotationLayer={false}
+                          />
+                        </Document>
                       </div>
                     ) : (
                       <Image
@@ -306,21 +324,34 @@ export default function PrescriptionOrderDetailsPage({ params }) {
                     )}
                   </div>
                 )}
-                
+
                 {/* 2. Show additional images */}
                 {order.images?.map(img => {
                   const srcUrl = img.image_url || img.image;
-                  const isPdf = srcUrl.toLowerCase().endsWith('.pdf');
+                  const isPdf = srcUrl?.toLowerCase().endsWith('.pdf');
                   return (
                     <div
                       key={img.id}
                       className="relative aspect-[3/4] rounded-2xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center"
                     >
                       {isPdf ? (
-                        <div className="flex flex-col items-center text-blue-500 z-10 p-4 text-center">
-                          <FiFileText size={48} />
-                          <span className="text-xs font-bold mt-2">PDF Document</span>
-                          <a href={getMediaUrl(srcUrl)} target="_blank" rel="noreferrer" className="absolute inset-0 cursor-pointer" title="View PDF"></a>
+                        <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                          <Document
+                            file={getMediaUrl(srcUrl)}
+                            loading={
+                              <FiFileText
+                                size={40}
+                                className="text-gray-300 animate-pulse"
+                              />
+                            }
+                          >
+                            <PdfPage
+                              pageNumber={1}
+                              width={200}
+                              renderTextLayer={false}
+                              renderAnnotationLayer={false}
+                            />
+                          </Document>
                         </div>
                       ) : (
                         <Image
@@ -390,7 +421,7 @@ export default function PrescriptionOrderDetailsPage({ params }) {
                 {[
                   { label: 'Phone Number', value: addressDetails.phone },
                   { label: 'Gender', value: addressDetails.gender },
-                  { label: 'Deistic', value: addressDetails.district },
+                  { label: 'District', value: addressDetails.district },
                   { label: 'Thana', value: addressDetails.thana },
                   { label: 'Full Address', value: addressDetails.cleanAddress },
                 ].map((item, i) => (

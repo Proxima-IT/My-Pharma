@@ -1,8 +1,5 @@
 'use client';
 
-
-
-
 import React, { useRef } from 'react';
 import Image from 'next/image';
 import { FiPlus, FiX, FiLoader, FiCamera, FiFileText } from 'react-icons/fi';
@@ -55,26 +52,7 @@ const Upload = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-<<<<<<< HEAD
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    {/* 1. Show Library Images (Locked) */}
+          {/* 1. Show Library Images (Locked) */}
           {libraryPreviews.map((src, idx) => {
             const isPdf = src?.toLowerCase().endsWith('.pdf');
             return (
@@ -84,62 +62,22 @@ const Upload = ({
               >
                 {isPdf ? (
                   <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
-                    <Document file={src} loading={<FiFileText size={40} className="text-gray-300 animate-pulse" />}>
-                      <Page pageNumber={1} width={250} renderTextLayer={false} renderAnnotationLayer={false} />
+                    <Document
+                      file={src}
+                      loading={
+                        <FiFileText
+                          size={40}
+                          className="text-gray-300 animate-pulse"
+                        />
+                      }
+                    >
+                      <Page
+                        pageNumber={1}
+                        width={250}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                      />
                     </Document>
-                  </div>
-                ) : (
-                  <Image src={src} alt="Library Rx" fill className="object-cover" unoptimized />
-                )}
-                <div className="absolute top-2 left-2 px-2 py-1 bg-blue-600 text-white text-[9px] font-black uppercase rounded-md shadow-sm">
-                  Library
-                </div>
-              </div>
-            );
-          })}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                    {/* 2. Show Newly Uploaded Images */}
-          {previews.map((src, idx) => {
-            const isPdf = images[idx]?.type === 'application/pdf';
-            return (
-              <div
-                key={`local-${idx}`}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 group bg-gray-50"
-              >
-                {isPdf ? (
-                  <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
-                    <Document file={src} loading={<FiFileText size={40} className="text-gray-300 animate-pulse" />}>
-                      <Page pageNumber={1} width={250} renderTextLayer={false} renderAnnotationLayer={false} />
-                    </Document>
-=======
-          {/* 1. Show Library Images (Locked) */}
-          {libraryPreviews.map((src, idx) => {
-            const isPdf = src.toLowerCase().includes('.pdf');
-            return (
-              <div
-                key={`lib-${idx}`}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-blue-100 group flex items-center justify-center bg-gray-50"
-              >
-                {isPdf ? (
-                  <div className="flex flex-col items-center text-blue-500 z-10">
-                    <FiFileText size={40} />
-                    <span className="text-xs font-bold mt-2">PDF Document</span>
-                    <a href={src} target="_blank" rel="noreferrer" className="absolute inset-0 cursor-pointer" title="View PDF"></a>
                   </div>
                 ) : (
                   <Image
@@ -160,28 +98,40 @@ const Upload = ({
           {/* 2. Show Newly Uploaded Images */}
           {previews.map((src, idx) => {
             const file = images[idx];
-            const isPdf = file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+            const isPdf =
+              file &&
+              (file.type === 'application/pdf' ||
+                file.name?.toLowerCase().endsWith('.pdf'));
             return (
               <div
                 key={`local-${idx}`}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 group flex items-center justify-center bg-gray-50"
+                className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 group bg-gray-50"
               >
                 {isPdf ? (
-                  <div className="flex flex-col items-center text-gray-500">
-                    <FiFileText size={40} />
-                    <span className="text-xs font-bold mt-2 px-2 text-center truncate w-full">{file.name}</span>
->>>>>>> 104d866b8d332a3dfc86d5e29f32e818553e84df
+                  <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                    <Document
+                      file={src}
+                      loading={
+                        <FiFileText
+                          size={40}
+                          className="text-gray-300 animate-pulse"
+                        />
+                      }
+                    >
+                      <Page
+                        pageNumber={1}
+                        width={250}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                      />
+                    </Document>
                   </div>
                 ) : (
                   <Image src={src} alt="New Rx" fill className="object-cover" />
                 )}
                 <button
                   onClick={() => removeLocalImage(idx)}
-<<<<<<< HEAD
-                  className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-=======
                   className="absolute top-2 right-2 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-20"
->>>>>>> 104d866b8d332a3dfc86d5e29f32e818553e84df
                 >
                   <FiX />
                 </button>
@@ -210,7 +160,6 @@ const Upload = ({
         ref={fileInputRef}
         className="hidden"
         multiple
-
         accept="image/*,.pdf"
         onChange={handleFileChange}
       />

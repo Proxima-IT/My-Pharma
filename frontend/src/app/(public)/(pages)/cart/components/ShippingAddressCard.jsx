@@ -21,7 +21,7 @@ const ShippingAddressCard = ({ onAddressSelect }) => {
         email: defaultAddr.email || 'N/A',
         phone: defaultAddr.phone,
         gender: defaultAddr.gender_display || defaultAddr.gender,
-        deistic: defaultAddr.district,
+        district: defaultAddr.district,
         thana: defaultAddr.thana,
         fullAddress: defaultAddr.address,
         isDefault: defaultAddr.is_default,
@@ -110,7 +110,7 @@ const ShippingAddressCard = ({ onAddressSelect }) => {
       <div className="w-full space-y-4 px-2 sm:px-4">
         <DetailRow label="PHONE NUMBER" value={currentAddress.phone} />
         <DetailRow label="GENDER" value={currentAddress.gender} />
-        <DetailRow label="DISTRICT" value={currentAddress.deistic} />
+        <DetailRow label="DISTRICT" value={currentAddress.district} />
         <DetailRow label="THANA" value={currentAddress.thana} />
         <DetailRow label="FULL ADDRESS" value={currentAddress.fullAddress} />
       </div>

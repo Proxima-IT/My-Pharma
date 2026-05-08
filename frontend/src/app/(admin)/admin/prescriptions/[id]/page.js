@@ -20,6 +20,9 @@ import { usePrescriptionAdmin } from '../../../hooks/usePrescriptionAdmin';
 import { useProductAdmin } from '../../../hooks/useProductAdmin';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { Document, Page as PdfPage, pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 /**
  * Admin Prescription Verification Page
@@ -47,8 +50,10 @@ export default function AdminPrescriptionDetailPage({ params }) {
   // Local States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState([]);
-  const [adminNotes, setAdminNotes] = useState('');
+    const [adminNotes, setAdminNotes] = useState('');
   const [doctorInfo, setDoctorInfo] = useState({ name: '', reg: '' });
+  const [hasSignature, setHasSignature] = useState(false);
+  const [patientName, setPatientName] = useState('');
 
   useEffect(() => {
     if (id) fetchPrescriptionDetails(id);
@@ -112,11 +117,13 @@ export default function AdminPrescriptionDetailPage({ params }) {
       return;
     }
 
-    const payload = {
+        const payload = {
       status: status,
       notes: adminNotes,
       doctor_name: doctorInfo.name,
       doctor_reg_number: doctorInfo.reg,
+      has_signature: hasSignature,
+      patient_name_on_rx: patientName,
       items: selectedItems.map(item => ({
         product: item.id,
         quantity_prescribed: item.quantity,
@@ -188,33 +195,114 @@ export default function AdminPrescriptionDetailPage({ params }) {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
         {/* Main Column */}
         <div className="xl:col-span-8 space-y-10">
+                    {/* 0. Prescription Metadata */}
+          <div className="bg-white border border-gray-100 p-8 space-y-6">
+            <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 text-[#1B1B1B]">
+              <FiFileText className="text-[#3A5A40]" /> Prescription Details
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <label className={labelClass}>Status</label>
+                <span className={`inline-block px-3 py-1 text-[10px] font-bold uppercase tracking-widest ${
+                  prescriptionDetails.status === 'PENDING' ? 'bg-amber-50 text-amber-600' :
+                  prescriptionDetails.status === 'APPROVED' ? 'bg-green-50 text-green-600' :
+                  prescriptionDetails.status === 'REJECTED' ? 'bg-red-50 text-red-600' :
+                  'bg-gray-50 text-gray-600'
+                }`}>{prescriptionDetails.status}</span>
+              </div>
+              <div>
+                <label className={labelClass}>User Email</label>
+                <p className="font-mono font-bold text-xs text-[#1B1B1B] break-all">{prescriptionDetails.user_email || 'N/A'}</p>
+              </div>
+              <div>
+                <label className={labelClass}>Supply Duration</label>
+                <p className="font-bold text-xs uppercase text-[#1B1B1B]">{prescriptionDetails.medicine_supply_duration?.replace('_', ' ') || 'N/A'}</p>
+              </div>
+              <div>
+                <label className={labelClass}>Issue Date</label>
+                <p className="font-mono font-bold text-xs text-[#1B1B1B]">{prescriptionDetails.issue_date || 'N/A'}</p>
+              </div>
+            </div>
+            {prescriptionDetails.patient_name_on_rx && (
+              <div>
+                <label className={labelClass}>Patient Name on Rx</label>
+                <p className="font-bold text-xs uppercase text-[#1B1B1B]">{prescriptionDetails.patient_name_on_rx}</p>
+              </div>
+            )}
+            {prescriptionDetails.prescription_note && (
+              <div className="p-5 bg-gray-50 border border-gray-100">
+                <label className={labelClass}>Prescription Note</label>
+                <p className="text-sm text-[#1B1B1B] font-medium leading-relaxed">{prescriptionDetails.prescription_note}</p>
+              </div>
+            )}
+            {prescriptionDetails.additional_products_note && (
+              <div className="p-5 bg-gray-50 border border-gray-100">
+                <label className={labelClass}>Additional Products Note</label>
+                <p className="text-sm text-[#1B1B1B] font-medium leading-relaxed">{prescriptionDetails.additional_products_note}</p>
+              </div>
+            )}
+          </div>
+
           {/* 1. Image Viewer Container */}
           <div className="bg-white border border-gray-100 p-8 space-y-6">
             <h3 className="font-mono text-[11px] font-bold uppercase tracking-widest flex items-center gap-2 text-[#1B1B1B]">
               <FiFileText className="text-[#3A5A40]" /> Digital Asset Review
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {prescriptionDetails.images?.map(img => (
-                <div
-                  key={img.id}
-                  className="relative aspect-[3/4] border border-gray-50 overflow-hidden group bg-gray-50"
-                >
-                  <Image
-                    src={getMediaUrl(img.image_url || img.image)}
-                    alt="Prescription"
-                    fill
-                    className="object-contain"
-                    unoptimized
-                  />
-                  <a
-                    href={getMediaUrl(img.image_url || img.image)}
-                    target="_blank"
-                    className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[#1B1B1B] font-mono text-[10px] font-bold uppercase tracking-widest transition-all"
+              {/* Primary file/image */}
+              {(prescriptionDetails.file || prescriptionDetails.image) && (() => {
+                const src = prescriptionDetails.file || prescriptionDetails.image;
+                const isPdf = src?.toLowerCase().endsWith('.pdf');
+                return (
+                  <div className="relative aspect-[3/4] border border-gray-50 overflow-hidden group bg-gray-50">
+                    {isPdf ? (
+                      <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                        <Document file={getMediaUrl(src)} loading={<FiFileText size={40} className="text-gray-300 animate-pulse" />}>
+                          <PdfPage pageNumber={1} width={250} renderTextLayer={false} renderAnnotationLayer={false} />
+                        </Document>
+                      </div>
+                    ) : (
+                      <Image src={getMediaUrl(src)} alt="Prescription" fill className="object-contain" unoptimized />
+                    )}
+                    <a
+                      href={getMediaUrl(src)}
+                      target="_blank"
+                      className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[#1B1B1B] font-mono text-[10px] font-bold uppercase tracking-widest transition-all z-10"
+                    >
+                      Open Full Resolution
+                    </a>
+                  </div>
+                );
+              })()}
+
+              {/* Additional images */}
+              {prescriptionDetails.images?.map(img => {
+                const srcUrl = img.image_url || img.image;
+                const isPdf = srcUrl?.toLowerCase().endsWith('.pdf');
+                return (
+                  <div
+                    key={img.id}
+                    className="relative aspect-[3/4] border border-gray-50 overflow-hidden group bg-gray-50"
                   >
-                    Open Full Resolution
-                  </a>
-                </div>
-              ))}
+                    {isPdf ? (
+                      <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                        <Document file={getMediaUrl(srcUrl)} loading={<FiFileText size={40} className="text-gray-300 animate-pulse" />}>
+                          <PdfPage pageNumber={1} width={250} renderTextLayer={false} renderAnnotationLayer={false} />
+                        </Document>
+                      </div>
+                    ) : (
+                      <Image src={getMediaUrl(srcUrl)} alt="Prescription" fill className="object-contain" unoptimized />
+                    )}
+                    <a
+                      href={getMediaUrl(srcUrl)}
+                      target="_blank"
+                      className="absolute inset-0 bg-white/90 opacity-0 group-hover:opacity-100 flex items-center justify-center text-[#1B1B1B] font-mono text-[10px] font-bold uppercase tracking-widest transition-all z-10"
+                    >
+                      Open Full Resolution
+                    </a>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -381,6 +469,31 @@ export default function AdminPrescriptionDetailPage({ params }) {
                     setDoctorInfo({ ...doctorInfo, reg: e.target.value })
                   }
                 />
+              </div>
+                            <div>
+                <label className={labelClass}>Patient Name on Rx</label>
+                <input
+                  className={inputClass}
+                  value={patientName}
+                  onChange={e => setPatientName(e.target.value)}
+                  placeholder="AS ON PRESCRIPTION"
+                />
+              </div>
+              <div className="flex items-center gap-3 py-2">
+                <button
+                  type="button"
+                  onClick={() => setHasSignature(!hasSignature)}
+                  className={`w-10 h-10 border flex items-center justify-center transition-all cursor-pointer ${
+                    hasSignature
+                      ? 'bg-[#3A5A40] border-[#3A5A40] text-white'
+                      : 'bg-white border-gray-200 text-transparent'
+                  }`}
+                >
+                  <FiCheck size={16} strokeWidth={3} />
+                </button>
+                <label className="font-mono text-[10px] font-bold text-[#8A8A78] uppercase tracking-widest">
+                  Doctor Signature Present
+                </label>
               </div>
               <div>
                 <label className={labelClass}>Internal Audit Notes</label>
