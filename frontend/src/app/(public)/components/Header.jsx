@@ -23,6 +23,7 @@ import { BsCart3 } from 'react-icons/bs';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
+import toast from 'react-hot-toast';
 import MobileDrawer from './MobileDrawer';
 import AddressSelectorPopup from './AddressSelectorPopup';
 import SearchSuggestions from './SearchSuggestions';
@@ -209,7 +210,7 @@ const Header = () => {
         const formData = new FormData();
         formData.append('file', file);
         await uploadPrescriptionApi(token, formData);
-        alert('Prescription uploaded successfully!');
+        toast.success('Prescription uploaded successfully!');
         router.push('/user/prescriptions');
       } else {
         const reader = new FileReader();
@@ -228,14 +229,14 @@ const Header = () => {
             'guest_prescriptions',
             JSON.stringify(guestPrescriptions),
           );
-          alert(
+          toast.success(
             'Prescription saved locally! Log in to sync with your account.',
           );
         };
         reader.readAsDataURL(file);
       }
     } catch (err) {
-      alert(err.message || 'Upload failed.');
+      toast.error(err.message || 'Upload failed.');
     } finally {
       setIsUploading(false);
       e.target.value = '';
