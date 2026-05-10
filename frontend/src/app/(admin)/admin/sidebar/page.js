@@ -40,14 +40,17 @@ function NavigationManagerContent() {
 
   const {
     categories: subCategoriesRes,
-    sidebarSelection,
+        sidebarSelection,
     featuredSelection,
+    forthSectionSelection,
     isUpdating,
     fetchCategories,
-    fetchSidebarSelection,
+        fetchSidebarSelection,
     saveSidebarSelection,
     fetchFeaturedSelection,
     saveFeaturedSelection,
+    fetchForthSectionSelection,
+    saveForthSectionSelection,
   } = useCategoryAdmin();
 
   // Local state for tabs that stay on this page
@@ -57,44 +60,57 @@ function NavigationManagerContent() {
   useEffect(() => {
     fetchSidebarItems();
     fetchCategories({ page_size: 500 });
-    fetchSidebarSelection();
+        fetchSidebarSelection();
     fetchFeaturedSelection();
+    fetchForthSectionSelection();
   }, [
     fetchSidebarItems,
     fetchCategories,
-    fetchSidebarSelection,
+        fetchSidebarSelection,
     fetchFeaturedSelection,
+    fetchForthSectionSelection,
   ]);
 
-  const [orderedSidebarIds, setOrderedSidebarIds] = useState([]);
+    const [orderedSidebarIds, setOrderedSidebarIds] = useState([]);
   const [orderedFeaturedIds, setOrderedFeaturedIds] = useState([]);
+  const [orderedForthIds, setOrderedForthIds] = useState([]);
 
   useEffect(() => {
     if (sidebarSelection.length > 0)
       setOrderedSidebarIds(sidebarSelection.map(c => c.id));
     if (featuredSelection.length > 0)
       setOrderedFeaturedIds(featuredSelection.map(c => c.id));
-  }, [sidebarSelection, featuredSelection]);
+    if (forthSectionSelection.length > 0)
+      setOrderedForthIds(forthSectionSelection.map(c => c.id));
+  }, [sidebarSelection, featuredSelection, forthSectionSelection]);
 
   const subCategoryList = subCategoriesRes.results || [];
 
-  const handleToggleSelection = (id, type) => {
+    const handleToggleSelection = (id, type) => {
     if (type === 'SIDEBAR') {
       setOrderedSidebarIds(prev =>
         prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id],
       );
-    } else {
+    } else if (type === 'FEATURED') {
       setOrderedFeaturedIds(prev =>
+        prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id],
+      );
+    } else if (type === 'FORTH') {
+      setOrderedForthIds(prev =>
         prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id],
       );
     }
   };
 
-  const saveDisplayMapping = async type => {
-    const success =
-      type === 'SIDEBAR'
-        ? await saveSidebarSelection(orderedSidebarIds)
-        : await saveFeaturedSelection(orderedFeaturedIds);
+    const saveDisplayMapping = async type => {
+    let success = false;
+    if (type === 'SIDEBAR') {
+      success = await saveSidebarSelection(orderedSidebarIds);
+    } else if (type === 'FEATURED') {
+      success = await saveFeaturedSelection(orderedFeaturedIds);
+    } else if (type === 'FORTH') {
+      success = await saveForthSectionSelection(orderedForthIds);
+    }
     if (success) alert(`${type} configuration synchronized.`);
   };
 
@@ -228,9 +244,9 @@ function NavigationManagerContent() {
         </div>
       )}
 
-      {/* TAB 2: DISPLAY RULES */}
+            {/* TAB 2: DISPLAY RULES */}
       {activeTab === 'DISPLAY_RULES' && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="bg-white border border-gray-100 p-8 space-y-6 rounded-none shadow-none">
             <div className="flex items-center justify-between border-b border-gray-50 pb-4">
               <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
@@ -304,6 +320,46 @@ function NavigationManagerContent() {
                   {orderedFeaturedIds.includes(cat.id) && (
                     <span className="font-mono text-[10px] font-bold text-white bg-black px-2 py-1 rounded-none shadow-none">
                       F {orderedFeaturedIds.indexOf(cat.id) + 1}
+                    </span>
+                  )}
+                </label>
+              ))}
+            </div>
+                    </div>
+
+          <div className="bg-white border border-gray-100 p-8 space-y-6 rounded-none shadow-none">
+            <div className="flex items-center justify-between border-b border-gray-50 pb-4">
+              <h3 className="text-lg font-black uppercase tracking-tight flex items-center gap-2">
+                <FiGrid className="text-emerald-600" /> Fourth Section
+              </h3>
+              <button
+                onClick={() => saveDisplayMapping('FORTH')}
+                disabled={isUpdating}
+                className="bg-[#3A5A40] text-white px-6 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all disabled:opacity-50 cursor-pointer rounded-none border-none shadow-none"
+              >
+                SAVE
+              </button>
+            </div>
+            <div className="max-h-[500px] overflow-y-auto admin-scrollbar divide-y divide-gray-50">
+              {subCategoryList.map(cat => (
+                <label
+                  key={cat.id}
+                  className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors cursor-pointer rounded-none"
+                >
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 accent-[#3A5A40]"
+                      checked={orderedForthIds.includes(cat.id)}
+                      onChange={() => handleToggleSelection(cat.id, 'FORTH')}
+                    />
+                    <span className="text-sm font-bold text-[#1B1B1B] uppercase">
+                      {cat.name}
+                    </span>
+                  </div>
+                  {orderedForthIds.includes(cat.id) && (
+                    <span className="font-mono text-[10px] font-bold text-white bg-[#3A5A40] px-2 py-1 rounded-none shadow-none">
+                      4 {orderedForthIds.indexOf(cat.id) + 1}
                     </span>
                   )}
                 </label>

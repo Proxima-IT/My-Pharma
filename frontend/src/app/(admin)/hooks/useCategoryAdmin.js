@@ -14,6 +14,7 @@ export const useCategoryAdmin = () => {
   // New States for Sidebar and Featured Selections
   const [sidebarSelection, setSidebarSelection] = useState([]);
   const [featuredSelection, setFeaturedSelection] = useState([]);
+  const [forthSectionSelection, setForthSectionSelection] = useState([]);
 
   const [loading, setLoading] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -196,6 +197,35 @@ export const useCategoryAdmin = () => {
     }
   };
 
+  // ১১. ফোর্থ সেকশন সিলেকশন লোড করা
+  const fetchForthSectionSelection = useCallback(async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const data = await categoryAdminApi.getForthSectionCategories(token);
+      setForthSectionSelection(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ১২. ফোর্থ সেকশন সিলেকশন সেভ করা
+  const saveForthSectionSelection = async categoryIds => {
+    setIsUpdating(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      await categoryAdminApi.updateForthSectionSelection(token, categoryIds);
+      return true;
+    } catch (err) {
+      setError(err.message);
+      return false;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   return {
     categories,
     categoryTree,
@@ -215,5 +245,8 @@ export const useCategoryAdmin = () => {
     saveSidebarSelection,
     fetchFeaturedSelection,
     saveFeaturedSelection,
+    forthSectionSelection,
+    fetchForthSectionSelection,
+    saveForthSectionSelection,
   };
 };

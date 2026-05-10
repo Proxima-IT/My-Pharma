@@ -13,9 +13,7 @@ import AuthGuard from '@/app/(shared)/components/AuthGuard';
 /**
  * AdminEditCategoryPage
  * Super Admin Zone: Handles category updates and homepage section persistence.
- * Updated: Removed redundant product-linking logic. Now relies strictly on 
- * the category's persistent 'is_home_categoery' flag to drive sections.
- * Design: Strictly rounded-none, industrial contrast, simple wording.
+ * Updated: Included Forth Section toggle.
  */
 export default function AdminEditCategoryPage({ params }) {
   const resolvedParams = use(params);
@@ -47,11 +45,12 @@ function EditCategoryContent({ slug }) {
     is_active: true,
     is_featured_home: false, // For circle icons
     is_home_categoery: false, // Persistent field for Homepage Section
+    forth_section: false,
     featured_order: 0,
     image: null,
   });
 
-  // Load existing category details
+    // Load existing category details
   useEffect(() => {
     const loadData = async () => {
       const data = await fetchCategoryBySlug(slug);
@@ -61,6 +60,7 @@ function EditCategoryContent({ slug }) {
           is_active: data.is_active ?? true,
           is_featured_home: data.is_featured_home ?? false,
           is_home_categoery: data.is_home_categoery ?? false,
+          forth_section: data.forth_section ?? false,
           featured_order: data.featured_order || 0,
           image: null,
         });
@@ -80,20 +80,15 @@ function EditCategoryContent({ slug }) {
     }
   };
 
-  /**
-   * handleSubmit
-   * Updates the category record in the database.
-   * Product sections on the homepage now filter automatically based on this category flag.
-   */
   const handleSubmit = async e => {
     e.preventDefault();
 
-    // Construct FormData for multipart/file submission
     const data = new FormData();
     data.append('name', formData.name);
     data.append('is_active', formData.is_active);
     data.append('is_featured_home', formData.is_featured_home);
     data.append('is_home_categoery', formData.is_home_categoery);
+    data.append('forth_section', formData.forth_section);
     data.append('featured_order', formData.featured_order);
 
     if (formData.image) {
@@ -214,7 +209,7 @@ function EditCategoryContent({ slug }) {
           </div>
 
           {/* Configuration Settings */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Store Visibility */}
             <div className="p-6 bg-gray-50 border border-gray-100 flex items-center justify-between">
               <div className="flex flex-col">
@@ -276,6 +271,29 @@ function EditCategoryContent({ slug }) {
                   setFormData({
                     ...formData,
                     is_home_categoery: e.target.checked,
+                  })
+                }
+              />
+            </div>
+
+            {/* Forth Section Switch */}
+            <div className="p-6 bg-[#3A5A40] text-white flex items-center justify-between">
+              <div className="flex flex-col">
+                <span className="font-bold text-[12px] uppercase">
+                  Fourth Section
+                </span>
+                <span className="text-[9px] text-gray-200 font-bold mt-1 uppercase">
+                  Show in 4th section?
+                </span>
+              </div>
+              <input
+                type="checkbox"
+                className="w-8 h-8 accent-white cursor-pointer"
+                checked={formData.forth_section}
+                onChange={e =>
+                  setFormData({
+                    ...formData,
+                    forth_section: e.target.checked,
                   })
                 }
               />

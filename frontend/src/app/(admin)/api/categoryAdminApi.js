@@ -119,7 +119,30 @@ export const categoryAdminApi = {
       },
       body: JSON.stringify({ category_ids: categoryIds }),
     });
-    if (!res.ok) throw new Error('ফিচারড লিস্ট আপডেট করা সম্ভব হয়নি।');
+        if (!res.ok) throw new Error('ফিচারড লিস্ট আপডেট করা সম্ভব হয়নি।');
+    return res.json();
+  },
+
+  // ১১. বর্তমানে ফোর্থ সেকশনে থাকা ক্যাটাগরিগুলোর লিস্ট
+  getForthSectionCategories: async token => {
+    const res = await fetch(`${API_BASE_URL}/categories/forth_section_category/`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error('ফোর্থ সেকশন ক্যাটাগরি লিস্ট পাওয়া যায়নি।');
+    return res.json();
+  },
+
+  // ১২. ফোর্থ সেকশন ক্যাটাগরি সিলেকশন আপডেট করা
+  updateForthSectionSelection: async (token, categoryIds) => {
+    const res = await fetch(`${API_BASE_URL}/categories/forth_section_category/`, {
+      method: 'PUT', 
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ category_ids: categoryIds }),
+    });
+    if (!res.ok) throw new Error('ফোর্থ সেকশন আপডেট করা সম্ভব হয়নি।');
     return res.json();
   },
 };

@@ -10,46 +10,60 @@ import { MdArrowForwardIos } from 'react-icons/md';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { useCart } from '@/app/(public)/hooks/useCart';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
+
 import {
+  API_BASE_URL,
   PRODUCT_ENDPOINTS,
   getProductImageUrl,
   parseJsonResponse,
 } from '@/app/(shared)/lib/apiConfig';
 
 const DealsSection = () => {
-  const [products, setProducts] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState({
+    category: null,
+    products: [],
+    isLoading: true,
+  });
   const { addItem, isUpdating } = useCart();
 
   useEffect(() => {
-    const fetchDeals = async () => {
+    const fetchForthSectionData = async () => {
       try {
-        const response = await fetch(
-          `${PRODUCT_ENDPOINTS.BASE}?is_active=true&available=true`,
-        );
-        if (!response.ok) {
-          throw new Error(`Failed to fetch deals (${response.status})`);
+        // 1. Find the category with forth_section=true
+        const catUrl = `${PRODUCT_ENDPOINTS.BASE.replace('products', 'categories')}?forth_section=true&is_active=true`;
+        const catRes = await fetch(catUrl);
+        const catJson = await parseJsonResponse(catRes, { results: [] });
+        const category = Array.isArray(catJson)
+          ? catJson[0]
+          : catJson.results
+            ? catJson.results[0]
+            : null;
+
+        if (category) {
+          // 2. Fetch products for this specific category
+          const prodRes = await fetch(
+            `${PRODUCT_ENDPOINTS.BASE}?category=${category.id}&is_active=true&page_size=4`,
+          );
+          const prodData = await parseJsonResponse(prodRes, { results: [] });
+          const productList = Array.isArray(prodData)
+            ? prodData
+            : prodData.results || [];
+
+          setData({
+            category,
+            products: productList,
+            isLoading: false,
+          });
+        } else {
+          setData(prev => ({ ...prev, isLoading: false }));
         }
-        const data = await parseJsonResponse(response, { results: [] });
-
-        const products = Array.isArray(data) ? data : (data.results || []);
-        const deals = products
-          .filter(
-            p =>
-              p.discount_percentage &&
-              p.discount_percentage > 0 &&
-              Number(p.quantity_in_stock || 0) > 0,
-          )
-          .slice(0, 4);
-
-        setProducts(deals);
       } catch (error) {
-        console.error('Error fetching deals:', error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error loading forth section:', error);
+        setData(prev => ({ ...prev, isLoading: false }));
       }
     };
-    fetchDeals();
+
+    fetchForthSectionData();
   }, []);
 
   const handleAddToCart = async (e, product) => {
@@ -58,30 +72,31 @@ const DealsSection = () => {
     await addItem(product, 1);
   };
 
-  if (isLoading)
+  if (data.isLoading)
     return (
       <div className="h-40 flex items-center justify-center text-gray-400 font-bold">
-        Loading Deals...
+        Loading Section...
       </div>
     );
-  if (products.length === 0) return null;
+
+  if (!data.category || data.products.length === 0) return null;
 
   return (
     <div className="pb-[70px] px-4 animate-in fade-in duration-700">
       <div className="flex justify-between items-center mb-8">
         <h1 className="font-bold text-lg lg:text-2xl text-gray-900 tracking-tight">
-          Unilever: Deals you can&apos;t miss
+          {data.category.name}
         </h1>
-        <Link href="/products">
+        <Link href={`/category/${data.category.slug}`}>
           <button className="border border-gray-100 bg-white rounded-full px-5 lg:px-8 py-2.5 lg:py-3.5 text-(--color-primary-500) flex gap-2 lg:gap-3 items-center text-xs lg:text-[14px] font-bold cursor-pointer hover:border-(--color-primary-500) transition-all active:scale-95">
-            See All Products
+            Explore All
             <MdArrowForwardIos size={14} />
           </button>
         </Link>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mt-7">
-        {products.map(product => (
+        {data.products.map(product => (
           <Link
             href={`/product/${product.slug}`}
             key={product.id}

@@ -8,6 +8,7 @@ import DynamicProductSection from './(public)/(pages)/home/components/DynamicPro
 import BookTestBanner from './(public)/(pages)/home/components/BookTestBanner';
 import SmartHealthBundle from './(public)/(pages)/home/components/SmartHealthBundle';
 import DealsSection from './(public)/(pages)/home/components/DealsSection';
+
 import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 /**
@@ -71,6 +72,7 @@ export default function Home() {
           ))}
 
       <SmartHealthBundle />
+
       <DealsSection />
 
       {/* 
