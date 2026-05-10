@@ -250,9 +250,35 @@ export default function AdminOrderDetailsPage({ params }) {
             <h3 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest flex items-center gap-2 mb-4">
               <FiMapPin className="text-[#3A5A40]" /> Shipping Address
             </h3>
-            <p className="text-sm text-[#1B1B1B] leading-relaxed font-bold uppercase tracking-tight">
-              {orderDetails.shipping_address}
-            </p>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <FiUser className="text-[#8A8A78] shrink-0" size={14} />
+                <span className="text-sm font-bold text-[#1B1B1B] uppercase">
+                  {parsedInfo.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <FiPhone className="text-[#8A8A78] shrink-0" size={14} />
+                <span className="text-sm font-mono text-[#1B1B1B]">
+                  {parsedInfo.phone}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <FiMail className="text-[#8A8A78] shrink-0" size={14} />
+                <span className="text-sm text-[#6B6B5E]">
+                  {parsedInfo.email}
+                </span>
+              </div>
+              <div className="flex items-start gap-3 pt-2 border-t border-gray-50">
+                <FiMapPin
+                  className="text-[#8A8A78] shrink-0 mt-0.5"
+                  size={14}
+                />
+                <span className="text-sm text-[#1B1B1B] font-bold uppercase leading-relaxed">
+                  {parsedInfo.address}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

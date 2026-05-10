@@ -3,6 +3,9 @@
 import React, { useRef } from 'react';
 import Image from 'next/image';
 import { FiPlus, FiX, FiLoader, FiCamera, FiFileText } from 'react-icons/fi';
+import { Document, Page, pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 const Upload = ({
   prescriptionId,
@@ -51,17 +54,30 @@ const Upload = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* 1. Show Library Images (Locked) */}
           {libraryPreviews.map((src, idx) => {
-            const isPdf = src.toLowerCase().includes('.pdf');
+            const isPdf = src?.toLowerCase().endsWith('.pdf');
             return (
               <div
                 key={`lib-${idx}`}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-blue-100 group flex items-center justify-center bg-gray-50"
+                className="relative aspect-[4/3] rounded-2xl overflow-hidden border-2 border-blue-100 group bg-gray-50"
               >
                 {isPdf ? (
-                  <div className="flex flex-col items-center text-blue-500 z-10">
-                    <FiFileText size={40} />
-                    <span className="text-xs font-bold mt-2">PDF Document</span>
-                    <a href={src} target="_blank" rel="noreferrer" className="absolute inset-0 cursor-pointer" title="View PDF"></a>
+                  <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                    <Document
+                      file={src}
+                      loading={
+                        <FiFileText
+                          size={40}
+                          className="text-gray-300 animate-pulse"
+                        />
+                      }
+                    >
+                      <Page
+                        pageNumber={1}
+                        width={250}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                      />
+                    </Document>
                   </div>
                 ) : (
                   <Image
@@ -82,16 +98,33 @@ const Upload = ({
           {/* 2. Show Newly Uploaded Images */}
           {previews.map((src, idx) => {
             const file = images[idx];
-            const isPdf = file && (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+            const isPdf =
+              file &&
+              (file.type === 'application/pdf' ||
+                file.name?.toLowerCase().endsWith('.pdf'));
             return (
               <div
                 key={`local-${idx}`}
-                className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 group flex items-center justify-center bg-gray-50"
+                className="relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 group bg-gray-50"
               >
                 {isPdf ? (
-                  <div className="flex flex-col items-center text-gray-500">
-                    <FiFileText size={40} />
-                    <span className="text-xs font-bold mt-2 px-2 text-center truncate w-full">{file.name}</span>
+                  <div className="w-full h-full flex items-center justify-center overflow-hidden pointer-events-none">
+                    <Document
+                      file={src}
+                      loading={
+                        <FiFileText
+                          size={40}
+                          className="text-gray-300 animate-pulse"
+                        />
+                      }
+                    >
+                      <Page
+                        pageNumber={1}
+                        width={250}
+                        renderTextLayer={false}
+                        renderAnnotationLayer={false}
+                      />
+                    </Document>
                   </div>
                 ) : (
                   <Image src={src} alt="New Rx" fill className="object-cover" />
@@ -127,7 +160,7 @@ const Upload = ({
         ref={fileInputRef}
         className="hidden"
         multiple
-        accept="image/*"
+        accept="image/*,.pdf"
         onChange={handleFileChange}
       />
 

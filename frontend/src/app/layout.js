@@ -3,6 +3,7 @@ import './globals.css';
 import LayoutWrapper from './LayoutWrapper';
 import { CartProvider } from './(public)/context/CartContext';
 import { AuthModalProvider } from './(public)/context/AuthModalContext';
+import { Toaster } from 'react-hot-toast';
 
 export const metadata = {
   title: 'My Pharma',
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
             */}
             <Suspense fallback={null}>
               <LayoutWrapper>{children}</LayoutWrapper>
+              <Toaster position="top-center" reverseOrder={false} />
             </Suspense>
           </CartProvider>
         </AuthModalProvider>

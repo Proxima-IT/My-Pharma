@@ -75,7 +75,7 @@ const PrescriptionOrderForm = ({
                 label="GENDER"
                 value={address.gender_display || address.gender}
               />
-              <DetailRow label="DEISTIC" value={address.district} />
+              <DetailRow label="DISTRICT" value={address.district} />
               <DetailRow label="THANA" value={address.thana} />
               <DetailRow label="FULL ADDRESS" value={address.address} />
             </div>
