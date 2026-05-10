@@ -55,6 +55,11 @@ class Category(models.Model):
         db_index=True,
         help_text="Additional boolean field for home category (per user request).",
     )
+    forth_section = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="When true, this category is shown in the forth section.",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

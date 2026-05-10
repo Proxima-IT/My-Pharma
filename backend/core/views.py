@@ -336,7 +336,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
         product_count=Count("products", filter=Q(products__is_active=True), distinct=True)
     ).all()
     serializer_class = CategorySerializer
-    filterset_fields = ["is_active", "parent", "show_in_sidebar", "is_featured_home", "is_home_categoery"]
+    filterset_fields = ["is_active", "parent", "show_in_sidebar", "is_featured_home", "is_home_categoery", "forth_section"]
     search_fields = ["name", "slug"]
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
@@ -351,7 +351,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "tree":
             return CategoryTreeSerializer
-        if self.action in ("sidebar", "featured", "sidebar_category", "featured_category"):
+        if self.action in ("sidebar", "featured", "forth_section", "sidebar_category", "featured_category", "forth_section_category"):
             return CategorySelectionUpdateSerializer if self.request.method in ("PUT", "PATCH") else CategoryMenuSerializer
         return CategorySerializer
 
@@ -410,6 +410,31 @@ class CategoryViewSet(viewsets.ModelViewSet):
             .order_by("featured_order", "name")
         )
         return Response(CategoryMenuSerializer(featured_categories, many=True, context={"request": request}).data)
+
+    def _list_forth_section_categories(self, request):
+        categories = (
+            Category.objects.filter(is_active=True, forth_section=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("featured_order", "name")
+        )
+        return Response(CategoryMenuSerializer(categories, many=True, context={"request": request}).data)
+
+    def _replace_forth_section_categories(self, request):
+        serializer = CategorySelectionUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        category_ids = serializer.validated_data["category_ids"]
+
+        with transaction.atomic():
+            Category.objects.filter(forth_section=True).update(forth_section=False)
+            for category_id in category_ids:
+                Category.objects.filter(id=category_id).update(forth_section=True)
+
+        categories = (
+            Category.objects.filter(id__in=category_ids, forth_section=True)
+            .annotate(product_count=Count("products", filter=Q(products__is_active=True), distinct=True))
+            .order_by("featured_order", "name")
+        )
+        return Response(CategoryMenuSerializer(categories, many=True, context={"request": request}).data)
 
     @extend_schema(
         methods=["GET"],
@@ -528,6 +553,65 @@ class CategoryViewSet(viewsets.ModelViewSet):
         if request.method == "GET":
             return self._list_featured_categories(request)
         return self._replace_featured_categories(request)
+
+    @extend_schema(
+        methods=["GET"],
+        tags=["Categories"],
+        summary="List forth section categories",
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        tags=["Categories"],
+        summary="Replace forth section categories (admin)",
+        request=CategorySelectionUpdateSerializer,
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get", "put"],
+        url_path="forth-section",
+        pagination_class=None,
+        filter_backends=[],
+    )
+    def forth_section_action(self, request):
+        """
+        GET: public forth section category list.
+        PUT: admin replaces forth section selection with category_ids.
+        """
+        if request.method == "GET":
+            return self._list_forth_section_categories(request)
+        return self._replace_forth_section_categories(request)
+
+    @extend_schema(
+        methods=["GET"],
+        tags=["Categories"],
+        summary="List forth-section categories",
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @extend_schema(
+        methods=["PUT"],
+        tags=["Categories"],
+        summary="Replace forth-section categories (admin)",
+        request=CategorySelectionUpdateSerializer,
+        responses=CategoryMenuSerializer(many=True),
+    )
+    @action(
+        detail=False,
+        methods=["get", "put"],
+        url_path="forth-section-category",
+        pagination_class=None,
+        filter_backends=[],
+    )
+    def forth_section_category(self, request):
+        """
+        Primary endpoint for forth section category selection.
+        GET: public list
+        PUT: admin replace selection
+        """
+        if request.method == "GET":
+            return self._list_forth_section_categories(request)
+        return self._replace_forth_section_categories(request)
 
 # ---- Brand (autocomplete for product search). List: any; write: Pharmacy Admin / Super ----
 class BrandViewSet(viewsets.ModelViewSet):
