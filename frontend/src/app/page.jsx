@@ -5,6 +5,7 @@ import HeroCarousel from './(public)/(pages)/home/components/HeroCarousel';
 import FeaturedCategory from './(public)/(pages)/home/components/FeaturedCategory';
 import UploadPrescriptionBanner from './(public)/(pages)/home/components/UploadPrescriptionBanner';
 import DynamicProductSection from './(public)/(pages)/home/components/DynamicProductSection';
+import PopularProduct from './(public)/(pages)/home/components/PopularProduct';
 import BookTestBanner from './(public)/(pages)/home/components/BookTestBanner';
 import SmartHealthBundle from './(public)/(pages)/home/components/SmartHealthBundle';
 import DealsSection from './(public)/(pages)/home/components/DealsSection';
@@ -55,6 +56,9 @@ export default function Home() {
       <FeaturedCategory />
 
       <UploadPrescriptionBanner />
+
+      {/* Popular Products – always shown regardless of category flags */}
+      <PopularProduct />
 
       {/* 
         First Batch of Dynamic Sections (Indices 0, 1, 2)
