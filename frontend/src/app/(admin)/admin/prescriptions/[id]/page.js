@@ -21,6 +21,7 @@ import { useProductAdmin } from '../../../hooks/useProductAdmin';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 import { API_BASE_URL, getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import { Document, Page as PdfPage, pdfjs } from 'react-pdf';
+import { searchProducts } from '@/app/(public)/lib/productSearchEngine';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
@@ -49,6 +50,8 @@ export default function AdminPrescriptionDetailPage({ params }) {
 
   // Local States
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
+  const [searchResults, setSearchResults] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [pendingQty, setPendingQty] = useState({});
   const [adminNotes, setAdminNotes] = useState('');
@@ -116,10 +119,33 @@ export default function AdminPrescriptionDetailPage({ params }) {
   }, [prescriptionDetails]);
 
   useEffect(() => {
-    if (searchQuery.length > 2) {
-      fetchProducts({ search: searchQuery, is_active: 'true' });
+    if (searchQuery.length >= 2) {
+      if (allProducts.length === 0) {
+        const fetchAll = async () => {
+          try {
+            const token = localStorage.getItem('access_token');
+            const res = await fetch(
+              `${API_BASE_URL}/products/?page_size=2000&is_active=true`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+            const data = await res.json();
+            const items = data.results || data || [];
+            setAllProducts(items);
+            setSearchResults(searchProducts(items, searchQuery, { limit: 15 }));
+          } catch (err) {
+            console.error('Failed to pre-fetch all products:', err);
+          }
+        };
+        fetchAll();
+      } else {
+        setSearchResults(
+          searchProducts(allProducts, searchQuery, { limit: 15 }),
+        );
+      }
+    } else {
+      setSearchResults([]);
     }
-  }, [searchQuery, fetchProducts]);
+  }, [searchQuery, allProducts]);
 
   // Address Parsing Logic (Handles both Object and String formats)
   const address = useMemo(() => {
@@ -484,42 +510,58 @@ export default function AdminPrescriptionDetailPage({ params }) {
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
-                {searchQuery.length > 2 && (
+                {searchQuery.length >= 2 && (
                   <div className="absolute top-full left-0 w-full bg-white border border-gray-100 z-50 max-h-80 overflow-y-auto border-t-0">
-                    {(products.results || []).map(p => (
-                      <div
-                        key={p.id}
-                        className="p-4 border-b border-gray-50 hover:bg-gray-50 flex items-center justify-between gap-4 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <span className="font-bold text-xs uppercase text-[#1B1B1B] block truncate">
-                            {p.name}
-                          </span>
-                          <span className="font-mono text-[10px] font-bold text-[#3A5A40]">
-                            {formatCurrency(p.price)}
-                          </span>
+                    {searchResults.length > 0 ? (
+                      searchResults.map(p => (
+                        <div
+                          key={p.id}
+                          className="p-4 border-b border-gray-50 hover:bg-gray-50 flex items-center justify-between gap-4 transition-colors"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="font-bold text-xs uppercase text-[#1B1B1B] block truncate">
+                              {p.name}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[10px] font-bold text-[#3A5A40]">
+                                {formatCurrency(p.price)}
+                              </span>
+                              {p.ingredient_name && (
+                                <span className="text-[9px] text-gray-400 font-mono uppercase truncate">
+                                  • {p.ingredient_name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <input
+                              type="number"
+                              min="1"
+                              className="w-14 h-9 text-center border border-gray-200 font-mono text-xs focus:border-[#3A5A40] outline-none"
+                              value={pendingQty[p.id] || 1}
+                              onClick={e => e.stopPropagation()}
+                              onChange={e => {
+                                const val = parseInt(e.target.value) || 1;
+                                setPendingQty(prev => ({
+                                  ...prev,
+                                  [p.id]: val,
+                                }));
+                              }}
+                            />
+                            <button
+                              onClick={() => addItem(p)}
+                              className="h-9 px-4 bg-[#1B1B1B] text-white font-mono text-[10px] font-bold uppercase tracking-widest hover:bg-[#3A5A40] transition-all cursor-pointer flex items-center gap-1.5"
+                            >
+                              <FiPlus size={12} strokeWidth={3} /> Add
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <input
-                            type="number"
-                            min="1"
-                            className="w-14 h-9 text-center border border-gray-200 font-mono text-xs focus:border-[#3A5A40] outline-none"
-                            value={pendingQty[p.id] || 1}
-                            onClick={e => e.stopPropagation()}
-                            onChange={e => {
-                              const val = parseInt(e.target.value) || 1;
-                              setPendingQty(prev => ({ ...prev, [p.id]: val }));
-                            }}
-                          />
-                          <button
-                            onClick={() => addItem(p)}
-                            className="h-9 px-4 bg-[#1B1B1B] text-white font-mono text-[10px] font-bold uppercase tracking-widest hover:bg-[#3A5A40] transition-all cursor-pointer flex items-center gap-1.5"
-                          >
-                            <FiPlus size={12} strokeWidth={3} /> Add
-                          </button>
-                        </div>
+                      ))
+                    ) : (
+                      <div className="p-8 text-center font-mono text-[10px] text-gray-400 uppercase">
+                        No products found in catalog
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </div>

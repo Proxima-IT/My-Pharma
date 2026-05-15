@@ -26,20 +26,6 @@ const BundleCard = ({ bundle }) => {
           <p className="text-sm sm:text-lg text-gray-600 font-medium opacity-80">
             {bundle.description}
           </p>
-
-          {/* Render list of products associated with this combo bundle */}
-          {bundle.products && bundle.products.length > 0 && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              {bundle.products.map(product => (
-                <span
-                  key={product.id}
-                  className="px-3 py-1 bg-white/30 backdrop-blur-md rounded-full text-[11px] font-bold text-gray-900 uppercase border border-white/20"
-                >
-                  {product.name}
-                </span>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* Pricing Section */}

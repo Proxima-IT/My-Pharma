@@ -11,6 +11,7 @@ import PopularProductCard from '../home/components/PopularProductCard';
 import { useProductData } from '../../hooks/useProductData';
 import Sidebar from '../../components/Sidebar';
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { searchProducts } from '../../lib/productSearchEngine';
 
 /**
  * Products Page Component
@@ -68,9 +69,7 @@ const Products = () => {
         }
 
         // Fetch ingredients
-        const ingredientsResponse = await fetch(
-          `${API_BASE_URL}/ingredients/`,
-        );
+        const ingredientsResponse = await fetch(`${API_BASE_URL}/ingredients/`);
         const ingredientsData = await ingredientsResponse.json();
         const ingredientList = ingredientsData.results || ingredientsData;
         setIngredients(ingredientList);
@@ -85,6 +84,10 @@ const Products = () => {
   const filteredProducts = useMemo(() => {
     let result = products;
 
+    if (searchQuery) {
+      result = searchProducts(result, searchQuery);
+    }
+
     if (minPrice) {
       result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
     }
@@ -97,7 +100,14 @@ const Products = () => {
     }
 
     return result;
-  }, [products, minPrice, maxPrice, selectedBrands, brandIdFromUrl]);
+  }, [
+    products,
+    searchQuery,
+    minPrice,
+    maxPrice,
+    selectedBrands,
+    brandIdFromUrl,
+  ]);
 
   // 6. Handlers
   const toggleBrand = brandName => {

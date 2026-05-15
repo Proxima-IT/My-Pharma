@@ -75,13 +75,29 @@ const Sidebar = () => {
   }, []);
 
   const categoryCounts = useMemo(() => {
-    const counts = {};
+    // Step 1: Build direct (flat) counts per category name
+    const directCounts = {};
     allProducts.forEach(product => {
       const catName = product.category_name;
-      if (catName) counts[catName] = (counts[catName] || 0) + 1;
+      if (catName) directCounts[catName] = (directCounts[catName] || 0) + 1;
     });
-    return counts;
-  }, [allProducts]);
+
+    // Step 2: Recursively sum children counts into parents
+    const totalCounts = {};
+    const sumTree = node => {
+      let total = directCounts[node.name] || 0;
+      if (Array.isArray(node.children)) {
+        node.children.forEach(child => {
+          total += sumTree(child);
+        });
+      }
+      totalCounts[node.name] = total;
+      return total;
+    };
+    categories.forEach(rootNode => sumTree(rootNode));
+
+    return totalCounts;
+  }, [allProducts, categories]);
 
   // Filter categories tree based on search term
   const filteredCategories = useMemo(() => {

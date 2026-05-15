@@ -25,6 +25,7 @@ export default function MyPrescriptionsPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [previewImage, setPreviewImage] = useState(null);
+  const [numPages, setNumPages] = useState(null);
 
   const handleDirectUpload = async file => {
     if (!file) return;
@@ -60,6 +61,10 @@ export default function MyPrescriptionsPage() {
       router.push(`/upload-prescription?prescriptionId=${selectedId}`);
     }
   };
+
+  function onDocumentLoadSuccess({ numPages }) {
+    setNumPages(numPages);
+  }
 
   return (
     <div className="w-full space-y-6 animate-in fade-in duration-700 pb-20">
@@ -126,7 +131,10 @@ export default function MyPrescriptionsPage() {
       {previewImage && (
         <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-sm animate-in fade-in duration-300 p-4 md:p-10">
           <button
-            onClick={() => setPreviewImage(null)}
+            onClick={() => {
+              setPreviewImage(null);
+              setNumPages(null);
+            }}
             className="absolute top-6 right-6 w-12 h-12 bg-white/10 hover:bg-white/20 text-white rounded-full flex items-center justify-center transition-all cursor-pointer z-[10001]"
           >
             <IoCloseSharp size={32} />
@@ -137,19 +145,27 @@ export default function MyPrescriptionsPage() {
               <div className="w-full h-full max-w-4xl overflow-auto bg-gray-900/50 rounded-2xl flex justify-center p-4 custom-scrollbar">
                 <Document
                   file={getMediaUrl(previewImage)}
+                  onLoadSuccess={onDocumentLoadSuccess}
                   loading={
                     <div className="flex items-center justify-center h-full">
                       <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin" />
                     </div>
                   }
-                  className="flex flex-col gap-4"
+                  className="flex flex-col gap-6"
                 >
-                  <Page
-                    pageNumber={1}
-                    renderTextLayer={false}
-                    renderAnnotationLayer={false}
-                    className="shadow-2xl rounded-lg overflow-hidden"
-                  />
+                  {Array.from(new Array(numPages), (el, index) => (
+                    <Page
+                      key={`page_${index + 1}`}
+                      pageNumber={index + 1}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      className="shadow-2xl rounded-lg overflow-hidden"
+                      // Auto-scale width for better mobile viewing
+                      width={
+                        window.innerWidth > 768 ? 800 : window.innerWidth - 64
+                      }
+                    />
+                  ))}
                 </Document>
               </div>
             ) : (

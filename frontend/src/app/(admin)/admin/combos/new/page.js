@@ -10,9 +10,11 @@ import {
   FiImage,
   FiPlus,
   FiBox,
+  FiSearch,
 } from 'react-icons/fi';
 import { useComboAdmin } from '@/app/(admin)/hooks/useComboAdmin';
 import { useProductAdmin } from '@/app/(admin)/hooks/useProductAdmin';
+import { searchProducts } from '@/app/(public)/lib/productSearchEngine';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -38,12 +40,24 @@ export default function NewComboPage() {
   });
 
   const [selectedProducts, setSelectedProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
 
   useEffect(() => {
-    fetchProducts({ page_size: 1000, is_active: true });
+    fetchProducts({ page_size: 2000, is_active: true });
   }, [fetchProducts]);
+
+  useEffect(() => {
+    if (searchQuery.length >= 2 && availableProducts?.results) {
+      setSearchResults(
+        searchProducts(availableProducts.results, searchQuery, { limit: 10 }),
+      );
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery, availableProducts]);
 
   const handleInputChange = e => {
     const { name, value, type, checked } = e.target;
@@ -53,16 +67,12 @@ export default function NewComboPage() {
     }));
   };
 
-  const handleProductSelect = e => {
-    const productId = parseInt(e.target.value);
-    if (!productId) return;
-
-    const product = availableProducts?.results?.find(p => p.id === productId);
-    if (product && !selectedProducts.find(p => p.id === productId)) {
+  const handleProductSelect = product => {
+    if (product && !selectedProducts.find(p => p.id === product.id)) {
       setSelectedProducts(prev => [...prev, product]);
     }
-    // Reset dropdown
-    e.target.value = '';
+    setSearchQuery('');
+    setSearchResults([]);
   };
 
   const removeProduct = id => {
@@ -182,24 +192,40 @@ export default function NewComboPage() {
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              {/* Dropdown Selection */}
+              {/* Search Selection */}
               <div className="space-y-4">
                 <label className={labelClass}>Search & Select Medicines</label>
-                <select
-                  className={inputClass + ' cursor-pointer'}
-                  onChange={handleProductSelect}
-                  defaultValue=""
-                >
-                  <option value="" disabled>
-                    Choose a product to add...
-                  </option>
-                  {availableProducts?.results?.map(product => (
-                    <option key={product.id} value={product.id}>
-                      {product.name.toUpperCase()} (
-                      {product.brand_name?.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <div className="relative">
+                    <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      className={inputClass + ' pl-12'}
+                      placeholder="TYPE MEDICINE NAME..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+
+                  {searchResults.length > 0 && (
+                    <div className="absolute top-full left-0 w-full bg-white border border-gray-200 z-50 max-h-60 overflow-y-auto shadow-xl">
+                      {searchResults.map(product => (
+                        <div
+                          key={product.id}
+                          onClick={() => handleProductSelect(product)}
+                          className="p-3 border-b border-gray-50 hover:bg-gray-50 cursor-pointer flex flex-col"
+                        >
+                          <span className="text-[11px] font-bold text-[#1B1B1B] uppercase">
+                            {product.name}
+                          </span>
+                          <span className="text-[9px] font-mono text-gray-400 uppercase">
+                            {product.brand_name} • {product.ingredient_name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <p className="text-[10px] font-mono text-[#8A8A78] uppercase leading-tight">
                   Add multiple products that belong to this combo package.
                 </p>

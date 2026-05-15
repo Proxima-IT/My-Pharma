@@ -34,6 +34,7 @@ import { useCart } from '../hooks/useCart';
 import { useProfile } from '../../(user)/hooks/useProfile';
 import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { searchProducts } from '../lib/productSearchEngine';
 
 const TrackOrderIcon = ({ className, size = 22 }) => (
   <svg
@@ -68,6 +69,7 @@ const Header = () => {
 
   // Search Suggestion States
   const [searchQuery, setSearchQuery] = useState('');
+  const [allProducts, setAllProducts] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -109,31 +111,37 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Real-time Search Logic with Debounce
+  // Real-time Search Logic with Local Engine
   useEffect(() => {
-    const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.trim().length > 2) {
-        setIsSearching(true);
-        setShowSuggestions(true);
-        try {
-          const res = await fetch(
-            `${API_BASE_URL}/products/?search=${encodeURIComponent(searchQuery.trim())}&is_active=true`,
-          );
-          const data = await res.json();
-          setSuggestions(data.results?.slice(0, 6) || []);
-        } catch (err) {
-          console.error('Search error:', err);
-        } finally {
-          setIsSearching(false);
-        }
-      } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
-    }, 300);
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length >= 3) {
+      setShowSuggestions(true);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchQuery]);
+      const performSearch = () => {
+        const matches = searchProducts(allProducts, q, { limit: 6 });
+        setSuggestions(matches);
+      };
+
+      if (allProducts.length === 0) {
+        setIsSearching(true);
+        fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`)
+          .then(res => res.json())
+          .then(data => {
+            const items = data.results || [];
+            setAllProducts(items);
+            const matches = searchProducts(items, q, { limit: 6 });
+            setSuggestions(matches);
+          })
+          .catch(err => console.error('Search preload error:', err))
+          .finally(() => setIsSearching(false));
+      } else {
+        performSearch();
+      }
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }, [searchQuery, allProducts]);
 
   useEffect(() => {
     const syncGuestData = async () => {
@@ -346,7 +354,9 @@ const Header = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              onFocus={() => searchQuery.length > 2 && setShowSuggestions(true)}
+              onFocus={() =>
+                searchQuery.length >= 3 && setShowSuggestions(true)
+              }
               placeholder='Search for "healthcare products"'
               className="w-full h-12 md:h-14 pl-6 pr-14 rounded-full border border-gray-100 text-sm focus:outline-none focus:ring-4 focus:ring-(--color-primary-500)/10 transition-all"
             />

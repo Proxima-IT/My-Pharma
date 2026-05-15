@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect } from 'react';
 
 /**
  * StockPriceTab Component
@@ -14,8 +14,21 @@ const labelClass =
   'block text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] mb-3';
 
 export default function StockPriceTab({ formData, handleInputChange }) {
+  useEffect(() => {
+    if (formData.is_generic !== true) {
+      handleInputChange({
+        target: {
+          name: 'is_generic',
+          type: 'checkbox',
+          checked: true,
+          value: true,
+        },
+      });
+    }
+  }, [formData.is_generic, handleInputChange]);
+
   // Use 'is_featured_home' to sync with the backend property provided in the product detail response
-  const flags = ['is_generic', 'requires_prescription', 'is_active'];
+  const flags = ['requires_prescription', 'is_active'];
 
   return (
     <div className="space-y-10 animate-in slide-in-from-left-2 text-black">

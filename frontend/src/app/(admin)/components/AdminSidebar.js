@@ -1,5 +1,5 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
@@ -23,11 +23,36 @@ import {
   FiBell,
 } from 'react-icons/fi';
 import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
+import { useAdminOrders } from '@/app/(admin)/hooks/useAdminOrders';
+import { usePrescriptionAdmin } from '@/app/(admin)/hooks/usePrescriptionAdmin';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { logos } = useLogoAdmin();
+  const { orders, fetchOrders } = useAdminOrders();
+  const { prescriptions, fetchPrescriptions } = usePrescriptionAdmin();
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [newPrescriptionsCount, setNewPrescriptionsCount] = useState(0);
+
+  useEffect(() => {
+    // Fetch orders with PENDING status
+    fetchOrders({ status: 'PENDING', page_size: 1 });
+    // Fetch prescriptions with PENDING status
+    fetchPrescriptions({ status: 'PENDING', page_size: 1 });
+  }, [fetchOrders, fetchPrescriptions]);
+
+  useEffect(() => {
+    if (orders && typeof orders.count === 'number') {
+      setNewOrdersCount(orders.count);
+    }
+  }, [orders]);
+
+  useEffect(() => {
+    if (prescriptions && typeof prescriptions.count === 'number') {
+      setNewPrescriptionsCount(prescriptions.count);
+    }
+  }, [prescriptions]);
 
   // Find the specific system logo asset
   const systemLogo = logos?.find(
@@ -46,7 +71,7 @@ const AdminSidebar = () => {
       title: 'Dashboard',
       items: [{ name: 'Overview', icon: <FiPieChart />, href: '/admin' }],
     },
-    {
+        {
       title: 'Logistics & Sales',
       items: [
         {
@@ -141,22 +166,37 @@ const AdminSidebar = () => {
     return (
       <Link href={item.href} className="flex items-center px-6 py-0.5 group">
         <div
-          className={`flex items-center gap-3 px-5 py-2.5 transition-all duration-200 rounded-none w-full border-l-2 ${
+          className={`flex items-center justify-between gap-3 px-5 py-2.5 transition-all duration-200 rounded-none w-full border-l-2 ${
             isActive
               ? 'bg-[#E8F0EA] text-[#1F3324] border-[#3A5A40]'
               : 'text-[#6B6B5E] border-transparent hover:bg-gray-50 hover:text-[#1B1B1B]'
           }`}
         >
-          <span
-            className={`text-lg ${isActive ? 'text-[#3A5A40]' : 'text-[#B7B7A4] group-hover:text-[#1B1B1B]'}`}
-          >
-            {item.icon}
-          </span>
-          <span
-            className={`text-[14px] tracking-tight ${isActive ? 'font-bold' : 'font-medium'}`}
-          >
-            {item.name}
-          </span>
+          <div className="flex items-center gap-3">
+            <span
+              className={`text-lg ${
+                isActive
+                  ? 'text-[#3A5A40]'
+                  : 'text-[#B7B7A4] group-hover:text-[#1B1B1B]'
+              }`}
+            >
+              {item.icon}
+            </span>
+            <span
+              className={`text-[14px] tracking-tight ${
+                isActive ? 'font-bold' : 'font-medium'
+              }`}
+            >
+              {item.name}
+            </span>
+          </div>
+
+                    {item.name === 'Order Records' &&
+            newOrdersCount + newPrescriptionsCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center">
+                {newOrdersCount + newPrescriptionsCount}
+              </span>
+            )}
         </div>
       </Link>
     );
