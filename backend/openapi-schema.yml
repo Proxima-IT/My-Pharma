@@ -531,6 +531,19 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/auth/admin/users/export-csv/:
+    get:
+      operationId: auth_admin_users_export_csv_retrieve
+      description: Export all non-deleted users to a CSV file. Restricted to SUPER_ADMIN.
+      tags:
+      - auth
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserManagement'
+          description: ''
   /api/auth/change-email/confirm/:
     post:
       operationId: auth_change_email_confirm_create
@@ -571,22 +584,11 @@ paths:
       responses:
         '200':
           description: No response body
-  /api/auth/login/:
-    post:
-      operationId: auth_login_create
-      description: POST /api/auth/login/ – Login with email or phone + password. Returns
-        JWT + user.
-      tags:
-      - auth
-      security:
-      - {}
-      responses:
-        '200':
-          description: No response body
   /api/auth/google/:
     post:
       operationId: auth_google_create
-      description: POST /api/auth/google/ - Sign up or sign in with Google via Firebase ID token.
+      description: POST /api/auth/google/ - Sign up or sign in with Google via Firebase
+        ID token.
       tags:
       - auth
       requestBody:
@@ -608,7 +610,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GoogleAuthTokenResponse'
+                $ref: '#/components/schemas/TokenResponse'
           description: ''
         '400':
           content:
@@ -621,7 +623,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-          description: Invalid or expired Firebase token.
+          description: Invalid/expired Firebase token.
         '423':
           content:
             application/json:
@@ -634,6 +636,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
           description: Firebase is not configured on server.
+  /api/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: POST /api/auth/login/ – Login with email or phone + password. Returns
+        JWT + user.
+      tags:
+      - auth
+      security:
+      - {}
+      responses:
+        '200':
+          description: No response body
   /api/auth/logout/:
     post:
       operationId: auth_logout_create
@@ -1661,6 +1675,10 @@ paths:
       summary: List categories
       parameters:
       - in: query
+        name: forth_section
+        schema:
+          type: boolean
+      - in: query
         name: is_active
         schema:
           type: boolean
@@ -1884,6 +1902,102 @@ paths:
         GET: public list
         PUT: admin replace ordered selection
       summary: Replace featured-category categories (admin)
+      tags:
+      - Categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+  /api/categories/forth-section/:
+    get:
+      operationId: categories_forth_section_list
+      description: |-
+        GET: public forth section category list.
+        PUT: admin replaces forth section selection with category_ids.
+      summary: List forth section categories
+      tags:
+      - Categories
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+    put:
+      operationId: categories_forth_section_update
+      description: |-
+        GET: public forth section category list.
+        PUT: admin replaces forth section selection with category_ids.
+      summary: Replace forth section categories (admin)
+      tags:
+      - Categories
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CategorySelectionUpdate'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+  /api/categories/forth-section-category/:
+    get:
+      operationId: categories_forth_section_category_list
+      description: |-
+        Primary endpoint for forth section category selection.
+        GET: public list
+        PUT: admin replace selection
+      summary: List forth-section categories
+      tags:
+      - Categories
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryMenu'
+          description: ''
+    put:
+      operationId: categories_forth_section_category_update
+      description: |-
+        Primary endpoint for forth section category selection.
+        GET: public list
+        PUT: admin replace selection
+      summary: Replace forth-section categories (admin)
       tags:
       - Categories
       requestBody:
@@ -2475,9 +2589,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/Coupon'
           description: ''
-  /api/delivery-durations/:
+  /api/delivery-methods/:
     get:
-      operationId: delivery_durations_list
+      operationId: delivery_methods_list
       summary: List delivery durations
       parameters:
       - name: page
@@ -2487,131 +2601,131 @@ paths:
         schema:
           type: integer
       tags:
-      - DeliveryDurations
+      - DeliveryMethods
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedDeliveryDurationList'
+                $ref: '#/components/schemas/PaginatedDeliveryMethodList'
           description: ''
     post:
-      operationId: delivery_durations_create
+      operationId: delivery_methods_create
       summary: Create delivery duration (admin)
       tags:
-      - DeliveryDurations
+      - DeliveryMethods
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryDuration'
+              $ref: '#/components/schemas/DeliveryMethod'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryDuration'
+              $ref: '#/components/schemas/DeliveryMethod'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryDuration'
+              $ref: '#/components/schemas/DeliveryMethod'
         required: true
       responses:
         '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeliveryDuration'
+                $ref: '#/components/schemas/DeliveryMethod'
           description: ''
-  /api/delivery-durations/{id}/:
+  /api/delivery-methods/{id}/:
     get:
-      operationId: delivery_durations_retrieve
+      operationId: delivery_methods_retrieve
       summary: Get a delivery duration
       parameters:
       - in: path
         name: id
         schema:
           type: integer
-        description: A unique integer value identifying this delivery duration.
+        description: A unique integer value identifying this delivery method.
         required: true
       tags:
-      - DeliveryDurations
+      - DeliveryMethods
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeliveryDuration'
+                $ref: '#/components/schemas/DeliveryMethod'
           description: ''
     put:
-      operationId: delivery_durations_update
+      operationId: delivery_methods_update
       summary: Update delivery duration (admin)
       parameters:
       - in: path
         name: id
         schema:
           type: integer
-        description: A unique integer value identifying this delivery duration.
+        description: A unique integer value identifying this delivery method.
         required: true
       tags:
-      - DeliveryDurations
+      - DeliveryMethods
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DeliveryDuration'
+              $ref: '#/components/schemas/DeliveryMethod'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/DeliveryDuration'
+              $ref: '#/components/schemas/DeliveryMethod'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/DeliveryDuration'
+              $ref: '#/components/schemas/DeliveryMethod'
         required: true
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeliveryDuration'
+                $ref: '#/components/schemas/DeliveryMethod'
           description: ''
     patch:
-      operationId: delivery_durations_partial_update
+      operationId: delivery_methods_partial_update
       summary: Partial update delivery duration (admin)
       parameters:
       - in: path
         name: id
         schema:
           type: integer
-        description: A unique integer value identifying this delivery duration.
+        description: A unique integer value identifying this delivery method.
         required: true
       tags:
-      - DeliveryDurations
+      - DeliveryMethods
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedDeliveryDuration'
+              $ref: '#/components/schemas/PatchedDeliveryMethod'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedDeliveryDuration'
+              $ref: '#/components/schemas/PatchedDeliveryMethod'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedDeliveryDuration'
+              $ref: '#/components/schemas/PatchedDeliveryMethod'
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/DeliveryDuration'
+                $ref: '#/components/schemas/DeliveryMethod'
           description: ''
     delete:
-      operationId: delivery_durations_destroy
+      operationId: delivery_methods_destroy
       summary: Delete delivery duration (admin)
       parameters:
       - in: path
         name: id
         schema:
           type: integer
-        description: A unique integer value identifying this delivery duration.
+        description: A unique integer value identifying this delivery method.
         required: true
       tags:
-      - DeliveryDurations
+      - DeliveryMethods
       responses:
         '204':
           description: No response body
@@ -5236,6 +5350,9 @@ components:
         is_home_categoery:
           type: boolean
           description: Additional boolean field for home category (per user request).
+        forth_section:
+          type: boolean
+          description: When true, this category is shown in the forth section.
         featured_order:
           type: integer
           maximum: 65535
@@ -5302,8 +5419,13 @@ components:
           type: integer
           readOnly: true
           description: Home featured display order; lower values appear first.
+        forth_section:
+          type: boolean
+          readOnly: true
+          description: When true, this category is shown in the forth section.
       required:
       - featured_order
+      - forth_section
       - id
       - image
       - image_url
@@ -5370,7 +5492,8 @@ components:
           description: When true, this category is shown in home featured categories.
         is_home_categoery:
           type: boolean
-          description: Additional boolean field for home category (per user request).
+        forth_section:
+          type: boolean
         featured_order:
           type: integer
           maximum: 65535
@@ -5417,12 +5540,17 @@ components:
         image_url:
           type: string
           readOnly: true
-        link:
-          type: string
-          format: uri
-          description: Destination URL when combo card is clicked (e.g. product list
-            or CMS page).
-          maxLength: 500
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductList'
+          readOnly: true
+        product_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
         price:
           type: string
           format: decimal
@@ -5458,6 +5586,7 @@ components:
       - id
       - image_url
       - price
+      - products
       - title
       - updated_at
     Consultation:
@@ -5621,7 +5750,7 @@ components:
       - code
       - discount_type
       - discount_value
-    DeliveryDuration:
+    DeliveryMethod:
       type: object
       properties:
         id:
@@ -5629,22 +5758,24 @@ components:
           readOnly: true
         name:
           type: string
-          description: e.g. Standard 3–5 days
+          description: e.g. Standard Delivery
           maxLength: 100
         delivery_type:
           $ref: '#/components/schemas/DeliveryTypeEnum'
-        days:
-          type: integer
-          maximum: 65535
-          minimum: 0
-          nullable: true
-          description: Optional number of days for display.
-        extra_charge:
+        amount:
           type: string
           format: decimal
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          description: Additional charge (BDT) over the base delivery fee for this
-            option.
+          description: Base amount for this delivery method.
+        duration:
+          type: string
+          description: Expected delivery duration (e.g., '2-3 days', '24 hours').
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Final price/charge applied to the order.
         is_active:
           type: boolean
         order:
@@ -5805,6 +5936,15 @@ components:
         * `Sylhet` - Sylhet
         * `Tangail` - Tangail
         * `Thakurgaon` - Thakurgaon
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+      required:
+      - detail
     GenderEnum:
       enum:
       - MALE
@@ -5815,6 +5955,14 @@ components:
         * `MALE` - Male
         * `FEMALE` - Female
         * `OTHER` - Other
+    GoogleAuthRequest:
+      type: object
+      properties:
+        id_token:
+          type: string
+          writeOnly: true
+      required:
+      - id_token
     Ingredient:
       type: object
       properties:
@@ -6120,16 +6268,16 @@ components:
           type: integer
           nullable: true
           description: Linked prescription when order contains prescription-only medicines.
-        duration:
+        delivery_method:
           type: integer
           nullable: true
-          description: Expected delivery duration (admin can set).
-        duration_name:
+          description: Selected delivery method.
+        delivery_method_name:
           type: string
           readOnly: true
           nullable: true
-        duration_days:
-          type: integer
+        delivery_method_duration:
+          type: string
           readOnly: true
           nullable: true
         status:
@@ -6195,8 +6343,8 @@ components:
           readOnly: true
       required:
       - created_at
-      - duration_days
-      - duration_name
+      - delivery_method_duration
+      - delivery_method_name
       - id
       - images
       - items
@@ -6364,7 +6512,7 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/Status657Enum'
-        duration:
+        delivery_method:
           type: integer
           nullable: true
     OrderStatusHistory:
@@ -6667,7 +6815,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Coupon'
-    PaginatedDeliveryDurationList:
+    PaginatedDeliveryMethodList:
       type: object
       properties:
         count:
@@ -6686,7 +6834,7 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/DeliveryDuration'
+            $ref: '#/components/schemas/DeliveryMethod'
     PaginatedIngredientList:
       type: object
       properties:
@@ -7277,6 +7425,9 @@ components:
         is_home_categoery:
           type: boolean
           description: Additional boolean field for home category (per user request).
+        forth_section:
+          type: boolean
+          description: When true, this category is shown in the forth section.
         featured_order:
           type: integer
           maximum: 65535
@@ -7311,12 +7462,17 @@ components:
         image_url:
           type: string
           readOnly: true
-        link:
-          type: string
-          format: uri
-          description: Destination URL when combo card is clicked (e.g. product list
-            or CMS page).
-          maxLength: 500
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductList'
+          readOnly: true
+        product_ids:
+          type: array
+          items:
+            type: integer
+            writeOnly: true
+          writeOnly: true
         price:
           type: string
           format: decimal
@@ -7388,7 +7544,7 @@ components:
           description: Null = unlimited
         is_active:
           type: boolean
-    PatchedDeliveryDuration:
+    PatchedDeliveryMethod:
       type: object
       properties:
         id:
@@ -7396,22 +7552,24 @@ components:
           readOnly: true
         name:
           type: string
-          description: e.g. Standard 3–5 days
+          description: e.g. Standard Delivery
           maxLength: 100
         delivery_type:
           $ref: '#/components/schemas/DeliveryTypeEnum'
-        days:
-          type: integer
-          maximum: 65535
-          minimum: 0
-          nullable: true
-          description: Optional number of days for display.
-        extra_charge:
+        amount:
           type: string
           format: decimal
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          description: Additional charge (BDT) over the base delivery fee for this
-            option.
+          description: Base amount for this delivery method.
+        duration:
+          type: string
+          description: Expected delivery duration (e.g., '2-3 days', '24 hours').
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          description: Final price/charge applied to the order.
         is_active:
           type: boolean
         order:
@@ -7446,7 +7604,7 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/Status657Enum'
-        duration:
+        delivery_method:
           type: integer
           nullable: true
     PatchedPage:
@@ -7872,7 +8030,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/UserManagementStatusEnum'
+          $ref: '#/components/schemas/Status245Enum'
         status_display:
           type: string
           readOnly: true
@@ -8744,6 +8902,18 @@ components:
       - id
       - image_url
       - title
+    Status245Enum:
+      enum:
+      - ACTIVE
+      - INACTIVE
+      - LOCKED
+      - PENDING_VERIFICATION
+      type: string
+      description: |-
+        * `ACTIVE` - Active
+        * `INACTIVE` - Inactive
+        * `LOCKED` - Locked
+        * `PENDING_VERIFICATION` - Pending Verification
     Status657Enum:
       enum:
       - PENDING
@@ -8782,34 +8952,6 @@ components:
         * `APPROVED` - Approved
         * `REJECTED` - Rejected
         * `USED` - Used
-    ErrorResponse:
-      type: object
-      properties:
-        detail:
-          type: string
-        code:
-          type: string
-      required:
-      - detail
-    GoogleAuthRequest:
-      type: object
-      properties:
-        id_token:
-          type: string
-      required:
-      - id_token
-    GoogleAuthTokenResponse:
-      type: object
-      properties:
-        access:
-          type: string
-        refresh:
-          type: string
-        user:
-          type: object
-      required:
-      - access
-      - refresh
     TokenRefresh:
       type: object
       properties:
@@ -8818,6 +8960,18 @@ components:
           readOnly: true
         refresh:
           type: string
+      required:
+      - access
+      - refresh
+    TokenResponse:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserMe'
       required:
       - access
       - refresh
@@ -9033,7 +9187,7 @@ components:
           type: string
           readOnly: true
         status:
-          $ref: '#/components/schemas/UserManagementStatusEnum'
+          $ref: '#/components/schemas/Status245Enum'
         status_display:
           type: string
           readOnly: true
@@ -9076,18 +9230,81 @@ components:
       - role_display
       - status_display
       - updated_at
-    UserManagementStatusEnum:
-      enum:
-      - ACTIVE
-      - INACTIVE
-      - LOCKED
-      - PENDING_VERIFICATION
-      type: string
-      description: |-
-        * `ACTIVE` - Active
-        * `INACTIVE` - Inactive
-        * `LOCKED` - Locked
-        * `PENDING_VERIFICATION` - Pending Verification
+    UserMe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          nullable: true
+          maxLength: 150
+        email:
+          type: string
+          readOnly: true
+        phone:
+          type: string
+          readOnly: true
+        profile_picture:
+          type: string
+          readOnly: true
+        addresses:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserAddress'
+          readOnly: true
+        gender:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/GenderEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        gender_display:
+          type: string
+          readOnly: true
+        date_of_birth:
+          type: string
+          format: date
+          nullable: true
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+        role_display:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/Status245Enum'
+          readOnly: true
+        status_display:
+          type: string
+          readOnly: true
+        email_verified:
+          type: boolean
+          readOnly: true
+        phone_verified:
+          type: boolean
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - addresses
+      - created_at
+      - email
+      - email_verified
+      - gender_display
+      - id
+      - phone
+      - phone_verified
+      - profile_picture
+      - role
+      - role_display
+      - status
+      - status_display
     UserNotification:
       type: object
       properties:

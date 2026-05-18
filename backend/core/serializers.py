@@ -11,7 +11,7 @@ from rest_framework import serializers
 from .models import (
     Brand,
     Category,
-    DeliveryDuration,
+    DeliveryMethod,
     Ingredient,
     Unit,
     Product,
@@ -686,8 +686,8 @@ class OrderSerializer(serializers.ModelSerializer):
     status_history = OrderStatusHistorySerializer(many=True, read_only=True)
     user_email = serializers.CharField(source="user.email", read_only=True)
     user_username = serializers.CharField(source="user.username", read_only=True)
-    duration_name = serializers.CharField(source="duration.name", read_only=True, allow_null=True)
-    duration_days = serializers.IntegerField(source="duration.days", read_only=True, allow_null=True)
+    delivery_method_name = serializers.CharField(source="delivery_method.name", read_only=True, allow_null=True)
+    delivery_method_duration = serializers.CharField(source="delivery_method.duration", read_only=True, allow_null=True)
     # Payment info from related OrderSettlement
     payment_status = serializers.CharField(source="settlement.payment_status", read_only=True, default="PENDING")
     payment_method = serializers.CharField(source="settlement.payment_method", read_only=True, default="COD")
@@ -695,7 +695,7 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = (
-            "id", "user", "user_email", "user_username", "prescription", "duration", "duration_name", "duration_days",
+            "id", "user", "user_email", "user_username", "prescription", "delivery_method", "delivery_method_name", "delivery_method_duration",
             "status",
             "payment_status",
             "payment_method",
@@ -723,15 +723,15 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         allow_null=True,
         help_text="Required when order contains prescription-only medicines; must be APPROVED and owned by you.",
     )
-    duration = serializers.PrimaryKeyRelatedField(
-        queryset=DeliveryDuration.objects.all(),
+    delivery_method = serializers.PrimaryKeyRelatedField(
+        queryset=DeliveryMethod.objects.all(),
         required=False,
         allow_null=True,
     )
 
     class Meta:
         model = Order
-        fields = ("shipping_address", "notes", "message", "items", "prescription", "duration")
+        fields = ("shipping_address", "notes", "message", "items", "prescription", "delivery_method")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -777,7 +777,7 @@ class OrderWriteSerializer(serializers.ModelSerializer):
             user=user,
             status=Order.Status.PENDING,
             prescription=prescription,
-            duration=validated_data.pop("duration", None),
+            duration=validated_data.pop("delivery_method", None),
             **validated_data,
         )
         total = Decimal("0")
@@ -806,35 +806,36 @@ class OrderWriteSerializer(serializers.ModelSerializer):
 
 class OrderStatusSerializer(serializers.ModelSerializer):
     """Admin PATCH: status and/or duration."""
-    duration = serializers.PrimaryKeyRelatedField(
-        queryset=DeliveryDuration.objects.all(),
+    delivery_method = serializers.PrimaryKeyRelatedField(
+        queryset=DeliveryMethod.objects.all(),
         required=False,
         allow_null=True,
     )
 
     class Meta:
         model = Order
-        fields = ("status", "duration")
+        fields = ("status", "delivery_method")
 
 
 # ---- Delivery duration (admin CRUD) ----
-class DeliveryDurationSerializer(serializers.ModelSerializer):
+class DeliveryMethodSerializer(serializers.ModelSerializer):
     class Meta:
-        model = DeliveryDuration
+        model = DeliveryMethod
         fields = (
             "id",
             "name",
             "delivery_type",
-            "days",
-            "extra_charge",
+            "amount",
+            "duration",
+            "price",
             "is_active",
             "order",
         )
         read_only_fields = ("id",)
 
-    def validate_extra_charge(self, value):
+    def validate_price(self, value):
         if value < 0:
-            raise serializers.ValidationError("extra_charge cannot be negative.")
+            raise serializers.ValidationError("price cannot be negative.")
         return value
 
 
@@ -1041,7 +1042,7 @@ class CartSerializer(serializers.ModelSerializer):
         from .services import get_cart_summary, validate_coupon, get_delivery_zone_for_district
         request = self.context.get("request")
         delivery_zone = None
-        delivery_duration = None
+        delivery_method = None
         coupon = obj.coupon
         if request:
             address_id = request.query_params.get("address_id") or request.data.get("address_id")
@@ -1053,15 +1054,15 @@ class CartSerializer(serializers.ModelSerializer):
                         delivery_zone = get_delivery_zone_for_district(addr.district)
                 except Exception:
                     pass
-            duration_id = request.query_params.get("delivery_duration_id") or request.data.get("delivery_duration_id")
+            duration_id = request.query_params.get("delivery_method_id") or request.data.get("delivery_method_id")
             if duration_id:
                 try:
-                    delivery_duration = DeliveryDuration.objects.filter(
+                    delivery_method = DeliveryMethod.objects.filter(
                         pk=duration_id,
                         is_active=True,
                     ).first()
                 except Exception:
-                    delivery_duration = None
+                    delivery_method = None
             code = request.query_params.get("coupon_code") or request.data.get("coupon_code")
             if code:
                 items = obj.items.select_related("product").all()
@@ -1074,7 +1075,7 @@ class CartSerializer(serializers.ModelSerializer):
             obj,
             delivery_zone=delivery_zone,
             coupon=coupon,
-            delivery_duration=delivery_duration,
+            delivery_method=delivery_method,
         )
         return data
 
@@ -1083,7 +1084,7 @@ class PlaceOrderFromCartSerializer(serializers.Serializer):
     shipping_address_id = serializers.IntegerField(required=True, help_text="UserAddress id for shipping")
     coupon_code = serializers.CharField(required=False, allow_blank=True)
     notes = serializers.CharField(required=False, allow_blank=True)
-    delivery_duration_id = serializers.IntegerField(
+    delivery_method_id = serializers.IntegerField(
         required=False,
         allow_null=True,
         help_text="Optional delivery option id (STANDARD/SAME_DAY/EXPRESS) managed by admin.",

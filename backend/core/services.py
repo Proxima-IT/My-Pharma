@@ -21,7 +21,7 @@ from .constants import (
     PAYMENT_FEE_RATES,
     PAYMENT_METHOD_COD,
 )
-from .models import Order, Cart, CartItem, Coupon, Product, ProductReview, DeliveryDuration
+from .models import Order, Cart, CartItem, Coupon, Product, ProductReview, DeliveryMethod
 
 
 def get_delivery_fee(subtotal: Decimal, delivery_zone: str = None) -> Decimal:
@@ -101,7 +101,7 @@ def validate_coupon(code: str, subtotal: Decimal):
     return c, discount
 
 
-def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_duration: DeliveryDuration = None):
+def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_method: DeliveryMethod = None):
     """
     Return dict: subtotal, delivery_fee, discount_amount, total_payable, discount_display, coupon_code.
     If coupon was already applied and persisted to cart item prices, discount_amount is computed as the
@@ -115,8 +115,8 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_dura
     )
     base_delivery_fee = get_delivery_fee(subtotal, delivery_zone)
     delivery_option_charge = Decimal("0.00")
-    if delivery_duration and getattr(delivery_duration, "is_active", True):
-        delivery_option_charge = Decimal(str(delivery_duration.extra_charge or "0")).quantize(Decimal("0.01"))
+    if delivery_method and getattr(delivery_method, "is_active", True):
+        delivery_option_charge = Decimal(str(delivery_method.price or "0")).quantize(Decimal("0.01"))
     # If the selected delivery option has its own charge, use ONLY that charge
     # (replaces base fee). Otherwise fall back to the zone-based base fee.
     if delivery_option_charge > 0:
@@ -152,9 +152,9 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_dura
         "subtotal_before_discount": original_subtotal,
         "subtotal": subtotal,
         "base_delivery_fee": base_delivery_fee,
-        "delivery_option_id": getattr(delivery_duration, "id", None),
-        "delivery_option_name": getattr(delivery_duration, "name", None),
-        "delivery_option_type": getattr(delivery_duration, "delivery_type", None),
+        "delivery_option_id": getattr(delivery_method, "id", None),
+        "delivery_option_name": getattr(delivery_method, "name", None),
+        "delivery_option_type": getattr(delivery_method, "delivery_type", None),
         "delivery_option_charge": delivery_option_charge,
         "delivery_fee": delivery_fee,
         "discount_amount": discount_amount,

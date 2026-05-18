@@ -13,7 +13,7 @@ from .models import (
     UserNotification,
     BlogCategory,
     BlogPost,
-    DeliveryDuration,
+    DeliveryMethod,
     Ingredient,
     Order,
     OrderImage,
@@ -167,15 +167,15 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ("id", "user", "status", "coupon", "discount_amount", "delivery_fee", "total", "created_at")
     list_filter = ("status",)
     search_fields = ("user__email", "user__phone", "id")
-    raw_id_fields = ("user", "prescription", "duration", "coupon")
+    raw_id_fields = ("user", "prescription", "delivery_method", "coupon")
     inlines = [OrderItemInline, OrderImageInline, OrderStatusHistoryInline]
     date_hierarchy = "created_at"
 
 
-@admin.register(DeliveryDuration)
-class DeliveryDurationAdmin(admin.ModelAdmin):
-    list_display = ("name", "days", "order")
-    list_editable = ("days", "order")
+@admin.register(DeliveryMethod)
+class DeliveryMethodAdmin(admin.ModelAdmin):
+    list_display = ("name", "delivery_type", "amount", "duration", "price", "is_active", "order")
+    list_editable = ("amount", "duration", "price", "is_active", "order")
     ordering = ("order", "id")
 
 

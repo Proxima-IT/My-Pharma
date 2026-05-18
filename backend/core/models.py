@@ -420,36 +420,42 @@ class ProductDosage(models.Model):
         return f"{self.product.name} – {self.dosage_label}"
 
 
-class DeliveryDuration(models.Model):
-    """Delivery duration options (e.g. 2–3 days, 1 week). Admin CRUD; order can reference one."""
+class DeliveryMethod(models.Model):
+    """Delivery method options (e.g. Standard, Express). Admin CRUD; order can reference one."""
     class DeliveryType(models.TextChoices):
         STANDARD = "STANDARD", "Standard Delivery"
         SAME_DAY = "SAME_DAY", "Same Day Delivery"
         EXPRESS = "EXPRESS", "Express Delivery"
 
-    name = models.CharField(max_length=100, help_text="e.g. Standard 3–5 days")
+    name = models.CharField(max_length=100, help_text="e.g. Standard Delivery")
     delivery_type = models.CharField(
         max_length=20,
         choices=DeliveryType.choices,
         default=DeliveryType.STANDARD,
         db_index=True,
     )
-    days = models.PositiveSmallIntegerField(
-        null=True,
-        blank=True,
-        help_text="Optional number of days for display.",
-    )
-    extra_charge = models.DecimalField(
+    amount = models.DecimalField(
         max_digits=12,
         decimal_places=2,
         default=0,
-        help_text="Additional charge (BDT) over the base delivery fee for this option.",
+        help_text="Base amount for this delivery method.",
+    )
+    duration = models.CharField(
+        max_length=100,
+        blank=True,
+        help_text="Expected delivery duration (e.g., '2-3 days', '24 hours').",
+    )
+    price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0,
+        help_text="Final price/charge applied to the order.",
     )
     is_active = models.BooleanField(default=True, db_index=True)
     order = models.PositiveSmallIntegerField(default=0, help_text="Display order; lower first.")
 
     class Meta:
-        db_table = "core_delivery_duration"
+        db_table = "core_delivery_method"
         ordering = ["order", "id"]
 
     def __str__(self):
@@ -480,14 +486,14 @@ class Order(models.Model):
         db_index=True,
         help_text="Linked prescription when order contains prescription-only medicines.",
     )
-    duration = models.ForeignKey(
-        "DeliveryDuration",
+    delivery_method = models.ForeignKey(
+        "DeliveryMethod",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="orders",
         db_index=True,
-        help_text="Expected delivery duration (admin can set).",
+        help_text="Selected delivery method.",
     )
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
     # Pricing breakdown (so admin/user can see discounts and delivery)
@@ -710,7 +716,7 @@ class PaymentTransaction(models.Model):
     discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     delivery_fee = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     coupon_id_ref = models.PositiveIntegerField(null=True, blank=True)
-    delivery_duration_id_ref = models.PositiveIntegerField(null=True, blank=True)
+    delivery_method_id_ref = models.PositiveIntegerField(null=True, blank=True)
     cart_snapshot = models.JSONField(default=list, blank=True)
     request_payload = models.JSONField(default=dict, blank=True)
     gateway_response = models.JSONField(default=dict, blank=True)

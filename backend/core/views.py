@@ -35,7 +35,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryDuration, Ingredient, Unit, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
+from .models import Brand, Category, DeliveryMethod, Ingredient, Unit, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -56,7 +56,7 @@ from .serializers import (
     OrderSerializer,
     OrderWriteSerializer,
     OrderStatusSerializer,
-    DeliveryDurationSerializer,
+    DeliveryMethodSerializer,
     CartSerializer,
     CartItemSerializer,
     AddToCartSerializer,
@@ -1090,7 +1090,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 discount_amount=order.discount_amount or Decimal("0"),
                 delivery_fee=order.delivery_fee or Decimal("0"),
                 coupon_id_ref=getattr(order.coupon, "id", None),
-                delivery_duration_id_ref=getattr(order.duration, "id", None),
+                delivery_method_id_ref=getattr(order.duration, "id", None),
                 cart_snapshot=[],
                 request_payload=post_body,
                 gateway_response=session_response or {},
@@ -1113,16 +1113,16 @@ class OrderViewSet(viewsets.ModelViewSet):
 
 # ---- Delivery duration (admin CRUD) ----
 @extend_schema_view(
-    list=extend_schema(tags=["DeliveryDurations"], summary="List delivery durations"),
-    retrieve=extend_schema(tags=["DeliveryDurations"], summary="Get a delivery duration"),
-    create=extend_schema(tags=["DeliveryDurations"], summary="Create delivery duration (admin)"),
-    update=extend_schema(tags=["DeliveryDurations"], summary="Update delivery duration (admin)"),
-    partial_update=extend_schema(tags=["DeliveryDurations"], summary="Partial update delivery duration (admin)"),
-    destroy=extend_schema(tags=["DeliveryDurations"], summary="Delete delivery duration (admin)"),
+    list=extend_schema(tags=["DeliveryMethods"], summary="List delivery durations"),
+    retrieve=extend_schema(tags=["DeliveryMethods"], summary="Get a delivery duration"),
+    create=extend_schema(tags=["DeliveryMethods"], summary="Create delivery duration (admin)"),
+    update=extend_schema(tags=["DeliveryMethods"], summary="Update delivery duration (admin)"),
+    partial_update=extend_schema(tags=["DeliveryMethods"], summary="Partial update delivery duration (admin)"),
+    destroy=extend_schema(tags=["DeliveryMethods"], summary="Delete delivery duration (admin)"),
 )
-class DeliveryDurationViewSet(viewsets.ModelViewSet):
-    queryset = DeliveryDuration.objects.all()
-    serializer_class = DeliveryDurationSerializer
+class DeliveryMethodViewSet(viewsets.ModelViewSet):
+    queryset = DeliveryMethod.objects.all()
+    serializer_class = DeliveryMethodSerializer
     permission_classes = [IsAuthenticated]
 
     def get_permissions(self):
@@ -1333,7 +1333,7 @@ class CartViewSet(viewsets.GenericViewSet):
         address_id = serializer.validated_data["shipping_address_id"]
         coupon_code = (serializer.validated_data.get("coupon_code") or "").strip()
         notes = (serializer.validated_data.get("notes") or "").strip()
-        delivery_duration_id = serializer.validated_data.get("delivery_duration_id")
+        delivery_method_id = serializer.validated_data.get("delivery_method_id")
         payment_method = _normalize_payment_method(serializer.validated_data.get("payment_method"))
 
         from authentication.models import UserAddress
@@ -1344,15 +1344,15 @@ class CartViewSet(viewsets.GenericViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
         shipping_text = f"{address.full_name}, {address.email}, {address.phone}, {address.district}, {address.thana}, {address.address}"
-        delivery_duration = None
-        if delivery_duration_id:
-            delivery_duration = DeliveryDuration.objects.filter(
-                pk=delivery_duration_id,
+        delivery_method = None
+        if delivery_method_id:
+            delivery_method = DeliveryMethod.objects.filter(
+                pk=delivery_method_id,
                 is_active=True,
             ).first()
-            if not delivery_duration:
+            if not delivery_method:
                 return Response(
-                    {"delivery_duration_id": "Invalid or inactive delivery option."},
+                    {"delivery_method_id": "Invalid or inactive delivery option."},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
@@ -1398,7 +1398,7 @@ class CartViewSet(viewsets.GenericViewSet):
             cart,
             delivery_zone=delivery_zone,
             coupon=coupon,
-            delivery_duration=delivery_duration,
+            delivery_method=delivery_method,
         )
         min_order_subtotal = summary.get("subtotal_before_discount") or summary["subtotal"]
         if not validate_min_order(min_order_subtotal):
@@ -1424,7 +1424,7 @@ class CartViewSet(viewsets.GenericViewSet):
             order = Order.objects.create(
                 user=request.user,
                 status=Order.Status.PENDING,
-                duration=delivery_duration,
+                duration=delivery_method,
                 total=summary["total_payable"],
                 subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
                 discount_amount=summary.get("discount_amount") or Decimal("0"),
@@ -1524,7 +1524,7 @@ class CartViewSet(viewsets.GenericViewSet):
                     discount_amount=summary.get("discount_amount") or Decimal("0"),
                     delivery_fee=summary.get("delivery_fee") or Decimal("0"),
                     coupon_id_ref=getattr(order.coupon, "id", None),
-                    delivery_duration_id_ref=getattr(delivery_duration, "id", None),
+                    delivery_method_id_ref=getattr(delivery_method, "id", None),
                     cart_snapshot=[],
                     request_payload=post_body,
                     gateway_response=session_response or {},
