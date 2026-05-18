@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { BsCart3 } from 'react-icons/bs';
@@ -10,6 +10,7 @@ import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 
 const PopularBundleCard = ({ bundle }) => {
   const { addItem, isUpdating } = useCart();
+  const [isAdding, setIsAdding] = useState(false);
   const getImageUrl = image => getMediaUrl(image);
 
   const originalPrice = parseFloat(bundle.original_price || bundle.price || 0);
@@ -43,16 +44,17 @@ const PopularBundleCard = ({ bundle }) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (bundle?.id) {
-      await addItem(
-        {
-          ...bundle,
-          price: discountedPrice,
-          original_price: originalPrice,
-          is_bundle: true,
-        },
-        1,
-      );
+    if (items && items.length > 0) {
+      setIsAdding(true);
+      try {
+        for (const item of items) {
+          await addItem(item, 1);
+        }
+      } catch (err) {
+        console.error('Failed to add combo items:', err);
+      } finally {
+        setIsAdding(false);
+      }
     }
   };
 
@@ -122,13 +124,13 @@ const PopularBundleCard = ({ bundle }) => {
 
               <button
                 onClick={handleAddToCart}
-                disabled={isUpdating}
+                disabled={isUpdating || isAdding}
                 className="w-11 h-11 bg-(--color-primary-25) rounded-full border border-(--color-primary-50) flex items-center justify-center text-(--color-primary-500) cursor-pointer hover:bg-(--color-primary-500) hover:text-white transition-all active:scale-90 disabled:opacity-50 shadow-none"
                 title="Add to Cart"
               >
                 <BsCart3
                   size={18}
-                  className={isUpdating ? 'animate-bounce' : ''}
+                  className={isUpdating || isAdding ? 'animate-bounce' : ''}
                 />
               </button>
             </div>

@@ -12,6 +12,7 @@ import SmartHealthBundle from '../home/components/SmartHealthBundle';
 import ShippingAddressCard from './components/ShippingAddressCard';
 import OrderSummaryCard from './components/OrderSummaryCard';
 import { useCart } from '../../hooks/useCart';
+import { fetchDeliveryMethodsApi } from '../../api/cartApi';
 import { useAuthModal } from '../../context/AuthModalContext';
 
 /**
@@ -32,6 +33,9 @@ const Cart = () => {
     refresh,
   } = useCart();
 
+  const [deliveryMethods, setDeliveryMethods] = React.useState([]);
+  const [selectedMethodId, setSelectedMethodId] = React.useState(null);
+
   /**
    * Intercepts the proceed action.
    * If user is not logged in, opens the login modal with a redirect intent.
@@ -44,6 +48,25 @@ const Cart = () => {
       router.push('/checkout');
     }
   };
+
+  React.useEffect(() => {
+    const getMethods = async () => {
+      try {
+        const methods = await fetchDeliveryMethodsApi();
+        const methodList = methods.results || methods;
+        setDeliveryMethods(methodList.filter(m => m.is_active));
+      } catch (err) {
+        console.error('Failed to fetch delivery methods:', err);
+      }
+    };
+    getMethods();
+  }, []);
+
+  React.useEffect(() => {
+    if (selectedMethodId) {
+      refresh({ delivery_method_id: selectedMethodId }, false);
+    }
+  }, [selectedMethodId, refresh]);
 
   if (isLoading) {
     return (
@@ -98,6 +121,42 @@ const Cart = () => {
 
           <div className="w-full lg:w-[42%] flex flex-col gap-8">
             <ShippingAddressCard />
+
+            {/* Estimate Delivery Selection */}
+            {deliveryMethods.length > 0 && (
+              <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 transition-all shadow-none">
+                <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <FiShoppingBag className="text-(--color-primary-500)" />
+                  Estimate Delivery
+                </h3>
+                <div className="flex flex-col gap-3">
+                  {deliveryMethods.map(method => (
+                    <button
+                      key={method.id}
+                      onClick={() => setSelectedMethodId(method.id)}
+                      className={`flex items-center justify-between p-4 rounded-[24px] border transition-all text-left ${
+                        selectedMethodId === method.id
+                          ? 'border-(--color-primary-500) bg-(--color-primary-25)'
+                          : 'border-gray-50 bg-gray-50 hover:border-gray-200'
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-sm font-bold text-gray-900">
+                          {method.name}
+                        </span>
+                        <span className="text-[11px] text-gray-500 font-medium">
+                          {method.duration || 'Standard delivery'}
+                        </span>
+                      </div>
+                      <span className="text-base font-black text-gray-900">
+                        ৳{parseFloat(method.price || 0).toLocaleString()}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <OrderSummaryCard
               summary={summary}
               items={items}

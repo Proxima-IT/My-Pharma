@@ -20,9 +20,8 @@ import ShippingAddressCard from '../cart/components/ShippingAddressCard';
 import OrderSummaryCard from '../cart/components/OrderSummaryCard';
 import PaymentMethodCard from '../cart/components/PaymentMethodCard';
 import { useCart } from '../../hooks/useCart';
-import { useCartContext } from '../../context/CartContext';
 import { useAuthModal } from '../../context/AuthModalContext';
-import { fetchDeliveryDurationsApi } from '../../api/cartApi';
+import { fetchDeliveryMethodsApi } from '../../api/cartApi';
 import UiButton from '@/app/(public)/components/UiButton';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 
@@ -42,32 +41,43 @@ const Checkout = () => {
     appliedCoupon,
   } = useCart();
 
-  const { selectedDeliveryId, updateDeliveryOption } = useCartContext();
-
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('BKASH');
   const [deliveryOptions, setDeliveryOptions] = useState([]);
+  const [selectedMethodId, setSelectedMethodId] = useState(null);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [callbackMessage, setCallbackMessage] = useState('');
 
   useEffect(() => {
     const loadDeliveryOptions = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        // Passing token if available to fetch options
-        const data = await fetchDeliveryDurationsApi(token);
-        const activeOptions = Array.isArray(data) ? data : data.results || [];
-        setDeliveryOptions(activeOptions.filter(opt => opt.is_active));
+        const data = await fetchDeliveryMethodsApi();
+        const activeOptions = (
+          Array.isArray(data) ? data : data.results || []
+        ).filter(opt => opt.is_active);
+        setDeliveryOptions(activeOptions);
 
-        if (!selectedDeliveryId && activeOptions.length > 0) {
-          updateDeliveryOption(activeOptions[0].id);
+        if (activeOptions.length > 0) {
+          setSelectedMethodId(activeOptions[0].id);
         }
       } catch (err) {
-        console.error('Failed to load delivery options', err);
+        console.error('Failed to load delivery methods', err);
       }
     };
     loadDeliveryOptions();
-  }, [selectedDeliveryId, updateDeliveryOption]);
+  }, []);
+
+  useEffect(() => {
+    if (selectedAddressId || selectedMethodId) {
+      refresh(
+        {
+          address_id: selectedAddressId,
+          delivery_method_id: selectedMethodId,
+        },
+        false,
+      );
+    }
+  }, [selectedAddressId, selectedMethodId, refresh]);
 
   useEffect(() => {
     const paymentStatus = (
@@ -100,10 +110,9 @@ const Checkout = () => {
   }, [items, isLoading, router, orderSuccess]);
 
   const handleConfirmOrder = async () => {
-    // INTERCEPT: Check for authentication before proceeding
     const token = localStorage.getItem('access_token');
     if (!token) {
-      openAuthModal(); // Trigger the login popup without losing state
+      openAuthModal();
       return;
     }
 
@@ -114,7 +123,7 @@ const Checkout = () => {
 
     const orderPayload = {
       shipping_address_id: Number(selectedAddressId),
-      delivery_duration_id: selectedDeliveryId,
+      delivery_method_id: selectedMethodId,
       payment_method: paymentMethod,
       notes: '',
     };
@@ -272,16 +281,22 @@ const Checkout = () => {
           />
 
           <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 transition-all shadow-none">
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-6">
-              Delivery Time
-            </h2>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 rounded-2xl bg-(--color-primary-50) flex items-center justify-center text-(--color-primary-500)">
+                <FiShoppingBag size={20} />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+                Delivery Method
+              </h2>
+            </div>
+
             <div className="flex flex-col gap-3">
               {deliveryOptions.map(option => (
                 <button
                   key={option.id}
-                  onClick={() => updateDeliveryOption(option.id)}
+                  onClick={() => setSelectedMethodId(option.id)}
                   className={`flex items-center justify-between p-4 rounded-[24px] border transition-all cursor-pointer text-left shadow-none ${
-                    Number(selectedDeliveryId) === Number(option.id)
+                    selectedMethodId === option.id
                       ? 'border-(--color-primary-500) bg-(--color-primary-25)'
                       : 'border-gray-100 bg-white hover:border-gray-200'
                   }`}
@@ -289,7 +304,7 @@ const Checkout = () => {
                   <div className="flex items-center gap-4">
                     <div
                       className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        Number(selectedDeliveryId) === Number(option.id)
+                        selectedMethodId === option.id
                           ? 'bg-(--color-primary-100) text-(--color-primary-600)'
                           : 'bg-gray-50 text-gray-400'
                       }`}
@@ -301,19 +316,20 @@ const Checkout = () => {
                         {option.name}
                       </p>
                       <p className="text-xs text-gray-500 font-medium">
-                        Estimated: {option.days}{' '}
-                        {option.days > 1 ? 'days' : 'day'}
+                        {option.duration || 'Standard delivery time'}
                       </p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={`text-sm font-black ${Number(option.extra_charge) > 0 ? 'text-gray-900' : 'text-(--color-success-600)'}`}
-                    >
-                      {Number(option.extra_charge) > 0
-                        ? `+${formatCurrency(option.extra_charge)}`
-                        : ''}
+                  <div className="text-right flex flex-col items-end">
+                    <p className="text-lg font-black text-gray-900 tracking-tight">
+                      {formatCurrency(option.price || 0)}
                     </p>
+                    {selectedMethodId === option.id && (
+                      <FiCheckCircle
+                        className="text-(--color-primary-500) mt-1"
+                        size={16}
+                      />
+                    )}
                   </div>
                 </button>
               ))}
@@ -342,12 +358,31 @@ const Checkout = () => {
               ))}
             </div>
           </div>
-          <OrderSummaryCard
-            summary={summary}
-            items={items}
-            refresh={refresh}
-            onPlaceOrder={handleConfirmOrder}
-          />
+
+          <div className="flex flex-col gap-6">
+            {summary?.shipping_charge === 0 && (
+              <div className="bg-(--success-50) border border-(--success-100) rounded-3xl p-4 flex items-center gap-3 animate-in slide-in-from-right-4">
+                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-(--success-500) shadow-sm">
+                  <FiCheckCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-(--success-700) font-black text-sm uppercase tracking-wider">
+                    Free Delivery Applied
+                  </p>
+                  <p className="text-(--success-600) text-xs font-medium">
+                    You saved {formatCurrency(summary.base_delivery_fee || 150)}{' '}
+                    on shipping!
+                  </p>
+                </div>
+              </div>
+            )}
+            <OrderSummaryCard
+              summary={summary}
+              items={items}
+              refresh={refresh}
+              onPlaceOrder={handleConfirmOrder}
+            />
+          </div>
         </div>
       </div>
     </div>

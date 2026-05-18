@@ -21,6 +21,7 @@ import {
   FiFileText,
   FiCreditCard,
   FiBell,
+  FiTruck,
 } from 'react-icons/fi';
 import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
 import { useAdminOrders } from '@/app/(admin)/hooks/useAdminOrders';
@@ -71,7 +72,7 @@ const AdminSidebar = () => {
       title: 'Dashboard',
       items: [{ name: 'Overview', icon: <FiPieChart />, href: '/admin' }],
     },
-        {
+    {
       title: 'Logistics & Sales',
       items: [
         {
@@ -150,6 +151,11 @@ const AdminSidebar = () => {
       title: 'Configuration',
       items: [
         {
+          name: 'Delivery Methods',
+          icon: <FiTruck />,
+          href: '/admin/delivery-methods',
+        },
+        {
           name: 'Global Settings',
           icon: <FiSettings />,
           href: '/admin/settings',
@@ -191,7 +197,7 @@ const AdminSidebar = () => {
             </span>
           </div>
 
-                    {item.name === 'Order Records' &&
+          {item.name === 'Order Records' &&
             newOrdersCount + newPrescriptionsCount > 0 && (
               <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center">
                 {newOrdersCount + newPrescriptionsCount}

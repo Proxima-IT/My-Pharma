@@ -48,14 +48,14 @@ export const fetchCartApi = async (token, params = {}) => {
  * GET /api/delivery-durations/
  * Fetches available delivery options (Standard, Same Day, Express).
  */
-export const fetchDeliveryDurationsApi = async () => {
-  const response = await fetchWithAuth(`${API_BASE_URL}/delivery-durations/`, {
+export const fetchDeliveryMethodsApi = async () => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/delivery-methods/`, {
     method: 'GET',
   });
 
   const data = await parseJsonResponse(response);
   if (!response.ok) {
-    throw new Error('Failed to fetch delivery options');
+    throw new Error('Failed to fetch delivery methods');
   }
   return data;
 };

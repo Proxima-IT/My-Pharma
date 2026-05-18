@@ -31,13 +31,13 @@ export const CartProvider = ({ children }) => {
   };
 
   const refreshCart = useCallback(
-    async (couponCode = null, showLoading = true, deliveryId = null) => {
+    async (extraParams = {}, showLoading = true) => {
       if (showLoading) setIsLoading(true);
       try {
         const token = localStorage.getItem('access_token');
 
         if (!token) {
-          // GUEST LOGIC: Load from LocalStorage
+          // GUEST LOGIC
           const localCart = localStorage.getItem('guest_cart');
           setCart(
             localCart ? JSON.parse(localCart) : { items: [], is_guest: true },
@@ -46,15 +46,11 @@ export const CartProvider = ({ children }) => {
           return;
         }
 
-        // Priority: Passed deliveryId > State selectedDeliveryId
-        const activeDeliveryId =
-          deliveryId ||
-          selectedDeliveryId ||
-          localStorage.getItem('selected_delivery_id');
-
-        const params = {};
-        if (couponCode) params.coupon_code = couponCode;
-        if (activeDeliveryId) params.delivery_duration_id = activeDeliveryId;
+        const params = {
+          delivery_method_id:
+            selectedDeliveryId || localStorage.getItem('selected_delivery_id'),
+          ...extraParams,
+        };
 
         const data = await fetchCartApi(token, params);
         setCart(processCartResponse(data));

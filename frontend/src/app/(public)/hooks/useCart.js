@@ -119,7 +119,7 @@ export const useCart = () => {
         }
         saveGuestCart(guestCart);
       }
-      await refreshCart(null, false);
+      await refreshCart({}, false);
       return true;
     } catch (err) {
       setError(err.message);
@@ -189,7 +189,7 @@ export const useCart = () => {
     try {
       await applyCartCouponApi(token, code);
       // Refresh the cart to get the new discounted prices and summary from backend
-      await refreshCart(null, false);
+      await refreshCart({}, false);
       return true;
     } catch (err) {
       setError(err.message);
@@ -208,7 +208,7 @@ export const useCart = () => {
     setIsUpdating(true);
     try {
       await removeCartCouponApi(token);
-      await refreshCart(null, false);
+      await refreshCart({}, false);
     } catch (err) {
       setError(err.message);
     } finally {
