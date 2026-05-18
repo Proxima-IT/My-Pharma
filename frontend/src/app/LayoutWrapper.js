@@ -25,6 +25,7 @@ export default function LayoutWrapper({ children }) {
   // 2. Pages with Header/Footer but NO Global Public Sidebar
   const isUserDashboard = pathname.startsWith('/user');
   const isProductsListPage = pathname.startsWith('/products');
+  const isCombosPage = pathname.startsWith('/combos');
   const isCartPage = pathname.startsWith('/cart');
   const isCheckoutPage = pathname.startsWith('/checkout');
   const isUploadPrescriptionPage = pathname.startsWith('/upload-prescription');
@@ -37,6 +38,7 @@ export default function LayoutWrapper({ children }) {
     !isPharmacyPanel &&
     !isAdminPanel &&
     !isProductsListPage &&
+    !isCombosPage &&
     !isCartPage &&
     !isUploadPrescriptionPage &&
     !isCheckoutPage &&

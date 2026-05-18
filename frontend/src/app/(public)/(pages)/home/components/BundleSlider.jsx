@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { MdArrowForwardIos } from 'react-icons/md';
 import BundleCard from './BundleCard';
 import { useBundleData } from '@/app/(public)/hooks/useBundleData';
@@ -74,6 +75,12 @@ export default function BundleSlider({ cardsToShow }) {
           Smart health bundles at better value
         </h1>
         <div className="flex items-center gap-3">
+          <Link href="/combos" className="hidden sm:block">
+            <button className="border border-gray-200 bg-white rounded-full px-5 py-2.5 text-sm font-bold text-(--color-primary-500) cursor-pointer hover:border-(--color-primary-500) transition-all active:scale-95 shadow-none">
+              View All Combos
+            </button>
+          </Link>
+
           <button
             onClick={() => scroll('left')}
             disabled={!canScrollLeft}
