@@ -37,24 +37,38 @@ const DynamicCategoryPage = ({ params }) => {
         setCategory(catData);
 
         if (catData) {
-          const [subRes, prodRes] = await Promise.all([
-            fetch(
-              `${API_BASE_URL}/categories/?parent=${catData.id}&is_active=true`,
-            ),
-            fetch(
-              `${API_BASE_URL}/products/?category=${currentSlug}&is_active=true`,
-            ),
-          ]);
-
+          // 1. Fetch sub-categories first to see if this is a parent category
+          const subRes = await fetch(
+            `${API_BASE_URL}/categories/?parent=${catData.id}&is_active=true`,
+          );
           const subData = await parseJsonResponse(subRes, { results: [] });
-          const prodData = await parseJsonResponse(prodRes, { results: [] });
+          const subList = Array.isArray(subData)
+            ? subData
+            : subData.results || [];
+          setSubCategories(subList);
 
-          setSubCategories(
-            Array.isArray(subData) ? subData : subData.results || [],
+          // 2. Aggregate slugs: current category + all its immediate children
+          const slugsToFetch = [currentSlug, ...subList.map(s => s.slug)];
+
+          // 3. Fetch products for all these categories
+          const productResponses = await Promise.all(
+            slugsToFetch.map(slug =>
+              fetch(
+                `${API_BASE_URL}/products/?category=${slug}&is_active=true`,
+              ).then(res => parseJsonResponse(res, { results: [] })),
+            ),
           );
-          setProducts(
-            Array.isArray(prodData) ? prodData : prodData.results || [],
+
+          // 4. Flatten and de-duplicate results by product ID
+          const combinedProducts = productResponses.flatMap(data =>
+            Array.isArray(data) ? data : data.results || [],
           );
+
+          const uniqueProducts = Array.from(
+            new Map(combinedProducts.map(p => [p.id, p])).values(),
+          );
+
+          setProducts(uniqueProducts);
         }
       } catch (error) {
         console.error('Error loading dynamic category page:', error);

@@ -275,11 +275,11 @@ const Header = () => {
 
   return (
     <header className="sticky top-0 z-20 bg-white border-b border-gray-100">
-      <div className="hidden lg:flex justify-between items-center text-black py-2.5 px-9 bg-gradient-to-r from-gray-50 to-green-50">
-        <h1 className="text-sm text-gray-800 font-medium">
+      <div className="hidden lg:flex justify-between items-center text-white py-2.5 px-9 bg-(--color-primary-500)">
+        <h1 className="text-sm text-white font-medium">
           <span className="font-bold">Call Us: </span>01755697233, 09677333000
         </h1>
-        <p className="font-semibold text-sm text-black">
+        <p className="font-semibold text-sm text-white">
           Medicines and healthcare products delivered to your doorstep
         </p>
         <div className="flex items-center gap-5 text-lg">

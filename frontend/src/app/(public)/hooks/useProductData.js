@@ -17,7 +17,10 @@ export const useProductData = (initialFilters = {}) => {
     brand_id: '',
     ingredient_id: '',
     has_discount: '',
+    discounted: '',
     available: '',
+    min_price: '',
+    max_price: '',
     ...initialFilters,
   });
 

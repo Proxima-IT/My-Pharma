@@ -45,8 +45,10 @@ const Products = () => {
     brand_id: brandIdFromUrl,
     // FIXED: Passing the ID (integer) instead of the Name (string)
     ingredient_id: selectedIngredients.length > 0 ? selectedIngredients[0] : '',
-    has_discount: hasDiscount,
+    discounted: hasDiscount,
     available: isAvailable,
+    min_price: minPrice,
+    max_price: maxPrice,
   });
 
   // 4. Effects
@@ -80,35 +82,6 @@ const Products = () => {
     fetchData();
   }, [brandIdFromUrl]);
 
-  // 5. Memoized Filtering Logic
-  const filteredProducts = useMemo(() => {
-    let result = products;
-
-    if (searchQuery) {
-      result = searchProducts(result, searchQuery);
-    }
-
-    if (minPrice) {
-      result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
-    }
-    if (maxPrice) {
-      result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
-    }
-
-    if (selectedBrands.length > 0 && !brandIdFromUrl) {
-      result = result.filter(p => selectedBrands.includes(p.brand_name));
-    }
-
-    return result;
-  }, [
-    products,
-    searchQuery,
-    minPrice,
-    maxPrice,
-    selectedBrands,
-    brandIdFromUrl,
-  ]);
-
   // 6. Handlers
   const toggleBrand = brandName => {
     setSelectedBrands(prev =>
@@ -136,6 +109,13 @@ const Products = () => {
     setHasDiscount('');
     setIsAvailable('');
     router.push('/products');
+  };
+
+  const totalPages = Math.ceil(totalCount / 20);
+
+  const handlePageChange = newPage => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (loading) {
@@ -402,12 +382,12 @@ const Products = () => {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {filteredProducts.map(product => (
+          {products.map(product => (
             <PopularProductCard key={product.id} product={product} />
           ))}
         </div>
 
-        {filteredProducts.length === 0 && (
+        {products.length === 0 && (
           <div className="w-full py-20 text-center bg-white rounded-[40px] border border-gray-100">
             <p className="text-gray-400 font-medium text-lg">
               No products found matching your criteria.
@@ -417,6 +397,43 @@ const Products = () => {
               className="text-(--color-primary-500) font-bold mt-2 inline-block hover:underline cursor-pointer"
             >
               Reset all filters
+            </button>
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-12 pb-10">
+            <button
+              disabled={page === 1}
+              onClick={() => handlePageChange(page - 1)}
+              className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <FiChevronDown className="rotate-90" size={18} />
+            </button>
+
+            {[...Array(totalPages)].map((_, i) => {
+              const p = i + 1;
+              return (
+                <button
+                  key={p}
+                  onClick={() => handlePageChange(p)}
+                  className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
+                    page === p
+                      ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+                      : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+
+            <button
+              disabled={page === totalPages}
+              onClick={() => handlePageChange(page + 1)}
+              className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <FiChevronDown className="-rotate-90" size={18} />
             </button>
           </div>
         )}
