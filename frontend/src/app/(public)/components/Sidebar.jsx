@@ -38,7 +38,10 @@ const Sidebar = () => {
     : '';
 
   const [categories, setCategories] = useState([]); // All categories in tree format
-  const [allProducts, setAllProducts] = useState([]);
+  const [countSummary, setCountSummary] = useState({
+    total_products: 0,
+    category_counts: [],
+  });
   const [ads, setAds] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,24 +50,25 @@ const Sidebar = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resA, adsRes, prodRes] = await Promise.all([
+        const [resA, adsRes, countRes] = await Promise.all([
           fetch(`${API_BASE_URL}/categories/tree/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
-          fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
+          fetch(`${API_BASE_URL}/products/count-summary/`),
         ]);
 
-        const [dataA, adsData, prodData] = await Promise.all([
+        const [dataA, adsData, countData] = await Promise.all([
           parseJsonResponse(resA, []),
           parseJsonResponse(adsRes, { results: [] }),
-          parseJsonResponse(prodRes, { results: [] }),
+          parseJsonResponse(countRes, {
+            total_products: 0,
+            category_counts: [],
+          }),
         ]);
 
         // dataA is the tree representation from backend
         setCategories(Array.isArray(dataA) ? dataA : dataA.results || []);
         setAds(Array.isArray(adsData) ? adsData : adsData.results || []);
-        setAllProducts(
-          Array.isArray(prodData) ? prodData : prodData.results || [],
-        );
+        setCountSummary(countData);
       } catch (error) {
         console.error('Error fetching sidebar data:', error);
       } finally {
@@ -75,14 +79,13 @@ const Sidebar = () => {
   }, []);
 
   const categoryCounts = useMemo(() => {
-    // Step 1: Build direct (flat) counts per category name
+    // Step 1: Map the flat backend counts into a dictionary for quick lookup
     const directCounts = {};
-    allProducts.forEach(product => {
-      const catName = product.category_name;
-      if (catName) directCounts[catName] = (directCounts[catName] || 0) + 1;
+    countSummary.category_counts.forEach(item => {
+      directCounts[item.name] = item.product_count;
     });
 
-    // Step 2: Recursively sum children counts into parents
+    // Step 2: Recursively sum children counts into parents to show "Total" per branch
     const totalCounts = {};
     const sumTree = node => {
       let total = directCounts[node.name] || 0;
@@ -97,7 +100,7 @@ const Sidebar = () => {
     categories.forEach(rootNode => sumTree(rootNode));
 
     return totalCounts;
-  }, [allProducts, categories]);
+  }, [countSummary, categories]);
 
   // Filter categories tree based on search term
   const filteredCategories = useMemo(() => {
@@ -259,7 +262,7 @@ const Sidebar = () => {
             <span
               className={`text-xs font-bold ${isAllProductsActive ? 'text-white/60' : 'text-gray-300'}`}
             >
-              {allProducts.length}
+              {countSummary.total_products}
             </span>
           </Link>
 

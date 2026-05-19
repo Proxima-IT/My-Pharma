@@ -118,6 +118,37 @@ const Products = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const getPaginationRange = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= page - delta && i <= page + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
+  };
+
   if (loading) {
     return (
       <div className="w-full h-[60vh] flex items-center justify-center">
@@ -411,22 +442,22 @@ const Products = () => {
               <FiChevronDown className="rotate-90" size={18} />
             </button>
 
-            {[...Array(totalPages)].map((_, i) => {
-              const p = i + 1;
-              return (
-                <button
-                  key={p}
-                  onClick={() => handlePageChange(p)}
-                  className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
-                    page === p
-                      ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+            {getPaginationRange().map((p, i) => (
+              <button
+                key={i}
+                disabled={p === '...'}
+                onClick={() => p !== '...' && handlePageChange(p)}
+                className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
+                  page === p
+                    ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+                    : p === '...'
+                      ? 'bg-transparent text-gray-400 cursor-default'
                       : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {p}
-                </button>
-              );
-            })}
+                }`}
+              >
+                {p}
+              </button>
+            ))}
 
             <button
               disabled={page === totalPages}
