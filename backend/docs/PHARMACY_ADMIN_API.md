@@ -244,6 +244,7 @@ Product `rating_avg` and `review_count` are updated automatically when reviews a
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/products/` | Paginated list. Query: `category`, `is_active`, `is_in_homepage`, `brand_id`, `ingredient_id`, `price_min`, `price_max`, `requires_prescription`, `search`, `ordering`. |
+| GET | `/api/products/count-summary/` | Get total active product count and active product count per category. |
 | GET | `/api/products/{slug}/` | Product detail by slug. |
 | POST | `/api/products/{slug}/link-category/` | Link this product to a specific category (admin). |
 

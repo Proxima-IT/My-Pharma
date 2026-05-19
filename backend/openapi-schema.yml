@@ -4236,6 +4236,22 @@ paths:
                 additionalProperties: {}
                 description: Unspecified response body
           description: ''
+  /api/products/count-summary/:
+    get:
+      operationId: products_count_summary_retrieve
+      description: Returns the total count of active products and the count of active
+        products per category.
+      summary: Get total product count and category-wise product count
+      tags:
+      - Products
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: {}
+          description: ''
   /api/products/inventory-list/:
     get:
       operationId: products_inventory_list_retrieve

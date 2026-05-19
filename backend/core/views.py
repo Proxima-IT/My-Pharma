@@ -703,7 +703,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductWriteSerializer
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve"):
+        if self.action in ("list", "retrieve", "count_summary"):
             return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
@@ -884,6 +884,30 @@ class ProductViewSet(viewsets.ModelViewSet):
             Product.objects.filter(pk=product.pk).update(**updates, updated_at=timezone.now())
             product.refresh_from_db()
         return Response(ProductDetailSerializer(product, context={"request": request}).data)
+
+    @extend_schema(
+        methods=["GET"],
+        tags=["Products"],
+        summary="Get total product count and category-wise product count",
+        responses={
+            200: OpenApiTypes.OBJECT,
+        }
+    )
+    @action(detail=False, methods=["get"], url_path="count-summary")
+    def count_summary(self, request):
+        """
+        Returns the total count of active products and the count of active products per category.
+        """
+        total_products = Product.objects.filter(is_active=True).count()
+        
+        category_counts = Category.objects.filter(is_active=True).annotate(
+            product_count=Count("products", filter=Q(products__is_active=True), distinct=True)
+        ).values("id", "name", "slug", "product_count").order_by("-product_count")
+        
+        return Response({
+            "total_products": total_products,
+            "category_counts": list(category_counts)
+        })
 
 
 # ---- Order: Pharmacy/Super see all; User sees own. Purchase = create (RegisteredUserOnly) ----
