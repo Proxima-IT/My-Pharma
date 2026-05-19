@@ -902,7 +902,7 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = (
-            Order.objects.select_related("user", "prescription", "duration", "coupon", "settlement")
+            Order.objects.select_related("user", "prescription", "delivery_method", "coupon", "settlement")
             .prefetch_related("items__product", "images", "status_history")
             .all()
         )
@@ -998,7 +998,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     },
                 )
         order.refresh_from_db()
-        qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "duration")
+        qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "delivery_method")
         order = qs.get()
         return Response(OrderSerializer(order, context={"request": request}).data)
 
@@ -1090,7 +1090,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                 discount_amount=order.discount_amount or Decimal("0"),
                 delivery_fee=order.delivery_fee or Decimal("0"),
                 coupon_id_ref=getattr(order.coupon, "id", None),
-                delivery_method_id_ref=getattr(order.duration, "id", None),
+                delivery_method_id_ref=getattr(order.delivery_method, "id", None),
                 cart_snapshot=[],
                 request_payload=post_body,
                 gateway_response=session_response or {},
@@ -1424,7 +1424,7 @@ class CartViewSet(viewsets.GenericViewSet):
             order = Order.objects.create(
                 user=request.user,
                 status=Order.Status.PENDING,
-                duration=delivery_method,
+                delivery_method=delivery_method,
                 total=summary["total_payable"],
                 subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
                 discount_amount=summary.get("discount_amount") or Decimal("0"),
@@ -1524,7 +1524,7 @@ class CartViewSet(viewsets.GenericViewSet):
                     discount_amount=summary.get("discount_amount") or Decimal("0"),
                     delivery_fee=summary.get("delivery_fee") or Decimal("0"),
                     coupon_id_ref=getattr(order.coupon, "id", None),
-                    delivery_method_id_ref=getattr(delivery_method, "id", None),
+                    delivery_method_id_ref=getattr(order.delivery_method, "id", None),
                     cart_snapshot=[],
                     request_payload=post_body,
                     gateway_response=session_response or {},

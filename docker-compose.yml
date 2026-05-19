@@ -11,7 +11,7 @@ services:
     restart: unless-stopped
     env_file: ${APP_ENV_FILE:-.env.dev}
     environment:
-      - DEBUG=false
+      - DISABLE_DATE_HIERARCHY=true
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_USER=mypharma
@@ -92,7 +92,7 @@ services:
     restart: unless-stopped
     env_file: ${APP_ENV_FILE:-.env.dev}
     environment:
-      - DEBUG=false
+      - DISABLE_DATE_HIERARCHY=true
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_USER=mypharma
