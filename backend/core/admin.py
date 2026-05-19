@@ -2,7 +2,12 @@
 Admin for core models: Category, Brand, Ingredient, Product, Order, OrderItem,
 Prescription, PrescriptionItem, Consultation, Notifications, Blog, Page.
 """
+import os
+from django.conf import settings
 from django.contrib import admin
+
+# Disable date_hierarchy locally to prevent timezone errors in MySQL without tzinfo
+DISABLE_DATE_HIERARCHY = os.environ.get("DISABLE_DATE_HIERARCHY", "true" if settings.DEBUG else "false").lower() in ("true", "1", "yes")
 
 from .models import (
     Brand,
@@ -106,7 +111,8 @@ class ProductReviewAdmin(admin.ModelAdmin):
     search_fields = ("user__username", "user__email", "product__name", "title", "comment")
     raw_id_fields = ("user", "product")
     inlines = [ProductReviewImageInline]
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 class OrderItemInline(admin.TabularInline):
@@ -169,7 +175,8 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "user__phone", "id")
     raw_id_fields = ("user", "prescription", "delivery_method", "coupon")
     inlines = [OrderItemInline, OrderImageInline, OrderStatusHistoryInline]
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(DeliveryMethod)
@@ -206,7 +213,8 @@ class PrescriptionAdmin(admin.ModelAdmin):
     search_fields = ("user__email", "user__phone", "patient_name_on_rx", "doctor_name", "prescription_note")
     raw_id_fields = ("user", "verified_by", "shipping_address")
     inlines = [PrescriptionItemInline, PrescriptionImageInline, PrescriptionStatusHistoryInline]
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(Consultation)
@@ -215,7 +223,8 @@ class ConsultationAdmin(admin.ModelAdmin):
     list_filter = ("status",)
     search_fields = ("user__email", "subject", "message")
     raw_id_fields = ("user", "doctor")
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(UserNotification)
@@ -224,7 +233,8 @@ class UserNotificationAdmin(admin.ModelAdmin):
     list_filter = ("is_read",)
     search_fields = ("user__email", "user__phone", "title", "message")
     raw_id_fields = ("campaign", "user", "created_by")
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(NotificationCampaign)
@@ -243,7 +253,8 @@ class NotificationCampaignAdmin(admin.ModelAdmin):
     list_filter = ("audience_mode", "status", "source")
     search_fields = ("title", "message", "dedupe_key")
     raw_id_fields = ("requested_by",)
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(NotificationDeliveryLog)
@@ -252,7 +263,8 @@ class NotificationDeliveryLogAdmin(admin.ModelAdmin):
     list_filter = ("status", "permanent_failure")
     search_fields = ("reason", "fcm_token", "provider_message_id")
     raw_id_fields = ("campaign", "user", "subscription")
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(BlogCategory)
@@ -271,7 +283,8 @@ class BlogPostAdmin(admin.ModelAdmin):
     search_fields = ("title", "slug", "content")
     prepopulated_fields = {"slug": ("title",)}
     raw_id_fields = ("category",)
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
 
 @admin.register(Page)

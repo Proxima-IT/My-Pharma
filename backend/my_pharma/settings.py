@@ -220,6 +220,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 # Production-ready static files (admin CSS, etc.)
 # Requires running `python manage.py collectstatic` in deploy/build.
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+WHITENOISE_MANIFEST_STRICT = False
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"

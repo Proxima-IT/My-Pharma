@@ -3,8 +3,13 @@ Admin for custom User and AuditLog.
 Uses email (not username) for login and user creation.
 Access: Only SUPER_ADMIN can access Users and Audit Logs (RBAC – Manage All Users).
 """
+import os
+from django.conf import settings
 from django import forms
 from django.contrib import admin
+
+# Disable date_hierarchy locally to prevent timezone errors in MySQL without tzinfo
+DISABLE_DATE_HIERARCHY = os.environ.get("DISABLE_DATE_HIERARCHY", "true" if settings.DEBUG else "false").lower() in ("true", "1", "yes")
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import UserChangeForm as BaseUserChangeForm
 from django.contrib.auth.forms import UserCreationForm as BaseUserCreationForm
@@ -159,7 +164,8 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_filter = ("action",)
     search_fields = ("user__email", "user__phone", "ip_address")
     readonly_fields = ("user", "action", "ip_address", "user_agent", "metadata", "created_at")
-    date_hierarchy = "created_at"
+    if not DISABLE_DATE_HIERARCHY:
+        date_hierarchy = "created_at"
 
     def has_module_permission(self, request):
         return _is_super_admin(request)

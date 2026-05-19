@@ -777,7 +777,7 @@ class OrderWriteSerializer(serializers.ModelSerializer):
             user=user,
             status=Order.Status.PENDING,
             prescription=prescription,
-            duration=validated_data.pop("delivery_method", None),
+            delivery_method=validated_data.pop("delivery_method", None),
             **validated_data,
         )
         total = Decimal("0")
