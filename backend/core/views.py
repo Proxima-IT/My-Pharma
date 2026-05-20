@@ -703,7 +703,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         return ProductWriteSerializer
 
     def get_permissions(self):
-        if self.action in ("list", "retrieve", "count_summary"):
+        if self.action in ("list", "retrieve", "count_summary", "search"):
             return [AllowAnyIncludingGuest()]
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
@@ -908,6 +908,155 @@ class ProductViewSet(viewsets.ModelViewSet):
             "total_products": total_products,
             "category_counts": list(category_counts)
         })
+
+    @extend_schema(
+        methods=["GET"],
+        tags=["Products"],
+        summary="Search products with smart relevance ranking, fuzzy Levenshtein corrections, and autocomplete",
+        parameters=[
+            OpenApiParameter(name="q", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="Search query string"),
+            OpenApiParameter(name="query", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="Alias for q"),
+            OpenApiParameter(name="autocomplete", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Lightweight autocomplete suggest format"),
+            OpenApiParameter(name="category", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="Category id OR slug OR name"),
+            OpenApiParameter(name="brand_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="ingredient_id", type=OpenApiTypes.INT, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="min_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="max_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="available", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="discounted", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="requires_prescription", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False),
+            OpenApiParameter(name="ordering", type=OpenApiTypes.STR, location=OpenApiParameter.QUERY, required=False, description="price,-price,name,-name,created_at,-created_at"),
+        ],
+        responses={
+            200: ProductListSerializer(many=True),
+        }
+    )
+    @action(detail=False, methods=["get"], permission_classes=[AllowAnyIncludingGuest], url_path="search")
+    def search(self, request):
+        """
+        Search products with relevance scoring and smart fallback modes.
+        GET /api/products/search/
+        """
+        from django.db.models import Case, When, Value, IntegerField
+        
+        q = request.query_params.get("q", "").strip() or request.query_params.get("query", "").strip()
+        autocomplete = request.query_params.get("autocomplete", "") in ("1", "true", "True", "yes")
+
+        # Get base queryset of active products
+        qs = self.get_queryset()
+
+        if q:
+            q_lower = q.lower()
+            
+            # Setup relevance ranking using DB-level annotations
+            w_exact_name = When(name__iexact=q_lower, then=Value(10))
+            w_starts_name = When(name__istartswith=q_lower, then=Value(8))
+            w_exact_brand = When(brand__name__iexact=q_lower, then=Value(7))
+            w_exact_ingredient = When(ingredient__name__iexact=q_lower, then=Value(7))
+            w_contains_name = When(name__icontains=q_lower, then=Value(5))
+            w_contains_ingredient = When(ingredient__name__icontains=q_lower, then=Value(4))
+            w_contains_brand = When(brand__name__icontains=q_lower, then=Value(4))
+
+            qs_matches = qs.filter(
+                Q(name__icontains=q) |
+                Q(brand__name__icontains=q) |
+                Q(ingredient__name__icontains=q)
+            )
+
+            # Annotate with relevance rank
+            qs_scored = qs_matches.annotate(
+                search_rank=Case(
+                    w_exact_name,
+                    w_starts_name,
+                    w_exact_brand,
+                    w_exact_ingredient,
+                    w_contains_name,
+                    w_contains_ingredient,
+                    w_contains_brand,
+                    default=Value(0),
+                    output_field=IntegerField()
+                )
+            )
+
+            # Filter out any non-matches (rank = 0 shouldn't happen with our Q filter, but safe)
+            qs_scored = qs_scored.filter(search_rank__gt=0)
+            
+            # If no direct matched results, try fuzzy Levenshtein distance <= 2 correction on product/brand/ingredient names
+            if not qs_scored.exists() and len(q) >= 3:
+                try:
+                    import Levenshtein
+                except ImportError:
+                    Levenshtein = None
+
+                if Levenshtein:
+                    # Fetch minimal fields for all active products to calculate distance in memory
+                    all_products = Product.objects.filter(is_active=True).only(
+                        "id", "name", "brand__name", "ingredient__name"
+                    ).select_related("brand", "ingredient")
+                    
+                    fuzzy_pks = []
+                    for product in all_products:
+                        name_dist = Levenshtein.distance(q_lower, product.name.lower())
+                        brand_dist = Levenshtein.distance(q_lower, product.brand.name.lower()) if product.brand else 999
+                        ing_dist = Levenshtein.distance(q_lower, product.ingredient.name.lower()) if product.ingredient else 999
+                        
+                        if name_dist <= 2 or brand_dist <= 2 or ing_dist <= 2:
+                            fuzzy_pks.append(product.pk)
+                    
+                    if fuzzy_pks:
+                        qs_scored = qs.filter(pk__in=fuzzy_pks).annotate(
+                            search_rank=Value(2, output_field=IntegerField())
+                        )
+            
+            # Apply relevance sorting
+            qs = qs_scored.order_by("-search_rank", "-rating_avg", "-created_at")
+        else:
+            # If no query provided, default ordering by name
+            qs = qs.order_by("name")
+
+        # Now apply the standard catalog filters (category, brand, ingredient, price range, stock status, discounted, requires_prescription)
+        qs = self.filter_queryset(qs)
+
+        # Autocomplete Optimization (instantly returns lightweight suggest list)
+        if autocomplete:
+            suggestions = []
+            # Slice results to 15 items maximum for autocompletion speed
+            for product in qs[:15]:
+                image_url = None
+                if product.image:
+                    image_url = product.image.url
+                    # Safe build absolute media uri
+                    if self.context.get("request") or request:
+                        req = self.context.get("request") or request
+                        image_url = req.build_absolute_uri(image_url)
+
+                suggestions.append({
+                    "id": product.id,
+                    "name": product.name,
+                    "slug": product.slug,
+                    "price": str(product.price),
+                    "original_price": str(product.original_price) if product.original_price else None,
+                    "discount_percentage": product.discount_percentage,
+                    "image_url": image_url,
+                    "brand_name": product.brand.name if product.brand else None,
+                    "category_name": product.category.name if product.category else None,
+                    "generic_name": product.ingredient.name if product.ingredient else None,
+                    "ingredient_name": product.ingredient.name if product.ingredient else None,
+                    "dosage": product.dosage,
+                    "requires_prescription": product.requires_prescription,
+                    "quantity_in_stock": product.quantity_in_stock,
+                })
+            return Response(suggestions, status=status.HTTP_200_OK)
+
+        # Full Search Mode: standard pagination and serialization
+        page = self.paginate_queryset(qs)
+        if page is not None:
+            serializer = ProductListSerializer(page, many=True, context={"request": request})
+            return self.get_paginated_response(serializer.data)
+
+        serializer = ProductListSerializer(qs, many=True, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 
 # ---- Order: Pharmacy/Super see all; User sees own. Purchase = create (RegisteredUserOnly) ----

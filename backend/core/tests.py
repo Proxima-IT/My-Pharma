@@ -4,7 +4,14 @@ from rest_framework.test import APITestCase
 from authentication.constants import UserRole, UserStatus
 from authentication.models import User
 
-from .models import NotificationCampaign, UserPushSubscription
+from .models import (
+    NotificationCampaign,
+    UserPushSubscription,
+    Product,
+    Category,
+    Brand,
+    Ingredient,
+)
 
 
 class NotificationApiSmokeTests(APITestCase):
@@ -55,3 +62,189 @@ class NotificationApiSmokeTests(APITestCase):
         detail_response = self.client.get(f"/api/notifications/campaigns/{campaign_id}/")
         self.assertEqual(detail_response.status_code, status.HTTP_200_OK)
         self.assertEqual(detail_response.data["campaign"]["id"], campaign_id)
+
+
+class ProductSearchApiTests(APITestCase):
+    def setUp(self):
+        # 1. Create categories
+        self.category_meds = Category.objects.create(name="Medicines", slug="medicines")
+        self.category_devs = Category.objects.create(name="Devices", slug="devices")
+
+        # 2. Create brands
+        self.brand_beximco = Brand.objects.create(name="Beximco Pharmaceuticals Ltd.", slug="beximco")
+        self.brand_square = Brand.objects.create(name="Square Pharmaceuticals Ltd.", slug="square")
+
+        # 3. Create ingredients
+        self.ing_para = Ingredient.objects.create(name="Paracetamol", slug="paracetamol")
+        self.ing_ibu = Ingredient.objects.create(name="Ibuprofen", slug="ibuprofen")
+
+        # 4. Create products
+        self.p_napa = Product.objects.create(
+            name="Napa 500mg",
+            slug="napa-500mg",
+            category=self.category_meds,
+            brand=self.brand_beximco,
+            ingredient=self.ing_para,
+            price=1.20,
+            original_price=1.50,
+            quantity_in_stock=100,
+            is_active=True,
+            rating_avg=4.8,
+            dosage="500mg"
+        )
+        self.p_napa_extra = Product.objects.create(
+            name="Napa Extra",
+            slug="napa-extra",
+            category=self.category_meds,
+            brand=self.brand_beximco,
+            ingredient=self.ing_para,
+            price=2.00,
+            quantity_in_stock=50,
+            is_active=True,
+            rating_avg=4.5,
+            dosage="665mg"
+        )
+        self.p_ace = Product.objects.create(
+            name="Ace 500mg",
+            slug="ace-500mg",
+            category=self.category_meds,
+            brand=self.brand_square,
+            ingredient=self.ing_para,
+            price=1.10,
+            quantity_in_stock=200,
+            is_active=True,
+            rating_avg=4.2,
+            dosage="500mg"
+        )
+        self.p_ibu = Product.objects.create(
+            name="Ibuprofen 400mg",
+            slug="ibuprofen-400mg",
+            category=self.category_meds,
+            brand=self.brand_square,
+            ingredient=self.ing_ibu,
+            price=3.00,
+            quantity_in_stock=10,
+            is_active=True,
+            requires_prescription=True,
+            rating_avg=4.0,
+            dosage="400mg"
+        )
+        self.p_inactive = Product.objects.create(
+            name="Napa Inactive",
+            slug="napa-inactive",
+            category=self.category_meds,
+            brand=self.brand_beximco,
+            ingredient=self.ing_para,
+            price=1.00,
+            quantity_in_stock=100,
+            is_active=False
+        )
+
+    def test_search_exact_and_partial_name(self):
+        # Searching for exact name "Napa 500mg"
+        response = self.client.get("/api/products/search/?q=Napa 500mg")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Results should be paginated
+        self.assertIn("results", response.data)
+        results = response.data["results"]
+        # The exact match should be first
+        self.assertGreater(len(results), 0)
+        self.assertEqual(results[0]["name"], "Napa 500mg")
+
+        # Searching for partial name "Napa"
+        response = self.client.get("/api/products/search/?q=napa")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        product_names = [p["name"] for p in results]
+        # Should return active Napa products
+        self.assertIn("Napa 500mg", product_names)
+        self.assertIn("Napa Extra", product_names)
+        # Inactive product should NOT be in the results
+        self.assertNotIn("Napa Inactive", product_names)
+
+    def test_search_brand_and_ingredient(self):
+        # Search by Brand "Square"
+        response = self.client.get("/api/products/search/?q=Square")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        # Should return "Ace 500mg" and "Ibuprofen 400mg"
+        product_names = [p["name"] for p in results]
+        self.assertIn("Ace 500mg", product_names)
+        self.assertIn("Ibuprofen 400mg", product_names)
+
+        # Search by Ingredient "Paracetamol"
+        response = self.client.get("/api/products/search/?q=Paracetamol")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        product_names = [p["name"] for p in results]
+        # Should return all active products with ingredient Paracetamol
+        self.assertEqual(len(results), 3)
+        self.assertIn("Napa 500mg", product_names)
+        self.assertIn("Napa Extra", product_names)
+        self.assertIn("Ace 500mg", product_names)
+
+        # They should be ranked by rating_avg descending under the same query score
+        # Rating average: Napa 500mg (4.8) > Napa Extra (4.5) > Ace 500mg (4.2)
+        self.assertEqual(results[0]["name"], "Napa 500mg")
+        self.assertEqual(results[1]["name"], "Napa Extra")
+        self.assertEqual(results[2]["name"], "Ace 500mg")
+
+    def test_search_filtering(self):
+        # Search for "Napa" and filter by min_price = 1.50
+        response = self.client.get("/api/products/search/?q=napa&min_price=1.50")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        product_names = [p["name"] for p in results]
+        # Napa 500mg (price=1.20) should be filtered out. Napa Extra (price=2.00) should remain.
+        self.assertIn("Napa Extra", product_names)
+        self.assertNotIn("Napa 500mg", product_names)
+
+        # Search for "Ibuprofen" and filter by requires_prescription = true
+        response = self.client.get("/api/products/search/?q=ibuprofen&requires_prescription=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["name"], "Ibuprofen 400mg")
+
+        # Search for "Ibuprofen" and filter by requires_prescription = false
+        response = self.client.get("/api/products/search/?q=ibuprofen&requires_prescription=false")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        self.assertEqual(len(results), 0)
+
+    def test_autocomplete_mode(self):
+        # Call autocomplete mode
+        response = self.client.get("/api/products/search/?q=napa&autocomplete=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # Should be a list, not a paginated dict
+        self.assertIsInstance(response.data, list)
+        self.assertEqual(len(response.data), 2)  # Napa 500mg and Napa Extra (active)
+        
+        # Verify autocomplete payload schema matches optimized fields
+        first_item = response.data[0]
+        expected_keys = {
+            "id", "name", "slug", "price", "original_price",
+            "discount_percentage", "image_url", "brand_name",
+            "category_name", "generic_name", "ingredient_name",
+            "dosage", "requires_prescription", "quantity_in_stock"
+        }
+        self.assertTrue(expected_keys.issubset(first_item.keys()))
+        self.assertEqual(first_item["brand_name"], "Beximco Pharmaceuticals Ltd.")
+        self.assertEqual(first_item["category_name"], "Medicines")
+        self.assertEqual(first_item["generic_name"], "Paracetamol")
+        self.assertEqual(first_item["ingredient_name"], "Paracetamol")
+
+    def test_fuzzy_spelling_correction(self):
+        # Search for misspelled ingredient "paracitamol"
+        # This has no exact/contains/starts matches, so it triggers Levenshtein distance <= 2 fallback
+        response = self.client.get("/api/products/search/?q=paracitamol")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        product_names = [p["name"] for p in results]
+        
+        # Should correctly correct to "Paracetamol" products
+        self.assertEqual(len(results), 3)
+        self.assertIn("Napa 500mg", product_names)
+        self.assertIn("Napa Extra", product_names)
+        self.assertIn("Ace 500mg", product_names)
+

@@ -4266,6 +4266,122 @@ paths:
               schema:
                 $ref: '#/components/schemas/ProductWrite'
           description: ''
+  /api/products/search/:
+    get:
+      operationId: products_search_list
+      description: |-
+        Search products with relevance scoring and smart fallback modes.
+        GET /api/products/search/
+      summary: Search products with smart relevance ranking, fuzzy Levenshtein corrections,
+        and autocomplete
+      parameters:
+      - in: query
+        name: autocomplete
+        schema:
+          type: boolean
+        description: Lightweight autocomplete suggest format
+      - in: query
+        name: available
+        schema:
+          type: boolean
+      - in: query
+        name: brand_id
+        schema:
+          type: integer
+      - in: query
+        name: category
+        schema:
+          type: string
+        description: Category id OR slug OR name
+      - in: query
+        name: discount_max
+        schema:
+          type: number
+        description: Maximum discount percent (<=)
+      - in: query
+        name: discount_min
+        schema:
+          type: number
+        description: Minimum discount percent (>=)
+      - in: query
+        name: discounted
+        schema:
+          type: boolean
+      - in: query
+        name: in_stock
+        schema:
+          type: boolean
+      - in: query
+        name: ingredient_id
+        schema:
+          type: integer
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: is_generic
+        schema:
+          type: boolean
+      - in: query
+        name: is_in_homepage
+        schema:
+          type: boolean
+      - in: query
+        name: max_price
+        schema:
+          type: number
+      - in: query
+        name: min_price
+        schema:
+          type: number
+      - in: query
+        name: ordering
+        schema:
+          type: string
+        description: price,-price,name,-name,created_at,-created_at
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: price_max
+        schema:
+          type: number
+      - in: query
+        name: price_min
+        schema:
+          type: number
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Search query string
+      - in: query
+        name: query
+        schema:
+          type: string
+        description: Alias for q
+      - in: query
+        name: requires_prescription
+        schema:
+          type: boolean
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Name search (fuzzy Levenshtein <= 2)
+      tags:
+      - Products
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductListList'
+          description: ''
   /api/reviews/:
     get:
       operationId: reviews_list
