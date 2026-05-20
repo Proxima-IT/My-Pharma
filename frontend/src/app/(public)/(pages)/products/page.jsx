@@ -42,7 +42,8 @@ const Products = () => {
   const { loading, products, page, setPage, totalCount } = useProductData({
     category: categoryFilter,
     search: searchQuery,
-    brand_id: brandIdFromUrl,
+    brand_id:
+      brandIdFromUrl || (selectedBrands.length > 0 ? selectedBrands[0] : ''),
     // FIXED: Passing the ID (integer) instead of the Name (string)
     ingredient_id: selectedIngredients.length > 0 ? selectedIngredients[0] : '',
     discounted: hasDiscount,
@@ -67,7 +68,7 @@ const Products = () => {
           const brandObj = brandList.find(
             b => b.id.toString() === brandIdFromUrl,
           );
-          if (brandObj) setSelectedBrands([brandObj.name]);
+          if (brandObj) setSelectedBrands([brandObj.id]);
         }
 
         // Fetch ingredients
@@ -82,12 +83,41 @@ const Products = () => {
     fetchData();
   }, [brandIdFromUrl]);
 
+  // 5. Memoized Filtering Logic
+  const filteredProducts = useMemo(() => {
+    let result = products;
+
+    if (searchQuery) {
+      result = searchProducts(result, searchQuery);
+    }
+
+    if (minPrice) {
+      result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
+    }
+    if (maxPrice) {
+      result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
+    }
+
+    if (selectedBrands.length > 0 && !brandIdFromUrl) {
+      result = result.filter(p => selectedBrands.includes(p.brand_id));
+    }
+
+    return result;
+  }, [
+    products,
+    searchQuery,
+    minPrice,
+    maxPrice,
+    selectedBrands,
+    brandIdFromUrl,
+  ]);
+
   // 6. Handlers
-  const toggleBrand = brandName => {
+  const toggleBrand = brandId => {
     setSelectedBrands(prev =>
-      prev.includes(brandName)
-        ? prev.filter(b => b !== brandName)
-        : [...prev, brandName],
+      prev.includes(brandId)
+        ? prev.filter(b => b !== brandId)
+        : [...prev, brandId],
     );
     if (brandIdFromUrl) router.push('/products');
   };
@@ -254,12 +284,12 @@ const Products = () => {
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      checked={selectedBrands.includes(brand.name)}
-                      onChange={() => toggleBrand(brand.name)}
+                      checked={selectedBrands.includes(brand.id)}
+                      onChange={() => toggleBrand(brand.id)}
                       className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
                     />
                     <span
-                      className={`text-sm font-medium transition-colors ${selectedBrands.includes(brand.name) ? 'text-gray-900 font-bold' : 'text-gray-600 group-hover:text-gray-900'}`}
+                      className={`text-sm font-medium transition-colors ${selectedBrands.includes(brand.id) ? 'text-gray-900 font-bold' : 'text-gray-600 group-hover:text-gray-900'}`}
                     >
                       {brand.name}
                     </span>
