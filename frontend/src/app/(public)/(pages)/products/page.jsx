@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { IoIosArrowDown } from 'react-icons/io';
@@ -11,7 +11,6 @@ import PopularProductCard from '../home/components/PopularProductCard';
 import { useProductData } from '../../hooks/useProductData';
 import Sidebar from '../../components/Sidebar';
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
-import { searchProducts } from '../../lib/productSearchEngine';
 
 /**
  * Products Page Component
@@ -82,35 +81,6 @@ const Products = () => {
     };
     fetchData();
   }, [brandIdFromUrl]);
-
-  // 5. Memoized Filtering Logic
-  const filteredProducts = useMemo(() => {
-    let result = products;
-
-    if (searchQuery) {
-      result = searchProducts(result, searchQuery);
-    }
-
-    if (minPrice) {
-      result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
-    }
-    if (maxPrice) {
-      result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
-    }
-
-    if (selectedBrands.length > 0 && !brandIdFromUrl) {
-      result = result.filter(p => selectedBrands.includes(p.brand_id));
-    }
-
-    return result;
-  }, [
-    products,
-    searchQuery,
-    minPrice,
-    maxPrice,
-    selectedBrands,
-    brandIdFromUrl,
-  ]);
 
   // 6. Handlers
   const toggleBrand = brandId => {
