@@ -54,11 +54,35 @@ from .validators import validate_prescription_file, validate_issue_date_not_olde
 from authentication.models import UserAddress
 
 
+class SafeCharField(serializers.CharField):
+    """
+    A CharField that safely traverses dotted source paths, returning None
+    instead of raising AttributeError or FieldError when an intermediate relation is None.
+    """
+    def get_attribute(self, instance):
+        try:
+            return super().get_attribute(instance)
+        except (AttributeError, ValueError):
+            return None
+
+
+class SafeEmailField(serializers.EmailField):
+    """
+    An EmailField that safely traverses dotted source paths, returning None
+    instead of raising AttributeError or FieldError when an intermediate relation is None.
+    """
+    def get_attribute(self, instance):
+        try:
+            return super().get_attribute(instance)
+        except (AttributeError, ValueError):
+            return None
+
+
 # ---- Category (hierarchy: parent / children) ----
 class CategorySerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
-    sidebar_category_title = serializers.CharField(
+    sidebar_category_title = SafeCharField(
         source="sidebar_category.title",
         read_only=True,
         allow_null=True,
@@ -327,9 +351,9 @@ def _product_image_urls(product, request=None):
 
 
 class ProductListSerializer(serializers.ModelSerializer):
-    category_name = serializers.CharField(source="category.name", read_only=True)
-    brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
-    ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
+    category_name = SafeCharField(source="category.name", read_only=True)
+    brand_name = SafeCharField(source="brand.name", read_only=True, allow_null=True)
+    ingredient_name = SafeCharField(source="ingredient.name", read_only=True, allow_null=True)
     unit_name = serializers.SerializerMethodField()
     is_low_stock = serializers.BooleanField(read_only=True)
     discount_percentage = serializers.IntegerField(read_only=True, allow_null=True)

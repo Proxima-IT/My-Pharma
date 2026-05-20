@@ -103,7 +103,7 @@ _default_csrf_trusted_origins = [
     "http://bluepillc.com",
     "http://www.bluepillc.com",
     "https://bluepillc.com",
-    "https://www.bluepillc.com",
+    "https://www.mypharma.com.bd",
     "http://46.202.194.251",
     "https://mypharma.com.bd",
     "https://www.mypharma.com.bd",
@@ -246,7 +246,7 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ),
     "DEFAULT_PAGINATION_CLASS":
-        "rest_framework.pagination.PageNumberPagination",
+        "core.pagination.CustomPageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
