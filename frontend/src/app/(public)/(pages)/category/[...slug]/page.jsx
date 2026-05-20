@@ -3,7 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiChevronRight } from 'react-icons/fi';
+import { FiChevronRight, FiChevronDown } from 'react-icons/fi';
 import PopularProductCard from '../../home/components/PopularProductCard';
 import {
   API_BASE_URL,
@@ -25,6 +25,8 @@ const DynamicCategoryPage = ({ params }) => {
   const [subCategories, setSubCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -50,12 +52,12 @@ const DynamicCategoryPage = ({ params }) => {
           // 2. Aggregate slugs: current category + all its immediate children
           const slugsToFetch = [currentSlug, ...subList.map(s => s.slug)];
 
-          // 3. Fetch products for all these categories
+          // 3. Fetch products for all these categories with pagination
           const productResponses = await Promise.all(
             slugsToFetch.map(slug =>
               fetch(
-                `${API_BASE_URL}/products/?category=${slug}&is_active=true`,
-              ).then(res => parseJsonResponse(res, { results: [] })),
+                `${API_BASE_URL}/products/?category=${slug}&is_active=true&page=${page}`,
+              ).then(res => parseJsonResponse(res, { results: [], count: 0 })),
             ),
           );
 
@@ -63,6 +65,12 @@ const DynamicCategoryPage = ({ params }) => {
           const combinedProducts = productResponses.flatMap(data =>
             Array.isArray(data) ? data : data.results || [],
           );
+
+          const total = productResponses.reduce(
+            (sum, data) => sum + (data.count || 0),
+            0,
+          );
+          setTotalCount(total);
 
           const uniqueProducts = Array.from(
             new Map(combinedProducts.map(p => [p.id, p])).values(),
@@ -78,7 +86,45 @@ const DynamicCategoryPage = ({ params }) => {
     };
 
     if (currentSlug) fetchData();
-  }, [currentSlug]);
+  }, [currentSlug, page]);
+
+  const totalPages = Math.ceil(totalCount / 20);
+
+  const handlePageChange = newPage => {
+    setPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPaginationRange = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= page - delta && i <= page + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
+  };
 
   const breadcrumbs = slugArray.map((segment, index) => {
     const path = `/category/${slugArray.slice(0, index + 1).join('/')}`;
@@ -177,6 +223,43 @@ const DynamicCategoryPage = ({ params }) => {
             {products.map(product => (
               <PopularProductCard key={product.id} product={product} />
             ))}
+          </div>
+        )}
+
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-12 pb-10">
+            <button
+              disabled={page === 1}
+              onClick={() => handlePageChange(page - 1)}
+              className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <FiChevronDown className="rotate-90" size={18} />
+            </button>
+
+            {getPaginationRange().map((p, i) => (
+              <button
+                key={i}
+                disabled={p === '...'}
+                onClick={() => p !== '...' && handlePageChange(p)}
+                className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
+                  page === p
+                    ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+                    : p === '...'
+                      ? 'bg-transparent text-gray-400 cursor-default'
+                      : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button
+              disabled={page === totalPages}
+              onClick={() => handlePageChange(page + 1)}
+              className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              <FiChevronDown className="-rotate-90" size={18} />
+            </button>
           </div>
         )}
       </div>

@@ -23,14 +23,40 @@ const FeaturedCategory = () => {
   const [canScrollRight, setCanScrollRight] = useState(true);
 
   useEffect(() => {
-    const fetchFeaturedFromTree = async () => {
+    const fetchFeaturedData = async () => {
       try {
-        const res = await fetch(`${API_BASE_URL}/categories/tree/`);
-        const data = await parseJsonResponse(res, []);
+        const [treeRes, countRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/categories/tree/`),
+          fetch(`${API_BASE_URL}/products/count-summary/`),
+        ]);
 
-        const featuredRoots = (Array.isArray(data) ? data : []).filter(
-          item => item.is_featured_home === true,
-        );
+        const treeData = await parseJsonResponse(treeRes, []);
+        const countData = await parseJsonResponse(countRes, {
+          total_products: 0,
+          category_counts: [],
+        });
+
+        const directCounts = {};
+        (countData.category_counts || []).forEach(item => {
+          directCounts[item.name] = item.product_count;
+        });
+
+        const sumTree = node => {
+          let total = directCounts[node.name] || 0;
+          if (Array.isArray(node.children)) {
+            node.children.forEach(child => {
+              total += sumTree(child);
+            });
+          }
+          return total;
+        };
+
+        const featuredRoots = (Array.isArray(treeData) ? treeData : [])
+          .filter(item => item.is_featured_home === true)
+          .map(item => ({
+            ...item,
+            product_count: sumTree(item),
+          }));
 
         featuredRoots.sort(
           (a, b) => (a.featured_order || 0) - (b.featured_order || 0),
@@ -43,7 +69,7 @@ const FeaturedCategory = () => {
         setIsLoading(false);
       }
     };
-    fetchFeaturedFromTree();
+    fetchFeaturedData();
   }, []);
 
   const checkScrollButtons = () => {

@@ -42,7 +42,8 @@ const Products = () => {
   const { loading, products, page, setPage, totalCount } = useProductData({
     category: categoryFilter,
     search: searchQuery,
-    brand_id: brandIdFromUrl,
+    brand_id:
+      brandIdFromUrl || (selectedBrands.length > 0 ? selectedBrands[0] : ''),
     // FIXED: Passing the ID (integer) instead of the Name (string)
     ingredient_id: selectedIngredients.length > 0 ? selectedIngredients[0] : '',
     discounted: hasDiscount,
@@ -67,7 +68,7 @@ const Products = () => {
           const brandObj = brandList.find(
             b => b.id.toString() === brandIdFromUrl,
           );
-          if (brandObj) setSelectedBrands([brandObj.name]);
+          if (brandObj) setSelectedBrands([brandObj.id]);
         }
 
         // Fetch ingredients
@@ -82,12 +83,41 @@ const Products = () => {
     fetchData();
   }, [brandIdFromUrl]);
 
+  // 5. Memoized Filtering Logic
+  const filteredProducts = useMemo(() => {
+    let result = products;
+
+    if (searchQuery) {
+      result = searchProducts(result, searchQuery);
+    }
+
+    if (minPrice) {
+      result = result.filter(p => parseFloat(p.price) >= parseFloat(minPrice));
+    }
+    if (maxPrice) {
+      result = result.filter(p => parseFloat(p.price) <= parseFloat(maxPrice));
+    }
+
+    if (selectedBrands.length > 0 && !brandIdFromUrl) {
+      result = result.filter(p => selectedBrands.includes(p.brand_id));
+    }
+
+    return result;
+  }, [
+    products,
+    searchQuery,
+    minPrice,
+    maxPrice,
+    selectedBrands,
+    brandIdFromUrl,
+  ]);
+
   // 6. Handlers
-  const toggleBrand = brandName => {
+  const toggleBrand = brandId => {
     setSelectedBrands(prev =>
-      prev.includes(brandName)
-        ? prev.filter(b => b !== brandName)
-        : [...prev, brandName],
+      prev.includes(brandId)
+        ? prev.filter(b => b !== brandId)
+        : [...prev, brandId],
     );
     if (brandIdFromUrl) router.push('/products');
   };
@@ -116,6 +146,37 @@ const Products = () => {
   const handlePageChange = newPage => {
     setPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const getPaginationRange = () => {
+    const delta = 1;
+    const range = [];
+    const rangeWithDots = [];
+    let l;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= page - delta && i <= page + delta)
+      ) {
+        range.push(i);
+      }
+    }
+
+    for (let i of range) {
+      if (l) {
+        if (i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      l = i;
+    }
+
+    return rangeWithDots;
   };
 
   if (loading) {
@@ -223,12 +284,12 @@ const Products = () => {
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      checked={selectedBrands.includes(brand.name)}
-                      onChange={() => toggleBrand(brand.name)}
+                      checked={selectedBrands.includes(brand.id)}
+                      onChange={() => toggleBrand(brand.id)}
                       className="w-5 h-5 rounded border-gray-300 text-(--color-primary-500) focus:ring-(--color-primary-500) cursor-pointer accent-(--color-primary-500)"
                     />
                     <span
-                      className={`text-sm font-medium transition-colors ${selectedBrands.includes(brand.name) ? 'text-gray-900 font-bold' : 'text-gray-600 group-hover:text-gray-900'}`}
+                      className={`text-sm font-medium transition-colors ${selectedBrands.includes(brand.id) ? 'text-gray-900 font-bold' : 'text-gray-600 group-hover:text-gray-900'}`}
                     >
                       {brand.name}
                     </span>
@@ -411,22 +472,22 @@ const Products = () => {
               <FiChevronDown className="rotate-90" size={18} />
             </button>
 
-            {[...Array(totalPages)].map((_, i) => {
-              const p = i + 1;
-              return (
-                <button
-                  key={p}
-                  onClick={() => handlePageChange(p)}
-                  className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
-                    page === p
-                      ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+            {getPaginationRange().map((p, i) => (
+              <button
+                key={i}
+                disabled={p === '...'}
+                onClick={() => p !== '...' && handlePageChange(p)}
+                className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
+                  page === p
+                    ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+                    : p === '...'
+                      ? 'bg-transparent text-gray-400 cursor-default'
                       : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {p}
-                </button>
-              );
-            })}
+                }`}
+              >
+                {p}
+              </button>
+            ))}
 
             <button
               disabled={page === totalPages}

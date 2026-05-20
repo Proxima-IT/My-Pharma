@@ -2,16 +2,19 @@
 const nextConfig = {
   reactCompiler: true,
   output: 'standalone',
+
   experimental: {
-    cpus: 2,
-    workerThreads: false,
     memoryBasedWorkersCount: true,
   },
-  typescript: { ignoreBuildErrors: true },
+
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   images: {
-    // This tells Next.js to use our custom function for EVERY <Image /> component
     loader: 'custom',
     loaderFile: './src/app/(shared)/lib/imageLoader.js',
+
     remotePatterns: [
       {
         protocol: 'http',
@@ -37,8 +40,6 @@ const nextConfig = {
       },
     ],
   },
-  // /media/* is proxied by src/app/media/[[...path]]/route.js so BACKEND_URL_INTERNAL
-  // works at runtime in Docker. Do not add a rewrite here (it would be baked at build time).
 };
 
 export default nextConfig;
