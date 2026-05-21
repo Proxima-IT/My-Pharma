@@ -112,7 +112,7 @@ const Header = () => {
   // Real-time Search Logic with Backend Autocomplete
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (q.length >= 3) {
+    if (q.length >= 1) {
       setShowSuggestions(true);
       setIsSearching(true);
 
@@ -348,10 +348,10 @@ const Header = () => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={() =>
-                searchQuery.length >= 3 && setShowSuggestions(true)
+                searchQuery.length >= 1 && setShowSuggestions(true)
               }
               placeholder='Search for "healthcare products"'
-              className="w-full h-12 md:h-14 pl-6 pr-14 rounded-full border border-gray-100 text-sm focus:outline-none focus:ring-4 focus:ring-(--color-primary-500)/10 transition-all"
+              className="w-full h-12 md:h-14 pl-6 pr-14 rounded-full border border-gray-100 text-sm outline-none ring-4 ring-(--color-primary-500)/10 transition-all"
             />
             <button
               type="submit"

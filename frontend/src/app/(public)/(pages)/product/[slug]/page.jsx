@@ -139,6 +139,10 @@ const ProductSingle = ({ params }) => {
         {/* Gallery & Descriptions */}
         <div className="w-full lg:w-[62%] min-w-0 space-y-6 lg:space-y-5">
           <ProductImageViewer images={getProductImages()} />
+          {/* Mobile Summary Card: Placed after image for mobile stack order */}
+          <div className="lg:hidden">
+            <ProductSummaryCard product={product} />
+          </div>
           <ProductDetailsTabs
             product={product}
             onReviewSuccess={refreshProduct}
@@ -147,7 +151,10 @@ const ProductSingle = ({ params }) => {
 
         {/* Purchase Info & Generic Suggestions */}
         <div className="w-full lg:w-[38%] min-w-0 space-y-6 lg:space-y-5">
-          <ProductSummaryCard product={product} />
+          {/* Desktop Summary Card: Hidden on mobile to maintain stack order */}
+          <div className="hidden lg:block">
+            <ProductSummaryCard product={product} />
+          </div>
 
           {/* Bundle/Combo Offerings */}
           <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[24px] p-6 lg:p-5">
