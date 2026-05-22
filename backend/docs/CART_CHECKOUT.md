@@ -39,6 +39,12 @@ ADD TO CART (product selection)
 
 Place order: **POST** `/api/orders/` with `shipping_address`, `notes`, `items`, optional `prescription`, `delivery_zone`, `payment_method`. Min order BDT 100; delivery fee by zone; prescription required if cart has Rx items.
 
+### Direct Order ("Buy Now" Checkout)
+
+For single-product purchases bypassing the shopping cart:
+- **POST** `/api/orders/buy-now-preview/` – Preview order summary and totals for a direct checkout purchase. Body: `product` (id), `quantity` (default 1), optional `shipping_address_id`, `coupon_code`, `delivery_method_id`.
+- **POST** `/api/orders/buy-now/` – Place a single-product order directly without adding to the cart. Body: `product` (id), `quantity`, `shipping_address_id`, optional `coupon_code`, `notes`, `message`, `delivery_method_id`, `payment_method` (defaults to COD), `prescription` (required if product requires a prescription). Returns SSLCommerz payment gateway URL if online payment method is chosen.
+
 ---
 
 ## References

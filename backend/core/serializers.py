@@ -1755,3 +1755,42 @@ class B2BCommissionEntrySerializer(serializers.ModelSerializer):
             "created_at",
         )
         read_only_fields = ("id", "commission_amount", "created_at")
+
+
+class BuyNowPreviewSerializer(serializers.Serializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True))
+    quantity = serializers.IntegerField(min_value=1, default=1)
+    dosage = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    shipping_address_id = serializers.IntegerField(required=False, allow_null=True)
+    coupon_code = serializers.CharField(required=False, allow_blank=True)
+    delivery_method_id = serializers.IntegerField(required=False, allow_null=True)
+
+
+class BuyNowSerializer(serializers.Serializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True))
+    quantity = serializers.IntegerField(min_value=1, default=1)
+    dosage = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    shipping_address_id = serializers.IntegerField(required=True)
+    coupon_code = serializers.CharField(required=False, allow_blank=True)
+    notes = serializers.CharField(required=False, allow_blank=True)
+    message = serializers.CharField(required=False, allow_blank=True)
+    delivery_method_id = serializers.IntegerField(required=False, allow_null=True)
+    payment_method = serializers.ChoiceField(
+        choices=PaymentTransaction.Method.choices,
+        required=False,
+        default=PaymentTransaction.Method.COD,
+    )
+    prescription = serializers.PrimaryKeyRelatedField(
+        queryset=Prescription.objects.none(),
+        required=False,
+        allow_null=True,
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "request" in self.context:
+            self.fields["prescription"].queryset = Prescription.objects.filter(
+                user=self.context["request"].user,
+                status=Prescription.Status.APPROVED,
+            )
+

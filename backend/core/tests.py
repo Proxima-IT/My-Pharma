@@ -248,3 +248,148 @@ class ProductSearchApiTests(APITestCase):
         self.assertIn("Napa Extra", product_names)
         self.assertIn("Ace 500mg", product_names)
 
+
+class BuyNowApiTests(APITestCase):
+    def setUp(self):
+        from decimal import Decimal
+        from authentication.models import UserAddress
+        from .models import Coupon, Prescription, PrescriptionItem
+
+        # Create categories, brands, products
+        self.category = Category.objects.create(name="Medicines", slug="meds")
+        self.product = Product.objects.create(
+            name="Buy Now Napa",
+            slug="bn-napa",
+            category=self.category,
+            price=Decimal("150.00"),
+            original_price=Decimal("200.00"),
+            quantity_in_stock=50,
+            is_active=True,
+        )
+        self.rx_product = Product.objects.create(
+            name="Rx Napa Extra",
+            slug="rx-napa-extra",
+            category=self.category,
+            price=Decimal("300.00"),
+            quantity_in_stock=30,
+            is_active=True,
+            requires_prescription=True,
+        )
+
+        # Create user
+        self.user = User.objects.create_user(
+            email="buyer@example.com",
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+        # Create address
+        self.address = UserAddress.objects.create(
+            user=self.user,
+            full_name="John Doe",
+            email="john@example.com",
+            phone="01711111111",
+            district="Dhaka",
+            thana="Dhanmondi",
+            address="House 12, Road 5",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_buy_now_preview_success(self):
+        payload = {
+            "product": self.product.id,
+            "quantity": 2,
+            "shipping_address_id": self.address.id,
+        }
+        response = self.client.post("/api/orders/buy-now-preview/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # 150.00 * 2 = 300.00 subtotal. Base delivery fee for Dhaka is 50.00.
+        # Total payable = 300.00 + 50.00 = 350.00 BDT.
+        self.assertEqual(float(response.data["subtotal"]), 300.00)
+        self.assertEqual(float(response.data["total_payable"]), 350.00)
+
+    def test_buy_now_preview_coupon(self):
+        from decimal import Decimal
+        from .models import Coupon
+
+        # Create coupon
+        coupon = Coupon.objects.create(
+            code="DIRECT10",
+            discount_type=Coupon.DiscountType.PERCENT,
+            discount_value=Decimal("10.00"),
+            is_active=True,
+            min_order_amount=Decimal("100.00"),
+        )
+        payload = {
+            "product": self.product.id,
+            "quantity": 2,
+            "shipping_address_id": self.address.id,
+            "coupon_code": "DIRECT10",
+        }
+        response = self.client.post("/api/orders/buy-now-preview/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        # 150.00 * 2 = 300.00. 10% of 300.00 = 30.00 discount.
+        # Delivery = 50.00.
+        # Total payable = 300.00 - 30.00 + 50.00 = 320.00 BDT.
+        self.assertEqual(float(response.data["total_payable"]), 320.00)
+        self.assertEqual(float(response.data["discount_amount"]), 130.00)  # Catalog (100) + Coupon (30)
+
+    def test_buy_now_place_order_cod(self):
+        from decimal import Decimal
+        from .models import Order, OrderItem
+
+        payload = {
+            "product": self.product.id,
+            "quantity": 1,
+            "shipping_address_id": self.address.id,
+            "payment_method": "COD",
+        }
+        response = self.client.post("/api/orders/buy-now/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data["payment_required"])
+        
+        # Verify DB records
+        order = Order.objects.get(pk=response.data["id"])
+        self.assertEqual(order.user, self.user)
+        self.assertEqual(order.total, Decimal("200.00")) # 150 + 50 delivery
+        self.assertEqual(OrderItem.objects.filter(order=order).count(), 1)
+        
+        # Verify inventory stock reduction
+        self.product.refresh_from_db()
+        self.assertEqual(self.product.quantity_in_stock, 49)
+
+    def test_buy_now_prescription_enforcement(self):
+        from .models import Prescription, PrescriptionItem, Order
+
+        # Attempting buy now for Rx product without prescription
+        payload = {
+            "product": self.rx_product.id,
+            "quantity": 1,
+            "shipping_address_id": self.address.id,
+            "payment_method": "COD",
+        }
+        response = self.client.post("/api/orders/buy-now/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("prescription", response.data)
+
+        # Create approved prescription
+        prescription = Prescription.objects.create(
+            user=self.user,
+            status=Prescription.Status.APPROVED,
+            shipping_address=self.address,
+        )
+        PrescriptionItem.objects.create(
+            prescription=prescription,
+            product=self.rx_product,
+            quantity_prescribed=5,
+        )
+
+        payload["prescription"] = prescription.id
+        response = self.client.post("/api/orders/buy-now/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        
+        # Verify order contains prescription
+        order = Order.objects.get(pk=response.data["id"])
+        self.assertEqual(order.prescription, prescription)
+

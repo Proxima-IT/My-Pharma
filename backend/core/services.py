@@ -174,3 +174,62 @@ def update_product_review_aggregates(product):
     product.rating_avg = Decimal(str(round(agg["avg_rating"] or 0, 2)))
     product.review_count = agg["count"] or 0
     product.save(update_fields=["rating_avg", "review_count"])
+
+
+def get_buy_now_summary(product: Product, quantity: int, delivery_zone: str = None, coupon: Coupon = None, delivery_method: DeliveryMethod = None):
+    """
+    Compute order summary for a single product direct checkout.
+    """
+    subtotal = product.price * quantity
+    original_subtotal = (product.original_price or product.price) * quantity
+    
+    base_delivery_fee = get_delivery_fee(subtotal, delivery_zone)
+    delivery_option_charge = Decimal("0.00")
+    if delivery_method and getattr(delivery_method, "is_active", True):
+        delivery_option_charge = Decimal(str(delivery_method.price or "0")).quantize(Decimal("0.01"))
+    
+    if delivery_option_charge > 0:
+        delivery_fee = delivery_option_charge
+    else:
+        delivery_fee = base_delivery_fee
+        
+    discount_amount = Decimal("0.00")
+    discount_display = None
+    coupon_code = None
+    
+    # 1. Product catalog discount (original_price - price)
+    catalog_discount = max(Decimal("0"), original_subtotal - subtotal)
+    
+    # 2. Coupon discount
+    if coupon:
+        if coupon.discount_type == Coupon.DiscountType.PERCENT:
+            coupon_discount = (subtotal * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
+            discount_display = f"-{coupon.discount_value}%"
+        else:
+            coupon_discount = min(coupon.discount_value, subtotal)
+            discount_display = f"-৳{coupon.discount_value}"
+        coupon_code = coupon.code
+        
+        # apply coupon discount to subtotal
+        subtotal = max(Decimal("0.00"), subtotal - coupon_discount)
+        discount_amount = catalog_discount + coupon_discount
+    else:
+        discount_amount = catalog_discount
+        
+    total_payable = max(Decimal("0"), subtotal + delivery_fee).quantize(Decimal("0.01"))
+    
+    return {
+        "subtotal_before_discount": original_subtotal,
+        "subtotal": product.price * quantity,  # Subtotal before coupon but after catalog discount
+        "base_delivery_fee": base_delivery_fee,
+        "delivery_option_id": getattr(delivery_method, "id", None),
+        "delivery_option_name": getattr(delivery_method, "name", None),
+        "delivery_option_type": getattr(delivery_method, "delivery_type", None),
+        "delivery_option_charge": delivery_option_charge,
+        "delivery_fee": delivery_fee,
+        "discount_amount": discount_amount,
+        "total_payable": total_payable,
+        "discount_display": discount_display,
+        "coupon_code": coupon_code,
+    }
+

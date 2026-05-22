@@ -102,6 +102,8 @@ from .serializers import (
     SettlementPayoutSerializer,
     B2BCustomerProfileSerializer,
     B2BCommissionEntrySerializer,
+    BuyNowPreviewSerializer,
+    BuyNowSerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -110,7 +112,9 @@ from .services import (
     get_delivery_zone_for_district,
     validate_min_order,
     update_product_review_aggregates,
+    get_buy_now_summary,
 )
+
 from .tasks import dispatch_web_push_notifications
 from .notification_service import create_and_dispatch_campaign, send_user_event_notification
 from .filters import ProductFilter
@@ -1085,7 +1089,7 @@ class OrderViewSet(viewsets.ModelViewSet):
         return qs.filter(user=self.request.user)
 
     def get_permissions(self):
-        if self.action == "create":
+        if self.action in ("create", "buy_now"):
             return [IsAuthenticated(), IsRegisteredUserOnly()]
         return [IsAuthenticated(), IsRegisteredUser()]
 
@@ -1094,6 +1098,10 @@ class OrderViewSet(viewsets.ModelViewSet):
             return OrderWriteSerializer
         if self.action in ("partial_update", "update"):
             return OrderStatusSerializer
+        if self.action == "buy_now_preview":
+            return BuyNowPreviewSerializer
+        if self.action == "buy_now":
+            return BuyNowSerializer
         return OrderSerializer
 
     def create(self, request, *args, **kwargs):
@@ -1282,6 +1290,312 @@ class OrderViewSet(viewsets.ModelViewSet):
                 {"detail": f"Failed to initialize payment: {exc}"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+    @action(detail=False, methods=["post"], url_path="buy-now-preview")
+    def buy_now_preview(self, request):
+        """
+        POST /api/orders/buy-now-preview/
+        Preview order summary for direct single-product checkout.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        product = serializer.validated_data["product"]
+        quantity = serializer.validated_data.get("quantity", 1)
+        shipping_address_id = serializer.validated_data.get("shipping_address_id")
+        coupon_code = (serializer.validated_data.get("coupon_code") or "").strip()
+        delivery_method_id = serializer.validated_data.get("delivery_method_id")
+        
+        # Resolve delivery zone and address district
+        delivery_zone = None
+        if shipping_address_id:
+            from authentication.models import UserAddress
+            address = UserAddress.objects.filter(user=request.user, pk=shipping_address_id).first()
+            if address:
+                delivery_zone = get_delivery_zone_for_district(address.district)
+                
+        # Resolve delivery method
+        delivery_method = None
+        if delivery_method_id:
+            delivery_method = DeliveryMethod.objects.filter(pk=delivery_method_id, is_active=True).first()
+            if not delivery_method:
+                return Response(
+                    {"delivery_method_id": "Invalid or inactive delivery option."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+                
+        # Resolve coupon and validate
+        coupon = None
+        if coupon_code:
+            subtotal = product.price * quantity
+            try:
+                coupon, _ = validate_coupon(coupon_code, subtotal)
+            except ValueError as e:
+                return Response({"coupon_code": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                
+        summary = get_buy_now_summary(
+            product=product,
+            quantity=quantity,
+            delivery_zone=delivery_zone,
+            coupon=coupon,
+            delivery_method=delivery_method,
+        )
+        return Response(summary, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"], url_path="buy-now")
+    def buy_now(self, request):
+        """
+        POST /api/orders/buy-now/
+        Directly places an order for a single product bypassing the cart.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        product = serializer.validated_data["product"]
+        quantity = serializer.validated_data.get("quantity", 1)
+        dosage = (serializer.validated_data.get("dosage") or "").strip()
+        shipping_address_id = serializer.validated_data["shipping_address_id"]
+        coupon_code = (serializer.validated_data.get("coupon_code") or "").strip()
+        notes = (serializer.validated_data.get("notes") or "").strip()
+        message = (serializer.validated_data.get("message") or "").strip()
+        delivery_method_id = serializer.validated_data.get("delivery_method_id")
+        payment_method = serializer.validated_data.get("payment_method")
+        prescription = serializer.validated_data.get("prescription")
+        
+        if quantity > product.quantity_in_stock:
+            return Response(
+                {"detail": f"Insufficient stock for {product.name}. Available: {product.quantity_in_stock}"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        # Enforce prescription checks on Rx products
+        if product.requires_prescription:
+            if not prescription:
+                return Response(
+                    {"prescription": "Required when ordering prescription-only medicines. Upload and get approval first."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if prescription.user_id != request.user.id:
+                return Response(
+                    {"prescription": "You can only use your own approved prescription."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if prescription.status != Prescription.Status.APPROVED:
+                return Response(
+                    {"prescription": "Prescription must be in APPROVED status."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+                
+            # Check if product matches prescription items
+            rx_item = PrescriptionItem.objects.filter(prescription=prescription, product=product).first()
+            if not rx_item:
+                return Response(
+                    {"prescription": f"{product.name} must be listed on the prescription."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if quantity > rx_item.quantity_prescribed:
+                return Response(
+                    {"prescription": f"Cannot exceed prescribed quantity ({rx_item.quantity_prescribed})."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        from authentication.models import UserAddress
+        address = UserAddress.objects.filter(user=request.user, pk=shipping_address_id).first()
+        if not address:
+            return Response(
+                {"shipping_address_id": "Address not found or not yours."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        shipping_text = f"{address.full_name}, {address.email}, {address.phone}, {address.district}, {address.thana}, {address.address}"
+        
+        delivery_method = None
+        if delivery_method_id:
+            delivery_method = DeliveryMethod.objects.filter(pk=delivery_method_id, is_active=True).first()
+            if not delivery_method:
+                return Response(
+                    {"delivery_method_id": "Invalid or inactive delivery option."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+                
+        delivery_zone = get_delivery_zone_for_district(address.district)
+        
+        coupon = None
+        if coupon_code:
+            subtotal = product.price * quantity
+            try:
+                coupon, _ = validate_coupon(coupon_code, subtotal)
+            except ValueError as e:
+                return Response({"coupon_code": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+                
+        summary = get_buy_now_summary(
+            product=product,
+            quantity=quantity,
+            delivery_zone=delivery_zone,
+            coupon=coupon,
+            delivery_method=delivery_method,
+        )
+        
+        min_order_subtotal = summary.get("subtotal_before_discount") or summary["subtotal"]
+        if not validate_min_order(min_order_subtotal):
+            return Response(
+                {
+                    "detail": (
+                        "Minimum order amount is ৳100. "
+                        f"Subtotal before discount: ৳{min_order_subtotal}. "
+                        f"Current subtotal: ৳{summary['subtotal']}."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+            
+        with transaction.atomic():
+            order = Order.objects.create(
+                user=request.user,
+                status=Order.Status.PENDING,
+                delivery_method=delivery_method,
+                total=summary["total_payable"],
+                subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
+                discount_amount=summary.get("discount_amount") or Decimal("0"),
+                delivery_fee=summary.get("delivery_fee") or Decimal("0"),
+                coupon=coupon,
+                shipping_address=shipping_text,
+                notes=notes,
+                prescription=prescription,
+            )
+            
+            # Apply coupon allocation logic to price_at_order if applicable
+            coupon_discount = Decimal("0.00")
+            if coupon:
+                if coupon.discount_type == Coupon.DiscountType.PERCENT:
+                    coupon_discount = ((product.price * quantity) * coupon.discount_value / Decimal("100")).quantize(Decimal("0.01"))
+                else:
+                    coupon_discount = min(coupon.discount_value, product.price * quantity)
+            
+            net_item_subtotal = max(Decimal("0.00"), (product.price * quantity) - coupon_discount)
+            price_at_order = (net_item_subtotal / quantity).quantize(Decimal("0.01")) if quantity else Decimal("0.00")
+            
+            OrderItem.objects.create(
+                order=order,
+                product=product,
+                quantity=quantity,
+                price_at_order=price_at_order,
+                dosage=(dosage or "").strip()[:50],
+            )
+            
+            product.quantity_in_stock -= quantity
+            product.save(update_fields=["quantity_in_stock"])
+            
+            OrderStatusHistory.objects.get_or_create(order=order, status=Order.Status.PENDING)
+            
+            payment_method_norm = _normalize_payment_method(payment_method)
+            is_online = _is_online_payment_method(payment_method_norm)
+            OrderSettlement.objects.get_or_create(
+                order=order,
+                defaults={
+                    "payment_method": OrderSettlement.PaymentMethod.ONLINE if is_online else OrderSettlement.PaymentMethod.COD,
+                    "payment_status": OrderSettlement.PaymentStatus.PENDING,
+                    "gross_amount": order.total,
+                    "net_payable": order.total,
+                    "status": OrderSettlement.Status.PENDING,
+                },
+            )
+            
+            if coupon:
+                coupon.times_used += 1
+                coupon.save(update_fields=["times_used"])
+
+        if is_online:
+            try:
+                sslcz = _get_sslcommerz_client()
+                tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
+                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+                customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
+                customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
+                product_names = product.name[:255]
+
+                total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
+                multi_card_name = _ssl_multi_card_name(payment_method_norm)
+                post_body = {
+                    "total_amount": str(total_payable),
+                    "currency": "BDT",
+                    "tran_id": tran_id,
+                    "success_url": _build_ssl_backend_url("success"),
+                    "fail_url": _build_ssl_backend_url("fail"),
+                    "cancel_url": _build_ssl_backend_url("cancel"),
+                    "ipn_url": _build_ssl_backend_url("ipn"),
+                    "emi_option": 0,
+                    "cus_name": customer_name,
+                    "cus_email": customer_email,
+                    "cus_phone": customer_phone,
+                    "cus_add1": (address.address or "")[:255],
+                    "cus_city": (address.district or "Dhaka")[:50],
+                    "cus_country": "Bangladesh",
+                    "shipping_method": "NO",
+                    "num_of_item": 1,
+                    "product_name": product_names[:255],
+                    "product_category": "Pharmacy",
+                    "product_profile": "general",
+                    "value_a": str(request.user.id),
+                    "value_b": str(shipping_address_id),
+                }
+                if multi_card_name:
+                    post_body["multi_card_name"] = multi_card_name
+                session_response = sslcz.createSession(post_body)
+                gateway_url = (session_response or {}).get("GatewayPageURL")
+                if not gateway_url:
+                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
+
+                PaymentTransaction.objects.create(
+                    user=request.user,
+                    order=order,
+                    method=payment_method_norm,
+                    amount=total_payable,
+                    currency="BDT",
+                    tran_id=tran_id,
+                    session_key=(session_response or {}).get("sessionkey", ""),
+                    gateway_url=gateway_url,
+                    status=PaymentTransaction.Status.INITIATED,
+                    shipping_address=shipping_text,
+                    notes=notes,
+                    subtotal_before_discount=summary.get("subtotal_before_discount") or summary.get("subtotal") or Decimal("0"),
+                    discount_amount=summary.get("discount_amount") or Decimal("0"),
+                    delivery_fee=summary.get("delivery_fee") or Decimal("0"),
+                    coupon_id_ref=getattr(order.coupon, "id", None),
+                    delivery_method_id_ref=getattr(order.delivery_method, "id", None),
+                    cart_snapshot=[],
+                    request_payload=post_body,
+                    gateway_response=session_response or {},
+                )
+
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_method": payment_method_norm,
+                        "payment_provider": "SSLCOMMERZ",
+                        "gateway_url": gateway_url,
+                        "tran_id": tran_id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as exc:
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_init_failed": True,
+                        "detail": f"Order placed but payment initialization failed: {exc}",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
+        return Response(
+            {
+                **OrderSerializer(order, context={"request": request}).data,
+                "payment_required": False,
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 # ---- Delivery duration (admin CRUD) ----

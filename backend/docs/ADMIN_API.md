@@ -170,8 +170,10 @@ Backward-compatible aliases are still available:
 | GET    | `/api/orders/{id}/` | Retrieve order (items, images, prescription, duration, message, **status_history** timeline in Bangladesh time; includes coupon/discount breakdown)                             |
 | POST   | `/api/orders/`      | Place order (REGISTERED_USER only). Body: shipping_address, notes, **message** (optional), **items** [{ product, quantity, dosage? }], optional **prescription** (id), optional **duration** (id). Use **multipart/form-data** to upload multiple **images** (field name `images`); when multipart, send `items` as JSON string. Prescription rules unchanged. |
 | PATCH  | `/api/orders/{id}/` | Update order status and/or duration (Pharmacy/Super only). Body: `status`, `duration` (optional).                                             |
+| POST   | `/api/orders/buy-now-preview/` | Preview order summary for single product direct checkout (REGISTERED_USER). Body: `product` (id), `quantity`, optional `shipping_address_id`, `coupon_code`, `delivery_method_id`. |
+| POST   | `/api/orders/buy-now/` | Place direct checkout order for single product bypassing cart (REGISTERED_USER only). Body: `product` (id), `quantity`, `shipping_address_id`, optional `coupon_code`, `notes`, `message`, `delivery_method_id`, `payment_method`, `prescription` (id). Enforces stock checks and prescription verification for Rx products. Returns payment gateway URL if online payment. |
 
-**Permission:** Create: `IsRegisteredUserOnly`. List/retrieve: `IsRegisteredUser` (queryset filtered by role). PATCH: Pharmacy/Super only.
+**Permission:** Create/Buy Now: `IsRegisteredUserOnly`. Preview: `IsRegisteredUser`. List/retrieve: `IsRegisteredUser` (queryset filtered by role). PATCH: Pharmacy/Super only.
 
 **Delivery durations:**  
 | Method | Path | Description |
