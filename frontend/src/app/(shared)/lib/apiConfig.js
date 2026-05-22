@@ -232,6 +232,7 @@ export function getMediaUrl(url) {
  */
 export function getProductImageUrl(product) {
   if (!product) return null;
+  if (product.image_url) return getMediaUrl(product.image_url);
   if (product.image) return getMediaUrl(product.image);
   if (Array.isArray(product.images) && product.images.length > 0) {
     const first = product.images[0];

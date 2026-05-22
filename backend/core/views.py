@@ -678,10 +678,7 @@ class UnitViewSet(viewsets.ModelViewSet):
             OpenApiParameter(name="price_min", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Legacy: min price (>=)"),
             OpenApiParameter(name="price_max", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Legacy: max price (<=)"),
             OpenApiParameter(name="min_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Alias: min price (>=)"),
-            OpenApiParameter(name="max_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Alias: max price (<=)"),
-            # Availability
-            OpenApiParameter(name="available", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="true => quantity_in_stock > 0"),
-            OpenApiParameter(name="in_stock", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="Alias of available"),
+            OpenApiParameter(name="max_price", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Alias of available"),
             # Discount
             OpenApiParameter(name="discounted", type=OpenApiTypes.BOOL, location=OpenApiParameter.QUERY, required=False, description="true => original_price > price"),
             OpenApiParameter(name="discount_min", type=OpenApiTypes.NUMBER, location=OpenApiParameter.QUERY, required=False, description="Minimum discount percent (>=). Requires discounted product."),
@@ -1030,9 +1027,8 @@ class ProductViewSet(viewsets.ModelViewSet):
                 if product.image:
                     image_url = product.image.url
                     # Safe build absolute media uri
-                    if self.context.get("request") or request:
-                        req = self.context.get("request") or request
-                        image_url = req.build_absolute_uri(image_url)
+                    if request:
+                        image_url = request.build_absolute_uri(image_url)
 
                 suggestions.append({
                     "id": product.id,
@@ -2011,7 +2007,7 @@ class CartViewSet(viewsets.GenericViewSet):
                     discount_amount=summary.get("discount_amount") or Decimal("0"),
                     delivery_fee=summary.get("delivery_fee") or Decimal("0"),
                     coupon_id_ref=getattr(order.coupon, "id", None),
-                    delivery_method_id_ref=getattr(order.delivery_method, "id", None),
+                    delivery_method_id_ref=getattr(delivery_method, "id", None),
                     cart_snapshot=[],
                     request_payload=post_body,
                     gateway_response=session_response or {},

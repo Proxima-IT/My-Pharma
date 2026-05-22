@@ -32,12 +32,12 @@ export default function AdminOrdersPage() {
   } = usePrescriptionAdmin();
 
   useEffect(() => {
-    const params = { page, search };
-    if (activeTab === 'Standard') {
-      fetchOrders(params);
-    } else {
-      fetchPrescriptions(params);
-    }
+    // Fetch both to ensure counts are available in tab headers and search is synchronized
+    fetchOrders({ page: activeTab === 'Standard' ? page : 1, search });
+    fetchPrescriptions({
+      page: activeTab === 'Prescription' ? page : 1,
+      search,
+    });
   }, [page, search, activeTab, fetchOrders, fetchPrescriptions]);
 
   const getStatusStyle = (status, type = 'Standard') => {
@@ -94,22 +94,32 @@ export default function AdminOrdersPage() {
 
       {/* Tab Switcher - Sharp Design */}
       <div className="flex items-center gap-1 border-b border-gray-100">
-        {['Standard', 'Prescription'].map(tab => (
-          <button
-            key={tab}
-            onClick={() => {
-              setActiveTab(tab);
-              setPage(1);
-            }}
-            className={`px-8 py-4 font-mono text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer border-t-2 ${
-              activeTab === tab
-                ? 'bg-white border-t-[#3A5A40] border-x border-x-gray-100 -mb-px text-[#3A5A40]'
-                : 'bg-transparent border-t-transparent text-[#8A8A78] hover:text-[#1B1B1B]'
-            }`}
-          >
-            {tab} Orders
-          </button>
-        ))}
+        {['Standard', 'Prescription'].map(tab => {
+          const count = tab === 'Standard' ? orders.count : prescriptions.count;
+          return (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab);
+                setPage(1);
+              }}
+              className={`px-8 py-4 font-mono text-[11px] font-bold uppercase tracking-widest transition-all cursor-pointer border-t-2 flex items-center gap-2 ${
+                activeTab === tab
+                  ? 'bg-white border-t-[#3A5A40] border-x border-x-gray-100 -mb-px text-[#3A5A40]'
+                  : 'bg-transparent border-t-transparent text-[#8A8A78] hover:text-[#1B1B1B]'
+              }`}
+            >
+              {tab} Orders
+              {count > 0 && (
+                <span
+                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] text-white font-bold animate-in zoom-in duration-300 ${count > 1 ? 'bg-red-600' : 'bg-[#3A5A40]'}`}
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Search Bar */}

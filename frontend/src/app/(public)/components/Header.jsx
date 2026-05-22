@@ -34,7 +34,6 @@ import { useCart } from '../hooks/useCart';
 import { useProfile } from '../../(user)/hooks/useProfile';
 import { useLogoAdmin } from '../../(admin)/hooks/useLogoAdmin';
 import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
-import { searchProducts } from '../lib/productSearchEngine';
 
 const TrackOrderIcon = ({ className, size = 22 }) => (
   <svg
@@ -69,7 +68,6 @@ const Header = () => {
 
   // Search Suggestion States
   const [searchQuery, setSearchQuery] = useState('');
-  const [allProducts, setAllProducts] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
@@ -111,37 +109,32 @@ const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Real-time Search Logic with Local Engine
+  // Real-time Search Logic with Backend Autocomplete
   useEffect(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (q.length >= 3) {
+    if (q.length >= 1) {
       setShowSuggestions(true);
+      setIsSearching(true);
 
-      const performSearch = () => {
-        const matches = searchProducts(allProducts, q, { limit: 6 });
-        setSuggestions(matches);
-      };
-
-      if (allProducts.length === 0) {
-        setIsSearching(true);
-        fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`)
+      const timer = setTimeout(() => {
+        fetch(
+          `${API_BASE_URL}/products/search/?q=${encodeURIComponent(q)}&autocomplete=true`,
+        )
           .then(res => res.json())
           .then(data => {
-            const items = data.results || [];
-            setAllProducts(items);
-            const matches = searchProducts(items, q, { limit: 6 });
-            setSuggestions(matches);
+            // Autocomplete mode returns a lightweight array of suggestions
+            setSuggestions(Array.isArray(data) ? data.slice(0, 6) : []);
           })
-          .catch(err => console.error('Search preload error:', err))
+          .catch(err => console.error('Search API error:', err))
           .finally(() => setIsSearching(false));
-      } else {
-        performSearch();
-      }
+      }, 300); // Debounce for network efficiency
+
+      return () => clearTimeout(timer);
     } else {
       setSuggestions([]);
       setShowSuggestions(false);
     }
-  }, [searchQuery, allProducts]);
+  }, [searchQuery]);
 
   useEffect(() => {
     const syncGuestData = async () => {
@@ -355,10 +348,10 @@ const Header = () => {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               onFocus={() =>
-                searchQuery.length >= 3 && setShowSuggestions(true)
+                searchQuery.length >= 1 && setShowSuggestions(true)
               }
               placeholder='Search for "healthcare products"'
-              className="w-full h-12 md:h-14 pl-6 pr-14 rounded-full border border-gray-100 text-sm focus:outline-none focus:ring-4 focus:ring-(--color-primary-500)/10 transition-all"
+              className="w-full h-12 md:h-14 pl-6 pr-14 rounded-full border border-gray-100 text-sm outline-none ring-4 ring-(--color-primary-500)/10 transition-all"
             />
             <button
               type="submit"

@@ -218,7 +218,7 @@ const ProductSummaryCard = ({ product }) => {
         <button
           onClick={handleAddToCart}
           disabled={isUpdating}
-          className="flex-1 h-12 lg:h-12 xl:h-[64px] 2xl:h-[72px] flex items-center justify-center gap-2 xl:gap-3 bg-[#1D3583] hover:bg-[#162a6b] text-white rounded-full text-sm lg:text-[14px] xl:text-[16px] 2xl:text-[18px] font-bold transition-all cursor-pointer active:scale-[0.98] shadow-none border-none"
+          className="flex-1 py-4 xl:py-5 2xl:py-6 px-8 flex items-center justify-center gap-2 xl:gap-3 bg-[#1D3583] hover:bg-[#162a6b] text-white rounded-full text-sm lg:text-[14px] xl:text-[16px] 2xl:text-[18px] font-bold transition-all cursor-pointer active:scale-[0.98] shadow-none border-none"
         >
           <BsCart3 className="w-4 h-4 xl:w-5 xl:h-5" strokeWidth={0.5} />
           <span>Add to Cart</span>
@@ -228,7 +228,7 @@ const ProductSummaryCard = ({ product }) => {
             handleAddToCart();
             router.push('/cart');
           }}
-          className="flex-1 h-12 lg:h-12 xl:h-[64px] 2xl:h-[72px] flex items-center justify-center gap-1 xl:gap-2 bg-[#F8FAFF] border border-[#E0E7FF] rounded-full text-sm lg:text-[14px] xl:text-[16px] 2xl:text-[18px] font-bold text-[#1D3583] hover:bg-[#EEF2FF] transition-all cursor-pointer active:scale-[0.98] shadow-none"
+          className="flex-1 py-4 xl:py-5 2xl:py-6 px-8 flex items-center justify-center gap-1 xl:gap-2 bg-[#F8FAFF] border border-[#E0E7FF] rounded-full text-sm lg:text-[14px] xl:text-[16px] 2xl:text-[18px] font-bold text-[#1D3583] hover:bg-[#EEF2FF] transition-all cursor-pointer active:scale-[0.98] shadow-none"
         >
           <span>Buy Now</span>
           <FiChevronRight className="w-4 h-4 xl:w-5 xl:h-5" strokeWidth={3} />

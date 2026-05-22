@@ -134,6 +134,12 @@ const Checkout = () => {
 
     const result = await placeOrder(orderPayload);
     if (result) {
+      // If payment is not COD and a gateway URL is provided, redirect immediately 
+      // instead of showing the local success screen.
+      if (paymentMethod !== 'COD' && result.gateway_url) {
+        window.location.href = result.gateway_url;
+        return;
+      }
       setOrderSuccess(result);
     }
   };

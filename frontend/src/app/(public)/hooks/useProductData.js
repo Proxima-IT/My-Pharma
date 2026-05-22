@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { fetchProductsApi } from '../api/productApi';
+import {
+  API_BASE_URL,
+  fetchWithAuth,
+  parseJsonResponse,
+} from '@/app/(shared)/lib/apiConfig';
 
 export const useProductData = (initialFilters = {}) => {
   const [products, setProducts] = useState([]);
@@ -49,7 +53,31 @@ export const useProductData = (initialFilters = {}) => {
         ),
       };
 
-      const data = await fetchProductsApi(params);
+      // Map legacy/frontend keys to backend search parameter names
+      if (params.has_discount) {
+        params.discounted = params.has_discount;
+        delete params.has_discount;
+      }
+
+      // Determine endpoint based on whether we are performing a search or just listing
+      // Search endpoint supports relevance ranking and fuzzy matching
+      let url = `${API_BASE_URL}/products/`;
+      if (params.search) {
+        url = `${API_BASE_URL}/products/search/`;
+        params.q = params.search; // Backend search endpoint expects 'q' or 'query'
+        delete params.search;
+      }
+
+      const queryString = new URLSearchParams(params).toString();
+      const finalUrl = `${url}${queryString ? `?${queryString}` : ''}`;
+
+      const response = await fetchWithAuth(finalUrl);
+      const data = await parseJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.detail || 'Failed to fetch products');
+      }
+
       setProducts(data.results || []);
       setTotalCount(data.count || 0);
     } catch (err) {
