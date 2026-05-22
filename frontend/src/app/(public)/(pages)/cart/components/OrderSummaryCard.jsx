@@ -16,16 +16,25 @@ const OrderSummaryCard = ({
   summary: propSummary,
   items = [],
   onPlaceOrder,
+  applyCoupon: customApplyCoupon,
+  removeCoupon: customRemoveCoupon,
+  appliedCoupon: customAppliedCoupon,
+  isApplyingCoupon: customIsApplyingCoupon,
+  error: customError,
 }) => {
   const router = useRouter();
-  const {
-    applyCoupon,
-    removeCoupon,
-    appliedCoupon,
-    isApplyingCoupon,
-    error: hookError,
-    summary: cartSummary,
-  } = useCart();
+  const cartHook = useCart();
+
+  const applyCoupon = customApplyCoupon || cartHook.applyCoupon;
+  const removeCoupon = customRemoveCoupon || cartHook.removeCoupon;
+  const appliedCoupon =
+    customAppliedCoupon !== undefined ? customAppliedCoupon : cartHook.appliedCoupon;
+  const isApplyingCoupon =
+    customIsApplyingCoupon !== undefined
+      ? customIsApplyingCoupon
+      : cartHook.isApplyingCoupon;
+  const hookError = customError !== undefined ? customError : cartHook.error;
+  const cartSummary = cartHook.summary;
 
   const [couponCode, setCouponCode] = useState('');
   const [loginError, setLoginError] = useState('');

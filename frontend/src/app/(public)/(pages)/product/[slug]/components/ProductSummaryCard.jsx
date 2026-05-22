@@ -7,6 +7,7 @@ import { GoStarFill } from 'react-icons/go';
 import { BsCart3 } from 'react-icons/bs';
 import { FiMinus, FiPlus, FiChevronRight } from 'react-icons/fi';
 import { useCart } from '../../../../hooks/useCart';
+import { useAuthModal } from '../../../../context/AuthModalContext';
 import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 /**
@@ -18,6 +19,7 @@ import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 const ProductSummaryCard = ({ product }) => {
   const router = useRouter();
   const { addItem, isUpdating } = useCart();
+  const { openAuthModal } = useAuthModal();
   const [selectedDosage, setSelectedDosage] = useState('');
   const [quantity, setQuantity] = useState(1);
   const [categorySlug, setCategorySlug] = useState('');
@@ -225,8 +227,17 @@ const ProductSummaryCard = ({ product }) => {
         </button>
         <button
           onClick={() => {
-            handleAddToCart();
-            router.push('/cart');
+            const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+            if (!token) {
+              const redirectUrl = `/checkout?buyNow=true&productId=${product.id}&slug=${product.slug}&qty=${quantity}&dosage=${encodeURIComponent(selectedDosage)}`;
+              openAuthModal(redirectUrl);
+              return;
+            }
+            if (product?.id) {
+              router.push(
+                `/checkout?buyNow=true&productId=${product.id}&slug=${product.slug}&qty=${quantity}&dosage=${encodeURIComponent(selectedDosage)}`
+              );
+            }
           }}
           className="flex-1 py-4 xl:py-5 2xl:py-6 px-8 flex items-center justify-center gap-1 xl:gap-2 bg-[#F8FAFF] border border-[#E0E7FF] rounded-full text-sm lg:text-[14px] xl:text-[16px] 2xl:text-[18px] font-bold text-[#1D3583] hover:bg-[#EEF2FF] transition-all cursor-pointer active:scale-[0.98] shadow-none"
         >

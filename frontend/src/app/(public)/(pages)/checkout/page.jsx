@@ -21,7 +21,14 @@ import OrderSummaryCard from '../cart/components/OrderSummaryCard';
 import PaymentMethodCard from '../cart/components/PaymentMethodCard';
 import { useCart } from '../../hooks/useCart';
 import { useAuthModal } from '../../context/AuthModalContext';
-import { fetchDeliveryMethodsApi } from '../../api/cartApi';
+import {
+  fetchDeliveryMethodsApi,
+  buyNowPreviewApi,
+  buyNowPlaceOrderApi,
+  validateCouponApi,
+} from '../../api/cartApi';
+import { fetchProductDetailsApi } from '../../api/productApi';
+import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
 import UiButton from '@/app/(public)/components/UiButton';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 
@@ -41,6 +48,25 @@ const Checkout = () => {
     appliedCoupon,
   } = useCart();
 
+  // Buy Now Search Parameters
+  const buyNow = searchParams.get('buyNow') === 'true';
+  const productId = searchParams.get('productId');
+  const slug = searchParams.get('slug');
+  const initialQty = parseInt(searchParams.get('qty') || '1', 10);
+  const dosage = searchParams.get('dosage') || '';
+
+  // Buy Now Specific State
+  const [buyNowProduct, setBuyNowProduct] = useState(null);
+  const [buyNowQty, setBuyNowQty] = useState(initialQty);
+  const [buyNowSummary, setBuyNowSummary] = useState(null);
+  const [buyNowCoupon, setBuyNowCoupon] = useState(null);
+  const [buyNowCouponCode, setBuyNowCouponCode] = useState('');
+  const [buyNowCouponError, setBuyNowCouponError] = useState('');
+  const [isApplyingBuyNowCoupon, setIsApplyingBuyNowCoupon] = useState(false);
+  const [buyNowLoading, setBuyNowLoading] = useState(buyNow);
+  const [buyNowError, setBuyNowError] = useState('');
+  const [isPlacingBuyNowOrder, setIsPlacingBuyNowOrder] = useState(false);
+
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('BKASH');
   const [deliveryOptions, setDeliveryOptions] = useState([]);
@@ -48,6 +74,7 @@ const Checkout = () => {
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [callbackMessage, setCallbackMessage] = useState('');
 
+  // Fetch Delivery Methods (Shared)
   useEffect(() => {
     const loadDeliveryOptions = async () => {
       try {
@@ -67,7 +94,68 @@ const Checkout = () => {
     loadDeliveryOptions();
   }, []);
 
+  // Fetch Product Details for Buy Now flow
   useEffect(() => {
+    if (!buyNow || !slug) return;
+    const loadProductDetails = async () => {
+      try {
+        setBuyNowLoading(true);
+        const data = await fetchProductDetailsApi(slug);
+        setBuyNowProduct(data);
+      } catch (err) {
+        console.error('Failed to load Buy Now product details', err);
+        setBuyNowError('Failed to load product details.');
+      } finally {
+        setBuyNowLoading(false);
+      }
+    };
+    loadProductDetails();
+  }, [buyNow, slug]);
+
+  // Fetch Dynamic Buy Now Preview on quantity, delivery method, selected address, or coupon change
+  useEffect(() => {
+    if (!buyNow || !productId) return;
+
+    const loadBuyNowPreview = async () => {
+      try {
+        const payload = {
+          product: parseInt(productId, 10),
+          quantity: buyNowQty,
+        };
+        if (selectedAddressId) {
+          payload.shipping_address_id = Number(selectedAddressId);
+        }
+        if (selectedMethodId) {
+          payload.delivery_method_id = Number(selectedMethodId);
+        }
+        if (buyNowCouponCode) {
+          payload.coupon_code = buyNowCouponCode;
+        }
+        if (dosage) {
+          payload.dosage = dosage;
+        }
+
+        const previewData = await buyNowPreviewApi(payload);
+        setBuyNowSummary(previewData);
+      } catch (err) {
+        console.error('Failed to load buy now preview', err);
+      }
+    };
+
+    loadBuyNowPreview();
+  }, [
+    buyNow,
+    productId,
+    buyNowQty,
+    selectedAddressId,
+    selectedMethodId,
+    buyNowCouponCode,
+    dosage,
+  ]);
+
+  // Refresh Standard Cart (Standard flow only)
+  useEffect(() => {
+    if (buyNow) return;
     if (selectedAddressId || selectedMethodId) {
       refresh(
         {
@@ -77,8 +165,9 @@ const Checkout = () => {
         false,
       );
     }
-  }, [selectedAddressId, selectedMethodId, refresh]);
+  }, [selectedAddressId, selectedMethodId, refresh, buyNow]);
 
+  // Handle Payment Callback Param Alerts (Shared)
   useEffect(() => {
     const paymentStatus = (
       searchParams.get('payment_status') || ''
@@ -103,12 +192,65 @@ const Checkout = () => {
     setCallbackMessage('');
   }, [searchParams]);
 
+  // Redirect Standard empty cart to cart page (Standard flow only)
   useEffect(() => {
+    if (buyNow) return;
     if (!isLoading && items.length === 0 && !orderSuccess) {
       router.replace('/cart');
     }
-  }, [items, isLoading, router, orderSuccess]);
+  }, [items, isLoading, router, orderSuccess, buyNow]);
 
+  // Coupon handling for stateless Buy Now flow
+  const handleApplyBuyNowCoupon = async code => {
+    if (!code || !buyNowProduct || isApplyingBuyNowCoupon) return;
+    setIsApplyingBuyNowCoupon(true);
+    setBuyNowCouponError('');
+    try {
+      const subtotal = parseFloat(buyNowProduct.price || 0) * buyNowQty;
+      const res = await validateCouponApi(code, subtotal);
+      if (res.is_valid) {
+        setBuyNowCoupon({ code: res.code, discount_amount: res.discount_amount });
+        setBuyNowCouponCode(res.code);
+      } else {
+        setBuyNowCouponError(res.message || 'Invalid coupon code');
+      }
+    } catch (err) {
+      console.error('Failed to validate coupon', err);
+      setBuyNowCouponError(err.message || 'Failed to validate coupon');
+    } finally {
+      setIsApplyingBuyNowCoupon(false);
+    }
+  };
+
+  const handleRemoveBuyNowCoupon = async () => {
+    setBuyNowCoupon(null);
+    setBuyNowCouponCode('');
+    setBuyNowCouponError('');
+  };
+
+  // Quantity updates inside Review Items (Buy Now flow)
+  const handleUpdateBuyNowQty = async (itemId, newQty) => {
+    if (newQty < 1) return;
+    if (buyNowProduct && newQty > buyNowProduct.quantity_in_stock) {
+      setBuyNowError(
+        `Insufficient stock for ${buyNowProduct.name}. Available: ${buyNowProduct.quantity_in_stock}`,
+      );
+      setTimeout(() => setBuyNowError(''), 5000);
+      return;
+    }
+    setBuyNowQty(newQty);
+  };
+
+  // Removing item redirects to product detail page (Buy Now flow)
+  const handleRemoveBuyNowItem = () => {
+    if (buyNowProduct?.slug) {
+      router.push(`/product/${buyNowProduct.slug}`);
+    } else {
+      router.push('/');
+    }
+  };
+
+  // Order Placement
   const handleConfirmOrder = async () => {
     const token = localStorage.getItem('access_token');
     if (!token) {
@@ -121,6 +263,43 @@ const Checkout = () => {
       return;
     }
 
+    if (buyNow) {
+      setIsPlacingBuyNowOrder(true);
+      setBuyNowError('');
+      try {
+        const orderPayload = {
+          product: parseInt(productId, 10),
+          quantity: buyNowQty,
+          shipping_address_id: Number(selectedAddressId),
+          delivery_method_id: selectedMethodId,
+          payment_method: paymentMethod,
+          notes: '',
+        };
+        if (buyNowCouponCode) {
+          orderPayload.coupon_code = buyNowCouponCode;
+        }
+        if (dosage) {
+          orderPayload.dosage = dosage;
+        }
+
+        const result = await buyNowPlaceOrderApi(orderPayload);
+        if (result) {
+          if (paymentMethod !== 'COD' && result.gateway_url) {
+            window.location.href = result.gateway_url;
+            return;
+          }
+          setOrderSuccess(result);
+        }
+      } catch (err) {
+        console.error('Failed to place Buy Now order', err);
+        setBuyNowError(err.message || 'Failed to place order.');
+      } finally {
+        setIsPlacingBuyNowOrder(false);
+      }
+      return;
+    }
+
+    // Standard Cart flow
     const orderPayload = {
       shipping_address_id: Number(selectedAddressId),
       delivery_method_id: selectedMethodId,
@@ -134,8 +313,6 @@ const Checkout = () => {
 
     const result = await placeOrder(orderPayload);
     if (result) {
-      // If payment is not COD and a gateway URL is provided, redirect immediately 
-      // instead of showing the local success screen.
       if (paymentMethod !== 'COD' && result.gateway_url) {
         window.location.href = result.gateway_url;
         return;
@@ -155,7 +332,9 @@ const Checkout = () => {
     }
   };
 
-  if (isLoading && !orderSuccess) {
+  const pageLoading = buyNow ? buyNowLoading : isLoading;
+
+  if (pageLoading && !orderSuccess) {
     return (
       <div className="w-full h-[60vh] flex items-center justify-center">
         <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
@@ -252,13 +431,63 @@ const Checkout = () => {
     );
   }
 
+  // Construct items & summary displays
+  const getBuyNowProductImage = () => {
+    if (!buyNowProduct) return null;
+    if (buyNowProduct.image) return getMediaUrl(buyNowProduct.image);
+    if (buyNowProduct.images && buyNowProduct.images.length > 0) {
+      const firstImg = buyNowProduct.images[0];
+      return getMediaUrl(typeof firstImg === 'object' ? firstImg.image : firstImg);
+    }
+    return null;
+  };
+
+  const mockBuyNowItem = buyNowProduct
+    ? {
+        id: buyNowProduct.id,
+        product_name: buyNowProduct.name,
+        image_url: getBuyNowProductImage(),
+        current_price: buyNowProduct.price,
+        product_original_price: buyNowProduct.original_price,
+        product_description: buyNowProduct.description,
+        product_unit_name: buyNowProduct.unit_name || (buyNowProduct.unit?.name || 'Unit'),
+        dosage: dosage,
+        quantity: buyNowQty,
+      }
+    : null;
+
+  const defaultDeliveryPrice = selectedMethodId
+    ? parseFloat(deliveryOptions.find(opt => opt.id === selectedMethodId)?.price || 0)
+    : 150;
+
+  const calculatedBuyNowSummary = buyNowSummary || {
+    sub_total: (parseFloat(buyNowProduct?.price || 0) * buyNowQty).toFixed(2),
+    discount_amount: buyNowCoupon?.discount_amount
+      ? parseFloat(buyNowCoupon.discount_amount).toFixed(2)
+      : '0.00',
+    delivery_fee: defaultDeliveryPrice.toFixed(2),
+    total_amount: (
+      parseFloat(buyNowProduct?.price || 0) * buyNowQty -
+      (buyNowCoupon?.discount_amount ? parseFloat(buyNowCoupon.discount_amount) : 0) +
+      defaultDeliveryPrice
+    ).toFixed(2),
+    base_delivery_fee: defaultDeliveryPrice.toFixed(2),
+    delivery_option_charge: 0,
+    delivery_option_name: selectedMethodId
+      ? deliveryOptions.find(opt => opt.id === selectedMethodId)?.name || 'Delivery'
+      : 'Delivery',
+  };
+
+  const displayItems = buyNow ? (mockBuyNowItem ? [mockBuyNowItem] : []) : items;
+  const displaySummary = buyNow ? calculatedBuyNowSummary : summary;
+
   return (
     <div className="w-full px-4 md:px-7 pt-7 pb-28 animate-in fade-in duration-700">
       <div className="flex items-center gap-5 mb-8">
-        <Link href="/cart">
+        <Link href={buyNow ? `/product/${slug}` : '/cart'}>
           <button className="border border-gray-100 bg-white rounded-full px-6 py-2 text-center text-(--color-primary-500) flex gap-2 items-center text-sm font-bold cursor-pointer hover:bg-gray-50 transition-all shadow-none">
             <MdKeyboardArrowLeft size={20} />
-            Back to Cart
+            {buyNow ? 'Back to Product' : 'Back to Cart'}
           </button>
         </Link>
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
@@ -266,7 +495,7 @@ const Checkout = () => {
         </h1>
       </div>
 
-      {(error || callbackMessage) && (
+      {(error || buyNowError || callbackMessage) && (
         <div className="mb-8 p-5 bg-red-50 border border-red-100 rounded-[24px] flex items-center gap-4 text-red-600 animate-in slide-in-from-top-2 shadow-none">
           <FiAlertCircle className="shrink-0" size={24} />
           <div>
@@ -274,7 +503,7 @@ const Checkout = () => {
               Order Failed
             </p>
             <p className="text-sm font-medium opacity-90">
-              {callbackMessage || error}
+              {callbackMessage || buyNowError || error}
             </p>
           </div>
         </div>
@@ -351,22 +580,22 @@ const Checkout = () => {
         <div className="w-full lg:w-[58%] flex flex-col gap-8">
           <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 transition-all shadow-none">
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">
-              Review Items ({items.length})
+              Review Items ({displayItems.length})
             </h2>
             <div className="flex flex-col gap-4">
-              {items.map(item => (
+              {displayItems.map(item => (
                 <CartCard
                   key={item.id}
                   item={item}
-                  onUpdate={updateQuantity}
-                  onRemove={removeItem}
+                  onUpdate={buyNow ? handleUpdateBuyNowQty : updateQuantity}
+                  onRemove={buyNow ? handleRemoveBuyNowItem : removeItem}
                 />
               ))}
             </div>
           </div>
 
           <div className="flex flex-col gap-6">
-            {summary?.shipping_charge === 0 && (
+            {displaySummary?.shipping_charge === 0 && (
               <div className="bg-(--success-50) border border-(--success-100) rounded-3xl p-4 flex items-center gap-3 animate-in slide-in-from-right-4">
                 <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-(--success-500) shadow-sm">
                   <FiCheckCircle size={20} />
@@ -376,17 +605,22 @@ const Checkout = () => {
                     Free Delivery Applied
                   </p>
                   <p className="text-(--success-600) text-xs font-medium">
-                    You saved {formatCurrency(summary.base_delivery_fee || 150)}{' '}
+                    You saved {formatCurrency(displaySummary.base_delivery_fee || 150)}{' '}
                     on shipping!
                   </p>
                 </div>
               </div>
             )}
             <OrderSummaryCard
-              summary={summary}
-              items={items}
-              refresh={refresh}
+              summary={displaySummary}
+              items={displayItems}
+              refresh={buyNow ? () => {} : refresh}
               onPlaceOrder={handleConfirmOrder}
+              applyCoupon={buyNow ? handleApplyBuyNowCoupon : undefined}
+              removeCoupon={buyNow ? handleRemoveBuyNowCoupon : undefined}
+              appliedCoupon={buyNow ? buyNowCoupon : undefined}
+              isApplyingCoupon={buyNow ? isApplyingBuyNowCoupon : undefined}
+              error={buyNow ? buyNowCouponError : undefined}
             />
           </div>
         </div>

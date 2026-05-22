@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { IoCloseSharp } from 'react-icons/io5';
 import LoginForm from '../(pages)/login/components/LoginForm';
 
@@ -12,6 +13,7 @@ const AuthModalContext = createContext();
  * Designed for "Intent-Preserved Authentication" (logging in without losing checkout state).
  */
 export const AuthModalProvider = ({ children }) => {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [redirectPath, setRedirectPath] = useState(null);
 
@@ -81,9 +83,11 @@ export const AuthModalProvider = ({ children }) => {
               <LoginForm
                 isModal={true}
                 onSuccess={() => {
+                  const path = redirectPath;
                   closeAuthModal();
-                  // If a specific redirect path was set, the useLogin hook will handle it via searchParams
-                  // Or we can manually trigger a router push if needed.
+                  if (path) {
+                    router.push(path);
+                  }
                 }}
               />
 

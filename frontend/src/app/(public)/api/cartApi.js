@@ -175,3 +175,51 @@ export const removeCartCouponApi = async token => {
   }
   return data;
 };
+
+/**
+ * POST /api/orders/buy-now-preview/
+ */
+export const buyNowPreviewApi = async orderData => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/orders/buy-now-preview/`, {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+
+  const data = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, 'Failed to preview order'));
+  }
+  return data;
+};
+
+/**
+ * POST /api/orders/buy-now/
+ */
+export const buyNowPlaceOrderApi = async orderData => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/orders/buy-now/`, {
+    method: 'POST',
+    body: JSON.stringify(orderData),
+  });
+
+  const data = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, 'Failed to place order'));
+  }
+  return data;
+};
+
+/**
+ * POST /api/coupons/validate/
+ */
+export const validateCouponApi = async (code, subtotal) => {
+  const response = await fetchWithAuth(`${API_BASE_URL}/coupons/validate/`, {
+    method: 'POST',
+    body: JSON.stringify({ code, subtotal }),
+  });
+
+  const data = await parseJsonResponse(response);
+  if (!response.ok) {
+    throw new Error(getApiErrorMessage(data, 'Failed to validate coupon'));
+  }
+  return data;
+};
