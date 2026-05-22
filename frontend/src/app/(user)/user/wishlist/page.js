@@ -1,47 +1,20 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { FiHeart, FiArrowLeft, FiInfo } from 'react-icons/fi';
 import ProductCard from './components/ProductCard';
 import UiButton from '@/app/(public)/components/UiButton';
+import { useWishlist } from '@/app/(public)/hooks/useWishlist';
 
 export default function WishlistPage() {
-  // Mock Data updated to match the new Card Design
-  const [wishlistItems, setWishlistItems] = useState([
-    {
-      id: 1,
-      name: 'Nutricost Korean Ginseng 1000mg...',
-      price: '1,250',
-      oldPrice: '1,790',
-      discount: '27',
-      rating: '5.0',
-      reviews: '1.2k+',
-      image: null,
-    },
-    {
-      id: 2,
-      name: 'Omron M2 Basic Blood Pressure Monitor',
-      price: '3,450',
-      oldPrice: '4,200',
-      discount: '15',
-      rating: '4.9',
-      reviews: '850',
-      image: null,
-    },
-    {
-      id: 3,
-      name: 'Napa Extend 665mg Tablet',
-      price: '15',
-      oldPrice: null,
-      discount: null,
-      rating: '5.0',
-      reviews: '2k+',
-      image: null,
-    },
-  ]);
+  const { items, isLoading, toggle } = useWishlist();
 
-  const handleRemove = id => {
-    setWishlistItems(prev => prev.filter(item => item.id !== id));
+  const handleRemove = async wishlistId => {
+    // Find the item to get the product_id for the toggle function
+    const item = items.find(i => i.id === wishlistId);
+    if (item) {
+      await toggle({ id: item.product_id });
+    }
   };
 
   return (
@@ -64,10 +37,25 @@ export default function WishlistPage() {
         </p>
       </div>
 
-      {wishlistItems.length > 0 ? (
+      {isLoading ? (
+        <div className="w-full py-20 flex items-center justify-center">
+          <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : items.length > 0 ? (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-          {wishlistItems.map(item => (
-            <ProductCard key={item.id} product={item} onRemove={handleRemove} />
+          {items.map(item => (
+            <ProductCard
+              key={item.id}
+              product={{
+                id: item.id,
+                name: item.product_name,
+                price: item.product_price,
+                oldPrice: item.product_original_price,
+                image: item.image_url,
+                slug: item.product_slug,
+              }}
+              onRemove={() => handleRemove(item.id)}
+            />
           ))}
         </div>
       ) : (

@@ -6,7 +6,9 @@ import React from 'react';
 import { BsCart3 } from 'react-icons/bs';
 import { GoStarFill } from 'react-icons/go';
 import { TbCurrencyTaka } from 'react-icons/tb';
+import { FiHeart } from 'react-icons/fi';
 import { useCart } from '../../../hooks/useCart';
+import { useWishlist } from '../../../hooks/useWishlist';
 import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
@@ -15,6 +17,15 @@ import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
  */
 const PopularProductCard = ({ product }) => {
   const { addItem, isUpdating } = useCart();
+  const { toggle, isFavorite } = useWishlist();
+
+  const isLiked = isFavorite(product.id);
+
+  const handleWishlistToggle = async e => {
+    e.preventDefault();
+    e.stopPropagation();
+    await toggle(product);
+  };
 
   /**
    * Helper to strip Markdown and HTML tags for plain text display on the card.
@@ -48,6 +59,20 @@ const PopularProductCard = ({ product }) => {
         <div className="relative bg-white rounded-[24px] border border-gray-100 p-3 transition-all hover:border-(--color-primary-100) shadow-none">
           {/* Image Container */}
           <div className="relative bg-(--color-imageBG) rounded-[18px] w-full aspect-square flex items-center justify-center overflow-hidden border border-gray-50 shadow-none">
+            <button
+              onClick={handleWishlistToggle}
+              className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center z-20 transition-all ${
+                isLiked
+                  ? 'bg-red-500 text-white border-red-500'
+                  : 'bg-white/80 text-gray-400 hover:text-red-500 hover:bg-white border-white'
+              } border shadow-sm cursor-pointer active:scale-90`}
+            >
+              <FiHeart
+                size={16}
+                fill={isLiked ? 'currentColor' : 'transparent'}
+              />
+            </button>
+
             {product?.discount_percentage > 0 && (
               <span className="absolute top-3 right-3 bg-(--success-500) text-white text-[10px] font-black px-2.5 py-1 rounded-full z-10 uppercase tracking-wider">
                 -{product.discount_percentage}% off
