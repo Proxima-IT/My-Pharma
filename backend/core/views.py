@@ -35,7 +35,7 @@ from authentication.permissions import (
 )
 from authentication.constants import UserRole
 
-from .models import Brand, Category, DeliveryMethod, Ingredient, Unit, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog
+from .models import Brand, Category, DeliveryMethod, Ingredient, Unit, Product, ProductImage, ProductDosage, ProductReview, ProductReviewImage, Order, OrderImage, OrderItem, OrderStatusHistory, Prescription, PrescriptionImage, PrescriptionItem, PrescriptionStatusHistory, Consultation, UserNotification, UserNotificationPreference, UserPushSubscription, BlogCategory, BlogPost, Page, Cart, CartItem, Coupon, SidebarCategory, Ad, Combo, AppLogo, PaymentTransaction, NotificationCampaign, NotificationDeliveryLog, WishlistItem
 from .serializers import (
     BrandSerializer,
     CategorySerializer,
@@ -104,6 +104,8 @@ from .serializers import (
     B2BCommissionEntrySerializer,
     BuyNowPreviewSerializer,
     BuyNowSerializer,
+    WishlistItemSerializer,
+    WishlistItemCreateSerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -3188,3 +3190,54 @@ class SSLCommerzIpnView(APIView):
         except Exception as exc:
             return Response({"detail": f"IPN processing error: {exc}"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"detail": "IPN verified."}, status=status.HTTP_200_OK)
+
+
+@extend_schema_view(
+    list=extend_schema(tags=["Wishlist"], summary="List wishlist items for the current user"),
+    create=extend_schema(tags=["Wishlist"], summary="Add a product to the user's wishlist"),
+    destroy=extend_schema(tags=["Wishlist"], summary="Remove a wishlist item by ID"),
+)
+class WishlistViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, IsRegisteredUser]
+    queryset = WishlistItem.objects.all()
+
+    def get_serializer_class(self):
+        if self.action == "create":
+            return WishlistItemCreateSerializer
+        return WishlistItemSerializer
+
+    def get_queryset(self):
+        return WishlistItem.objects.filter(user=self.request.user).select_related(
+            "product", "product__unit"
+        )
+
+    def create(self, request, *args, **kwargs):
+        serializer = WishlistItemCreateSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        wishlist_item = serializer.save(user=request.user)
+        response_serializer = WishlistItemSerializer(wishlist_item, context={"request": request})
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=["post"], url_path="remove", permission_classes=[IsAuthenticated, IsRegisteredUser])
+    @extend_schema(
+        tags=["Wishlist"],
+        summary="Remove a product from the wishlist",
+        request=WishlistItemCreateSerializer,
+        responses={204: None},
+    )
+    def remove_product(self, request):
+        """
+        Remove a product from the current user's wishlist using the product ID in the request body.
+        Body format: {"product": <product_id>}
+        """
+        product_id = request.data.get("product")
+        if not product_id:
+            return Response({"product": "product is required."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        wishlist_item = WishlistItem.objects.filter(user=request.user, product_id=product_id).first()
+        if not wishlist_item:
+            return Response({"detail": "Product is not in your wishlist."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        wishlist_item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

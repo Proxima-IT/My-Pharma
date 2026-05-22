@@ -11,6 +11,8 @@ Single reference for **current authentication and notification APIs**: request/r
 
 **→ Multiple user addresses (CRUD, titles: Home, Office, Other):** [API_ADDRESSES.md](API_ADDRESSES.md).
 
+**→ Wishlist CRUD API (authenticated registered users, toggle action, nested product info):** [WISHLIST.md](WISHLIST.md).
+
 ---
 
 ## 1. General
@@ -120,6 +122,10 @@ Endpoints that return tokens return:
 | PUT    | `/api/auth/addresses/<id>/`    | Yes  | —                | Full update address                                                           |
 | PATCH  | `/api/auth/addresses/<id>/`    | Yes  | —                | Partial update address                                                        |
 | DELETE | `/api/auth/addresses/<id>/`    | Yes  | —                | Delete address                                                                |
+| GET    | `/api/wishlist/`               | Yes  | —                | List my wishlist items (paginated, nested product details)                   |
+| POST   | `/api/wishlist/`               | Yes  | —                | Add a product to my wishlist (checks active product, uniqueness constraint)   |
+| DELETE | `/api/wishlist/<id>/`          | Yes  | —                | Remove an item from my wishlist by Wishlist Item ID                           |
+| POST   | `/api/wishlist/remove/`        | Yes  | —                | Remove a product from my wishlist by Product ID (custom toggle utility)      |
 | GET    | `/api/notifications/`          | Yes  | —                | List current user's inbox notifications                                       |
 | GET    | `/api/notifications/{id}/`     | Yes  | —                | Retrieve one inbox notification                                               |
 | PATCH  | `/api/notifications/{id}/read/` | Yes | —                | Mark one inbox notification as read                                           |

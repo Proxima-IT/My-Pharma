@@ -1443,3 +1443,28 @@ class Page(models.Model):
 
     def __str__(self):
         return self.title
+
+
+class WishlistItem(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="wishlist_items",
+        db_index=True,
+    )
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="wishlist_items",
+        db_index=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "core_wishlist_item"
+        unique_together = [["user", "product"]]
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.user.email or self.user.phone or str(self.user.id)} - {self.product.name}"
+

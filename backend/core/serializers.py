@@ -44,6 +44,7 @@ from .models import (
     B2BCommissionEntry,
     Page,
     SidebarCategory,
+    WishlistItem,
     Ad,
     Combo,
     AppLogo,
@@ -1793,4 +1794,66 @@ class BuyNowSerializer(serializers.Serializer):
                 user=self.context["request"].user,
                 status=Prescription.Status.APPROVED,
             )
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    product_id = serializers.IntegerField(source="product.id", read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
+    product_slug = serializers.CharField(source="product.slug", read_only=True)
+    product_description = serializers.CharField(source="product.description", read_only=True)
+    product_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
+    product_original_price = serializers.DecimalField(source="product.original_price", max_digits=12, decimal_places=2, read_only=True, allow_null=True)
+    product_unit_name = serializers.SerializerMethodField()
+    product_dosage = serializers.CharField(source="product.dosage", read_only=True)
+    image_url = serializers.SerializerMethodField()
+    quantity_in_stock = serializers.IntegerField(source="product.quantity_in_stock", read_only=True)
+    is_in_stock = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WishlistItem
+        fields = (
+            "id",
+            "product",
+            "product_id",
+            "product_name",
+            "product_slug",
+            "product_description",
+            "product_price",
+            "product_original_price",
+            "product_unit_name",
+            "product_dosage",
+            "image_url",
+            "quantity_in_stock",
+            "is_in_stock",
+            "created_at",
+        )
+        read_only_fields = ("id", "created_at")
+
+    def get_image_url(self, obj):
+        return _product_image_url(obj.product, self.context.get("request"))
+
+    def get_product_unit_name(self, obj):
+        return obj.product.unit.name if obj.product and obj.product.unit else None
+
+    def get_is_in_stock(self, obj):
+        return obj.product.quantity_in_stock > 0
+
+
+class WishlistItemCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WishlistItem
+        fields = ("product",)
+
+    def validate_product(self, value):
+        if not value.is_active:
+            raise serializers.ValidationError("This product is currently inactive.")
+        return value
+
+    def validate(self, attrs):
+        user = self.context["request"].user
+        product = attrs["product"]
+        if WishlistItem.objects.filter(user=user, product=product).exists():
+            raise serializers.ValidationError({"product": "This product is already in your wishlist."})
+        return attrs
+
 

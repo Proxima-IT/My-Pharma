@@ -37,6 +37,7 @@ from .models import (
     Cart,
     CartItem,
     Coupon,
+    WishlistItem,
 )
 
 
@@ -293,3 +294,12 @@ class PageAdmin(admin.ModelAdmin):
     list_filter = ("is_published",)
     search_fields = ("title", "slug", "content")
     prepopulated_fields = {"slug": ("title",)}
+
+
+@admin.register(WishlistItem)
+class WishlistItemAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "product", "created_at")
+    search_fields = ("user__email", "user__phone", "product__name")
+    raw_id_fields = ("user", "product")
+    ordering = ("-created_at",)
+

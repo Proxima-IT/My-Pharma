@@ -29,6 +29,7 @@ router.register(r"cart", views.CartViewSet, basename="cart")
 router.register(r"settlements", views.OrderSettlementViewSet, basename="settlement")
 router.register(r"b2b/customers", views.B2BCustomerProfileViewSet, basename="b2b-customer")
 router.register(r"b2b/commissions", views.B2BCommissionEntryViewSet, basename="b2b-commission")
+router.register(r"wishlist", views.WishlistViewSet, basename="wishlist")
 
 urlpatterns = [
     path("payments/sslcommerz/success/", views.SSLCommerzSuccessView.as_view(), name="sslcommerz-success"),

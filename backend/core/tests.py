@@ -11,7 +11,9 @@ from .models import (
     Category,
     Brand,
     Ingredient,
+    WishlistItem,
 )
+
 
 
 class NotificationApiSmokeTests(APITestCase):
@@ -393,3 +395,125 @@ class BuyNowApiTests(APITestCase):
         order = Order.objects.get(pk=response.data["id"])
         self.assertEqual(order.prescription, prescription)
 
+
+class WishlistApiTests(APITestCase):
+    def setUp(self):
+        # 1. Create categories and brand
+        self.category = Category.objects.create(name="Medicines", slug="meds")
+        self.brand = Brand.objects.create(name="Square", slug="square")
+
+        # 2. Create products
+        self.p_active = Product.objects.create(
+            name="Active Napa",
+            slug="active-napa",
+            category=self.category,
+            brand=self.brand,
+            price=15.00,
+            quantity_in_stock=100,
+            is_active=True,
+        )
+        self.p_inactive = Product.objects.create(
+            name="Inactive Napa",
+            slug="inactive-napa",
+            category=self.category,
+            brand=self.brand,
+            price=12.00,
+            quantity_in_stock=50,
+            is_active=False,
+        )
+
+        # 3. Create users
+        self.user = User.objects.create_user(
+            email="registered@example.com",
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+        self.guest_user = User.objects.create_user(
+            email="guest@example.com",
+            password="StrongPass123!",
+            role=UserRole.GUEST_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+
+    def test_unauthenticated_request_is_unauthorized(self):
+        response = self.client.get("/api/wishlist/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_guest_user_is_forbidden(self):
+        self.client.force_authenticate(user=self.guest_user)
+        response = self.client.get("/api/wishlist/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_wishlist_list_and_add_success(self):
+        self.client.force_authenticate(user=self.user)
+        
+        # Initially empty list
+        response = self.client.get("/api/wishlist/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("results") if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 0)
+
+        # Add active product to wishlist
+        payload = {"product": self.p_active.id}
+        response = self.client.post("/api/wishlist/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["product"], self.p_active.id)
+        self.assertEqual(response.data["product_name"], "Active Napa")
+        self.assertEqual(response.data["is_in_stock"], True)
+
+        # Retrieve wishlist list again
+        response = self.client.get("/api/wishlist/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data.get("results") if isinstance(response.data, dict) else response.data
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["product_id"], self.p_active.id)
+
+    def test_add_duplicate_product_fails(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {"product": self.p_active.id}
+        
+        response = self.client.post("/api/wishlist/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        # Add duplicate
+        response = self.client.post("/api/wishlist/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("product", response.data)
+
+    def test_add_inactive_product_fails(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {"product": self.p_inactive.id}
+        
+        response = self.client.post("/api/wishlist/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_remove_by_id_success(self):
+        self.client.force_authenticate(user=self.user)
+        # Create wishlist item
+        item = WishlistItem.objects.create(user=self.user, product=self.p_active)
+        
+        # Remove by item ID
+        response = self.client.delete(f"/api/wishlist/{item.id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(WishlistItem.objects.filter(pk=item.id).exists())
+
+    def test_remove_by_product_id_success(self):
+        self.client.force_authenticate(user=self.user)
+        # Create wishlist item
+        item = WishlistItem.objects.create(user=self.user, product=self.p_active)
+
+        # Remove by custom POST action
+        payload = {"product": self.p_active.id}
+        response = self.client.post("/api/wishlist/remove/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(WishlistItem.objects.filter(pk=item.id).exists())
+
+    def test_remove_non_existent_product_fails(self):
+        self.client.force_authenticate(user=self.user)
+        payload = {"product": self.p_active.id}
+        response = self.client.post("/api/wishlist/remove/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["detail"], "Product is not in your wishlist.")
