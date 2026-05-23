@@ -79,12 +79,29 @@ export const useProfile = () => {
     data.append('gender', formData.gender);
     data.append('date_of_birth', formData.date_of_birth);
 
+    // 🟢 ARCHITECT FIX: Include identity fields in the update payload.
+    // If the phone/email is changed, the backend will trigger its verification protocol.
+    if (formData.email && formData.email !== initialData.email) {
+      data.append('email', formData.email);
+    }
+    if (formData.phone && formData.phone !== initialData.phone) {
+      data.append('phone', formData.phone);
+    }
+
     if (formData.profile_picture instanceof File) {
       data.append('profile_picture', formData.profile_picture);
     }
 
     try {
-      await updateProfileApi(token, data);
+      const response = await updateProfileApi(token, data);
+
+      // 🟢 ARCHITECT FIX: Handle the 'pending_verification' response.
+      // If the backend identifies a new phone/email, it will halt the update until verified.
+      if (response?.pending_verification) {
+        setVerifyingType(response.pending_verification);
+        return;
+      }
+
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 5000);
       await loadProfile();

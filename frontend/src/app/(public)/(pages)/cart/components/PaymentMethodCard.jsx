@@ -11,7 +11,7 @@ const PaymentMethodCard = ({ selected, onSelect }) => {
     { id: 'UPAY', name: 'Upay', img: '/assets/images/upay.png' },
     { id: 'ONLINE', name: 'SSL Commerz', img: '/assets/images/ssl.png' },
     { id: 'CARD', name: 'Card', img: '/assets/images/card.png' },
-    { id: 'COD', name: 'COD', img: '/assets/images/cod.png' },
+    { id: 'COD', name: 'Cash On Delivery', img: '/assets/images/cod.png' },
   ];
 
   return (

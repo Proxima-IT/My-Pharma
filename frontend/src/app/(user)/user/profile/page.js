@@ -186,7 +186,7 @@ export default function UserProfilePage() {
                     <button
                       type="button"
                       onClick={verifyCode}
-                      className="text-[10px] font-bold text-(--primary-500) uppercase tracking-widest"
+                      className="px-3 py-1 bg-(--primary-50) hover:bg-(--primary-100) rounded-full text-[10px] font-bold text-(--primary-500) uppercase tracking-widest transition-colors"
                     >
                       Verify
                     </button>
@@ -209,7 +209,7 @@ export default function UserProfilePage() {
                       <button
                         type="button"
                         onClick={() => requestVerification('phone')}
-                        className="text-[10px] font-bold text-(--primary-500) uppercase tracking-widest"
+                        className="px-3 py-1 bg-(--primary-50) hover:bg-(--primary-100) rounded-full text-[10px] font-bold text-(--primary-500) uppercase tracking-widest transition-colors"
                       >
                         Verify
                       </button>

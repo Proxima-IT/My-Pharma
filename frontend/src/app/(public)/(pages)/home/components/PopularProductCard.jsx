@@ -54,14 +54,14 @@ const PopularProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group">
+    <div className="group relative">
       <Link href={`/product/${product?.slug}`}>
-        <div className="relative bg-white rounded-[24px] border border-gray-100 p-3 transition-all hover:border-(--color-primary-100) shadow-none">
+        <div className="bg-white rounded-[24px] border border-gray-100 p-3 transition-all hover:border-(--color-primary-100) shadow-none">
           {/* Image Container */}
           <div className="relative bg-(--color-imageBG) rounded-[18px] w-full aspect-square flex items-center justify-center overflow-hidden border border-gray-50 shadow-none">
             <button
               onClick={handleWishlistToggle}
-              className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center z-20 transition-all ${
+              className={`absolute top-3 left-3 w-8 h-8 rounded-full flex items-center justify-center z-10 transition-all ${
                 isLiked
                   ? 'bg-red-500 text-white border-red-500'
                   : 'bg-white/80 text-gray-400 hover:text-red-500 hover:bg-white border-white'

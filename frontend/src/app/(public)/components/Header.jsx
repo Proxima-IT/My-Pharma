@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { FaFacebook, FaLinkedin } from 'react-icons/fa';
 import { BsInstagram } from 'react-icons/bs';
 import { LuUpload } from 'react-icons/lu';
-import { IoSearchOutline } from 'react-icons/io5';
+import { IoSearchOutline, IoCloseSharp } from 'react-icons/io5';
 import {
   FiBell,
   FiUser,
@@ -98,7 +98,8 @@ const Header = () => {
     if (token) setIsLoggedIn(true);
 
     const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      const isMobile = window.innerWidth < 1024;
+      if (!isMobile && dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsProfileOpen(false);
       }
       if (searchRef.current && !searchRef.current.contains(event.target)) {
@@ -506,6 +507,70 @@ const Header = () => {
         isOpen={isLocationOpen}
         onClose={() => setIsLocationOpen(false)}
       />
+
+      {/* Mobile Profile Sidebar */}
+      <div 
+        className={`fixed inset-0 z-[100] lg:hidden transition-all duration-500 ${isLoggedIn && isProfileOpen ? 'visible' : 'invisible'}`}
+      >
+        {/* Backdrop */}
+        <div 
+          className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-500 ${isLoggedIn && isProfileOpen ? 'opacity-100' : 'opacity-0'}`}
+          onClick={() => setIsProfileOpen(false)}
+        />
+        
+        {/* Sidebar Panel */}
+        <div 
+          className={`absolute right-0 top-0 h-full w-[280px] bg-white transition-transform duration-500 ease-out transform ${isLoggedIn && isProfileOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        >
+          <div className="flex flex-col h-full overflow-hidden">
+            {/* User Info Header */}
+            <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center text-(--color-primary-500) overflow-hidden shrink-0">
+                  {profile?.avatar_preview ? (
+                    <Image src={profile.avatar_preview} alt="Profile" width={40} height={40} className="w-full h-full object-cover" />
+                  ) : (
+                    <FiUser size={20} />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-gray-900 text-sm truncate">{profile?.fullName || profile?.username || 'User Account'}</p>
+                  <p className="text-[10px] text-gray-500 font-medium truncate">{profile?.email || profile?.phone}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsProfileOpen(false)}
+                className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
+              >
+                <IoCloseSharp size={20} />
+              </button>
+            </div>
+
+            {/* Menu Links */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1 no-scrollbar">
+              <DropdownItem href="/user/profile" icon={FiUser} label="Profile" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/user/orders" icon={TrackOrderIcon} label="Track Order" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/user/prescriptions" icon={FiFileText} label="Prescriptions" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/user/wishlist" icon={FiHeart} label="Wishlist" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/user/address" icon={FiMapPin} label="Manage Address" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/user/transactions" icon={FiCreditCard} label="Transaction History" />
+              <div className="h-px bg-gray-100/50 mx-4 my-3" />
+              <DropdownItem href="/terms" icon={FiFileText} label="Terms & Conditions" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/privacy" icon={FiShield} label="Privacy Policy" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/return-policy" icon={FiRefreshCcw} label="Refund Policy" />
+              <div className="h-px bg-gray-50 mx-4 my-0.5" />
+              <DropdownItem href="/user/faq" icon={FiHelpCircle} label="FAQ" />
+            </div>  
+          </div>
+        </div>
+      </div>
     </header>
   );
 };

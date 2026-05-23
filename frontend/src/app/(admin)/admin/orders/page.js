@@ -283,7 +283,7 @@ export default function AdminOrdersPage() {
             Page {page}
           </div>
           <button
-            disabled={currentData.results.length < 10 || isLoading}
+            disabled={page * 10 >= currentData.count || isLoading}
             onClick={() => setPage(p => p + 1)}
             className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
           >
