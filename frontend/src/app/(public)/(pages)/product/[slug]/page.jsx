@@ -8,7 +8,7 @@ import ProductSummaryCard from './components/ProductSummaryCard';
 import ProductImageViewer from './components/ProductImageViewer';
 import ProductDetailsTabs from './components/ProductDetailsTabs';
 import AlternativeProductCard from './components/AlternativeProductCard';
-import BundleSlider from '../../home/components/BundleSlider';
+import ProductBundleSlider from './components/ProductBundleSlider';
 import PopularProductCard from '../../home/components/PopularProductCard';
 import UploadPrescriptionBanner from '../../home/components/UploadPrescriptionBanner';
 import { useProductDetails } from '../../../hooks/useProductDetails';
@@ -161,7 +161,7 @@ const ProductSingle = ({ params }) => {
             <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight mb-3 px-1 uppercase">
               Bundle Packages
             </h3>
-            <BundleSlider cardsToShow={1} />
+            <ProductBundleSlider />
           </div>
 
           {/* Generic Alternatives Engine */}
@@ -170,8 +170,7 @@ const ProductSingle = ({ params }) => {
               <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight px-1 uppercase leading-tight">
                 Alternative Brands For {product.name}
               </h3>
-              <p className="text-[11px] font-medium text-gray-500 px-1 mt-1 leading-relaxed">
-              </p>
+              <p className="text-[11px] font-medium text-gray-500 px-1 mt-1 leading-relaxed"></p>
             </div>
             {/* Component now handles its own fetching based on product.ingredient ID */}
             <AlternativeProductCard currentProduct={product} />

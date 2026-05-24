@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import { useAdminOrders } from '../../hooks/useAdminOrders';
 import { usePrescriptionAdmin } from '../../hooks/usePrescriptionAdmin';
+import { useAdminContext } from '../../context/AdminContext';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 
 /**
@@ -22,6 +23,8 @@ export default function AdminOrdersPage() {
   const [activeTab, setActiveTab] = useState('Standard'); // 'Standard' or 'Prescription'
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+
+  const { unseenOrderCount, unseenPrescriptionCount } = useAdminContext();
 
   // Hooks for both order types
   const { orders, loading: ordersLoading, fetchOrders } = useAdminOrders();
@@ -95,7 +98,9 @@ export default function AdminOrdersPage() {
       {/* Tab Switcher - Sharp Design */}
       <div className="flex items-center gap-1 border-b border-gray-100">
         {['Standard', 'Prescription'].map(tab => {
-          const count = tab === 'Standard' ? orders.count : prescriptions.count;
+          // 🟢 ARCHITECT FIX: Tab badge now consumes the Global Sovereign Count from AdminContext.
+          // This eliminates page-limit blindness and ensures the count is consistent across the panel.
+          const count = tab === 'Standard' ? unseenOrderCount : unseenPrescriptionCount;
           return (
             <button
               key={tab}
@@ -195,9 +200,16 @@ export default function AdminOrdersPage() {
                     className="hover:bg-gray-50/50 transition-colors duration-200 group"
                   >
                     <td className="px-8 py-6 border-r border-gray-100 font-mono text-sm font-bold text-[#1B1B1B]">
-                      {activeTab === 'Prescription'
-                        ? `RX-${item.id}`
-                        : `#${item.id}`}
+                      <div className="flex items-center gap-2">
+                        {activeTab === 'Standard' && !item.is_seen && (
+                          <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0" title="New Unseen Order" />
+                        )}
+                        <span>
+                          {activeTab === 'Prescription'
+                            ? `RX-${item.id}`
+                            : `#${item.id}`}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-8 py-6 border-r border-gray-100">
                       <div className="flex flex-col">

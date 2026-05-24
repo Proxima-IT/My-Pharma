@@ -20,15 +20,16 @@ export const orderAdminApi = {
     return res.json();
   },
 
-  // ৩. অর্ডারের স্ট্যাটাস পরিবর্তন করা (যেমন: Pending থেকে Delivered)
-  updateOrderStatus: async (token, id, status) => {
+  // ৩. অর্ডারের স্ট্যাটাস বা অন্যান্য তথ্য পরিবর্তন করা (যেমন: Pending থেকে Delivered অথবা is_seen আপডেট)
+  updateOrderStatus: async (token, id, payload) => {
+    const body = typeof payload === 'string' ? { status: payload } : payload;
     const res = await fetch(`${API_BASE_URL}/orders/${id}/`, {
       method: 'PATCH',
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify(body),
     });
     if (!res.ok) throw new Error('স্ট্যাটাস আপডেট করা সম্ভব হয়নি।');
     return res.json();

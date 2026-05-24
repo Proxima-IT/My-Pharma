@@ -24,36 +24,16 @@ import {
   FiTruck,
 } from 'react-icons/fi';
 import { useLogoAdmin } from '@/app/(admin)/hooks/useLogoAdmin';
-import { useAdminOrders } from '@/app/(admin)/hooks/useAdminOrders';
-import { usePrescriptionAdmin } from '@/app/(admin)/hooks/usePrescriptionAdmin';
+import { useAdminContext } from '@/app/(admin)/context/AdminContext';
 
 const AdminSidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const { logos } = useLogoAdmin();
-  const { orders, fetchOrders } = useAdminOrders();
-  const { prescriptions, fetchPrescriptions } = usePrescriptionAdmin();
-  const [newOrdersCount, setNewOrdersCount] = useState(0);
-  const [newPrescriptionsCount, setNewPrescriptionsCount] = useState(0);
-
-  useEffect(() => {
-    // Fetch orders with PENDING status
-    fetchOrders({ status: 'PENDING', page_size: 1 });
-    // Fetch prescriptions with PENDING status
-    fetchPrescriptions({ status: 'PENDING', page_size: 1 });
-  }, [fetchOrders, fetchPrescriptions]);
-
-  useEffect(() => {
-    if (orders && typeof orders.count === 'number') {
-      setNewOrdersCount(orders.count);
-    }
-  }, [orders]);
-
-  useEffect(() => {
-    if (prescriptions && typeof prescriptions.count === 'number') {
-      setNewPrescriptionsCount(prescriptions.count);
-    }
-  }, [prescriptions]);
+  
+  // 🟢 ARCHITECT FIX: Consume global counts from the AdminContext bus.
+  // This removes redundant local polling and ensures the badge syncs with all panel actions.
+  const { unseenOrderCount, unseenPrescriptionCount } = useAdminContext();
 
   // Find the specific system logo asset
   const systemLogo = logos?.find(
@@ -198,9 +178,9 @@ const AdminSidebar = () => {
           </div>
 
           {item.name === 'Order Records' &&
-            newOrdersCount + newPrescriptionsCount > 0 && (
+            unseenOrderCount + unseenPrescriptionCount > 0 && (
               <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[20px] h-5 flex items-center justify-center">
-                {newOrdersCount + newPrescriptionsCount}
+                {unseenOrderCount + unseenPrescriptionCount}
               </span>
             )}
         </div>

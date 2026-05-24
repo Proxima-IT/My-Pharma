@@ -38,6 +38,14 @@ export default function AdminOrderDetailsPage({ params }) {
     if (id) fetchOrderDetails(id);
   }, [id, fetchOrderDetails]);
 
+  // 🟢 ARCHITECT FIX: Automatic seen synchronization for the current detail context.
+  // Triggers a silent patch to mark the order as read upon arrival.
+  useEffect(() => {
+    if (orderDetails && !orderDetails.is_seen && !isUpdating) {
+      updateStatus(id, { is_seen: true });
+    }
+  }, [orderDetails, id, updateStatus, isUpdating]);
+
   const parsedInfo = useMemo(() => {
     if (!orderDetails?.shipping_address) {
       return {

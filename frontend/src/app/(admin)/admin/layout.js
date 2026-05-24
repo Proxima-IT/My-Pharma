@@ -6,6 +6,7 @@ import { FiMenu, FiX } from 'react-icons/fi';
 import AdminSidebar from '../components/AdminSidebar';
 import AuthGuard from '@/app/(shared)/components/AuthGuard';
 import LoadingOverlay from '@/app/(pharmacy-owner)/components/LoadingOverlay';
+import { AdminProvider } from '../context/AdminContext';
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
@@ -39,9 +40,10 @@ export default function AdminLayout({ children }) {
 
   return (
     <AuthGuard allowedRoles={['SUPER_ADMIN']}>
-      {showLoading && <LoadingOverlay onFinish={handleLoadingFinish} />}
+      <AdminProvider>
+        {showLoading && <LoadingOverlay onFinish={handleLoadingFinish} />}
 
-      <div className="flex min-h-screen bg-(--color-admin-bg) relative">
+        <div className="flex min-h-screen bg-(--color-admin-bg) relative">
         {/* 1. DESKTOP SIDEBAR (Static - Always visible on LG screens) */}
         <aside className="hidden lg:block w-[320px] shrink-0 h-screen sticky top-0 bg-white border-r border-gray-100 overflow-y-auto">
           <AdminSidebar />
@@ -135,6 +137,7 @@ export default function AdminLayout({ children }) {
           </main>
         </div>
       </div>
+      </AdminProvider>
     </AuthGuard>
   );
 }

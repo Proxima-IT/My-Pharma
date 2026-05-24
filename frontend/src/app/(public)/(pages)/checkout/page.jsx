@@ -167,13 +167,32 @@ const Checkout = () => {
     }
   }, [selectedAddressId, selectedMethodId, refresh, buyNow]);
 
-  // Handle Payment Callback Param Alerts (Shared)
+  // Handle Payment Callback — redirect to order details if order_id is present
+  // NOTE: useSearchParams() can return empty during Suspense hydration, so we
+  // also read window.location.search directly as a reliable fallback.
   useEffect(() => {
+    const rawParams =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search)
+        : null;
     const paymentStatus = (
-      searchParams.get('payment_status') || ''
+      searchParams.get('payment_status') ||
+      rawParams?.get('payment_status') ||
+      ''
     ).toLowerCase();
+    const orderId = searchParams.get('order_id') || rawParams?.get('order_id');
+
     if (!paymentStatus) {
       setCallbackMessage('');
+      return;
+    }
+
+    // Order is already placed but unpaid — redirect to order details page
+    if (
+      (paymentStatus === 'failed' || paymentStatus === 'cancelled') &&
+      orderId
+    ) {
+      router.replace(`/user/orders/${orderId}`);
       return;
     }
 
@@ -190,15 +209,24 @@ const Checkout = () => {
       return;
     }
     setCallbackMessage('');
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   // Redirect Standard empty cart to cart page (Standard flow only)
+  // Skip redirect if returning from a payment callback (order already placed, cart is empty)
+  // NOTE: useSearchParams() can return empty during Suspense hydration, so we
+  // also read window.location.search directly to avoid a premature /cart redirect.
   useEffect(() => {
     if (buyNow) return;
+    const rawSearch =
+      typeof window !== 'undefined' ? window.location.search : '';
+    const paymentStatus =
+      searchParams.get('payment_status') ||
+      new URLSearchParams(rawSearch).get('payment_status');
+    if (paymentStatus) return;
     if (!isLoading && items.length === 0 && !orderSuccess) {
       router.replace('/cart');
     }
-  }, [items, isLoading, router, orderSuccess, buyNow]);
+  }, [items, isLoading, router, orderSuccess, buyNow, searchParams]);
 
   // Coupon handling for stateless Buy Now flow
   const handleApplyBuyNowCoupon = async code => {
@@ -209,7 +237,10 @@ const Checkout = () => {
       const subtotal = parseFloat(buyNowProduct.price || 0) * buyNowQty;
       const res = await validateCouponApi(code, subtotal);
       if (res.is_valid) {
-        setBuyNowCoupon({ code: res.code, discount_amount: res.discount_amount });
+        setBuyNowCoupon({
+          code: res.code,
+          discount_amount: res.discount_amount,
+        });
         setBuyNowCouponCode(res.code);
       } else {
         setBuyNowCouponError(res.message || 'Invalid coupon code');
@@ -437,7 +468,9 @@ const Checkout = () => {
     if (buyNowProduct.image) return getMediaUrl(buyNowProduct.image);
     if (buyNowProduct.images && buyNowProduct.images.length > 0) {
       const firstImg = buyNowProduct.images[0];
-      return getMediaUrl(typeof firstImg === 'object' ? firstImg.image : firstImg);
+      return getMediaUrl(
+        typeof firstImg === 'object' ? firstImg.image : firstImg,
+      );
     }
     return null;
   };
@@ -450,14 +483,17 @@ const Checkout = () => {
         current_price: buyNowProduct.price,
         product_original_price: buyNowProduct.original_price,
         product_description: buyNowProduct.description,
-        product_unit_name: buyNowProduct.unit_name || (buyNowProduct.unit?.name || 'Unit'),
+        product_unit_name:
+          buyNowProduct.unit_name || buyNowProduct.unit?.name || 'Unit',
         dosage: dosage,
         quantity: buyNowQty,
       }
     : null;
 
   const defaultDeliveryPrice = selectedMethodId
-    ? parseFloat(deliveryOptions.find(opt => opt.id === selectedMethodId)?.price || 0)
+    ? parseFloat(
+        deliveryOptions.find(opt => opt.id === selectedMethodId)?.price || 0,
+      )
     : 150;
 
   const calculatedBuyNowSummary = buyNowSummary || {
@@ -468,17 +504,24 @@ const Checkout = () => {
     delivery_fee: defaultDeliveryPrice.toFixed(2),
     total_amount: (
       parseFloat(buyNowProduct?.price || 0) * buyNowQty -
-      (buyNowCoupon?.discount_amount ? parseFloat(buyNowCoupon.discount_amount) : 0) +
+      (buyNowCoupon?.discount_amount
+        ? parseFloat(buyNowCoupon.discount_amount)
+        : 0) +
       defaultDeliveryPrice
     ).toFixed(2),
     base_delivery_fee: defaultDeliveryPrice.toFixed(2),
     delivery_option_charge: 0,
     delivery_option_name: selectedMethodId
-      ? deliveryOptions.find(opt => opt.id === selectedMethodId)?.name || 'Delivery'
+      ? deliveryOptions.find(opt => opt.id === selectedMethodId)?.name ||
+        'Delivery'
       : 'Delivery',
   };
 
-  const displayItems = buyNow ? (mockBuyNowItem ? [mockBuyNowItem] : []) : items;
+  const displayItems = buyNow
+    ? mockBuyNowItem
+      ? [mockBuyNowItem]
+      : []
+    : items;
   const displaySummary = buyNow ? calculatedBuyNowSummary : summary;
 
   return (
@@ -605,8 +648,9 @@ const Checkout = () => {
                     Free Delivery Applied
                   </p>
                   <p className="text-(--success-600) text-xs font-medium">
-                    You saved {formatCurrency(displaySummary.base_delivery_fee || 150)}{' '}
-                    on shipping!
+                    You saved{' '}
+                    {formatCurrency(displaySummary.base_delivery_fee || 150)} on
+                    shipping!
                   </p>
                 </div>
               </div>

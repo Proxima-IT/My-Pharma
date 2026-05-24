@@ -1,8 +1,10 @@
 'use client';
 import { useState, useCallback } from 'react';
 import { orderAdminApi } from '../api/orderAdminApi';
+import { useAdminContext } from '../context/AdminContext';
 
 export const useAdminOrders = () => {
+  const { refreshCounts } = useAdminContext();
   const [orders, setOrders] = useState({ results: [], count: 0 });
   const [orderDetails, setOrderDetails] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -17,6 +19,32 @@ export const useAdminOrders = () => {
       const token = localStorage.getItem('access_token');
       const data = await orderAdminApi.getOrders(token, params);
       setOrders(data);
+
+      // 🟢 ARCHITECT FIX: Automatic Bulk Seen logic for active pagination page.
+      // Uses Promise.all to ensure backend persistence before triggering a global count refresh.
+      const unseenIds = data.results?.filter(o => !o.is_seen).map(o => o.id) || [];
+      if (unseenIds.length > 0) {
+        // Wait for all patch requests to resolve to prevent race conditions during refresh
+        await Promise.all(
+          unseenIds.map(id =>
+            orderAdminApi
+              .updateOrderStatus(token, id, { is_seen: true })
+              .catch(err =>
+                console.error(`Failed to mark order ${id} as seen`, err),
+              ),
+          ),
+        );
+
+        // Optimistic UI Update: Ensure local state reflects "seen" immediately
+        setOrders(prev => ({
+          ...prev,
+          results: prev.results.map(order => ({ ...order, is_seen: true })),
+        }));
+
+        // 🟢 ARCHITECT FIX: Refresh global counts only AFTER Promise.all ensures 
+        // DB state is updated.
+        refreshCounts();
+      }
     } catch (err) {
       setError(err.message);
     } finally {
@@ -58,6 +86,11 @@ export const useAdminOrders = () => {
           order.id === id ? updatedOrder : order,
         ),
       }));
+
+      // 🟢 ARCHITECT FIX: Synchronize global counts in the context bus 
+      // after manual status/seen update.
+      refreshCounts();
+
       return true;
     } catch (err) {
       setError(err.message);
