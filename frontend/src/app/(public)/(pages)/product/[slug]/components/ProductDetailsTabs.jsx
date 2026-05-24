@@ -96,6 +96,21 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
     fetchReviews(newPage);
   };
 
+  // 4. Rating Distribution — compute real percentages from review data
+  const ratingDistribution = useMemo(() => {
+    const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+    reviews.forEach(r => {
+      const star = Math.round(parseFloat(r.rating));
+      if (star >= 1 && star <= 5) counts[star]++;
+    });
+    const total = reviews.length;
+    return [5, 4, 3, 2, 1].map(star => ({
+      star,
+      count: counts[star],
+      percent: total > 0 ? Math.round((counts[star] / total) * 100) : 0,
+    }));
+  }, [reviews]);
+
   const hasReviewed = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const userData = localStorage.getItem('user');
@@ -273,23 +288,26 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
               </div>
 
               <div className="flex-1 w-full max-w-md space-y-5">
-                {[5, 4, 3, 2, 1].map(stars => (
-                  <div key={stars} className="flex items-center gap-4">
+                {ratingDistribution.map(({ star, count, percent }) => (
+                  <div key={star} className="flex items-center gap-4">
                     <div className="flex items-center gap-2 w-8">
                       <FiStar
                         className="text-amber-400 fill-amber-400"
                         size={18}
                       />
                       <span className="text-sm font-bold text-gray-900">
-                        {stars}
+                        {star}
                       </span>
                     </div>
                     <div className="flex-1 h-2 bg-gray-100 rounded-full relative overflow-hidden shadow-none">
                       <div
-                        className="absolute left-0 top-0 h-full bg-black rounded-full shadow-none"
-                        style={{ width: `${stars === 5 ? 85 : 5}%` }}
+                        className="absolute left-0 top-0 h-full bg-black rounded-full shadow-none transition-all duration-500"
+                        style={{ width: `${percent}%` }}
                       />
                     </div>
+                    <span className="text-xs font-bold text-gray-400 w-8 text-right">
+                      {count}
+                    </span>
                   </div>
                 ))}
               </div>
