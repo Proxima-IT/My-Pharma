@@ -100,7 +100,8 @@ export default function AdminOrdersPage() {
         {['Standard', 'Prescription'].map(tab => {
           // 🟢 ARCHITECT FIX: Tab badge now consumes the Global Sovereign Count from AdminContext.
           // This eliminates page-limit blindness and ensures the count is consistent across the panel.
-          const count = tab === 'Standard' ? unseenOrderCount : unseenPrescriptionCount;
+          const count =
+            tab === 'Standard' ? unseenOrderCount : unseenPrescriptionCount;
           return (
             <button
               key={tab}
@@ -202,7 +203,16 @@ export default function AdminOrdersPage() {
                     <td className="px-8 py-6 border-r border-gray-100 font-mono text-sm font-bold text-[#1B1B1B]">
                       <div className="flex items-center gap-2">
                         {activeTab === 'Standard' && !item.is_seen && (
-                          <div className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0" title="New Unseen Order" />
+                          <div
+                            className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0"
+                            title="New Unseen Order"
+                          />
+                        )}
+                        {activeTab === 'Prescription' && !item.is_seen && (
+                          <div
+                            className="w-2 h-2 rounded-full bg-red-600 animate-pulse shrink-0"
+                            title="New Unseen Prescription"
+                          />
                         )}
                         <span>
                           {activeTab === 'Prescription'

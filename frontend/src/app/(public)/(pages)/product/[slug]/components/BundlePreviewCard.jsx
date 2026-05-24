@@ -44,16 +44,6 @@ const BundlePreviewCard = ({ bundle }) => {
               </div>
             )}
           </div>
-
-          {/* View Prompt */}
-          <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500 group-hover:text-gray-900 transition-colors mt-1 uppercase tracking-wider">
-            <span>View Bundle</span>
-            <FiChevronRight
-              size={12}
-              strokeWidth={3}
-              className="transition-transform group-hover:translate-x-0.5"
-            />
-          </div>
         </div>
 
         {/* Image */}

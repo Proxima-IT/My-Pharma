@@ -42,11 +42,14 @@ export const AdminProvider = ({ children }) => {
         page_size: 1,
       });
 
-      // 🟢 ARCHITECT FIX: Aligning definitions to resolve 4/11/8 mismatch.
-      // As per the latest directive, Prescription counting is suppressed (set to 0) 
-      // to focus strictly on Standard Order synchronization.
+      // 2. Fetch global unseen count for Prescription Orders
+      const rxData = await prescriptionAdminApi.getPrescriptions(token, {
+        is_seen: false,
+        page_size: 1,
+      });
+
       setUnseenOrderCount(orderData.count || 0);
-      setUnseenPrescriptionCount(0); 
+      setUnseenPrescriptionCount(rxData.count || 0);
     } catch (err) {
       console.error('Failed to synchronize global admin counts:', err);
     } finally {

@@ -45,6 +45,7 @@ export default function AdminPrescriptionDetailPage({ params }) {
     isUpdating,
     fetchPrescriptionDetails,
     verifyRx,
+    updatePrescription,
   } = usePrescriptionAdmin();
   const { products, fetchProducts } = useProductAdmin();
 
@@ -62,6 +63,14 @@ export default function AdminPrescriptionDetailPage({ params }) {
   useEffect(() => {
     if (id) fetchPrescriptionDetails(id);
   }, [id, fetchPrescriptionDetails]);
+
+  // Automatic seen synchronization for the current detail context.
+  // Triggers a silent patch to mark the prescription as read upon arrival (mirrors orders/[id]/page.js).
+  useEffect(() => {
+    if (prescriptionDetails && !prescriptionDetails.is_seen && !isUpdating) {
+      updatePrescription(id, { is_seen: true });
+    }
+  }, [prescriptionDetails, id, updatePrescription, isUpdating]);
 
   // Pre-populate form with existing data when viewing an already-verified prescription
   useEffect(() => {

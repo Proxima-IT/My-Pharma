@@ -10,6 +10,7 @@ import {
   FiDatabase,
   FiShield,
   FiRefreshCw,
+  FiFileText,
 } from 'react-icons/fi';
 import Link from 'next/link';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
@@ -21,7 +22,8 @@ export default function AdminDashboardPage() {
 
   // 🟢 ARCHITECT FIX: Consume global unseen order count and loading state from the AdminContext bus.
   // Using isLoadingCounts ensures this specific card is decoupled from the general dashboard data fetcher.
-  const { unseenOrderCount, isLoadingCounts } = useAdminContext();
+  const { unseenOrderCount, unseenPrescriptionCount, isLoadingCounts } =
+    useAdminContext();
 
   // Dynamic stats based on API data
   const dynamicStats = [
@@ -32,6 +34,14 @@ export default function AdminDashboardPage() {
       icon: <FiShoppingBag />,
       color: unseenOrderCount > 0 ? 'text-red-600' : 'text-[#3A5A40]',
       isAlert: unseenOrderCount > 0,
+    },
+    {
+      label: 'NEW PRESCRIPTIONS',
+      value: isLoadingCounts ? '...' : unseenPrescriptionCount.toString(),
+      change: unseenPrescriptionCount > 0 ? 'ACTION REQ' : 'CLEAN',
+      icon: <FiFileText />,
+      color: unseenPrescriptionCount > 0 ? 'text-red-600' : 'text-[#3A5A40]',
+      isAlert: unseenPrescriptionCount > 0,
     },
     {
       label: 'TOTAL USERS',
@@ -114,7 +124,9 @@ export default function AdminDashboardPage() {
               <div className={`text-xl ${stat.color} p-2 bg-gray-50`}>
                 {stat.icon}
               </div>
-              <span className={`font-mono text-[10px] font-bold px-1.5 py-0.5 ${stat.isAlert ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'}`}>
+              <span
+                className={`font-mono text-[10px] font-bold px-1.5 py-0.5 ${stat.isAlert ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'}`}
+              >
                 {stat.change}
               </span>
             </div>

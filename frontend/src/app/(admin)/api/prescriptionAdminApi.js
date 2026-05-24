@@ -64,6 +64,26 @@ export const prescriptionAdminApi = {
   },
 
   /**
+   * Update a prescription's fields (e.g. is_seen, notes)
+   * Generic PATCH on the prescription resource.
+   * @param {string} token
+   * @param {number} id
+   * @param {Object} payload - { is_seen: true, ... }
+   */
+  updatePrescription: async (token, id, payload) => {
+    const response = await fetch(`${API_BASE_URL}/prescriptions/${id}/`, {
+      method: 'PATCH',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) throw new Error('Failed to update prescription');
+    return response.json();
+  },
+
+  /**
    * Delete a prescription record
    */
   deletePrescription: async (token, id) => {
