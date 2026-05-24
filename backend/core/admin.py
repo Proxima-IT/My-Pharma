@@ -171,8 +171,8 @@ class CouponAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "status", "coupon", "discount_amount", "delivery_fee", "total", "created_at")
-    list_filter = ("status",)
+    list_display = ("id", "user", "status", "is_seen", "coupon", "discount_amount", "delivery_fee", "total", "created_at")
+    list_filter = ("status", "is_seen")
     search_fields = ("user__email", "user__phone", "id")
     raw_id_fields = ("user", "prescription", "delivery_method", "coupon")
     inlines = [OrderItemInline, OrderImageInline, OrderStatusHistoryInline]

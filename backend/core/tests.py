@@ -517,3 +517,58 @@ class WishlistApiTests(APITestCase):
         response = self.client.post("/api/wishlist/remove/", payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["detail"], "Product is not in your wishlist.")
+
+
+class OrderApiTests(APITestCase):
+    def setUp(self):
+        from decimal import Decimal
+        from authentication.models import User
+        from authentication.constants import UserRole, UserStatus
+        from .models import Order
+
+        # Create admin and customer
+        self.admin_user = User.objects.create_user(
+            email="order_admin@example.com",
+            password="StrongPass123!",
+            role=UserRole.SUPER_ADMIN,
+            status=UserStatus.ACTIVE,
+            is_staff=True,
+            is_superuser=True,
+            email_verified=True,
+        )
+        self.customer = User.objects.create_user(
+            email="order_customer@example.com",
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+
+        # Create a sample order
+        self.order = Order.objects.create(
+            user=self.customer,
+            status=Order.Status.PENDING,
+            total=Decimal("150.00"),
+            shipping_address="Dhaka, Bangladesh",
+        )
+
+    def test_order_creation_defaults_is_seen_false(self):
+        self.assertFalse(self.order.is_seen)
+
+    def test_admin_can_patch_is_seen(self):
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {"is_seen": True}
+        response = self.client.patch(f"/api/orders/{self.order.id}/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_seen"])
+        
+        self.order.refresh_from_db()
+        self.assertTrue(self.order.is_seen)
+
+    def test_customer_cannot_patch_is_seen(self):
+        self.client.force_authenticate(user=self.customer)
+        payload = {"is_seen": True}
+        response = self.client.patch(f"/api/orders/{self.order.id}/", payload, format="json")
+        # Regular user PATCH on /api/orders/<id>/ returns 403 Forbidden because of ViewSet permission checks
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+

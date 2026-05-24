@@ -512,6 +512,7 @@ class Order(models.Model):
     shipping_address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     message = models.TextField(blank=True, help_text="Customer message with the order.")
+    is_seen = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

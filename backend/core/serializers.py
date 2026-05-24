@@ -722,6 +722,7 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = (
             "id", "user", "user_email", "user_username", "prescription", "delivery_method", "delivery_method_name", "delivery_method_duration",
             "status",
+            "is_seen",
             "payment_status",
             "payment_method",
             "subtotal_before_discount",
@@ -839,7 +840,7 @@ class OrderStatusSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ("status", "delivery_method")
+        fields = ("status", "delivery_method", "is_seen")
 
 
 # ---- Delivery duration (admin CRUD) ----
