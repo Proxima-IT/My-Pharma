@@ -1255,7 +1255,7 @@ class PrescriptionSerializer(serializers.ModelSerializer):
         fields = (
             "id", "user", "user_email", "shipping_address", "shipping_address_detail",
             "save_prescription", "medicine_supply_duration", "custom_supply_days", "prescription_note", "additional_products_note",
-            "image", "file", "images", "status", "issue_date",
+            "image", "file", "images", "status", "is_seen", "issue_date",
             "patient_name_on_rx", "doctor_name", "doctor_reg_number", "has_signature",
             "verified_by", "verified_at", "notes", "items", "status_history",
             "created_at", "updated_at",
@@ -1348,7 +1348,7 @@ class PrescriptionVerifySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Prescription
-        fields = ("status", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "items")
+        fields = ("status", "is_seen", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "items")
 
     def validate_status(self, value):
         if value not in (Prescription.Status.APPROVED, Prescription.Status.REJECTED):

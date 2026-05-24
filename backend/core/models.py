@@ -996,6 +996,7 @@ class Prescription(models.Model):
     image = models.ImageField(upload_to="prescriptions/%Y/%m/", blank=True, null=True)  # legacy
     file = models.FileField(upload_to="prescriptions/%Y/%m/", blank=True, null=True)  # JPG/PNG/PDF, max 10MB
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING, db_index=True)
+    is_seen = models.BooleanField(default=False, db_index=True)
     issue_date = models.DateField(null=True, blank=True, help_text="Prescription issue date; must not be older than 6 months.")
     patient_name_on_rx = models.CharField(max_length=200, blank=True, help_text="Patient name as on prescription; must match account holder.")
     doctor_name = models.CharField(max_length=200, blank=True)

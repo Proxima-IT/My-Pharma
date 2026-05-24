@@ -1,3 +1,4 @@
+from django.core.files.uploadedfile import SimpleUploadedFile
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -571,4 +572,26 @@ class OrderApiTests(APITestCase):
         response = self.client.patch(f"/api/orders/{self.order.id}/", payload, format="json")
         # Regular user PATCH on /api/orders/<id>/ returns 403 Forbidden because of ViewSet permission checks
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class PrescriptionOrderApiTests(APITestCase):
+    def setUp(self):
+        self.customer = User.objects.create_user(
+            email="rx_customer@example.com",
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+        self.client.force_authenticate(user=self.customer)
+
+    def test_prescription_order_creation_defaults_is_seen_false(self):
+        payload = {
+            "prescription_note": "Please review quickly.",
+            "file": SimpleUploadedFile("rx.pdf", b"%PDF-1.4 test content", content_type="application/pdf"),
+        }
+        response = self.client.post("/api/prescription-orders/", payload, format="multipart")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertIn("is_seen", response.data)
+        self.assertFalse(response.data["is_seen"])
 

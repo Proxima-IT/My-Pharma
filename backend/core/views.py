@@ -2153,7 +2153,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = PrescriptionSerializer
     permission_classes = [IsAuthenticated]
-    filterset_fields = ["status"]
+    filterset_fields = ["status", "is_seen"]
     http_method_names = ["get", "post", "patch", "put", "delete", "head", "options"]
 
     def get_queryset(self):
@@ -2214,6 +2214,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
         prescription.status = data.get("status", prescription.status)
+        prescription.is_seen = data.get("is_seen", prescription.is_seen)
         prescription.notes = data.get("notes", prescription.notes)
         prescription.doctor_name = data.get("doctor_name", prescription.doctor_name)
         prescription.doctor_reg_number = data.get("doctor_reg_number", prescription.doctor_reg_number)
@@ -2221,7 +2222,7 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
         prescription.patient_name_on_rx = data.get("patient_name_on_rx", prescription.patient_name_on_rx)
         prescription.verified_by = request.user
         prescription.verified_at = timezone.now()
-        prescription.save(update_fields=["status", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "verified_by", "verified_at", "updated_at"])
+        prescription.save(update_fields=["status", "is_seen", "notes", "doctor_name", "doctor_reg_number", "has_signature", "patient_name_on_rx", "verified_by", "verified_at", "updated_at"])
         if prescription.status == Prescription.Status.APPROVED and "items" in data and data["items"]:
             PrescriptionItem.objects.filter(prescription=prescription).delete()
             for entry in data["items"]:

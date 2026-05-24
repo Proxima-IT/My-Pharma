@@ -209,8 +209,8 @@ class PrescriptionStatusHistoryInline(admin.TabularInline):
 
 @admin.register(Prescription)
 class PrescriptionAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "status", "medicine_supply_duration", "patient_name_on_rx", "created_at")
-    list_filter = ("status", "medicine_supply_duration")
+    list_display = ("id", "user", "status", "is_seen", "medicine_supply_duration", "patient_name_on_rx", "created_at")
+    list_filter = ("status", "is_seen", "medicine_supply_duration")
     search_fields = ("user__email", "user__phone", "patient_name_on_rx", "doctor_name", "prescription_note")
     raw_id_fields = ("user", "verified_by", "shipping_address")
     inlines = [PrescriptionItemInline, PrescriptionImageInline, PrescriptionStatusHistoryInline]
