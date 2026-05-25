@@ -2,11 +2,12 @@
 import React from 'react';
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 20;
 
 /**
  * Reusable Pagination Component — Admin Dashboard
  * Calculates total pages from `totalItems` and `pageSize`.
+ * Defaults to the backend admin/API page size of 20 items per page.
  * Renders numbered circle buttons (1, 2, 3...) with ellipsis for large page counts.
  * Completely prevents navigating beyond the last page.
  */
