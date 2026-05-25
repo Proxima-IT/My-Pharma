@@ -186,6 +186,30 @@ class Combo(models.Model):
         total = sum((p.price for p in self.products.all()), Decimal("0"))
         return total.quantize(Decimal("0.01"))
 
+    def get_cart_original_price(self) -> Decimal:
+        """Return the undiscounted unit price for cart display (strikethrough reference).
+
+        This is the price shown as the "original" price in the cart before any combo
+        discount (discount_price) is applied. Used for CartItem.original_price_at_order.
+
+        Precedence (highest first):
+          1. original_price (if not None) — marketing strikethrough price
+          2. custom_price (if not None) — admin fixed price when discount_price overrides it
+          3. combo.price — display/marketing price
+          4. sum of linked Product.price values (fallback)
+
+        Always quantized to 2 decimal places.
+        """
+        if self.original_price is not None:
+            return self.original_price.quantize(Decimal("0.01"))
+        if self.custom_price is not None:
+            return self.custom_price.quantize(Decimal("0.01"))
+        if self.price is not None:
+            return self.price.quantize(Decimal("0.01"))
+        # Fallback: sum of product prices
+        total = sum((p.price for p in self.products.all()), Decimal("0"))
+        return total.quantize(Decimal("0.01"))
+
 
 class AppLogo(models.Model):
     """App logo assets (e.g. primary header logo, footer logo) keyed by slug."""
