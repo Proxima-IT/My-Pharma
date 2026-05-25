@@ -38,7 +38,6 @@ export default function EditComboPage({ params }) {
     description: '',
     price: '',
     original_price: '',
-    cart_price: '',
     bg_color: '#B0E5C7',
     order: 0,
     is_active: true,
@@ -73,7 +72,6 @@ export default function EditComboPage({ params }) {
           description: data.description || '',
           price: data.price || '',
           original_price: data.original_price || '',
-          cart_price: data.discount_price ?? data.custom_price ?? '',
           bg_color: data.bg_color || '#B0E5C7',
           order: data.order || 0,
           is_active: data.is_active ?? true,
@@ -137,7 +135,7 @@ export default function EditComboPage({ params }) {
       data.append('description', formData.description);
       data.append('price', formData.price);
       data.append('original_price', formData.original_price);
-      data.append('discount_price', formData.cart_price);
+      data.append('discount_price', '');
       data.append('custom_price', '');
       data.append('bg_color', formData.bg_color);
       data.append('order', formData.order);
@@ -352,25 +350,6 @@ export default function EditComboPage({ params }) {
               </div>
 
               <div>
-                <label className={labelClass}>
-                  Cart / Checkout Price (BDT)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="cart_price"
-                  className={inputClass}
-                  placeholder="Leave blank to use sum of products"
-                  value={formData.cart_price}
-                  onChange={handleInputChange}
-                />
-                <p className="text-[9px] font-mono text-[#3A5A40] mt-1 uppercase tracking-widest font-bold">
-                  Single admin price used for future carts. Blank = auto-sum
-                  linked products.
-                </p>
-              </div>
-
-              <div>
                 <label className={labelClass}>Container Color</label>
                 <div className="flex gap-2">
                   <input
@@ -469,9 +448,7 @@ export default function EditComboPage({ params }) {
             )}
           </button>
           <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
-            Note: This editor now uses one cart / checkout price field. Existing
-            custom combo prices are loaded into that field automatically.
-            Leaving it blank keeps backend fallback pricing from the sum of
+            Note: Cart pricing is automatically calculated from the sum of
             linked product prices.
           </div>
         </div>

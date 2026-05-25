@@ -34,7 +34,6 @@ export default function NewComboPage() {
     description: '',
     price: '',
     original_price: '',
-    cart_price: '',
     bg_color: '#B0E5C7',
     order: 0,
     is_active: true,
@@ -99,7 +98,7 @@ export default function NewComboPage() {
       data.append('description', formData.description);
       data.append('price', formData.price);
       data.append('original_price', formData.original_price);
-      data.append('discount_price', formData.cart_price);
+      data.append('discount_price', '');
       data.append('custom_price', '');
       data.append('bg_color', formData.bg_color);
       data.append('order', formData.order);
@@ -320,25 +319,6 @@ export default function NewComboPage() {
 
               <div>
                 <label className={labelClass}>
-                  Cart / Checkout Price (BDT)
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="cart_price"
-                  className={inputClass}
-                  placeholder="Leave blank to use sum of products"
-                  value={formData.cart_price}
-                  onChange={handleInputChange}
-                />
-                <p className="text-[9px] font-mono text-[#3A5A40] mt-1 uppercase tracking-widest font-bold">
-                  Single admin price used for future carts. Blank = auto-sum
-                  linked products.
-                </p>
-              </div>
-
-              <div>
-                <label className={labelClass}>
                   Container Color (Public Card)
                 </label>
                 <div className="flex gap-2">
@@ -461,10 +441,9 @@ export default function NewComboPage() {
           </button>
 
           <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
-            Note: Admin now manages 3 pricing inputs only — display sale price,
-            optional display original price, and one cart / checkout price.
-            Leaving cart price blank keeps backend fallback pricing from the sum
-            of linked product prices.
+            Note: Combo pricing consists of display sale price and optional
+            display original price. Cart pricing is automatically calculated
+            from the sum of linked product prices.
           </div>
         </div>
       </form>
