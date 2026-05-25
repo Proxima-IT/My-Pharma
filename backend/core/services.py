@@ -107,7 +107,7 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_meth
     If coupon was already applied and persisted to cart item prices, discount_amount is computed as the
     difference between original_subtotal and current subtotal.
     """
-    items = cart.items.select_related("product").all()
+    items = cart.items.select_related("product", "combo").all()
     subtotal = sum((item.price_at_order * item.quantity for item in items), Decimal("0"))
     original_subtotal = sum(
         ((item.original_price_at_order or item.price_at_order) * item.quantity for item in items),

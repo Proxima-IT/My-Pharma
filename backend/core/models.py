@@ -883,6 +883,16 @@ class CartItem(models.Model):
         Product,
         on_delete=models.CASCADE,
         related_name="cart_items",
+        null=True,
+        blank=True,
+        db_index=True,
+    )
+    combo = models.ForeignKey(
+        Combo,
+        on_delete=models.CASCADE,
+        related_name="cart_items",
+        null=True,
+        blank=True,
         db_index=True,
     )
     quantity = models.PositiveIntegerField(default=1)
@@ -902,11 +912,24 @@ class CartItem(models.Model):
 
     class Meta:
         db_table = "core_cart_item"
-        unique_together = [["cart", "product"]]
         ordering = ["id"]
+        unique_together = [["cart", "product"], ["cart", "combo"]]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (models.Q(product__isnull=False) & models.Q(combo__isnull=True))
+                    | (models.Q(product__isnull=True) & models.Q(combo__isnull=False))
+                ),
+                name="cart_item_exactly_one_product_or_combo",
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.product.name} x {self.quantity}"
+        if self.product:
+            return f"{self.product.name} x {self.quantity}"
+        if self.combo:
+            return f"{self.combo.title} (Combo) x {self.quantity}"
+        return f"Cart item #{self.id} x {self.quantity}"
 
 
 class Coupon(models.Model):

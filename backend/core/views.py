@@ -4,6 +4,7 @@ Core API views with RBAC.
 import logging
 import json
 import uuid
+from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from datetime import timedelta
 from urllib.parse import urlencode
@@ -14,14 +15,15 @@ from django.db.models import Count, Q
 from django.db.models.deletion import ProtectedError
 from django.http import HttpResponseRedirect
 from django.utils import timezone
-from rest_framework import status, viewsets, mixins
+from rest_framework import status, viewsets, mixins, serializers
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.filters import SearchFilter
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter
+from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter, inline_serializer, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
 
 from authentication.permissions import (
@@ -1661,7 +1663,7 @@ class CouponViewSet(viewsets.ModelViewSet):
         if subtotal is None:
             # If subtotal not sent, try to compute from cart
             cart = get_or_create_cart(request.user)
-            items = cart.items.select_related("product").all()
+            items = cart.items.select_related("product", "combo").all()
             subtotal = sum((i.price_at_order * i.quantity for i in items), Decimal("0"))
         try:
             coupon, discount = validate_coupon(code, subtotal)
@@ -1693,12 +1695,100 @@ class CouponViewSet(viewsets.ModelViewSet):
         )
 
 
+def _sum_combo_products_price(combo: Combo) -> Decimal:
+    total = sum((p.price for p in combo.products.all()), Decimal("0.00"))
+    return total.quantize(Decimal("0.01"))
+
+
+def _build_cart_product_demand(cart: Cart, item_overrides=None, extra_product=None, extra_combo=None, extra_quantity: int = 0):
+    """
+    Build required quantity by product across the cart, including combo lines.
+    item_overrides: {cart_item_id: replacement_quantity}
+    extra_product/extra_combo: additional quantity to simulate an add operation.
+    """
+    item_overrides = item_overrides or {}
+    demand = defaultdict(int)
+    items = (
+        cart.items.select_related("product", "combo")
+        .prefetch_related("combo__products")
+        .all()
+    )
+    for item in items:
+        qty = item_overrides.get(item.id, item.quantity)
+        if qty <= 0:
+            continue
+        if item.product_id:
+            demand[item.product_id] += qty
+            continue
+        if item.combo_id:
+            for product_id in item.combo.products.values_list("id", flat=True):
+                demand[product_id] += qty
+
+    if extra_quantity > 0 and extra_product is not None:
+        demand[extra_product.id] += extra_quantity
+    if extra_quantity > 0 and extra_combo is not None:
+        for product_id in extra_combo.products.values_list("id", flat=True):
+            demand[product_id] += extra_quantity
+    return demand
+
+
+def _find_stock_error(demand):
+    products = Product.objects.filter(id__in=demand.keys()).only("id", "name", "quantity_in_stock")
+    for product in products:
+        required = demand.get(product.id, 0)
+        if required > product.quantity_in_stock:
+            return f"Insufficient stock for {product.name}. Required: {required}, available: {product.quantity_in_stock}."
+    return None
+
+
 # ---- Cart: one cart per user; add, update/remove items, summary, place order ----
+@extend_schema_view(
+    list=extend_schema(
+        tags=["Cart"],
+        summary="Get my cart",
+        responses={200: CartSerializer},
+    ),
+    add=extend_schema(
+        tags=["Cart"],
+        summary="Add product or combo to cart",
+        request=AddToCartSerializer,
+        responses={201: CartSerializer},
+    ),
+    apply_coupon=extend_schema(
+        tags=["Cart"],
+        summary="Apply coupon to cart",
+        request=inline_serializer(
+            name="CartApplyCouponRequest",
+            fields={
+                "coupon_code": serializers.CharField(),
+            },
+        ),
+        responses={200: CartSerializer},
+    ),
+    remove_coupon=extend_schema(
+        tags=["Cart"],
+        summary="Remove coupon from cart",
+        request=None,
+        responses={200: CartSerializer},
+    ),
+    place_order=extend_schema(
+        tags=["Cart"],
+        summary="Place order from cart",
+        request=PlaceOrderFromCartSerializer,
+        responses={201: OrderSerializer},
+    ),
+)
 class CartViewSet(viewsets.GenericViewSet):
     """GET /api/cart/ – my cart with items and summary. POST add, POST place-order."""
     permission_classes = [IsAuthenticated, IsRegisteredUser]
     serializer_class = CartSerializer
+    pagination_class = None
 
+    @extend_schema(
+        tags=["Cart"],
+        summary="Get my cart",
+        responses={200: OpenApiResponse(response=CartSerializer)},
+    )
     def list(self, request, *args, **kwargs):
         cart = get_or_create_cart(request.user)
         serializer = self.get_serializer(cart)
@@ -1715,7 +1805,7 @@ class CartViewSet(viewsets.GenericViewSet):
         if not code:
             return Response({"coupon_code": "coupon_code is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        items = cart.items.select_related("product").all()
+        items = cart.items.select_related("product", "combo").all()
         if not items.exists():
             return Response({"detail": "Cart is empty."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1781,30 +1871,62 @@ class CartViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], url_path="add")
     def add(self, request):
-        """POST /api/cart/add/ – body: { product: id, quantity: int, dosage?: str }."""
+        """POST /api/cart/add/ - body: { product?: id, combo?: id, quantity: int, dosage?: str }."""
         serializer = AddToCartSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        product = serializer.validated_data["product"]
+        product = serializer.validated_data.get("product")
+        combo = serializer.validated_data.get("combo")
         quantity = serializer.validated_data["quantity"]
         dosage = (serializer.validated_data.get("dosage") or "").strip()[:50]
         cart = get_or_create_cart(request.user)
-        from .models import CartItem
-        item, created = CartItem.objects.get_or_create(
+
+        stock_demand = _build_cart_product_demand(
             cart=cart,
-            product=product,
-            defaults={"quantity": quantity, "original_price_at_order": product.price, "price_at_order": product.price, "dosage": dosage},
+            extra_product=product,
+            extra_combo=combo,
+            extra_quantity=quantity,
         )
-        if not created:
-            item.quantity += quantity
-            item.dosage = dosage
-            if item.original_price_at_order is None:
-                item.original_price_at_order = item.price_at_order
-            if item.quantity > product.quantity_in_stock:
-                return Response(
-                    {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            item.save(update_fields=["quantity", "dosage", "original_price_at_order"])
+        stock_error = _find_stock_error(stock_demand)
+        if stock_error:
+            return Response({"detail": stock_error}, status=status.HTTP_400_BAD_REQUEST)
+
+        if product:
+            item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                product=product,
+                combo=None,
+                defaults={
+                    "quantity": quantity,
+                    "original_price_at_order": product.price,
+                    "price_at_order": product.price,
+                    "dosage": dosage,
+                },
+            )
+            if not created:
+                item.quantity += quantity
+                item.dosage = dosage
+                if item.original_price_at_order is None:
+                    item.original_price_at_order = item.price_at_order
+                item.save(update_fields=["quantity", "dosage", "original_price_at_order"])
+        else:
+            combo_unit_price = _sum_combo_products_price(combo)
+            item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                product=None,
+                combo=combo,
+                defaults={
+                    "quantity": quantity,
+                    "original_price_at_order": combo_unit_price,
+                    "price_at_order": combo_unit_price,
+                    "dosage": "",
+                },
+            )
+            if not created:
+                item.quantity += quantity
+                if item.original_price_at_order is None:
+                    item.original_price_at_order = item.price_at_order
+                item.save(update_fields=["quantity", "original_price_at_order"])
+
         cart.save(update_fields=["updated_at"])
         cart.refresh_from_db()
         return Response(CartSerializer(cart, context={"request": request}).data, status=status.HTTP_201_CREATED)
@@ -1847,7 +1969,7 @@ class CartViewSet(viewsets.GenericViewSet):
         if coupon_code:
             # If a code is sent at checkout, validate and persist it first (so prices are saved).
             # Reuse apply_coupon logic by validating against original subtotal.
-            items = cart.items.select_related("product").all()
+            items = cart.items.select_related("product", "combo").all()
             original_subtotal = sum(((i.original_price_at_order or i.price_at_order) * i.quantity for i in items), Decimal("0"))
             try:
                 coupon, discount_amount = validate_coupon(coupon_code, original_subtotal)
@@ -1897,14 +2019,17 @@ class CartViewSet(viewsets.GenericViewSet):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        for item in cart.items.select_related("product").all():
-            if item.quantity > item.product.quantity_in_stock:
-                return Response(
-                    {"detail": f"Insufficient stock for {item.product.name}. Available: {item.product.quantity_in_stock}"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+        stock_demand = _build_cart_product_demand(cart)
+        stock_error = _find_stock_error(stock_demand)
+        if stock_error:
+            return Response({"detail": stock_error}, status=status.HTTP_400_BAD_REQUEST)
 
         # ── Unified flow: create order FIRST for all payment methods ──
+        cart_items = (
+            cart.items.select_related("product", "combo")
+            .prefetch_related("combo__products")
+            .all()
+        )
         with transaction.atomic():
             order = Order.objects.create(
                 user=request.user,
@@ -1918,16 +2043,78 @@ class CartViewSet(viewsets.GenericViewSet):
                 shipping_address=shipping_text,
                 notes=notes,
             )
-            for item in cart.items.select_related("product").all():
+            aggregated = {}
+            for item in cart_items:
+                if item.product_id:
+                    product_key = item.product_id
+                    line_amount = (item.price_at_order * item.quantity).quantize(Decimal("0.01"))
+                    data = aggregated.setdefault(
+                        product_key,
+                        {
+                            "product": item.product,
+                            "quantity": 0,
+                            "amount": Decimal("0.00"),
+                            "dosage": "",
+                        },
+                    )
+                    data["quantity"] += item.quantity
+                    data["amount"] += line_amount
+                    if not data["dosage"] and item.dosage:
+                        data["dosage"] = (item.dosage or "").strip()[:50]
+                    continue
+
+                combo_products = list(item.combo.products.all()) if item.combo_id else []
+                if not combo_products:
+                    combo_name = item.combo.title if item.combo else "Unknown combo"
+                    raise ValidationError({"detail": f"Combo '{combo_name}' has no products. Please remove it from cart."})
+                base_prices = [p.price for p in combo_products]
+                base_sum = sum(base_prices, Decimal("0.00"))
+                allocated_units = []
+                running = Decimal("0.00")
+                for idx, base_price in enumerate(base_prices):
+                    if idx == len(base_prices) - 1:
+                        allocated = (item.price_at_order - running).quantize(Decimal("0.01"))
+                    else:
+                        if base_sum > 0:
+                            allocated = (item.price_at_order * (base_price / base_sum)).quantize(Decimal("0.01"))
+                        else:
+                            allocated = (item.price_at_order / Decimal(str(len(base_prices)))).quantize(Decimal("0.01"))
+                        running += allocated
+                    allocated_units.append(max(Decimal("0.00"), allocated))
+
+                for combo_product, allocated_unit in zip(combo_products, allocated_units):
+                    product_key = combo_product.id
+                    line_amount = (allocated_unit * item.quantity).quantize(Decimal("0.01"))
+                    data = aggregated.setdefault(
+                        product_key,
+                        {
+                            "product": combo_product,
+                            "quantity": 0,
+                            "amount": Decimal("0.00"),
+                            "dosage": "",
+                        },
+                    )
+                    data["quantity"] += item.quantity
+                    data["amount"] += line_amount
+
+            for data in aggregated.values():
+                qty = data["quantity"]
+                unit_price = (data["amount"] / qty).quantize(Decimal("0.01")) if qty else Decimal("0.00")
                 OrderItem.objects.create(
                     order=order,
-                    product=item.product,
-                    quantity=item.quantity,
-                    price_at_order=item.price_at_order,
-                    dosage=(item.dosage or "").strip()[:50],
+                    product=data["product"],
+                    quantity=qty,
+                    price_at_order=unit_price,
+                    dosage=(data["dosage"] or "").strip()[:50],
                 )
-                item.product.quantity_in_stock -= item.quantity
-                item.product.save(update_fields=["quantity_in_stock"])
+
+            for product_id, required_qty in stock_demand.items():
+                product = Product.objects.select_for_update().filter(pk=product_id).first()
+                if not product or required_qty > product.quantity_in_stock:
+                    product_name = product.name if product else f"Product #{product_id}"
+                    raise ValidationError({"detail": f"Insufficient stock for {product_name}."})
+                product.quantity_in_stock -= required_qty
+                product.save(update_fields=["quantity_in_stock"])
 
             OrderStatusHistory.objects.get_or_create(order=order, status=Order.Status.PENDING)
 
@@ -2048,6 +2235,19 @@ class CartViewSet(viewsets.GenericViewSet):
         )
 
 
+@extend_schema_view(
+    partial_update=extend_schema(
+        tags=["Cart"],
+        summary="Update cart item quantity/dosage",
+        request=UpdateCartItemSerializer,
+        responses={200: CartItemSerializer, 204: None},
+    ),
+    destroy=extend_schema(
+        tags=["Cart"],
+        summary="Remove cart item",
+        responses={204: None},
+    ),
+)
 class CartItemViewSet(viewsets.GenericViewSet):
     """PATCH /api/cart/items/<id>/ – update quantity. DELETE – remove item."""
     permission_classes = [IsAuthenticated, IsRegisteredUser]
@@ -2055,7 +2255,11 @@ class CartItemViewSet(viewsets.GenericViewSet):
 
     def get_queryset(self):
         cart = get_or_create_cart(self.request.user)
-        return CartItem.objects.filter(cart=cart).select_related("product", "product__unit")
+        return (
+            CartItem.objects.filter(cart=cart)
+            .select_related("product", "product__unit", "combo")
+            .prefetch_related("combo__products")
+        )
 
     def partial_update(self, request, pk=None):
         item = self.get_object()
@@ -2067,18 +2271,25 @@ class CartItemViewSet(viewsets.GenericViewSet):
             if qty == 0:
                 item.delete()
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            if qty > item.product.quantity_in_stock:
-                stock_msg = f"Insufficient stock. Available: {item.product.quantity_in_stock}"
+            cart = get_or_create_cart(request.user)
+            stock_demand = _build_cart_product_demand(cart=cart, item_overrides={item.id: qty})
+            stock_error = _find_stock_error(stock_demand)
+            if stock_error:
                 return Response(
                     {
-                        "detail": stock_msg,
-                        "quantity": stock_msg,
+                        "detail": stock_error,
+                        "quantity": stock_error,
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
             item.quantity = qty
             update_fields.append("quantity")
         if "dosage" in serializer.validated_data:
+            if item.combo_id:
+                return Response(
+                    {"dosage": "Dosage is not applicable for combo cart items."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             item.dosage = (serializer.validated_data["dosage"] or "").strip()[:50]
             update_fields.append("dosage")
         if update_fields:

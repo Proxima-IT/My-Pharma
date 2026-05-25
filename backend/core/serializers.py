@@ -882,23 +882,36 @@ def _product_image_url(product, request=None):
     return None
 
 
+def _combo_image_url(combo, request=None):
+    if combo and combo.image:
+        url = combo.image.url
+        if request:
+            url = request.build_absolute_uri(url)
+        return url
+    return None
+
+
 class CartItemSerializer(serializers.ModelSerializer):
-    product_id = serializers.IntegerField(source="product.id", read_only=True)
-    product_name = serializers.CharField(source="product.name", read_only=True)
-    product_slug = serializers.CharField(source="product.slug", read_only=True)
-    product_description = serializers.CharField(source="product.description", read_only=True)
-    product_original_price = serializers.DecimalField(source="product.original_price", max_digits=12, decimal_places=2, read_only=True, allow_null=True)
+    item_type = serializers.SerializerMethodField()
+    product_id = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    product_slug = serializers.SerializerMethodField()
+    product_description = serializers.SerializerMethodField()
+    product_original_price = serializers.SerializerMethodField()
     product_unit_name = serializers.SerializerMethodField()
-    product_dosage = serializers.CharField(source="product.dosage", read_only=True)
+    product_dosage = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
-    current_price = serializers.DecimalField(source="product.price", max_digits=12, decimal_places=2, read_only=True)
-    quantity_in_stock = serializers.IntegerField(source="product.quantity_in_stock", read_only=True)
+    current_price = serializers.SerializerMethodField()
+    quantity_in_stock = serializers.SerializerMethodField()
+    combo_id = serializers.IntegerField(source="combo.id", read_only=True, allow_null=True)
+    combo_title = serializers.CharField(source="combo.title", read_only=True, allow_null=True)
     original_price_at_order = serializers.DecimalField(max_digits=12, decimal_places=2, read_only=True, allow_null=True)
 
     class Meta:
         model = CartItem
         fields = (
             "id",
+            "item_type",
             "product",
             "product_id",
             "product_name",
@@ -907,6 +920,9 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_original_price",
             "product_unit_name",
             "product_dosage",
+            "combo",
+            "combo_id",
+            "combo_title",
             "dosage",
             "image_url",
             "quantity",
@@ -917,6 +933,8 @@ class CartItemSerializer(serializers.ModelSerializer):
         )
         read_only_fields = (
             "id",
+            "product",
+            "combo",
             "price_at_order",
             "product_name",
             "product_slug",
@@ -928,26 +946,100 @@ class CartItemSerializer(serializers.ModelSerializer):
             "current_price",
             "quantity_in_stock",
             "original_price_at_order",
+            "item_type",
+            "combo_id",
+            "combo_title",
         )
 
+    def get_item_type(self, obj):
+        return "COMBO" if obj.combo_id else "PRODUCT"
+
+    def get_product_id(self, obj):
+        return obj.product_id or obj.combo_id
+
+    def get_product_name(self, obj):
+        if obj.product:
+            return obj.product.name
+        return obj.combo.title if obj.combo else None
+
+    def get_product_slug(self, obj):
+        if obj.product:
+            return obj.product.slug
+        return None
+
+    def get_product_description(self, obj):
+        if obj.product:
+            return obj.product.description
+        return obj.combo.description if obj.combo else None
+
+    def get_product_original_price(self, obj):
+        if obj.product:
+            return obj.product.original_price
+        return obj.original_price_at_order or obj.price_at_order
+
     def get_image_url(self, obj):
-        return _product_image_url(obj.product, self.context.get("request"))
+        request = self.context.get("request")
+        if obj.product:
+            return _product_image_url(obj.product, request)
+        return _combo_image_url(obj.combo, request)
 
     def get_product_unit_name(self, obj):
-        return obj.product.unit.name if obj.product and obj.product.unit else None
+        if obj.product and obj.product.unit:
+            return obj.product.unit.name
+        return "Combo Pack" if obj.combo else None
+
+    def get_product_dosage(self, obj):
+        if obj.product:
+            return obj.product.dosage
+        return ""
+
+    def get_current_price(self, obj):
+        if obj.product:
+            return obj.product.price
+        return obj.price_at_order
+
+    def get_quantity_in_stock(self, obj):
+        if obj.product:
+            return obj.product.quantity_in_stock
+        if not obj.combo:
+            return None
+        product_stocks = [p.quantity_in_stock for p in obj.combo.products.all()]
+        return min(product_stocks) if product_stocks else 0
 
 
 class AddToCartSerializer(serializers.Serializer):
-    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.filter(is_active=True))
+    product = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
+    combo = serializers.PrimaryKeyRelatedField(
+        queryset=Combo.objects.filter(is_active=True),
+        required=False,
+        allow_null=True,
+    )
     quantity = serializers.IntegerField(min_value=1)
     dosage = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
     def validate(self, attrs):
-        product = attrs["product"]
+        product = attrs.get("product")
+        combo = attrs.get("combo")
         qty = attrs["quantity"]
-        if qty > product.quantity_in_stock:
+        if bool(product) == bool(combo):
+            raise serializers.ValidationError(
+                {"detail": "Exactly one of 'product' or 'combo' is required."}
+            )
+        if product and qty > product.quantity_in_stock:
             raise serializers.ValidationError(
                 {"quantity": f"Insufficient stock. Available: {product.quantity_in_stock}"}
+            )
+        if combo and not combo.products.exists():
+            raise serializers.ValidationError(
+                {"combo": "This combo has no products configured by admin."}
+            )
+        if combo and (attrs.get("dosage") or "").strip():
+            raise serializers.ValidationError(
+                {"dosage": "Dosage is only applicable when adding a single product."}
             )
         return attrs
 
@@ -1091,7 +1183,7 @@ class CartSerializer(serializers.ModelSerializer):
                     delivery_method = None
             code = request.query_params.get("coupon_code") or request.data.get("coupon_code")
             if code:
-                items = obj.items.select_related("product").all()
+                items = obj.items.select_related("product", "combo").all()
                 subtotal = sum(((i.original_price_at_order or i.price_at_order) * i.quantity for i in items), Decimal("0"))
                 try:
                     coupon, _ = validate_coupon(code, subtotal)

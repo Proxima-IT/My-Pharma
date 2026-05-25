@@ -213,6 +213,25 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 
 ---
 
+## 4b. Cart APIs (REGISTERED_USER)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/cart/` | Get current user's cart with items + summary. |
+| POST | `/api/cart/add/` | Add product or combo. Body supports either `product` or `combo` (exactly one), plus `quantity`; `dosage` only for product lines. |
+| PATCH | `/api/cart/items/{id}/` | Update cart line quantity/dosage. `quantity: 0` removes item. |
+| DELETE | `/api/cart/items/{id}/` | Remove cart line. |
+| POST | `/api/cart/apply-coupon/` | Apply coupon and persist discounted `price_at_order` on cart lines. |
+| POST | `/api/cart/remove-coupon/` | Remove coupon and restore line prices from `original_price_at_order`. |
+| POST | `/api/cart/place-order/` | Place order from cart. Supports `shipping_address_id`, optional `delivery_method_id`, `payment_method`, `coupon_code`, `notes`. |
+
+**Combo behavior in user cart:**  
+- Adding a combo creates **one cart line item** (`item_type: COMBO`) instead of adding each product separately in cart response.  
+- Combo line price is generated as the sum of linked product prices at add time.  
+- During checkout, combo lines are expanded into regular product order items so admin order processing remains product-based.
+
+---
+
 **Product reviews (rating + comment + images):**  
 | Method | Path | Description |
 |--------|------|-------------|

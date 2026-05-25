@@ -1554,48 +1554,40 @@ paths:
       operationId: cart_list
       description: GET /api/cart/ – my cart with items and summary. POST add, POST
         place-order.
-      parameters:
-      - name: page
-        required: false
-        in: query
-        description: A page number within the paginated result set.
-        schema:
-          type: integer
-      - name: page_size
-        required: false
-        in: query
-        description: Number of results to return per page.
-        schema:
-          type: integer
+      summary: Get my cart
       tags:
-      - cart
+      - Cart
       responses:
         '200':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedCartList'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Cart'
           description: ''
   /api/cart/add/:
     post:
       operationId: cart_add_create
-      description: 'POST /api/cart/add/ – body: { product: id, quantity: int, dosage?:
-        str }.'
+      description: 'POST /api/cart/add/ - body: { product?: id, combo?: id, quantity:
+        int, dosage?: str }.'
+      summary: Add product or combo to cart
       tags:
-      - cart
+      - Cart
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/AddToCart'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/AddToCart'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/AddToCart'
+        required: true
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:
@@ -1607,19 +1599,21 @@ paths:
       description: |-
         Persist coupon discount on cart items by updating CartItem.price_at_order.
         Body: { coupon_code: str }
+      summary: Apply coupon to cart
       tags:
-      - cart
+      - Cart
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/CartApplyCouponRequest'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/CartApplyCouponRequest'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/CartApplyCouponRequest'
+        required: true
       responses:
         '200':
           content:
@@ -1632,6 +1626,7 @@ paths:
       operationId: cart_items_partial_update
       description: PATCH /api/cart/items/<id>/ – update quantity. DELETE – remove
         item.
+      summary: Update cart item quantity/dosage
       parameters:
       - in: path
         name: id
@@ -1639,18 +1634,18 @@ paths:
           type: integer
         required: true
       tags:
-      - cart
+      - Cart
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/PatchedCartItem'
+              $ref: '#/components/schemas/PatchedUpdateCartItem'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/PatchedCartItem'
+              $ref: '#/components/schemas/PatchedUpdateCartItem'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/PatchedCartItem'
+              $ref: '#/components/schemas/PatchedUpdateCartItem'
       responses:
         '200':
           content:
@@ -1658,10 +1653,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/CartItem'
           description: ''
+        '204':
+          description: No response body
     delete:
       operationId: cart_items_destroy
       description: PATCH /api/cart/items/<id>/ – update quantity. DELETE – remove
         item.
+      summary: Remove cart item
       parameters:
       - in: path
         name: id
@@ -1669,7 +1667,7 @@ paths:
           type: integer
         required: true
       tags:
-      - cart
+      - Cart
       responses:
         '204':
           description: No response body
@@ -1678,44 +1676,36 @@ paths:
       operationId: cart_place_order_create
       description: 'POST /api/cart/place-order/ – body: { shipping_address_id: int,
         coupon_code?: str, notes?: str }.'
+      summary: Place order from cart
       tags:
-      - cart
+      - Cart
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/PlaceOrderFromCart'
           application/x-www-form-urlencoded:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/PlaceOrderFromCart'
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Cart'
+              $ref: '#/components/schemas/PlaceOrderFromCart'
+        required: true
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Cart'
+                $ref: '#/components/schemas/Order'
           description: ''
   /api/cart/remove-coupon/:
     post:
       operationId: cart_remove_coupon_create
       description: Remove applied coupon and restore CartItem.price_at_order from
         original_price_at_order.
+      summary: Remove coupon from cart
       tags:
-      - cart
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Cart'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/Cart'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/Cart'
+      - Cart
       responses:
         '200':
           content:
@@ -3808,6 +3798,10 @@ paths:
       operationId: prescriptions_list
       summary: List prescriptions
       parameters:
+      - in: query
+        name: is_seen
+        schema:
+          type: boolean
       - name: page
         required: false
         in: query
@@ -5399,6 +5393,23 @@ components:
       - image
       - image_url
       - updated_at
+    AddToCart:
+      type: object
+      properties:
+        product:
+          type: integer
+          nullable: true
+        combo:
+          type: integer
+          nullable: true
+        quantity:
+          type: integer
+          minimum: 1
+        dosage:
+          type: string
+          maxLength: 50
+      required:
+      - quantity
     AddressTypeEnum:
       enum:
       - HOME
@@ -5753,16 +5764,28 @@ components:
       - items
       - summary
       - updated_at
+    CartApplyCouponRequest:
+      type: object
+      properties:
+        coupon_code:
+          type: string
+      required:
+      - coupon_code
     CartItem:
       type: object
       properties:
         id:
           type: integer
           readOnly: true
+        item_type:
+          type: string
+          readOnly: true
         product:
           type: integer
+          readOnly: true
+          nullable: true
         product_id:
-          type: integer
+          type: string
           readOnly: true
         product_name:
           type: string
@@ -5775,16 +5798,25 @@ components:
           readOnly: true
         product_original_price:
           type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           readOnly: true
-          nullable: true
         product_unit_name:
           type: string
           readOnly: true
         product_dosage:
           type: string
           readOnly: true
+        combo:
+          type: integer
+          readOnly: true
+          nullable: true
+        combo_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        combo_title:
+          type: string
+          readOnly: true
+          nullable: true
         dosage:
           type: string
           description: Selected dosage for this line (e.g. 50mg, 500mg).
@@ -5810,16 +5842,18 @@ components:
           readOnly: true
         current_price:
           type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           readOnly: true
         quantity_in_stock:
-          type: integer
+          type: string
           readOnly: true
       required:
+      - combo
+      - combo_id
+      - combo_title
       - current_price
       - id
       - image_url
+      - item_type
       - original_price_at_order
       - price_at_order
       - product
@@ -6810,6 +6844,8 @@ components:
           nullable: true
         status:
           $ref: '#/components/schemas/Status657Enum'
+        is_seen:
+          type: boolean
         payment_status:
           type: string
           readOnly: true
@@ -6956,7 +6992,7 @@ components:
           format: date-time
           readOnly: true
         payment_method:
-          $ref: '#/components/schemas/PaymentMethodEnum'
+          $ref: '#/components/schemas/OrderSettlementPaymentMethodEnum'
         payment_status:
           $ref: '#/components/schemas/PaymentStatusEnum'
         commission_rate:
@@ -7020,6 +7056,14 @@ components:
       - order_status
       - order_total
       - updated_at
+    OrderSettlementPaymentMethodEnum:
+      enum:
+      - COD
+      - ONLINE
+      type: string
+      description: |-
+        * `COD` - Cash on Delivery
+        * `ONLINE` - Online
     OrderSettlementStatusEnum:
       enum:
       - PENDING
@@ -7043,6 +7087,8 @@ components:
         delivery_method:
           type: integer
           nullable: true
+        is_seen:
+          type: boolean
     OrderStatusHistory:
       type: object
       description: Status timeline entry; date/time in Bangladeshi time (Asia/Dhaka).
@@ -7243,26 +7289,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Brand'
-    PaginatedCartList:
-      type: object
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Cart'
     PaginatedCategoryList:
       type: object
       properties:
@@ -7863,69 +7889,6 @@ components:
           type: string
           format: date-time
           readOnly: true
-    PatchedCartItem:
-      type: object
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        product:
-          type: integer
-        product_id:
-          type: integer
-          readOnly: true
-        product_name:
-          type: string
-          readOnly: true
-        product_slug:
-          type: string
-          readOnly: true
-        product_description:
-          type: string
-          readOnly: true
-        product_original_price:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-          nullable: true
-        product_unit_name:
-          type: string
-          readOnly: true
-        product_dosage:
-          type: string
-          readOnly: true
-        dosage:
-          type: string
-          description: Selected dosage for this line (e.g. 50mg, 500mg).
-          maxLength: 50
-        image_url:
-          type: string
-          readOnly: true
-        quantity:
-          type: integer
-          maximum: 4294967295
-          minimum: 0
-          format: int64
-        original_price_at_order:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-          nullable: true
-        price_at_order:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        current_price:
-          type: string
-          format: decimal
-          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
-          readOnly: true
-        quantity_in_stock:
-          type: integer
-          readOnly: true
     PatchedCategory:
       type: object
       properties:
@@ -8155,6 +8118,8 @@ components:
         delivery_method:
           type: integer
           nullable: true
+        is_seen:
+          type: boolean
     PatchedPage:
       type: object
       properties:
@@ -8187,6 +8152,8 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/StatusFd4Enum'
+        is_seen:
+          type: boolean
         notes:
           type: string
           description: Internal admin notes.
@@ -8424,6 +8391,15 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PatchedUpdateCartItem:
+      type: object
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+        dosage:
+          type: string
+          maxLength: 50
     PatchedUserAddress:
       type: object
       description: 'Read/write serializer for user address. Fields: full_name, email,
@@ -8697,14 +8673,6 @@ components:
           type: string
           format: date-time
           readOnly: true
-    PaymentMethodEnum:
-      enum:
-      - COD
-      - ONLINE
-      type: string
-      description: |-
-        * `COD` - Cash on Delivery
-        * `ONLINE` - Online
     PaymentStatusEnum:
       enum:
       - PENDING
@@ -8713,6 +8681,55 @@ components:
       description: |-
         * `PENDING` - Pending
         * `PAID` - Paid
+    PlaceOrderFromCart:
+      type: object
+      properties:
+        shipping_address_id:
+          type: integer
+          description: UserAddress id for shipping
+        coupon_code:
+          type: string
+        notes:
+          type: string
+        delivery_method_id:
+          type: integer
+          nullable: true
+          description: Optional delivery option id (STANDARD/SAME_DAY/EXPRESS) managed
+            by admin.
+        payment_method:
+          allOf:
+          - $ref: '#/components/schemas/PlaceOrderFromCartPaymentMethodEnum'
+          default: COD
+          description: |-
+            COD or online channel (BKASH/NAGAD/ROCKET/UPAY/CARD/ONLINE).
+
+            * `COD` - Cash on Delivery
+            * `BKASH` - bKash
+            * `NAGAD` - Nagad
+            * `ROCKET` - Rocket
+            * `UPAY` - Upay
+            * `CARD` - Card
+            * `ONLINE` - Online
+      required:
+      - shipping_address_id
+    PlaceOrderFromCartPaymentMethodEnum:
+      enum:
+      - COD
+      - BKASH
+      - NAGAD
+      - ROCKET
+      - UPAY
+      - CARD
+      - ONLINE
+      type: string
+      description: |-
+        * `COD` - Cash on Delivery
+        * `BKASH` - bKash
+        * `NAGAD` - Nagad
+        * `ROCKET` - Rocket
+        * `UPAY` - Upay
+        * `CARD` - Card
+        * `ONLINE` - Online
     Prescription:
       type: object
       properties:
@@ -8776,6 +8793,8 @@ components:
           allOf:
           - $ref: '#/components/schemas/StatusFd4Enum'
           readOnly: true
+        is_seen:
+          type: boolean
         issue_date:
           type: string
           format: date
@@ -8915,6 +8934,8 @@ components:
       properties:
         status:
           $ref: '#/components/schemas/StatusFd4Enum'
+        is_seen:
+          type: boolean
         notes:
           type: string
           description: Internal admin notes.

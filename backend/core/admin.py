@@ -141,8 +141,8 @@ class OrderStatusHistoryInline(admin.TabularInline):
 class CartItemInline(admin.TabularInline):
     model = CartItem
     extra = 0
-    raw_id_fields = ("product",)
-    fields = ("product", "quantity", "price_at_order", "dosage")
+    raw_id_fields = ("product", "combo")
+    fields = ("product", "combo", "quantity", "price_at_order", "dosage")
 
 
 @admin.register(Cart)

@@ -1,18 +1,17 @@
 # 6. Cart & Checkout Logic
 
-Cart and checkout flow: add to cart, cart review, prescription check, address, payment, confirm. Aligned with [ADMIN_API.md](ADMIN_API.md).
+Cart and checkout flow for authenticated users. This document reflects the current cart APIs (`/api/cart/*`) and combo-cart behavior.
 
 ---
 
 ## Checkout Process Flow
 
-```
-ADD TO CART (product selection)
-    → CART REVIEW (qty adjustments)
-    → RX CHECK (prescription validation for Rx items)
-    → ADDRESS (delivery location)
-    → PAYMENT (payment method)
-    → CONFIRM (order placed)
+```text
+ADD TO CART (product or combo)
+  -> CART REVIEW (quantity, coupon)
+  -> ADDRESS + DELIVERY METHOD
+  -> PAYMENT METHOD
+  -> PLACE ORDER
 ```
 
 ---
@@ -20,35 +19,67 @@ ADD TO CART (product selection)
 ## Cart Business Rules
 
 | Rule | Implementation |
-|------|-----------------|
-| **Cart persistence** | Cart data in **localStorage** for guests (frontend); **synced to DB** for logged-in users via `/api/cart/`. |
-| **Stock validation** | Real-time inventory check before adding; block if quantity exceeds available stock. |
-| **Prescription items** | Items with `requires_prescription` are flagged; checkout blocked until valid (APPROVED) prescription uploaded and linked. |
-| **Price lock** | Prices locked at time of adding to cart for **24 hours**; recalculated after (`price_locked_until`). |
-| **Minimum order** | Minimum order value **BDT 100**; validated at order create. |
-| **Delivery** | Base fee **BDT 50** within city, **BDT 100** suburbs, **BDT 150+** other; **waived for orders above BDT 500**. |
+|------|----------------|
+| Cart owner | One cart per registered user (`/api/cart/`). |
+| Item type | Cart line can be either a single `product` or a `combo` (not both). |
+| Combo in cart | Combo appears as one cart line item (`item_type: COMBO`) on user APIs. |
+| Combo price | Combo line `price_at_order` is computed as sum of linked product prices when added. |
+| Stock validation | Stock is validated on add, quantity update, and place-order. Combo checks all linked products. |
+| Coupon | Coupon discount is persisted by updating `price_at_order` on cart items. |
+| Minimum order | Minimum order value BDT 100 is validated before place-order. |
+| Order creation | Combo lines are expanded into normal product `OrderItem` rows at checkout (admin order flow unchanged). |
 
 ---
 
 ## API Summary
 
-- **GET** `/api/cart/` – Get current user cart (items, subtotal, `has_prescription_items`). Registered users only.
-- **POST** `/api/cart/items/` – Add item. Body: `product` (id), `quantity`. Stock validated; price locked 24h.
-- **PATCH** `/api/cart/items/<product_id>/` – Update quantity. Body: `quantity`. Remove if quantity 0.
-- **DELETE** `/api/cart/items/<product_id>/` – Remove item.
+- `GET /api/cart/`
+  - Returns current user's cart with `items` and `summary`.
 
-Place order: **POST** `/api/orders/` with `shipping_address`, `notes`, `items`, optional `prescription`, `delivery_zone`, `payment_method`. Min order BDT 100; delivery fee by zone; prescription required if cart has Rx items.
+- `POST /api/cart/add/`
+  - Add product or combo.
+  - Body (product): `{ "product": <id>, "quantity": <int>, "dosage": "optional" }`
+  - Body (combo): `{ "combo": <id>, "quantity": <int> }`
+  - Exactly one of `product` or `combo` is required.
 
-### Direct Order ("Buy Now" Checkout)
+- `POST /api/cart/apply-coupon/`
+  - Body: `{ "coupon_code": "SAVE10" }`
+  - Persists coupon-adjusted pricing in cart lines.
 
-For single-product purchases bypassing the shopping cart:
-- **POST** `/api/orders/buy-now-preview/` – Preview order summary and totals for a direct checkout purchase. Body: `product` (id), `quantity` (default 1), optional `shipping_address_id`, `coupon_code`, `delivery_method_id`.
-- **POST** `/api/orders/buy-now/` – Place a single-product order directly without adding to the cart. Body: `product` (id), `quantity`, `shipping_address_id`, optional `coupon_code`, `notes`, `message`, `delivery_method_id`, `payment_method` (defaults to COD), `prescription` (required if product requires a prescription). Returns SSLCommerz payment gateway URL if online payment method is chosen.
+- `POST /api/cart/remove-coupon/`
+  - Removes applied coupon and restores original locked line prices.
+
+- `PATCH /api/cart/items/{id}/`
+  - Body: `{ "quantity": <int> }` or `{ "dosage": "..." }`.
+  - `quantity: 0` removes the item.
+  - Dosage updates are only valid for product lines (not combo lines).
+
+- `DELETE /api/cart/items/{id}/`
+  - Removes one cart line.
+
+- `POST /api/cart/place-order/`
+  - Body:
+    - `shipping_address_id` (required)
+    - `delivery_method_id` (optional)
+    - `payment_method` (optional, default COD)
+    - `coupon_code` (optional)
+    - `notes` (optional)
+  - Creates order, decrements stock, clears cart.
+  - If online payment method is selected, returns SSLCommerz gateway URL.
+
+---
+
+## Direct Order (Buy Now)
+
+For single-product checkout without cart:
+
+- `POST /api/orders/buy-now-preview/`
+- `POST /api/orders/buy-now/`
 
 ---
 
 ## References
 
-- [ADMIN_API.md](ADMIN_API.md) – Cart and Orders endpoints
-- [ORDER_WORKFLOW.md](ORDER_WORKFLOW.md) – Order status flow
-- [PRESCRIPTION_MANAGEMENT.md](PRESCRIPTION_MANAGEMENT.md) – Prescription validation
+- [ADMIN_API.md](ADMIN_API.md)
+- [ORDER_WORKFLOW.md](ORDER_WORKFLOW.md)
+- [PAYMENT_LOGIC.md](PAYMENT_LOGIC.md)
