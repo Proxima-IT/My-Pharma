@@ -1080,7 +1080,7 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = (
             Order.objects.select_related("user", "prescription", "delivery_method", "coupon", "settlement")
-            .prefetch_related("items__product", "images", "status_history")
+            .prefetch_related("items__product", "items__combo", "images", "status_history")
             .all()
         )
         role = getattr(self.request.user, "role", None)
@@ -1179,7 +1179,7 @@ class OrderViewSet(viewsets.ModelViewSet):
                     },
                 )
         order.refresh_from_db()
-        qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "images", "status_history").select_related("user", "prescription", "delivery_method")
+        qs = Order.objects.filter(pk=order.pk).prefetch_related("items__product", "items__combo", "images", "status_history").select_related("user", "prescription", "delivery_method")
         order = qs.get()
         return Response(OrderSerializer(order, context={"request": request}).data)
 
@@ -1217,7 +1217,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
             customer_email = (request.user.email or (parts[1].strip() if len(parts) > 1 else "") or "customer@example.com").strip()
             customer_phone = (request.user.phone or (parts[2].strip() if len(parts) > 2 else "") or "").strip() or "01700000000"
-            product_names = ", ".join([oi.product.name for oi in order.items.select_related("product").all()[:3]]) or "Pharmacy Order"
+            product_names = ", ".join(
+                [_order_item_display_name(oi) for oi in order.items.select_related("product", "combo").all()[:3]]
+            ) or "Pharmacy Order"
 
             sslcz = _get_sslcommerz_client()
             tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
@@ -1741,6 +1743,14 @@ def _find_stock_error(demand):
     return None
 
 
+def _order_item_display_name(item) -> str:
+    if item.product_id and item.product:
+        return item.product.name
+    if item.combo_id and item.combo:
+        return item.combo.title
+    return "Item"
+
+
 # ---- Cart: one cart per user; add, update/remove items, summary, place order ----
 @extend_schema_view(
     list=extend_schema(
@@ -2043,70 +2053,30 @@ class CartViewSet(viewsets.GenericViewSet):
                 shipping_address=shipping_text,
                 notes=notes,
             )
-            aggregated = {}
             for item in cart_items:
                 if item.product_id:
-                    product_key = item.product_id
-                    line_amount = (item.price_at_order * item.quantity).quantize(Decimal("0.01"))
-                    data = aggregated.setdefault(
-                        product_key,
-                        {
-                            "product": item.product,
-                            "quantity": 0,
-                            "amount": Decimal("0.00"),
-                            "dosage": "",
-                        },
+                    OrderItem.objects.create(
+                        order=order,
+                        product=item.product,
+                        combo=None,
+                        quantity=item.quantity,
+                        price_at_order=item.price_at_order,
+                        dosage=(item.dosage or "").strip()[:50],
                     )
-                    data["quantity"] += item.quantity
-                    data["amount"] += line_amount
-                    if not data["dosage"] and item.dosage:
-                        data["dosage"] = (item.dosage or "").strip()[:50]
                     continue
 
-                combo_products = list(item.combo.products.all()) if item.combo_id else []
-                if not combo_products:
-                    combo_name = item.combo.title if item.combo else "Unknown combo"
-                    raise ValidationError({"detail": f"Combo '{combo_name}' has no products. Please remove it from cart."})
-                base_prices = [p.price for p in combo_products]
-                base_sum = sum(base_prices, Decimal("0.00"))
-                allocated_units = []
-                running = Decimal("0.00")
-                for idx, base_price in enumerate(base_prices):
-                    if idx == len(base_prices) - 1:
-                        allocated = (item.price_at_order - running).quantize(Decimal("0.01"))
-                    else:
-                        if base_sum > 0:
-                            allocated = (item.price_at_order * (base_price / base_sum)).quantize(Decimal("0.01"))
-                        else:
-                            allocated = (item.price_at_order / Decimal(str(len(base_prices)))).quantize(Decimal("0.01"))
-                        running += allocated
-                    allocated_units.append(max(Decimal("0.00"), allocated))
-
-                for combo_product, allocated_unit in zip(combo_products, allocated_units):
-                    product_key = combo_product.id
-                    line_amount = (allocated_unit * item.quantity).quantize(Decimal("0.01"))
-                    data = aggregated.setdefault(
-                        product_key,
-                        {
-                            "product": combo_product,
-                            "quantity": 0,
-                            "amount": Decimal("0.00"),
-                            "dosage": "",
-                        },
+                if item.combo_id:
+                    if not item.combo.products.exists():
+                        combo_name = item.combo.title if item.combo else "Unknown combo"
+                        raise ValidationError({"detail": f"Combo '{combo_name}' has no products. Please remove it from cart."})
+                    OrderItem.objects.create(
+                        order=order,
+                        product=None,
+                        combo=item.combo,
+                        quantity=item.quantity,
+                        price_at_order=item.price_at_order,
+                        dosage="",
                     )
-                    data["quantity"] += item.quantity
-                    data["amount"] += line_amount
-
-            for data in aggregated.values():
-                qty = data["quantity"]
-                unit_price = (data["amount"] / qty).quantize(Decimal("0.01")) if qty else Decimal("0.00")
-                OrderItem.objects.create(
-                    order=order,
-                    product=data["product"],
-                    quantity=qty,
-                    price_at_order=unit_price,
-                    dosage=(data["dosage"] or "").strip()[:50],
-                )
 
             for product_id, required_qty in stock_demand.items():
                 product = Product.objects.select_for_update().filter(pk=product_id).first()
@@ -2146,7 +2116,9 @@ class CartViewSet(viewsets.GenericViewSet):
                 customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
                 customer_email = (request.user.email or getattr(address, "email", "") or "customer@example.com").strip()
                 customer_phone = (request.user.phone or address.phone or "").strip() or "01700000000"
-                product_names = ", ".join([oi.product.name for oi in order.items.select_related("product").all()[:3]]) or "Pharmacy Order"
+                product_names = ", ".join(
+                    [_order_item_display_name(oi) for oi in order.items.select_related("product", "combo").all()[:3]]
+                ) or "Pharmacy Order"
 
                 total_payable = Decimal(str(summary["total_payable"])).quantize(Decimal("0.01"))
                 multi_card_name = _ssl_multi_card_name(payment_method)

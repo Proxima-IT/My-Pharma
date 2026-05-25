@@ -6947,8 +6947,23 @@ components:
         id:
           type: integer
           readOnly: true
+        item_type:
+          type: string
+          readOnly: true
         product:
           type: integer
+          nullable: true
+        combo:
+          type: integer
+          nullable: true
+        combo_id:
+          type: integer
+          readOnly: true
+          nullable: true
+        combo_title:
+          type: string
+          readOnly: true
+          nullable: true
         product_name:
           type: string
           readOnly: true
@@ -6966,9 +6981,11 @@ components:
           description: Selected dosage for this line (e.g. 50mg, 500mg).
           maxLength: 50
       required:
+      - combo_id
+      - combo_title
       - id
+      - item_type
       - price_at_order
-      - product
       - product_name
       - quantity
     OrderSettlement:

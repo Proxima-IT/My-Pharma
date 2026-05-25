@@ -527,7 +527,20 @@ class Order(models.Model):
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
-    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="order_items")
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.PROTECT,
+        related_name="order_items",
+        null=True,
+        blank=True,
+    )
+    combo = models.ForeignKey(
+        Combo,
+        on_delete=models.PROTECT,
+        related_name="order_items",
+        null=True,
+        blank=True,
+    )
     quantity = models.PositiveIntegerField()
     price_at_order = models.DecimalField(max_digits=12, decimal_places=2)
     dosage = models.CharField(
@@ -538,10 +551,23 @@ class OrderItem(models.Model):
 
     class Meta:
         db_table = "core_order_item"
-        unique_together = [["order", "product"]]
+        unique_together = [["order", "product"], ["order", "combo"]]
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (models.Q(product__isnull=False) & models.Q(combo__isnull=True))
+                    | (models.Q(product__isnull=True) & models.Q(combo__isnull=False))
+                ),
+                name="order_item_exactly_one_product_or_combo",
+            ),
+        ]
 
     def __str__(self):
-        return f"{self.product.name} x {self.quantity}"
+        if self.product:
+            return f"{self.product.name} x {self.quantity}"
+        if self.combo:
+            return f"{self.combo.title} (Combo) x {self.quantity}"
+        return f"Order item #{self.id} x {self.quantity}"
 
 
 class OrderImage(models.Model):

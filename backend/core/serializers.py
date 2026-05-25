@@ -647,11 +647,33 @@ class InventoryProductSerializer(serializers.ModelSerializer):
 
 # ---- Order ----
 class OrderItemSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source="product.name", read_only=True)
+    item_type = serializers.SerializerMethodField()
+    product_name = serializers.SerializerMethodField()
+    combo_id = serializers.IntegerField(source="combo.id", read_only=True, allow_null=True)
+    combo_title = serializers.CharField(source="combo.title", read_only=True, allow_null=True)
 
     class Meta:
         model = OrderItem
-        fields = ("id", "product", "product_name", "quantity", "price_at_order", "dosage")
+        fields = (
+            "id",
+            "item_type",
+            "product",
+            "combo",
+            "combo_id",
+            "combo_title",
+            "product_name",
+            "quantity",
+            "price_at_order",
+            "dosage",
+        )
+
+    def get_item_type(self, obj):
+        return "COMBO" if obj.combo_id else "PRODUCT"
+
+    def get_product_name(self, obj):
+        if obj.product:
+            return obj.product.name
+        return obj.combo.title if obj.combo else None
 
 
 class OrderItemWriteSerializer(serializers.ModelSerializer):

@@ -119,8 +119,8 @@ class ProductReviewAdmin(admin.ModelAdmin):
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    raw_id_fields = ("product",)
-    fields = ("product", "quantity", "price_at_order", "dosage")
+    raw_id_fields = ("product", "combo")
+    fields = ("product", "combo", "quantity", "price_at_order", "dosage")
 
 
 class OrderImageInline(admin.TabularInline):
