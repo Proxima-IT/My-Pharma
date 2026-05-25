@@ -34,6 +34,8 @@ export default function NewComboPage() {
     description: '',
     price: '',
     original_price: '',
+    custom_price: '',
+    discount_price: '',
     bg_color: '#B0E5C7',
     order: 0,
     is_active: true,
@@ -290,23 +292,54 @@ export default function NewComboPage() {
                   onChange={handleInputChange}
                 />
               </div>
-              <div>
-                <label className={labelClass}>Original Price (BDT)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  name="original_price"
-                  className={inputClass}
-                  placeholder="0.00"
-                  value={formData.original_price}
-                  onChange={handleInputChange}
-                />
-              </div>
+               <div>
+                 <label className={labelClass}>Original Price (BDT)</label>
+                 <input
+                   type="number"
+                   step="0.01"
+                   name="original_price"
+                   className={inputClass}
+                   placeholder="0.00"
+                   value={formData.original_price}
+                   onChange={handleInputChange}
+                 />
+               </div>
 
-              <div>
-                <label className={labelClass}>
-                  Container Color (Public Card)
-                </label>
+               <div>
+                 <label className={labelClass}>Custom Price (BDT)</label>
+                 <input
+                   type="number"
+                   step="0.01"
+                   name="custom_price"
+                   className={inputClass}
+                   placeholder="Optional fixed cart price"
+                   value={formData.custom_price}
+                   onChange={handleInputChange}
+                 />
+                 <p className="text-[9px] font-mono text-[#8A8A78] mt-1 uppercase tracking-widest">
+                   Overrides product sum if no discount price set.
+                 </p>
+               </div>
+               <div>
+                 <label className={labelClass}>Discount Price (BDT)</label>
+                 <input
+                   type="number"
+                   step="0.01"
+                   name="discount_price"
+                   className={inputClass}
+                   placeholder="Optional cart/checkout price"
+                   value={formData.discount_price}
+                   onChange={handleInputChange}
+                 />
+                 <p className="text-[9px] font-mono text-[#3A5A40] mt-1 uppercase tracking-widest font-bold">
+                   If set, THIS price is used in cart/checkout (highest priority).
+                 </p>
+               </div>
+
+               <div>
+                 <label className={labelClass}>
+                   Container Color (Public Card)
+                 </label>
                 <div className="flex gap-2">
                   <input
                     type="color"
@@ -426,10 +459,10 @@ export default function NewComboPage() {
             )}
           </button>
 
-          <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
-            Note: All products added to this combo will be automatically bundled
-            at the specified price.
-          </div>
+            <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
+              Note: Cart/checkout uses discount_price (if set) &gt; custom_price (if set) &gt; sum of product prices.
+              The Sale Price / Original Price fields are for marketing display only.
+            </div>
         </div>
       </form>
     </div>

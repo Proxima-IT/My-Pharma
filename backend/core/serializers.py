@@ -386,7 +386,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         return []
 
 
-# ---- Combo (combo packages: image + products + price) ----
+# ---- Combo (combo packages: image + products + marketing price + optional custom_price/discount_price for cart) ----
 class ComboSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     products = ProductListSerializer(many=True, read_only=True)
@@ -410,6 +410,8 @@ class ComboSerializer(serializers.ModelSerializer):
             "product_ids",
             "price",
             "original_price",
+            "custom_price",
+            "discount_price",
             "bg_color",
             "order",
             "is_active",

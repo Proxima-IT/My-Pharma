@@ -28,11 +28,11 @@ const BundleCard = ({ bundle }) => {
           </p>
         </div>
 
-        {/* Pricing Section */}
+        {/* Pricing Section — cart effective price (discount > custom > marketing price) */}
         <div className="flex items-center gap-3">
           <div className="flex items-center text-3xl sm:text-[36px] font-bold text-gray-900">
             <TbCurrencyTaka className="text-4xl -ml-1" />
-            <span>{bundle.price}</span>
+            <span>{bundle.discount_price ?? bundle.custom_price ?? bundle.price}</span>
           </div>
           {bundle.original_price && (
             <div className="flex items-center text-lg sm:text-xl text-gray-400 line-through font-medium">

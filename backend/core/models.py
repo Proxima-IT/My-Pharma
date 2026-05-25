@@ -4,6 +4,7 @@ Consultation, Notifications, Blog, Page (CMS).
 Aligned with RBAC: Products/Inventory/Orders/Prescriptions (Pharmacy Admin),
 Consultations (Doctor), CMS/Notifications (Super/Pharmacy).
 """
+from decimal import Decimal
 from django.conf import settings
 from django.db import models
 from django.utils.text import slugify
@@ -110,7 +111,14 @@ class Ad(models.Model):
 
 
 class Combo(models.Model):
-    """Combo package card (e.g. Health Combo, Baby Care Combo) with image, link, and fixed price."""
+    """Combo package (bundle) with marketing price + optional admin-set custom_price / discount_price for cart/checkout.
+
+    Cart pricing precedence (via get_cart_price()):
+      - discount_price (if not None) → highest priority, used as CartItem.price_at_order
+      - custom_price (if not None) → overrides legacy product-sum
+      - else → sum of linked Product.price (backward-compatible fallback)
+    `price` + `original_price` remain for card display / strikethrough marketing only.
+    """
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     image = models.ImageField(upload_to="combos/%Y/%m/", blank=True, null=True)
@@ -127,6 +135,20 @@ class Combo(models.Model):
         null=True,
         blank=True,
         help_text="Optional struck-through price for showing discount on combo.",
+    )
+    custom_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Admin-set fixed price for the whole combo bundle. Overrides product sum for cart if no discount_price.",
+    )
+    discount_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="If set, this is the effective sale price used for CartItem.price_at_order (and thus charged at checkout). Takes highest precedence.",
     )
     bg_color = models.CharField(
         max_length=32,
@@ -145,6 +167,24 @@ class Combo(models.Model):
 
     def __str__(self):
         return self.title
+
+    def get_cart_price(self) -> Decimal:
+        """Return the unit price to use for this combo when adding to cart.
+
+        Precedence (highest first):
+          1. discount_price (if not None) — overrides everything for CartItem.price_at_order
+          2. custom_price (if not None) — admin fixed price, overrides legacy sum
+          3. sum of linked Product.price values (backward-compatible fallback)
+
+        Always quantized to 2 decimal places.
+        """
+        if self.discount_price is not None:
+            return self.discount_price.quantize(Decimal("0.01"))
+        if self.custom_price is not None:
+            return self.custom_price.quantize(Decimal("0.01"))
+        # Fallback: legacy behavior (sum of product prices)
+        total = sum((p.price for p in self.products.all()), Decimal("0"))
+        return total.quantize(Decimal("0.01"))
 
 
 class AppLogo(models.Model):

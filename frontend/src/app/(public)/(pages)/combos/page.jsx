@@ -38,23 +38,29 @@ const CombosPage = () => {
       );
     }
 
+    // Effective price for cart (discount_price > custom_price > price) used for filters
+    const getEffectivePrice = b =>
+      parseFloat(
+        b.discount_price ?? b.custom_price ?? b.price ?? 0,
+      );
+
     if (minPrice) {
       result = result.filter(
-        b => parseFloat(b.price || 0) >= parseFloat(minPrice),
+        b => getEffectivePrice(b) >= parseFloat(minPrice),
       );
     }
     if (maxPrice) {
       result = result.filter(
-        b => parseFloat(b.price || 0) <= parseFloat(maxPrice),
+        b => getEffectivePrice(b) <= parseFloat(maxPrice),
       );
     }
 
     if (hasDiscount === 'true') {
-      result = result.filter(
-        b =>
-          parseFloat(b.original_price || b.price || 0) >
-          parseFloat(b.price || 0),
-      );
+      result = result.filter(b => {
+        const eff = getEffectivePrice(b);
+        const orig = parseFloat(b.original_price || eff || 0);
+        return orig > eff;
+      });
     }
 
     return result;

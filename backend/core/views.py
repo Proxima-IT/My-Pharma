@@ -1697,11 +1697,6 @@ class CouponViewSet(viewsets.ModelViewSet):
         )
 
 
-def _sum_combo_products_price(combo: Combo) -> Decimal:
-    total = sum((p.price for p in combo.products.all()), Decimal("0.00"))
-    return total.quantize(Decimal("0.01"))
-
-
 def _build_cart_product_demand(cart: Cart, item_overrides=None, extra_product=None, extra_combo=None, extra_quantity: int = 0):
     """
     Build required quantity by product across the cart, including combo lines.
@@ -1881,7 +1876,10 @@ class CartViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], url_path="add")
     def add(self, request):
-        """POST /api/cart/add/ - body: { product?: id, combo?: id, quantity: int, dosage?: str }."""
+        """POST /api/cart/add/ - body: { product?: id, combo?: id, quantity: int, dosage?: str }.
+
+        For combos, price_at_order is determined by Combo.get_cart_price() (discount_price > custom_price > sum of products).
+        """
         serializer = AddToCartSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         product = serializer.validated_data.get("product")
@@ -1919,7 +1917,8 @@ class CartViewSet(viewsets.GenericViewSet):
                     item.original_price_at_order = item.price_at_order
                 item.save(update_fields=["quantity", "dosage", "original_price_at_order"])
         else:
-            combo_unit_price = _sum_combo_products_price(combo)
+            # Use model method which implements discount_price > custom_price > legacy product sum precedence
+            combo_unit_price = combo.get_cart_price()
             item, created = CartItem.objects.get_or_create(
                 cart=cart,
                 product=None,

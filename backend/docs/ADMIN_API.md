@@ -123,7 +123,7 @@ Backward-compatible aliases are still available:
 | PUT / PATCH | `/api/combos/{id}/` | Update combo (Pharmacy/Super only) |
 | DELETE | `/api/combos/{id}/` | Delete combo (Pharmacy/Super only) |
 
-**Fields:** Include `title`, `description`, `image`, `products`, `product_ids`, `price`, `original_price`, `bg_color`, `order`, `is_active`.
+**Fields:** Include `title`, `description`, `image`, `products`, `product_ids`, `price`, `original_price`, `custom_price`, `discount_price`, `bg_color`, `order`, `is_active`.
 
 **Permission:** List/retrieve: any (guests see active only). Create/update/delete: `IsPharmacyAdminOrSuper`.
 
@@ -225,10 +225,15 @@ Admins can create discount coupons (flat amount or percent). Users can validate/
 | POST | `/api/cart/remove-coupon/` | Remove coupon and restore line prices from `original_price_at_order`. |
 | POST | `/api/cart/place-order/` | Place order from cart. Supports `shipping_address_id`, optional `delivery_method_id`, `payment_method`, `coupon_code`, `notes`. |
 
-**Combo behavior in user cart:**  
-- Adding a combo creates **one cart line item** (`item_type: COMBO`) instead of adding each product separately in cart response.  
-- Combo line price is generated as the sum of linked product prices at add time.  
-- During checkout, combo lines are expanded into regular product order items so admin order processing remains product-based.
+**Combo behavior in user cart (pricing precedence):**  
+- Adding a combo creates **one cart line item** (with `combo` populated) instead of adding each product separately.  
+- The `price_at_order` (and `original_price_at_order`) for the combo line is set **once** at add time using `Combo.get_cart_price()` with this strict precedence:
+  1. `discount_price` (if not null) — highest priority, admin sale price for the whole bundle.
+  2. `custom_price` (if not null) — fixed admin price, overrides product sum.
+  3. Sum of each linked product's current `price` (legacy fallback, 100% backward compatible).
+- `price` / `original_price` on the Combo are **marketing/display only** and never affect what is charged.
+- Changing `discount_price` / `custom_price` on a combo after it has been added to carts has **no effect** on existing carts (prices are locked).
+- During checkout, combo lines are expanded into regular product `OrderItem`s (one per linked product) for admin processing; the locked combo line price is used for totals.
 
 ---
 

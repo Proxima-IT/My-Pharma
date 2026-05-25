@@ -161,28 +161,31 @@ export default function ComboDetailsPage({ params }) {
 
               <div className="h-px bg-gray-100 w-full" />
 
-              {/* Pricing — computed as sum of all included product prices */}
+              {/* Pricing — uses discount_price > custom_price > sum-of-products (exactly matches backend Combo.get_cart_price() + CartItem.price_at_order) */}
               {(() => {
-                const comboPrice = (combo.products || []).reduce(
-                  (sum, p) => sum + parseFloat(p.price || 0),
-                  0,
-                );
-                const originalSum = (combo.products || []).reduce(
-                  (sum, p) =>
-                    sum + parseFloat(p.original_price || p.price || 0),
-                  0,
-                );
-                const hasDiscount = originalSum > comboPrice;
+                const products = combo.products || [];
+                let cartPrice;
+                if (combo.discount_price != null) {
+                  cartPrice = parseFloat(combo.discount_price);
+                } else if (combo.custom_price != null) {
+                  cartPrice = parseFloat(combo.custom_price);
+                } else {
+                  cartPrice = products.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
+                }
+                const displayOriginal = combo.original_price != null
+                  ? parseFloat(combo.original_price)
+                  : products.reduce((sum, p) => sum + parseFloat(p.original_price || p.price || 0), 0);
+                const hasDiscount = displayOriginal > cartPrice;
                 return (
                   <div className="space-y-2">
                     <div className="flex items-baseline gap-4">
                       <span className="text-5xl md:text-6xl font-black text-gray-900 flex items-center tracking-tighter">
                         <span className="text-3xl mr-1">৳</span>
-                        {comboPrice.toLocaleString()}
+                        {cartPrice.toLocaleString()}
                       </span>
                       {hasDiscount && (
                         <span className="text-2xl text-gray-300 line-through font-bold">
-                          ৳{originalSum.toLocaleString()}
+                          ৳{displayOriginal.toLocaleString()}
                         </span>
                       )}
                     </div>

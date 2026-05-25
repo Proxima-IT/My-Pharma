@@ -129,7 +129,7 @@ Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. wi
 | PUT / PATCH | `/api/combos/{id}/` | Update combo (admin). |
 | DELETE | `/api/combos/{id}/` | Delete combo (admin). |
 
-**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `products`, `product_ids`, `price`, `original_price`, `bg_color`, `order`, `is_active`, `created_at`, `updated_at`.
+**Response fields:** `id`, `title`, `description`, `image`, `image_url`, `products`, `product_ids`, `price`, `original_price`, `custom_price`, `discount_price`, `bg_color`, `order`, `is_active`, `created_at`, `updated_at`.
 
 **Create/Update (multipart for image):**
 
@@ -137,11 +137,21 @@ Combo cards like **Health Combo Packages**, **Baby Care Combo Packages** etc. wi
 - `description` (string, optional) – short tagline for the card
 - `image` (file, optional on update; required if you want an image)
 - `product_ids` (array of integers, optional) – Select products to include in this combo
-- `price` (decimal, required) – combo price to display on card
-- `original_price` (decimal, optional) – crossed-out price for discount
+- `price` (decimal, required) – marketing / display price shown on cards (strikethrough uses `original_price`)
+- `original_price` (decimal, optional) – crossed-out price for visual discount on cards
+- `custom_price` (decimal, optional) – admin-set fixed price for the *entire bundle*. Overrides the sum of linked product prices in the user's cart/checkout **unless** `discount_price` is also set.
+- `discount_price` (decimal, optional) – **highest priority**. If set, this exact value is used as `CartItem.price_at_order` (and what the customer is charged at checkout). Takes precedence over `custom_price` and product sum.
 - `bg_color` (string, optional) – background color (e.g. `#F3F4FF` or a CSS/Tailwind class)
 - `order` (int, default 0) – lower first
 - `is_active` (bool, default true)
+
+**Pricing Behavior (Cart & Checkout):**  
+When a customer adds a combo to cart, the unit price locked in `price_at_order` is chosen by this precedence (implemented in `Combo.get_cart_price()`):  
+1. `discount_price` (if not null)  
+2. `custom_price` (if not null)  
+3. Sum of the current `price` values of all linked products (legacy / fallback, fully backward compatible).  
+
+`price` + `original_price` are **never** used for charging — they are purely for marketing card display. Changing these fields on an existing combo does **not** affect carts that already contain the combo (prices are locked at add time).
 
 ---
 
