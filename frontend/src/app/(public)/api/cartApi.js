@@ -62,18 +62,28 @@ export const fetchDeliveryMethodsApi = async () => {
 
 /**
  * POST /api/cart/add/
+ * Supports adding a single product OR a combo (exactly one).
+ * @param {string} token
+ * @param {number} productId - Product ID (pass null for combo)
+ * @param {number} quantity
+ * @param {string|null} dosage - Only for product lines
+ * @param {number|null} comboId - Combo ID (pass null for product)
  */
 export const addToCartApi = async (
   token,
   productId,
   quantity,
   dosage = null,
+  comboId = null,
 ) => {
-  const body = {
-    product: productId,
-    quantity: quantity,
-  };
-  if (dosage) body.dosage = dosage;
+  const body = { quantity };
+
+  if (comboId) {
+    body.combo = comboId;
+  } else {
+    body.product = productId;
+    if (dosage) body.dosage = dosage;
+  }
 
   const response = await fetchWithAuth(CART_ENDPOINTS.ADD, {
     method: 'POST',

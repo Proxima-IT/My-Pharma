@@ -57,6 +57,11 @@ export const useCart = () => {
     }
   }, [cart]);
 
+  /**
+   * Add a product or combo to the cart.
+   * For combos: pass { _isCombo: true, id: <comboId>, ... }
+   * For products: pass the product object as before.
+   */
   const addItem = async (product, quantity = 1) => {
     setIsUpdating(true);
     setError(null);
@@ -65,60 +70,79 @@ export const useCart = () => {
       const parsedQuantity = Number.isFinite(Number(quantity))
         ? Math.max(1, Math.floor(Number(quantity)))
         : 1;
-      const productId =
-        product?.id ||
-        product?.product_id ||
-        (typeof product?.product === 'number' ? product.product : null);
-      const selectedDosage =
-        typeof product?.selected_dosage === 'string'
-          ? product.selected_dosage
-          : '';
 
-      if (token && !productId) {
-        throw new Error(
-          'Unable to add this product. Please refresh and try again.',
-        );
-      }
+      const isCombo = !!product?._isCombo;
 
-      if (
-        token &&
-        Number.isFinite(Number(product?.quantity_in_stock)) &&
-        Number(product.quantity_in_stock) < parsedQuantity
-      ) {
-        throw new Error(
-          Number(product.quantity_in_stock) <= 0
-            ? 'This product is out of stock.'
-            : `Only ${Number(product.quantity_in_stock)} item(s) available in stock.`,
-        );
-      }
-
-      if (token) {
-        await addToCartApi(token, productId, parsedQuantity, selectedDosage);
-      } else {
-        const guestCart = getGuestCart();
-        const existing = guestCart.items.find(
-          i => i.id === productId && i.selected_dosage === selectedDosage,
-        );
-        if (existing) {
-          existing.quantity += parsedQuantity;
-        } else {
-          guestCart.items.push({
-            id: productId,
-            product: product.slug,
-            quantity: parsedQuantity,
-            product_name: product.name,
-            current_price: product.price,
-            product_original_price: product.original_price,
-            image_url: getProductImageUrl(product),
-            product_description: product.description,
-            product_unit_name: product.unit_name,
-            product_dosage: product.dosage,
-            selected_dosage: selectedDosage,
-            is_guest_item: true,
-          });
+      if (isCombo) {
+        // ── Combo add-to-cart (authenticated only) ──
+        const comboId = product?.id;
+        if (!token) {
+          throw new Error('Please login to add combos to your cart.');
         }
-        saveGuestCart(guestCart);
+        if (!comboId) {
+          throw new Error(
+            'Unable to add this combo. Please refresh and try again.',
+          );
+        }
+        await addToCartApi(token, null, parsedQuantity, null, comboId);
+      } else {
+        // ── Product add-to-cart (existing logic) ──
+        const productId =
+          product?.id ||
+          product?.product_id ||
+          (typeof product?.product === 'number' ? product.product : null);
+        const selectedDosage =
+          typeof product?.selected_dosage === 'string'
+            ? product.selected_dosage
+            : '';
+
+        if (token && !productId) {
+          throw new Error(
+            'Unable to add this product. Please refresh and try again.',
+          );
+        }
+
+        if (
+          token &&
+          Number.isFinite(Number(product?.quantity_in_stock)) &&
+          Number(product.quantity_in_stock) < parsedQuantity
+        ) {
+          throw new Error(
+            Number(product.quantity_in_stock) <= 0
+              ? 'This product is out of stock.'
+              : `Only ${Number(product.quantity_in_stock)} item(s) available in stock.`,
+          );
+        }
+
+        if (token) {
+          await addToCartApi(token, productId, parsedQuantity, selectedDosage);
+        } else {
+          const guestCart = getGuestCart();
+          const existing = guestCart.items.find(
+            i => i.id === productId && i.selected_dosage === selectedDosage,
+          );
+          if (existing) {
+            existing.quantity += parsedQuantity;
+          } else {
+            guestCart.items.push({
+              id: productId,
+              product: product.slug,
+              quantity: parsedQuantity,
+              product_name: product.name,
+              current_price: product.price,
+              product_original_price: product.original_price,
+              image_url: getProductImageUrl(product),
+              product_description: product.description,
+              product_unit_name: product.unit_name,
+              product_dosage: product.dosage,
+              selected_dosage: selectedDosage,
+              is_guest_item: true,
+            });
+          }
+          saveGuestCart(guestCart);
+        }
       }
+
       await refreshCart({}, false);
       return true;
     } catch (err) {

@@ -1,18 +1,20 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import React from 'react';
-import { FiMinus, FiPlus, FiBox } from 'react-icons/fi';
+import { FiMinus, FiPlus, FiBox, FiPackage } from 'react-icons/fi';
 import { RiDeleteBinLine } from 'react-icons/ri';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 
 /**
  * CartCard Component
- * Updated: Implemented formatting stripping logic to clean Markdown and HTML tags
- * from the product description for a clean UI snippet.
+ * Updated: Supports both PRODUCT and COMBO cart line items.
+ * Combo lines show a "COMBO" badge, combo title, and hide dosage.
  */
 const CartCard = ({ item, onUpdate, onRemove }) => {
-  const unitPrice = parseFloat(item.current_price || 0);
+  const isCombo = item.item_type === 'COMBO';
+  const unitPrice = parseFloat(item.current_price || item.price_at_order || 0);
   const originalPrice = parseFloat(item.product_original_price || 0);
 
   /**
@@ -35,7 +37,12 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
   return (
     <div className="bg-white border border-gray-100 rounded-[24px] p-4 flex flex-col sm:flex-row items-start gap-6 transition-all relative group animate-in fade-in slide-in-from-left-4 duration-500 shadow-none">
       {/* 1. Image Wrapper */}
-      <div className="w-full sm:w-[140px] h-[140px] bg-(--color-imageBG) rounded-[18px] flex items-center justify-center p-4 shrink-0 border border-gray-50 shadow-none">
+      <div className="relative w-full sm:w-[140px] h-[140px] bg-(--color-imageBG) rounded-[18px] flex items-center justify-center p-4 shrink-0 border border-gray-50 shadow-none">
+        {isCombo && (
+          <span className="absolute top-2 left-2 z-10 bg-(--color-primary-500) text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+            <FiPackage size={10} /> Combo
+          </span>
+        )}
         {item.image_url ? (
           <Image
             src={item.image_url}
@@ -48,9 +55,9 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
           />
         ) : (
           <div className="flex flex-col items-center gap-2 text-gray-300">
-            <FiBox size={40} />
+            {isCombo ? <FiPackage size={40} /> : <FiBox size={40} />}
             <span className="text-[10px] font-bold uppercase tracking-widest">
-              No Photo
+              {isCombo ? 'Combo' : 'No Photo'}
             </span>
           </div>
         )}
@@ -59,9 +66,18 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
       {/* 2. Content Area */}
       <div className="flex-1 w-full flex flex-col justify-between min-h-[140px] py-1">
         <div className="space-y-1 pr-12">
-          <h3 className="text-[18px] font-bold text-gray-900 leading-tight uppercase tracking-tight">
-            {item.product_name}
-          </h3>
+          {/* Title — link to combo or product detail page */}
+          {isCombo ? (
+            <Link href={`/combo/${item.combo_id}`} className="hover:underline">
+              <h3 className="text-[18px] font-bold text-gray-900 leading-tight uppercase tracking-tight">
+                {item.combo_title || item.product_name}
+              </h3>
+            </Link>
+          ) : (
+            <h3 className="text-[18px] font-bold text-gray-900 leading-tight uppercase tracking-tight">
+              {item.product_name}
+            </h3>
+          )}
 
           <div className="flex items-center gap-3">
             <span className="text-[18px] font-bold text-(--color-primary-500)">
@@ -81,17 +97,20 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
           </p>
 
           <div className="flex items-center gap-2 text-[14px] text-gray-700 font-bold uppercase tracking-tighter">
-            <span>{item.product_unit_name || 'Unit N/A'}</span>
+            <span>
+              {item.product_unit_name || (isCombo ? 'Combo Pack' : 'Unit N/A')}
+            </span>
 
-            {/* Displaying Selected Dosage */}
-            {(item.dosage || item.selected_dosage || item.product_dosage) && (
-              <>
-                <span className="text-gray-300 font-light">|</span>
-                <span className="text-(--color-primary-500)">
-                  {item.dosage || item.selected_dosage || item.product_dosage}
-                </span>
-              </>
-            )}
+            {/* Displaying Selected Dosage — hidden for combo lines */}
+            {!isCombo &&
+              (item.dosage || item.selected_dosage || item.product_dosage) && (
+                <>
+                  <span className="text-gray-300 font-light">|</span>
+                  <span className="text-(--color-primary-500)">
+                    {item.dosage || item.selected_dosage || item.product_dosage}
+                  </span>
+                </>
+              )}
           </div>
         </div>
 

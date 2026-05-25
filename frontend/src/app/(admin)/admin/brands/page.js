@@ -1,16 +1,9 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  FiPlus,
-  FiSearch,
-  FiEdit2,
-  FiTrash2,
-  FiAward,
-  FiChevronLeft,
-  FiChevronRight,
-} from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiAward } from 'react-icons/fi';
 import { useBrandAdmin } from '../../hooks/useBrandAdmin';
+import Pagination from '../../components/Pagination';
 
 export default function AdminBrandListPage() {
   const { brands, loading, fetchBrands, deleteBrand } = useBrandAdmin();
@@ -149,31 +142,13 @@ export default function AdminBrandListPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase">
-          Total Companies:{' '}
-          <span className="text-[#1B1B1B]">{brands.count}</span>
-        </p>
-        <div className="flex items-center gap-0 border border-gray-200 bg-white">
-          <button
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-            className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronLeft size={18} />
-          </button>
-          <div className="px-4 font-mono text-xs font-bold text-[#1B1B1B]">
-            PAGE {page}
-          </div>
-          <button
-            disabled={brands.results.length < 10 || loading}
-            onClick={() => setPage(p => p + 1)}
-            className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronRight size={18} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        setPage={setPage}
+        totalItems={brands.count}
+        loading={loading}
+        label="Total Companies"
+      />
     </div>
   );
 }

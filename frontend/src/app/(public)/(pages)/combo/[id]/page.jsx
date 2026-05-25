@@ -51,17 +51,18 @@ export default function ComboDetailsPage({ params }) {
     if (id) fetchCombo();
   }, [id]);
 
-  const handleAddAllToCart = async () => {
-    if (!combo?.products || combo.products.length === 0) return;
+  const handleAddComboToCart = async () => {
+    if (!combo?.id) return;
 
     try {
-      for (const product of combo.products) {
-        await addItem(product, quantity);
+      // Send a single combo cart line to backend (not individual products)
+      const success = await addItem({ _isCombo: true, id: combo.id }, quantity);
+      if (success) {
+        setIsAdded(true);
+        setTimeout(() => setIsAdded(false), 3000);
       }
-      setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 3000);
     } catch (err) {
-      console.error('Failed to add combo products to cart', err);
+      console.error('Failed to add combo to cart', err);
     }
   };
 
@@ -160,26 +161,41 @@ export default function ComboDetailsPage({ params }) {
 
               <div className="h-px bg-gray-100 w-full" />
 
-              {/* Pricing */}
-              <div className="space-y-2">
-                <div className="flex items-baseline gap-4">
-                  <span className="text-5xl md:text-6xl font-black text-gray-900 flex items-center tracking-tighter">
-                    <span className="text-3xl mr-1">৳</span>
-                    {parseFloat(combo.price).toLocaleString()}
-                  </span>
-                  {combo.original_price && (
-                    <span className="text-2xl text-gray-300 line-through font-bold">
-                      ৳{parseFloat(combo.original_price).toLocaleString()}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <FiCheckCircle className="text-green-500" />
-                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">
-                    Guaranteed Savings on this Bundle
-                  </p>
-                </div>
-              </div>
+              {/* Pricing — computed as sum of all included product prices */}
+              {(() => {
+                const comboPrice = (combo.products || []).reduce(
+                  (sum, p) => sum + parseFloat(p.price || 0),
+                  0,
+                );
+                const originalSum = (combo.products || []).reduce(
+                  (sum, p) =>
+                    sum + parseFloat(p.original_price || p.price || 0),
+                  0,
+                );
+                const hasDiscount = originalSum > comboPrice;
+                return (
+                  <div className="space-y-2">
+                    <div className="flex items-baseline gap-4">
+                      <span className="text-5xl md:text-6xl font-black text-gray-900 flex items-center tracking-tighter">
+                        <span className="text-3xl mr-1">৳</span>
+                        {comboPrice.toLocaleString()}
+                      </span>
+                      {hasDiscount && (
+                        <span className="text-2xl text-gray-300 line-through font-bold">
+                          ৳{originalSum.toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <FiCheckCircle className="text-green-500" />
+                      <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">
+                        {combo.products?.length || 0} products included in this
+                        bundle
+                      </p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               <div className="h-px bg-gray-100 w-full" />
 
@@ -212,7 +228,7 @@ export default function ComboDetailsPage({ params }) {
               {/* Actions */}
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <button
-                  onClick={handleAddAllToCart}
+                  onClick={handleAddComboToCart}
                   disabled={isUpdating}
                   className={`flex-1 h-20 rounded-full font-black text-base uppercase tracking-[0.25em] flex items-center justify-center gap-4 transition-all active:scale-95 disabled:opacity-50 cursor-pointer border-none shadow-xl ${
                     isAdded

@@ -8,8 +8,6 @@ import {
   FiEdit2,
   FiTrash2,
   FiPlus,
-  FiChevronLeft,
-  FiChevronRight,
   FiFileText,
   FiGrid,
   FiEye,
@@ -18,6 +16,7 @@ import {
 import { useBlogAdmin } from '../../hooks/useBlogAdmin';
 import { formatDate } from '@/app/(user)/lib/formatters';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import Pagination from '../../components/Pagination';
 
 /**
  * Admin Blog Management Page
@@ -262,31 +261,13 @@ export default function AdminBlogPage() {
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between px-2">
-        <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase tracking-widest">
-          Total Count:{' '}
-          <span className="text-[#1B1B1B]">{currentData.count}</span>
-        </p>
-        <div className="flex items-center gap-0 border border-gray-100 bg-white">
-          <button
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-            className="w-10 h-10 flex items-center justify-center border-r border-gray-100 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronLeft size={18} />
-          </button>
-          <div className="px-6 font-mono text-xs font-bold text-[#1B1B1B] uppercase tracking-widest">
-            Page {page}
-          </div>
-          <button
-            disabled={currentData.results.length < 10 || loading}
-            onClick={() => setPage(p => p + 1)}
-            className="w-10 h-10 flex items-center justify-center border-l border-gray-100 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronRight size={18} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        setPage={setPage}
+        totalItems={currentData.count}
+        loading={loading}
+        label="Total Count"
+      />
     </div>
   );
 }

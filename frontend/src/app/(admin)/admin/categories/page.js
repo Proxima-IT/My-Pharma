@@ -7,11 +7,10 @@ import {
   FiEdit2,
   FiTrash2,
   FiLayers,
-  FiChevronLeft,
-  FiChevronRight,
   FiEye,
 } from 'react-icons/fi';
 import { useCategoryAdmin } from '../../hooks/useCategoryAdmin';
+import Pagination from '../../components/Pagination';
 
 /**
  * AdminCategoryListPage
@@ -181,31 +180,13 @@ export default function AdminCategoryListPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <p className="font-mono text-[10px] font-bold text-[#8A8A78] uppercase">
-          Filtered Records:{' '}
-          <span className="text-[#1B1B1B]">{rootCategories.length}</span>
-        </p>
-        <div className="flex items-center gap-0 border border-gray-200 bg-white shadow-none">
-          <button
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-            className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer rounded-none"
-          >
-            <FiChevronLeft size={18} />
-          </button>
-          <div className="px-6 font-mono text-xs font-bold text-[#1B1B1B] flex items-center h-10">
-            PAGE {page}
-          </div>
-          <button
-            disabled={categories.results.length < 10 || loading}
-            onClick={() => setPage(p => p + 1)}
-            className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer rounded-none"
-          >
-            <FiChevronRight size={18} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        setPage={setPage}
+        totalItems={categories.count}
+        loading={loading}
+        label="Filtered Records"
+      />
     </div>
   );
 }

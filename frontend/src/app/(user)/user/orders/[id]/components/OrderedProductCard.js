@@ -2,46 +2,50 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  FiChevronRight,
-  FiRotateCcw,
-  FiPackage,
-  FiInfo,
-  FiTag,
-} from 'react-icons/fi';
+import { FiChevronRight, FiRotateCcw, FiPackage, FiInfo } from 'react-icons/fi';
 import { formatCurrency } from '../../../../lib/formatters';
 import { getMediaUrl, getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * OrderedProductCard Component
- * Optimized for high-density displays (1280x800) and ultra-responsive mobile stacking.
- * Logic:
- * - Desktop: Clean two-row horizontal layout.
- * - Mobile: Full vertical stack where every detail (Price, Unit, Buttons) gets its own row.
+ * Updated: Supports both PRODUCT and COMBO order items.
+ * Combo items show a "COMBO" badge, link to /combo/[id], hide dosage, show "Combo Pack" unit.
  */
 export default function OrderedProductCard({ item, productInfo }) {
   const router = useRouter();
 
-  const slug = productInfo?.slug || item.product_slug || item.product;
-  const productPath = `/product/${slug}`;
+  const isCombo = item.item_type === 'COMBO';
+
+  // Determine the correct detail path and slug
+  const detailPath = isCombo
+    ? `/combo/${item.combo_id}`
+    : `/product/${productInfo?.slug || item.product_slug || item.product}`;
+
   const unitPrice = parseFloat(item.price_at_order || 0);
 
-  const imageUrl = productInfo
-    ? getProductImageUrl(productInfo)
-    : item.image_url
+  const imageUrl = isCombo
+    ? item.image_url
       ? getMediaUrl(item.image_url)
-      : null;
+      : null
+    : productInfo
+      ? getProductImageUrl(productInfo)
+      : item.image_url
+        ? getMediaUrl(item.image_url)
+        : null;
 
-  const genericName =
-    productInfo?.ingredient_name ||
-    item.product_description ||
-    'Medical Information';
+  const genericName = isCombo
+    ? 'Combo Bundle'
+    : productInfo?.ingredient_name ||
+      item.product_description ||
+      'Medical Information';
 
-  const unitLabel =
-    productInfo?.unit_name || item.product_unit_name || 'Standard Pack';
+  const unitLabel = isCombo
+    ? 'Combo Pack'
+    : productInfo?.unit_name || item.product_unit_name || 'Standard Pack';
 
-  const displayDosage =
-    item.dosage || item.product_dosage || productInfo?.dosage;
+  const displayDosage = isCombo
+    ? null
+    : item.dosage || item.product_dosage || productInfo?.dosage;
 
   return (
     <div className="bg-white border border-gray-100 rounded-[28px] p-5 lg:p-6 flex flex-col gap-5 2xl:gap-6 transition-all hover:border-(--color-primary-200) group w-full overflow-hidden shadow-none">
@@ -50,9 +54,14 @@ export default function OrderedProductCard({ item, productInfo }) {
         {/* Visual Container */}
         <div className="w-full max-w-[112px] mx-auto 2xl:mx-0 2xl:w-auto">
           <div
-            className="w-full h-24 rounded-[20px] bg-gray-50 flex items-center justify-center p-3 cursor-pointer border border-gray-100/50 transition-transform active:scale-95 sm:h-20 lg:h-28"
-            onClick={() => router.push(productPath)}
+            className="relative w-full h-24 rounded-[20px] bg-gray-50 flex items-center justify-center p-3 cursor-pointer border border-gray-100/50 transition-transform active:scale-95 sm:h-20 lg:h-28"
+            onClick={() => router.push(detailPath)}
           >
+            {isCombo && (
+              <span className="absolute -top-1.5 -right-1.5 z-10 bg-(--color-primary-500) text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-0.5">
+                <FiPackage size={9} /> Combo
+              </span>
+            )}
             {imageUrl ? (
               <img
                 src={imageUrl}
@@ -60,7 +69,14 @@ export default function OrderedProductCard({ item, productInfo }) {
                 className="max-w-full max-h-full object-contain mix-blend-multiply transition-transform group-hover:scale-110"
               />
             ) : (
-              <FiPackage size={24} className="text-gray-300" />
+              <div className="flex flex-col items-center gap-1">
+                <FiPackage size={24} className="text-gray-300" />
+                {isCombo && (
+                  <span className="text-[8px] font-bold text-gray-300 uppercase">
+                    Combo
+                  </span>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -68,9 +84,11 @@ export default function OrderedProductCard({ item, productInfo }) {
         {/* Text Content */}
         <div className="flex-1 min-w-0 text-center 2xl:text-left">
           <div className="flex flex-wrap items-center justify-center gap-3 2xl:justify-start">
-            <Link href={productPath}>
+            <Link href={detailPath}>
               <h3 className="text-[16px] lg:text-[18px] font-bold text-gray-900 leading-tight hover:text-(--color-primary-500) transition-colors truncate uppercase tracking-tight">
-                {item.product_name}
+                {isCombo
+                  ? item.combo_title || item.product_name
+                  : item.product_name}
               </h3>
             </Link>
             <div className="flex items-center gap-2 text-gray-400">
@@ -82,8 +100,21 @@ export default function OrderedProductCard({ item, productInfo }) {
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-2 mt-4 2xl:justify-start">
-            <div className="flex items-center justify-center gap-2 bg-gray-50 px-3 py-1.5 rounded-full border border-gray-100">
-              <span className="text-[10px] font-black text-gray-700 uppercase tracking-widest">
+            <div
+              className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded-full border ${
+                isCombo
+                  ? 'bg-(--color-primary-50) border-(--color-primary-100)'
+                  : 'bg-gray-50 border-gray-100'
+              }`}
+            >
+              {isCombo && (
+                <FiPackage size={10} className="text-(--color-primary-600)" />
+              )}
+              <span
+                className={`text-[10px] font-black uppercase tracking-widest ${
+                  isCombo ? 'text-(--color-primary-600)' : 'text-gray-700'
+                }`}
+              >
                 {unitLabel}
               </span>
             </div>
@@ -117,7 +148,7 @@ export default function OrderedProductCard({ item, productInfo }) {
           </div>
           <div className="min-w-[170px] flex-1 flex flex-col items-start">
             <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">
-              Price Per Unit
+              {isCombo ? 'Price Per Pack' : 'Price Per Unit'}
             </span>
             <span className="text-[12px] lg:text-[13px] font-bold text-gray-500 leading-none">
               {formatCurrency(unitPrice)}
@@ -128,14 +159,14 @@ export default function OrderedProductCard({ item, productInfo }) {
         {/* Action Rows */}
         <div className="flex flex-wrap items-center justify-center gap-3 w-full 2xl:justify-end">
           <Link
-            href={productPath}
+            href={detailPath}
             className="min-w-[160px] flex-1 sm:flex-none h-11 px-6 border border-gray-100 rounded-full flex items-center justify-center text-[11px] font-black text-gray-500 hover:text-black hover:border-gray-900 uppercase tracking-widest transition-all"
           >
             View Details <FiChevronRight className="ml-1" />
           </Link>
 
           <button
-            onClick={() => router.push(productPath)}
+            onClick={() => router.push(detailPath)}
             className="min-w-[160px] flex-1 sm:flex-none h-11 px-8 bg-gray-900 hover:bg-black text-white text-[11px] font-black rounded-full transition-all cursor-pointer uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-none active:scale-95 shadow-none"
           >
             <FiRotateCcw size={14} />

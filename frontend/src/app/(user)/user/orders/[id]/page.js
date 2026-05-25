@@ -3,13 +3,7 @@
 import React, { useEffect, use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  FiArrowLeft,
-  FiCheck,
-  FiBox,
-  FiHome,
-  FiAlertCircle,
-} from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiBox, FiHome } from 'react-icons/fi';
 import { TbTruckDelivery, TbBike } from 'react-icons/tb';
 import { useOrders } from '../../../hooks/useOrders';
 import { orderApi } from '../../../api/orderApi';
@@ -32,7 +26,7 @@ export default function OrderDetailsPage({ params }) {
     error,
     loadOrderDetails,
   } = useOrders();
-  const { products } = useProductData();
+  const { products } = useProductData({ page_size: 1000, is_active: true });
   const [payLoading, setPayLoading] = useState(false);
 
   useEffect(() => {
@@ -259,7 +253,7 @@ export default function OrderDetailsPage({ params }) {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-10">
           <div className="space-y-6 md:space-y-10">
             <div className="w-full bg-white border border-gray-100 rounded-[24px] md:rounded-[32px] p-5 md:p-8 space-y-6 shadow-none">
-              <h3 className="text-xl md:text-2xl font-bold">Cart Product</h3>
+              <h3 className="text-xl md:text-2xl font-bold">Ordered Items</h3>
               <div className="space-y-4">
                 {orderDetails.items?.map(item => (
                   <OrderedProductCard

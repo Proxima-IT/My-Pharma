@@ -15,6 +15,7 @@ import { usePharmacyOrders } from '../../../hooks/usePharmacyOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
 import OrderInfoCard from './components/OrderInfoCard';
 import OrderedProductCard from './components/OrderedProductCard';
+import { useProductData } from '@/app/(public)/hooks/useProductData';
 
 /**
  * PharmacyOrderDetailsPage
@@ -36,6 +37,8 @@ export default function PharmacyOrderDetailsPage({ params }) {
     loadOrderDetails,
     updateStatus,
   } = usePharmacyOrders();
+
+  const { products } = useProductData({ page_size: 1000, is_active: true });
 
   useEffect(() => {
     if (id) loadOrderDetails(id);
@@ -144,7 +147,11 @@ export default function PharmacyOrderDetailsPage({ params }) {
             </div>
             <div className="p-6 space-y-4">
               {orderDetails.items?.map((item, idx) => (
-                <OrderedProductCard key={idx} item={item} />
+                <OrderedProductCard
+                  key={idx}
+                  item={item}
+                  productInfo={products.find(p => p.id === item.product)}
+                />
               ))}
             </div>
           </div>

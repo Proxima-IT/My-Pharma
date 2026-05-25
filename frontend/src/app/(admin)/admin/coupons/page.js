@@ -7,8 +7,6 @@ import {
   FiEdit2,
   FiTrash2,
   FiTag,
-  FiChevronLeft,
-  FiChevronRight,
   FiActivity,
   FiClock,
   FiSearch,
@@ -16,6 +14,7 @@ import {
 } from 'react-icons/fi';
 import { useCouponAdmin } from '@/app/(admin)/hooks/useCouponAdmin';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
+import Pagination from '@/app/(admin)/components/Pagination';
 
 /**
  * Super Admin - Coupon Management List
@@ -280,29 +279,13 @@ export default function CouponListPage() {
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between font-mono text-[10px] text-[#8A8A78] uppercase tracking-widest pt-4">
-        <div className="flex items-center gap-6">
-          <span>Database: core_coupon_v1</span>
-          <span>Sync: Real-time</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            disabled={page === 1}
-            onClick={() => setPage(p => p - 1)}
-            className="p-2 border border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronLeft size={16} />
-          </button>
-          <span className="px-4 font-bold text-[#1B1B1B]">Page {page}</span>
-          <button
-            disabled={coupons.results.length < 10}
-            onClick={() => setPage(p => p + 1)}
-            className="p-2 border border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronRight size={16} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        setPage={setPage}
+        totalItems={coupons.count}
+        loading={loading}
+        label="Total Coupons"
+      />
     </div>
   );
 }

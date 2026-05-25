@@ -10,7 +10,6 @@ import {
   FiMail,
   FiClock,
   FiDollarSign,
-  FiTruck,
 } from 'react-icons/fi';
 import { useAdminOrders } from '../../../hooks/useAdminOrders';
 import { formatCurrency, formatDate } from '@/app/(user)/lib/formatters';
@@ -171,36 +170,48 @@ export default function AdminOrderDetailsPage({ params }) {
             <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex items-center gap-2">
               <FiPackage className="text-[#3A5A40]" />
               <h3 className="text-xs font-bold text-[#1B1B1B] uppercase tracking-widest">
-                Ordered Medicines
+                Ordered Items
               </h3>
             </div>
             <div className="divide-y divide-gray-50">
-              {orderDetails.items?.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="p-6 flex justify-between items-center hover:bg-gray-50/50 transition-colors"
-                >
-                  <div className="flex flex-col gap-1">
-                    <p className="font-bold text-[#1B1B1B] text-sm uppercase">
-                      {item.product_name}
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <p className="font-mono text-[11px] text-[#8A8A78]">
-                        Price: {formatCurrency(item.price_at_order)} x{' '}
-                        {item.quantity}
-                      </p>
-                      {item.dosage && (
-                        <span className="px-2 py-0.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[10px] font-bold uppercase">
-                          Dosage: {item.dosage}
-                        </span>
-                      )}
+              {orderDetails.items?.map((item, idx) => {
+                const isCombo = item.item_type === 'COMBO';
+                return (
+                  <div
+                    key={idx}
+                    className="p-6 flex justify-between items-center hover:bg-gray-50/50 transition-colors"
+                  >
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        {isCombo && (
+                          <span className="px-2 py-0.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[9px] font-bold uppercase flex items-center gap-1">
+                            <FiPackage size={10} /> COMBO
+                          </span>
+                        )}
+                        <p className="font-bold text-[#1B1B1B] text-sm uppercase">
+                          {isCombo
+                            ? item.combo_title || item.product_name
+                            : item.product_name}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-mono text-[11px] text-[#8A8A78]">
+                          Price: {formatCurrency(item.price_at_order)} x{' '}
+                          {item.quantity}
+                        </p>
+                        {!isCombo && item.dosage && (
+                          <span className="px-2 py-0.5 bg-[#E8F0EA] border border-[#3A5A40]/20 text-[#3A5A40] font-mono text-[10px] font-bold uppercase">
+                            Dosage: {item.dosage}
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    <span className="font-mono font-bold text-[#1B1B1B]">
+                      {formatCurrency(item.price_at_order * item.quantity)}
+                    </span>
                   </div>
-                  <span className="font-mono font-bold text-[#1B1B1B]">
-                    {formatCurrency(item.price_at_order * item.quantity)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

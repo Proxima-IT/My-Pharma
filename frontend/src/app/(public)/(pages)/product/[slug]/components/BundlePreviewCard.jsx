@@ -26,9 +26,6 @@ const BundlePreviewCard = ({ bundle }) => {
             <h3 className="text-lg font-bold text-gray-900 leading-tight tracking-tight line-clamp-1">
               {bundle.title}
             </h3>
-            <p className="text-xs text-gray-600 font-medium opacity-80 line-clamp-1">
-              {bundle.description}
-            </p>
           </div>
 
           {/* Pricing */}

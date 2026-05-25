@@ -44,17 +44,16 @@ const PopularBundleCard = ({ bundle }) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (items && items.length > 0) {
-      setIsAdding(true);
-      try {
-        for (const item of items) {
-          await addItem(item, 1);
-        }
-      } catch (err) {
-        console.error('Failed to add combo items:', err);
-      } finally {
-        setIsAdding(false);
-      }
+    if (!bundle?.id) return;
+
+    setIsAdding(true);
+    try {
+      // Send a single combo cart line to backend
+      await addItem({ _isCombo: true, id: bundle.id }, 1);
+    } catch (err) {
+      console.error('Failed to add combo to cart:', err);
+    } finally {
+      setIsAdding(false);
     }
   };
 

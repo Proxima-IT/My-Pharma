@@ -1,16 +1,9 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  FiPlus,
-  FiSearch,
-  FiEdit2,
-  FiTrash2,
-  FiDroplet,
-  FiChevronLeft,
-  FiChevronRight,
-} from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiDroplet } from 'react-icons/fi';
 import { useIngredientAdmin } from '../../hooks/useIngredientAdmin';
+import Pagination from '../../components/Pagination';
 
 export default function AdminIngredientListPage() {
   const { ingredients, loading, fetchIngredients, deleteIngredient } =
@@ -146,31 +139,13 @@ export default function AdminIngredientListPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase">
-          Total Records:{' '}
-          <span className="text-[#1B1B1B]">{ingredients.count}</span>
-        </p>
-        <div className="flex items-center gap-0 border border-gray-200 bg-white">
-          <button
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-            className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronLeft size={18} />
-          </button>
-          <div className="px-4 font-mono text-xs font-bold text-[#1B1B1B]">
-            PAGE {page}
-          </div>
-          <button
-            disabled={ingredients.results.length < 10 || loading}
-            onClick={() => setPage(p => p + 1)}
-            className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronRight size={18} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        setPage={setPage}
+        totalItems={ingredients.count}
+        loading={loading}
+        label="Total Records"
+      />
     </div>
   );
 }

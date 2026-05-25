@@ -1,19 +1,13 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import {
-  FiPlus,
-  FiSearch,
-  FiEdit2,
-  FiTrash2,
-  FiTruck,
-  FiChevronLeft,
-  FiChevronRight,
-} from 'react-icons/fi';
+import { FiPlus, FiSearch, FiEdit2, FiTrash2, FiTruck } from 'react-icons/fi';
 import { useDeliveryMethodAdmin } from '../../hooks/useDeliveryMethodAdmin';
+import Pagination from '../../components/Pagination';
 
 export default function AdminDeliveryMethodsPage() {
-  const { methods, loading, fetchMethods, deleteMethod } = useDeliveryMethodAdmin();
+  const { methods, loading, fetchMethods, deleteMethod } =
+    useDeliveryMethodAdmin();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
 
@@ -29,13 +23,31 @@ export default function AdminDeliveryMethodsPage() {
 
   const getTypeBadge = type => {
     const map = {
-      STANDARD: { bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-100' },
-      EXPRESS: { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-100' },
-      SAME_DAY: { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-100' },
+      STANDARD: {
+        bg: 'bg-blue-50',
+        text: 'text-blue-600',
+        border: 'border-blue-100',
+      },
+      EXPRESS: {
+        bg: 'bg-amber-50',
+        text: 'text-amber-600',
+        border: 'border-amber-100',
+      },
+      SAME_DAY: {
+        bg: 'bg-purple-50',
+        text: 'text-purple-600',
+        border: 'border-purple-100',
+      },
     };
-    const style = map[type] || { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-100' };
+    const style = map[type] || {
+      bg: 'bg-gray-50',
+      text: 'text-gray-600',
+      border: 'border-gray-100',
+    };
     return (
-      <span className={`px-3 py-1 border font-mono text-[10px] font-bold uppercase tracking-tighter ${style.bg} ${style.text} ${style.border}`}>
+      <span
+        className={`px-3 py-1 border font-mono text-[10px] font-bold uppercase tracking-tighter ${style.bg} ${style.text} ${style.border}`}
+      >
         {(type || 'N/A').replace('_', ' ')}
       </span>
     );
@@ -86,12 +98,24 @@ export default function AdminDeliveryMethodsPage() {
           <table className="w-full border-collapse">
             <thead>
               <tr className="bg-gray-50 text-[#1B1B1B] text-[11px] uppercase tracking-[0.2em] font-bold">
-                <th className="px-8 py-4 text-left border-r border-gray-100">Name</th>
-                <th className="px-8 py-4 text-left border-r border-gray-100">Type</th>
-                <th className="px-8 py-4 text-left border-r border-gray-100">Duration</th>
-                <th className="px-8 py-4 text-right border-r border-gray-100">Price (BDT)</th>
-                <th className="px-8 py-4 text-center border-r border-gray-100">Order</th>
-                <th className="px-8 py-4 text-left border-r border-gray-100">Status</th>
+                <th className="px-8 py-4 text-left border-r border-gray-100">
+                  Name
+                </th>
+                <th className="px-8 py-4 text-left border-r border-gray-100">
+                  Type
+                </th>
+                <th className="px-8 py-4 text-left border-r border-gray-100">
+                  Duration
+                </th>
+                <th className="px-8 py-4 text-right border-r border-gray-100">
+                  Price (BDT)
+                </th>
+                <th className="px-8 py-4 text-center border-r border-gray-100">
+                  Order
+                </th>
+                <th className="px-8 py-4 text-left border-r border-gray-100">
+                  Status
+                </th>
                 <th className="px-8 py-4 text-right">Options</th>
               </tr>
             </thead>
@@ -160,7 +184,9 @@ export default function AdminDeliveryMethodsPage() {
                     </td>
                     <td className="px-8 py-6">
                       <div className="flex items-center justify-end gap-2">
-                        <Link href={`/admin/delivery-methods/edit/${method.id}`}>
+                        <Link
+                          href={`/admin/delivery-methods/edit/${method.id}`}
+                        >
                           <button className="w-9 h-9 border border-gray-200 flex items-center justify-center text-[#1B1B1B] hover:bg-[#3A5A40] hover:text-white transition-all duration-300 cursor-pointer">
                             <FiEdit2 size={14} />
                           </button>
@@ -182,31 +208,13 @@ export default function AdminDeliveryMethodsPage() {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2">
-        <p className="font-mono text-[11px] font-bold text-[#8A8A78] uppercase">
-          Total Methods:{' '}
-          <span className="text-[#1B1B1B]">{methods.count}</span>
-        </p>
-        <div className="flex items-center gap-0 border border-gray-200 bg-white">
-          <button
-            disabled={page === 1 || loading}
-            onClick={() => setPage(p => p - 1)}
-            className="w-10 h-10 flex items-center justify-center border-r border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronLeft size={18} />
-          </button>
-          <div className="px-4 font-mono text-xs font-bold text-[#1B1B1B]">
-            PAGE {page}
-          </div>
-          <button
-            disabled={methods.results.length < 10 || loading}
-            onClick={() => setPage(p => p + 1)}
-            className="w-10 h-10 flex items-center justify-center border-l border-gray-200 hover:bg-gray-50 disabled:opacity-20 cursor-pointer"
-          >
-            <FiChevronRight size={18} />
-          </button>
-        </div>
-      </div>
+      <Pagination
+        page={page}
+        setPage={setPage}
+        totalItems={methods.count}
+        loading={loading}
+        label="Total Methods"
+      />
     </div>
   );
 }
