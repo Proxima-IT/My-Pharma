@@ -367,6 +367,25 @@ AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = int(
     os.environ.get("AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES", "30")
 )
 
+# --------------------------------------------------------------------------
+# OTP / SMS (MiMSMS)
+# --------------------------------------------------------------------------
+AUTH_OTP_EXPIRY_MINUTES = int(os.environ.get("AUTH_OTP_EXPIRY_MINUTES", "5"))
+AUTH_OTP_MAX_RESEND_PER_HOUR = int(os.environ.get("AUTH_OTP_MAX_RESEND_PER_HOUR", "3"))
+AUTH_REGISTRATION_TOKEN_EXPIRY_MINUTES = int(
+    os.environ.get("AUTH_REGISTRATION_TOKEN_EXPIRY_MINUTES", "10")
+)
+
+MIMSMS_ENABLED = os.environ.get("MIMSMS_ENABLED", "true").lower() in ("true", "1", "yes")
+MIMSMS_BASE_URL = os.environ.get("MIMSMS_BASE_URL", "https://api.mimsms.com").strip().rstrip("/")
+MIMSMS_SEND_SMS_PATH = os.environ.get("MIMSMS_SEND_SMS_PATH", "/api/SmsSending/SMS").strip()
+MIMSMS_USERNAME = os.environ.get("MIMSMS_USERNAME", "").strip()
+MIMSMS_APIKEY = os.environ.get("MIMSMS_APIKEY", "").strip()
+MIMSMS_SENDER_NAME = os.environ.get("MIMSMS_SENDER_NAME", "").strip()
+MIMSMS_TRANSACTION_TYPE = os.environ.get("MIMSMS_TRANSACTION_TYPE", "T").strip().upper()
+MIMSMS_CAMPAIGN_ID = os.environ.get("MIMSMS_CAMPAIGN_ID", "null").strip()
+MIMSMS_TIMEOUT_SECONDS = int(os.environ.get("MIMSMS_TIMEOUT_SECONDS", "15"))
+
 # ------------------------------------------------------------------------------
 # SSLCOMMERZ (Bangladesh payment gateway)
 # ------------------------------------------------------------------------------

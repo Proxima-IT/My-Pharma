@@ -3,6 +3,10 @@ Celery tasks for auth: OTP SMS, password reset email.
 Async to avoid blocking request cycle; Redis as broker.
 """
 import logging
+import json
+from urllib import request as urllib_request
+from urllib.error import HTTPError, URLError
+
 from celery import shared_task
 from django.conf import settings
 from django.core.mail import send_mail
@@ -13,20 +17,71 @@ logger = logging.getLogger(__name__)
 
 @shared_task(bind=True, max_retries=3)
 def send_otp_sms(self, phone: str, otp: str):
-    """
-    Send OTP via SMS. Implement actual provider (Twilio, etc.) in production.
-    Placeholder logs OTP for development.
-    """
+    """Send OTP via MiMSMS SMS gateway."""
     try:
-        if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
-            logger.info("OTP for %s: %s (dev mode)", phone[-4:], otp)
+        if not getattr(settings, "MIMSMS_ENABLED", True):
+            logger.info("MiMSMS is disabled; skipped OTP SMS for ****%s.", phone[-4:])
             return
-        # Production: call SMS gateway (e.g. Twilio, BD local provider)
-        # send_sms(phone, f"Your My Pharma OTP is {otp}. Valid for 5 minutes.")
-        logger.info("OTP sent to phone (masked); implement SMS gateway in production.")
-        return
+
+        username = getattr(settings, "MIMSMS_USERNAME", "").strip()
+        apikey = getattr(settings, "MIMSMS_APIKEY", "").strip()
+        sender_name = getattr(settings, "MIMSMS_SENDER_NAME", "").strip()
+        if not username or not apikey or not sender_name:
+            logger.warning(
+                "MiMSMS credentials are not fully configured (username/apikey/sender). "
+                "Skipping OTP SMS for ****%s.",
+                phone[-4:],
+            )
+            return
+
+        base_url = getattr(settings, "MIMSMS_BASE_URL", "https://api.mimsms.com").strip().rstrip("/")
+        send_path = getattr(settings, "MIMSMS_SEND_SMS_PATH", "/api/SmsSending/SMS").strip()
+        if not send_path.startswith("/"):
+            send_path = "/" + send_path
+        endpoint = f"{base_url}{send_path}"
+
+        message = f"Your My Pharma OTP is {otp}. Valid for {getattr(settings, 'AUTH_OTP_EXPIRY_MINUTES', 5)} minutes."
+        payload = {
+            "UserName": username,
+            "Apikey": apikey,
+            "MobileNumber": phone,
+            "CampaignId": getattr(settings, "MIMSMS_CAMPAIGN_ID", "null"),
+            "SenderName": sender_name,
+            "TransactionType": getattr(settings, "MIMSMS_TRANSACTION_TYPE", "T"),
+            "Message": message,
+        }
+
+        req = urllib_request.Request(
+            endpoint,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            method="POST",
+        )
+        timeout = int(getattr(settings, "MIMSMS_TIMEOUT_SECONDS", 15))
+        with urllib_request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8")
+
+        parsed = {}
+        if body:
+            try:
+                parsed = json.loads(body)
+            except json.JSONDecodeError:
+                parsed = {}
+
+        status_code = str(parsed.get("statusCode", "")).strip()
+        status_text = str(parsed.get("status", "")).strip().lower()
+        if status_code != "200" or status_text not in {"ok", "success"}:
+            raise ValueError(f"MiMSMS send failed: {body or 'empty response'}")
+
+        logger.info("OTP SMS sent successfully to ****%s via MiMSMS.", phone[-4:])
     except Exception as exc:
-        logger.warning("OTP send failed: %s", exc)
+        if isinstance(exc, HTTPError):
+            detail = f"HTTP {exc.code}"
+        elif isinstance(exc, URLError):
+            detail = f"URL error: {exc.reason}"
+        else:
+            detail = str(exc)
+        logger.warning("OTP send failed for ****%s: %s", phone[-4:], detail)
         raise self.retry(exc=exc, countdown=60)
 
 
