@@ -38,8 +38,7 @@ export default function EditComboPage({ params }) {
     description: '',
     price: '',
     original_price: '',
-    custom_price: '',
-    discount_price: '',
+    cart_price: '',
     bg_color: '#B0E5C7',
     order: 0,
     is_active: true,
@@ -74,8 +73,7 @@ export default function EditComboPage({ params }) {
           description: data.description || '',
           price: data.price || '',
           original_price: data.original_price || '',
-          custom_price: data.custom_price || '',
-          discount_price: data.discount_price || '',
+          cart_price: data.discount_price ?? data.custom_price ?? '',
           bg_color: data.bg_color || '#B0E5C7',
           order: data.order || 0,
           is_active: data.is_active ?? true,
@@ -135,9 +133,15 @@ export default function EditComboPage({ params }) {
     e.preventDefault();
     try {
       const data = new FormData();
-      Object.keys(formData).forEach(key => {
-        data.append(key, formData[key]);
-      });
+      data.append('title', formData.title);
+      data.append('description', formData.description);
+      data.append('price', formData.price);
+      data.append('original_price', formData.original_price);
+      data.append('discount_price', formData.cart_price);
+      data.append('custom_price', '');
+      data.append('bg_color', formData.bg_color);
+      data.append('order', formData.order);
+      data.append('is_active', formData.is_active);
 
       // Append selected product IDs for the ManyToMany relation
       selectedProducts.forEach(p => {
@@ -316,7 +320,7 @@ export default function EditComboPage({ params }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={labelClass}>Sale Price (BDT)</label>
+                <label className={labelClass}>Display Sale Price (BDT)</label>
                 <input
                   required
                   type="number"
@@ -326,52 +330,48 @@ export default function EditComboPage({ params }) {
                   value={formData.price}
                   onChange={handleInputChange}
                 />
+                <p className="text-[9px] font-mono text-[#8A8A78] mt-1 uppercase tracking-widest">
+                  Public card price shown to customers.
+                </p>
               </div>
-               <div>
-                 <label className={labelClass}>Original Price (BDT)</label>
-                 <input
-                   type="number"
-                   step="0.01"
-                   name="original_price"
-                   className={inputClass}
-                   value={formData.original_price}
-                   onChange={handleInputChange}
-                 />
-               </div>
+              <div>
+                <label className={labelClass}>
+                  Display Original Price (BDT)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="original_price"
+                  className={inputClass}
+                  value={formData.original_price}
+                  onChange={handleInputChange}
+                />
+                <p className="text-[9px] font-mono text-[#8A8A78] mt-1 uppercase tracking-widest">
+                  Optional struck-through marketing price.
+                </p>
+              </div>
 
-               <div>
-                 <label className={labelClass}>Custom Price (BDT)</label>
-                 <input
-                   type="number"
-                   step="0.01"
-                   name="custom_price"
-                   className={inputClass}
-                   placeholder="Optional fixed cart price"
-                   value={formData.custom_price}
-                   onChange={handleInputChange}
-                 />
-                 <p className="text-[9px] font-mono text-[#8A8A78] mt-1 uppercase tracking-widest">
-                   Overrides product sum if no discount price set.
-                 </p>
-               </div>
-               <div>
-                 <label className={labelClass}>Discount Price (BDT)</label>
-                 <input
-                   type="number"
-                   step="0.01"
-                   name="discount_price"
-                   className={inputClass}
-                   placeholder="Optional cart/checkout price"
-                   value={formData.discount_price}
-                   onChange={handleInputChange}
-                 />
-                 <p className="text-[9px] font-mono text-[#3A5A40] mt-1 uppercase tracking-widest font-bold">
-                   If set, THIS price is used in cart/checkout (highest priority).
-                 </p>
-               </div>
+              <div>
+                <label className={labelClass}>
+                  Cart / Checkout Price (BDT)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="cart_price"
+                  className={inputClass}
+                  placeholder="Leave blank to use sum of products"
+                  value={formData.cart_price}
+                  onChange={handleInputChange}
+                />
+                <p className="text-[9px] font-mono text-[#3A5A40] mt-1 uppercase tracking-widest font-bold">
+                  Single admin price used for future carts. Blank = auto-sum
+                  linked products.
+                </p>
+              </div>
 
-               <div>
-                 <label className={labelClass}>Container Color</label>
+              <div>
+                <label className={labelClass}>Container Color</label>
                 <div className="flex gap-2">
                   <input
                     type="color"
@@ -468,6 +468,12 @@ export default function EditComboPage({ params }) {
               </>
             )}
           </button>
+          <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
+            Note: This editor now uses one cart / checkout price field. Existing
+            custom combo prices are loaded into that field automatically.
+            Leaving it blank keeps backend fallback pricing from the sum of
+            linked product prices.
+          </div>
         </div>
       </form>
     </div>

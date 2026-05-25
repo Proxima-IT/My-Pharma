@@ -7,20 +7,22 @@ import { BsCart3 } from 'react-icons/bs';
 import { TbCurrencyTaka } from 'react-icons/tb';
 import { useCart } from '../../../hooks/useCart';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import {
+  getComboDiscountPercentage,
+  getComboDisplayOriginalPrice,
+  getComboDisplayPrice,
+  getComboHasDiscount,
+} from '@/app/(public)/lib/comboPricing';
 
 const PopularBundleCard = ({ bundle }) => {
   const { addItem, isUpdating } = useCart();
   const [isAdding, setIsAdding] = useState(false);
   const getImageUrl = image => getMediaUrl(image);
 
-  const originalPrice = parseFloat(bundle.original_price || bundle.price || 0);
-  const discountedPrice = parseFloat(
-    bundle.discount_price || bundle.price || 0,
-  );
-  const hasDiscount = originalPrice > discountedPrice;
-  const discountPercentage = hasDiscount
-    ? Math.round(((originalPrice - discountedPrice) / originalPrice) * 100)
-    : 0;
+  const displayPrice = getComboDisplayPrice(bundle);
+  const originalPrice = getComboDisplayOriginalPrice(bundle);
+  const hasDiscount = getComboHasDiscount(bundle);
+  const discountPercentage = getComboDiscountPercentage(bundle);
 
   const items = bundle.products || bundle.items || [];
   const bundleImage =
@@ -110,7 +112,7 @@ const PopularBundleCard = ({ bundle }) => {
               <div className="flex flex-col">
                 <div className="flex items-center text-lg font-black text-gray-900">
                   <TbCurrencyTaka className="text-xl -ml-1" />
-                  <span>{discountedPrice.toLocaleString()}</span>
+                  <span>{displayPrice.toLocaleString()}</span>
                 </div>
 
                 {hasDiscount && (

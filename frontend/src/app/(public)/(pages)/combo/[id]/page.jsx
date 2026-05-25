@@ -3,15 +3,8 @@
 import React, { useEffect, useState, use } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  FiArrowLeft,
-  FiShoppingBag,
-  FiCheckCircle,
-  FiChevronRight,
-  FiMinus,
-  FiPlus,
-} from 'react-icons/fi';
-import { TbCurrencyTaka } from 'react-icons/tb';
+import { FiShoppingBag, FiCheckCircle, FiMinus, FiPlus } from 'react-icons/fi';
+
 import {
   API_BASE_URL,
   getMediaUrl,
@@ -19,7 +12,11 @@ import {
 } from '@/app/(shared)/lib/apiConfig';
 import { useCart } from '../../../hooks/useCart';
 import PopularProductCard from '../../home/components/PopularProductCard';
-import UiButton from '@/app/(public)/components/UiButton';
+import {
+  getComboDisplayOriginalPrice,
+  getComboDisplayPrice,
+  getComboHasDiscount,
+} from '@/app/(public)/lib/comboPricing';
 
 /**
  * ComboDetailsPage
@@ -89,6 +86,11 @@ export default function ComboDetailsPage({ params }) {
       </div>
     );
   }
+
+  const displayPrice = getComboDisplayPrice(combo);
+
+  const displayOriginalPrice = getComboDisplayOriginalPrice(combo);
+  const hasDiscount = getComboHasDiscount(combo);
 
   return (
     <div className="w-full animate-in fade-in duration-700 pb-20 bg-gray-50/50 min-h-screen">
@@ -161,44 +163,28 @@ export default function ComboDetailsPage({ params }) {
 
               <div className="h-px bg-gray-100 w-full" />
 
-              {/* Pricing — uses discount_price > custom_price > sum-of-products (exactly matches backend Combo.get_cart_price() + CartItem.price_at_order) */}
-              {(() => {
-                const products = combo.products || [];
-                let cartPrice;
-                if (combo.discount_price != null) {
-                  cartPrice = parseFloat(combo.discount_price);
-                } else if (combo.custom_price != null) {
-                  cartPrice = parseFloat(combo.custom_price);
-                } else {
-                  cartPrice = products.reduce((sum, p) => sum + parseFloat(p.price || 0), 0);
-                }
-                const displayOriginal = combo.original_price != null
-                  ? parseFloat(combo.original_price)
-                  : products.reduce((sum, p) => sum + parseFloat(p.original_price || p.price || 0), 0);
-                const hasDiscount = displayOriginal > cartPrice;
-                return (
-                  <div className="space-y-2">
-                    <div className="flex items-baseline gap-4">
-                      <span className="text-5xl md:text-6xl font-black text-gray-900 flex items-center tracking-tighter">
-                        <span className="text-3xl mr-1">৳</span>
-                        {cartPrice.toLocaleString()}
-                      </span>
-                      {hasDiscount && (
-                        <span className="text-2xl text-gray-300 line-through font-bold">
-                          ৳{displayOriginal.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <FiCheckCircle className="text-green-500" />
-                      <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">
-                        {combo.products?.length || 0} products included in this
-                        bundle
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* Pricing — display price from combo database fields */}
+
+              <div className="space-y-2">
+                <div className="flex items-baseline gap-4">
+                  <span className="text-5xl md:text-6xl font-black text-gray-900 flex items-center tracking-tighter">
+                    <span className="text-3xl mr-1">৳</span>
+                    {displayPrice.toLocaleString()}
+                  </span>
+                  {hasDiscount && (
+                    <span className="text-2xl text-gray-300 line-through font-bold">
+                      ৳{displayOriginalPrice.toLocaleString()}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <FiCheckCircle className="text-green-500" />
+                  <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest">
+                    {combo.products?.length || 0} products included in this
+                    bundle
+                  </p>
+                </div>
+              </div>
 
               <div className="h-px bg-gray-100 w-full" />
 

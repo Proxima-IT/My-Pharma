@@ -4,7 +4,11 @@ import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
 import { TbCurrencyTaka } from 'react-icons/tb';
-import { FiChevronRight } from 'react-icons/fi';
+import {
+  getComboDisplayOriginalPrice,
+  getComboDisplayPrice,
+  getComboHasDiscount,
+} from '@/app/(public)/lib/comboPricing';
 
 /**
  * BundlePreviewCard
@@ -13,6 +17,11 @@ import { FiChevronRight } from 'react-icons/fi';
  * The entire card is a single clickable link to the combo detail page.
  */
 const BundlePreviewCard = ({ bundle }) => {
+  const displayPrice = getComboDisplayPrice(bundle);
+
+  const displayOriginalPrice = getComboDisplayOriginalPrice(bundle);
+  const hasDiscount = getComboHasDiscount(bundle);
+
   return (
     <Link href={`/combo/${bundle.id}`} className="block group">
       <div
@@ -28,16 +37,16 @@ const BundlePreviewCard = ({ bundle }) => {
             </h3>
           </div>
 
-          {/* Pricing — effective cart price (discount_price || custom_price || price) */}
+          {/* Pricing — display price from combo database fields */}
           <div className="flex items-center gap-2">
             <div className="flex items-center text-xl font-bold text-gray-900">
               <TbCurrencyTaka className="text-2xl -ml-0.5" />
-              <span>{bundle.discount_price ?? bundle.custom_price ?? bundle.price}</span>
+              <span>{displayPrice.toLocaleString()}</span>
             </div>
-            {bundle.original_price && (
+            {hasDiscount && (
               <div className="flex items-center text-sm text-gray-400 line-through font-medium">
                 <TbCurrencyTaka />
-                <span>{bundle.original_price}</span>
+                <span>{displayOriginalPrice.toLocaleString()}</span>
               </div>
             )}
           </div>

@@ -5,12 +5,22 @@ import Link from 'next/link';
 import React from 'react';
 import { FiChevronRight } from 'react-icons/fi';
 import { TbCurrencyTaka } from 'react-icons/tb';
+import {
+  getComboDisplayOriginalPrice,
+  getComboDisplayPrice,
+  getComboHasDiscount,
+} from '@/app/(public)/lib/comboPricing';
 
 /**
  * BundleCard Component
  * Updated: Uses inline styles to apply the dynamic hex color selected by the Super Admin.
  */
 const BundleCard = ({ bundle }) => {
+  const displayPrice = getComboDisplayPrice(bundle);
+
+  const displayOriginalPrice = getComboDisplayOriginalPrice(bundle);
+  const hasDiscount = getComboHasDiscount(bundle);
+
   return (
     <div
       className="relative rounded-[40px] w-full h-full flex flex-col overflow-hidden transition-all"
@@ -28,16 +38,16 @@ const BundleCard = ({ bundle }) => {
           </p>
         </div>
 
-        {/* Pricing Section — cart effective price (discount > custom > marketing price) */}
+        {/* Pricing Section — marketing/display price from database */}
         <div className="flex items-center gap-3">
           <div className="flex items-center text-3xl sm:text-[36px] font-bold text-gray-900">
             <TbCurrencyTaka className="text-4xl -ml-1" />
-            <span>{bundle.discount_price ?? bundle.custom_price ?? bundle.price}</span>
+            <span>{displayPrice.toLocaleString()}</span>
           </div>
-          {bundle.original_price && (
+          {hasDiscount && (
             <div className="flex items-center text-lg sm:text-xl text-gray-400 line-through font-medium">
               <TbCurrencyTaka />
-              <span>{bundle.original_price}</span>
+              <span>{displayOriginalPrice.toLocaleString()}</span>
             </div>
           )}
         </div>

@@ -7,6 +7,10 @@ import { TbCurrencyTaka } from 'react-icons/tb';
 import { FiFilter, FiChevronDown } from 'react-icons/fi';
 import PopularBundleCard from '../home/components/PopularBundleCard';
 import { useBundleData } from '../../hooks/useBundleData';
+import {
+  getComboDisplayOriginalPrice,
+  getComboDisplayPrice,
+} from '@/app/(public)/lib/comboPricing';
 
 const CombosPage = () => {
   const searchParams = useSearchParams();
@@ -38,28 +42,22 @@ const CombosPage = () => {
       );
     }
 
-    // Effective price for cart (discount_price > custom_price > price) used for filters
-    const getEffectivePrice = b =>
-      parseFloat(
-        b.discount_price ?? b.custom_price ?? b.price ?? 0,
-      );
-
     if (minPrice) {
       result = result.filter(
-        b => getEffectivePrice(b) >= parseFloat(minPrice),
+        b => getComboDisplayPrice(b) >= parseFloat(minPrice),
       );
     }
     if (maxPrice) {
       result = result.filter(
-        b => getEffectivePrice(b) <= parseFloat(maxPrice),
+        b => getComboDisplayPrice(b) <= parseFloat(maxPrice),
       );
     }
 
     if (hasDiscount === 'true') {
       result = result.filter(b => {
-        const eff = getEffectivePrice(b);
-        const orig = parseFloat(b.original_price || eff || 0);
-        return orig > eff;
+        const displayPrice = getComboDisplayPrice(b);
+        const originalPrice = getComboDisplayOriginalPrice(b);
+        return originalPrice !== null && originalPrice > displayPrice;
       });
     }
 

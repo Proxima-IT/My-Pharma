@@ -21,6 +21,9 @@ import Image from 'next/image';
 export default function ComboListPage() {
   const { combos, loading, error, deleteCombo } = useComboAdmin();
 
+  const getEffectiveCartPrice = combo =>
+    combo.discount_price ?? combo.custom_price ?? null;
+
   const handleDelete = async (id, title) => {
     if (
       window.confirm(`Are you sure you want to delete the combo: "${title}"?`)
@@ -178,25 +181,22 @@ export default function ComboListPage() {
                     </td>
                     <td className="p-5 text-right font-mono">
                       <div className="flex flex-col items-end gap-0.5">
-                        <span className="text-sm font-black text-[#1B1B1B]">
-                          ৳{combo.price}
+                        <span className="text-[9px] text-[#8A8A78] uppercase tracking-widest">
+                          Display: ৳{combo.price}
                         </span>
                         {combo.original_price && (
                           <span className="text-[10px] text-red-400 line-through">
                             ৳{combo.original_price}
                           </span>
                         )}
-                        {/* Cart pricing indicators for new fields */}
-                        {combo.discount_price != null ? (
+                        {getEffectiveCartPrice(combo) != null ? (
                           <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 border border-emerald-100 mt-1">
-                            CART: ৳{combo.discount_price} <span className="font-mono text-[8px]">(DISCOUNT)</span>
-                          </span>
-                        ) : combo.custom_price != null ? (
-                          <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 border border-amber-100 mt-1">
-                            CART: ৳{combo.custom_price} <span className="font-mono text-[8px]">(CUSTOM)</span>
+                            CART: ৳{getEffectiveCartPrice(combo)}
                           </span>
                         ) : (
-                          <span className="text-[9px] text-[#8A8A78] mt-1">Cart: sum products</span>
+                          <span className="text-[9px] text-[#8A8A78] mt-1 uppercase tracking-widest">
+                            Cart: sum products
+                          </span>
                         )}
                       </div>
                     </td>
