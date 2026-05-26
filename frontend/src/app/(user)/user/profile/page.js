@@ -37,6 +37,12 @@ export default function UserProfilePage() {
     verifyCode,
   } = useProfile();
 
+  React.useEffect(() => {
+    if (showSuccess && formData.profile_picture instanceof File) {
+      window.location.reload();
+    }
+  }, [showSuccess, formData.profile_picture]);
+
   if (isLoading) {
     return (
       <div className="w-full flex justify-center items-center py-40">
