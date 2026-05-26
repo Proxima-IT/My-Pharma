@@ -22,13 +22,23 @@ PASSWORD_REGEX = re.compile(
 
 
 def normalize_phone(phone: str) -> str:
-    """Normalize phone for storage and Redis keys (digits only, BD prefix optional)."""
+    """Normalize phone for storage and Redis keys (digits only, BD prefix optional).
+    Returns the international BD format: 8801XXXXXXXXX (13 digits).
+    """
     digits = "".join(c for c in phone if c.isdigit())
+    if not digits:
+        return phone
+    # Already in international format
+    if digits.startswith("880") and len(digits) >= 13:
+        return digits
+    # Local format starts with 0: 01XXXXXXXXX (11 digits) -> 8801XXXXXXXXX
     if digits.startswith("0") and len(digits) >= 10:
-        digits = "88" + digits[1:]
-    elif len(digits) == 10 and digits.startswith("1"):
-        digits = "88" + digits
-    return digits or phone
+        return "880" + digits[1:]
+    # 10-digit number starting with 1 (no prefix) -> 880 + 1XXXXXXXXX
+    if len(digits) == 10 and digits.startswith("1"):
+        return "880" + digits
+    # Fallback: return as-is if it's already a valid format
+    return digits
 
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
