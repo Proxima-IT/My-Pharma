@@ -1864,11 +1864,14 @@ class CartViewSet(viewsets.GenericViewSet):
     def remove_coupon(self, request):
         """Remove applied coupon and restore CartItem.price_at_order from original_price_at_order."""
         cart = get_or_create_cart(request.user)
-        items = cart.items.all()
+        items = cart.items.select_related("combo").all()
         for it in items:
-            if it.original_price_at_order is not None:
+            # For combo items, restore to the combo's discounted price (not undiscounted original)
+            if it.combo_id and it.combo is not None:
+                it.price_at_order = it.combo.get_cart_price()
+            elif it.original_price_at_order is not None:
                 it.price_at_order = it.original_price_at_order
-                it.save(update_fields=["price_at_order"])
+            it.save(update_fields=["price_at_order"])
         cart.coupon = None
         cart.save(update_fields=["coupon", "updated_at"])
         cart.refresh_from_db()
@@ -1925,7 +1928,7 @@ class CartViewSet(viewsets.GenericViewSet):
                 combo=combo,
                 defaults={
                     "quantity": quantity,
-                    "original_price_at_order": combo_unit_price,
+                    "original_price_at_order": combo.get_cart_original_price(),
                     "price_at_order": combo_unit_price,
                     "dosage": "",
                 },
