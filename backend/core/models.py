@@ -585,9 +585,32 @@ class Order(models.Model):
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["user", "status"])]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_status = self.status
+
+    def save(self, *args, **kwargs):
+        status_changed = False
+        if self.pk and self.status != getattr(self, "_original_status", self.status):
+            status_changed = True
+            
+        super().save(*args, **kwargs)
+        
+        if status_changed:
+            self._original_status = self.status
+            phone = self.user.phone if hasattr(self.user, "phone") else None
+            if phone:
+                try:
+                    from authentication.tasks import send_generic_sms
+                    status_label = self.get_status_display()
+                    message = f"Your order {self.id} from My Pharma is {status_label}"
+                    send_generic_sms.delay(phone, message)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning("Failed to queue order SMS: %s", e)
+
     def __str__(self):
         return f"Order #{self.id} ({self.user_id})"
-
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="items")
@@ -1132,9 +1155,32 @@ class Prescription(models.Model):
         ordering = ["-created_at"]
         indexes = [models.Index(fields=["status"]), models.Index(fields=["user", "status"])]
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._original_status = self.status
+
+    def save(self, *args, **kwargs):
+        status_changed = False
+        if self.pk and self.status != getattr(self, "_original_status", self.status):
+            status_changed = True
+            
+        super().save(*args, **kwargs)
+        
+        if status_changed:
+            self._original_status = self.status
+            phone = self.user.phone if hasattr(self.user, "phone") else None
+            if phone:
+                try:
+                    from authentication.tasks import send_generic_sms
+                    status_label = self.get_status_display()
+                    message = f"Your prescription order {self.id} from My Pharma is {status_label}"
+                    send_generic_sms.delay(phone, message)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning("Failed to queue prescription SMS: %s", e)
+
     def __str__(self):
         return f"Prescription #{self.id} ({self.user_id})"
-
 
 class PrescriptionImage(models.Model):
     """Multiple prescription images per order (upload prescription flow)."""
