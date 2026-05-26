@@ -21,6 +21,7 @@ const OrderSummaryCard = ({
   appliedCoupon: customAppliedCoupon,
   isApplyingCoupon: customIsApplyingCoupon,
   error: customError,
+  showDiscountBreakdown = true,
 }) => {
   const router = useRouter();
   const cartHook = useCart();
@@ -28,7 +29,9 @@ const OrderSummaryCard = ({
   const applyCoupon = customApplyCoupon || cartHook.applyCoupon;
   const removeCoupon = customRemoveCoupon || cartHook.removeCoupon;
   const appliedCoupon =
-    customAppliedCoupon !== undefined ? customAppliedCoupon : cartHook.appliedCoupon;
+    customAppliedCoupon !== undefined
+      ? customAppliedCoupon
+      : cartHook.appliedCoupon;
   const isApplyingCoupon =
     customIsApplyingCoupon !== undefined
       ? customIsApplyingCoupon
@@ -66,8 +69,17 @@ const OrderSummaryCard = ({
   const hasBackendSummary = activeSummary?.base_delivery_fee != null;
   const displayData = {
     subtotal: parseFloat(
-      activeSummary?.sub_total || calculatedValues.subtotal || 0,
+      showDiscountBreakdown
+        ? (activeSummary?.sub_total ??
+            activeSummary?.subtotal ??
+            calculatedValues.subtotal ??
+            0)
+        : (activeSummary?.subtotal ??
+            activeSummary?.sub_total ??
+            calculatedValues.subtotal ??
+            0),
     ),
+
     discount: parseFloat(activeSummary?.discount_amount || 0),
     // Breakdown fields for shipping — trust backend values (including 0) when present
     baseDelivery: hasBackendSummary
@@ -133,7 +145,7 @@ const OrderSummaryCard = ({
         />
 
         {/* Row 2: Discount (Persisted Savings) */}
-        {displayData.discount > 0 && (
+        {showDiscountBreakdown && displayData.discount > 0 && (
           <SummaryRow
             label={displayData.discountLabel}
             value={`-${formatCurrency(displayData.discount)}`}

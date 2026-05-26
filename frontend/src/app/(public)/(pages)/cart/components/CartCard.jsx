@@ -14,8 +14,7 @@ import { formatCurrency } from '@/app/(user)/lib/formatters';
  */
 const CartCard = ({ item, onUpdate, onRemove }) => {
   const isCombo = item.item_type === 'COMBO';
-  const unitPrice = parseFloat(item.current_price || item.price_at_order || 0);
-  const originalPrice = parseFloat(item.product_original_price || 0);
+  const unitPrice = parseFloat(item.price_at_order || item.current_price || 0);
 
   /**
    * Helper to strip Markdown and HTML tags for plain text display.
@@ -83,11 +82,6 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
             <span className="text-[18px] font-bold text-(--color-primary-500)">
               {formatCurrency(unitPrice * item.quantity)}
             </span>
-            {originalPrice > unitPrice && (
-              <span className="text-[13px] text-gray-400 line-through font-medium">
-                {formatCurrency(originalPrice * item.quantity)}
-              </span>
-            )}
           </div>
 
           {/* Clean Description Snippet */}

@@ -93,12 +93,14 @@ export default function NewComboPage() {
     e.preventDefault();
 
     try {
+      const effectiveCartPrice = formData.price?.toString().trim() || '0';
+
       const data = new FormData();
       data.append('title', formData.title);
       data.append('description', formData.description);
       data.append('price', formData.price);
       data.append('original_price', formData.original_price);
-      data.append('discount_price', '');
+      data.append('discount_price', effectiveCartPrice);
       data.append('custom_price', '');
       data.append('bg_color', formData.bg_color);
       data.append('order', formData.order);
@@ -284,7 +286,7 @@ export default function NewComboPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={labelClass}>Display Sale Price (BDT)</label>
+                <label className={labelClass}>Discount Price (BDT)</label>
                 <input
                   required
                   type="number"
@@ -301,7 +303,7 @@ export default function NewComboPage() {
               </div>
               <div>
                 <label className={labelClass}>
-                  Display Original Price (BDT)
+                  Original Price (BDT)
                 </label>
                 <input
                   type="number"
@@ -441,9 +443,9 @@ export default function NewComboPage() {
           </button>
 
           <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
-            Note: Combo pricing consists of display sale price and optional
-            display original price. Cart pricing is automatically calculated
-            from the sum of linked product prices.
+            Note: Cart pricing now follows the Discount Price (BDT) value on
+            this form. Included product prices are only used as a backend
+            fallback if no cart override is saved.
           </div>
         </div>
       </form>

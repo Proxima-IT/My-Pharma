@@ -63,6 +63,23 @@ export default function AdminOrderDetailsPage({ params }) {
     };
   }, [orderDetails]);
 
+  const chargedSubtotal = useMemo(() => {
+    const itemSubtotal =
+      orderDetails?.items?.reduce(
+        (sum, item) =>
+          sum +
+          parseFloat(item?.price_at_order || 0) *
+            parseFloat(item?.quantity || 0),
+        0,
+      ) || 0;
+
+    if (itemSubtotal > 0) return itemSubtotal;
+
+    const total = parseFloat(orderDetails?.total || 0);
+    const deliveryFee = parseFloat(orderDetails?.delivery_fee || 0);
+    return Math.max(0, total - deliveryFee);
+  }, [orderDetails]);
+
   const handleStatusChange = async newStatus => {
     if (confirm(`Are you sure you want to change status to ${newStatus}?`)) {
       await updateStatus(id, newStatus);
@@ -222,22 +239,11 @@ export default function AdminOrderDetailsPage({ params }) {
             </h3>
             <div className="space-y-3 font-mono text-[11px] uppercase">
               <div className="flex justify-between items-center">
-                <span className="text-[#8A8A78]">Subtotal (Pre-Discount)</span>
+                <span className="text-[#8A8A78]">Subtotal</span>
                 <span className="text-[#1B1B1B] font-bold">
-                  {formatCurrency(orderDetails.subtotal_before_discount || 0)}
+                  {formatCurrency(chargedSubtotal)}
                 </span>
               </div>
-
-              {parseFloat(orderDetails.discount_amount) > 0 && (
-                <div className="flex justify-between items-center text-red-600">
-                  <span>
-                    Discount ({orderDetails.coupon?.code || 'COUPON'})
-                  </span>
-                  <span className="font-bold">
-                    -{formatCurrency(orderDetails.discount_amount)}
-                  </span>
-                </div>
-              )}
 
               <div className="flex justify-between items-center">
                 <span className="text-[#8A8A78]">Base Shipping Charge</span>

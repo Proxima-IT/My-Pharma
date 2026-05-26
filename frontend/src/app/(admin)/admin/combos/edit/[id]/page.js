@@ -130,18 +130,21 @@ export default function EditComboPage({ params }) {
   const handleSubmit = async e => {
     e.preventDefault();
     try {
+      const effectiveCartPrice = formData.price?.toString().trim() || '0';
+
       const data = new FormData();
       data.append('title', formData.title);
       data.append('description', formData.description);
       data.append('price', formData.price);
       data.append('original_price', formData.original_price);
-      data.append('discount_price', '');
+      data.append('discount_price', effectiveCartPrice);
       data.append('custom_price', '');
       data.append('bg_color', formData.bg_color);
       data.append('order', formData.order);
       data.append('is_active', formData.is_active);
 
       // Append selected product IDs for the ManyToMany relation
+
       selectedProducts.forEach(p => {
         data.append('product_ids', p.id);
       });
@@ -318,7 +321,7 @@ export default function EditComboPage({ params }) {
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className={labelClass}>Display Sale Price (BDT)</label>
+                <label className={labelClass}>Discount Price (BDT)</label>
                 <input
                   required
                   type="number"
@@ -448,8 +451,9 @@ export default function EditComboPage({ params }) {
             )}
           </button>
           <div className="p-4 bg-[#F1F1E6] border border-[#DAD7CD] font-mono text-[9px] text-[#8A8A78] uppercase leading-relaxed">
-            Note: Cart pricing is automatically calculated from the sum of
-            linked product prices.
+            Note: Cart pricing now follows the Discount Price (BDT) value on
+            this form. Included product prices are only used as a backend
+            fallback if no cart override is saved.
           </div>
         </div>
       </form>
