@@ -162,6 +162,7 @@ const Cart = () => {
               items={items}
               refresh={refresh}
               onPlaceOrder={handleProceedToCheckout}
+              showDiscountBreakdown={false}
             />
           </div>
         </div>
