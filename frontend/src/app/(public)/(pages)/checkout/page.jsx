@@ -68,7 +68,7 @@ const Checkout = () => {
   const [isPlacingBuyNowOrder, setIsPlacingBuyNowOrder] = useState(false);
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('BKASH');
+  const [paymentMethod, setPaymentMethod] = useState('ONLINE');
   const [deliveryOptions, setDeliveryOptions] = useState([]);
   const [selectedMethodId, setSelectedMethodId] = useState(null);
   const [orderSuccess, setOrderSuccess] = useState(null);

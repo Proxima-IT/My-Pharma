@@ -987,7 +987,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             qs_scored = qs_scored.filter(search_rank__gt=0)
             
             # If no direct matched results, try fuzzy Levenshtein distance <= 2 correction on product/brand/ingredient names
-            if not qs_scored.exists() and len(q) >= 3:
+            if not qs_scored.exists() and len(q) >= 2:
                 try:
                     import Levenshtein
                 except ImportError:
@@ -1005,7 +1005,16 @@ class ProductViewSet(viewsets.ModelViewSet):
                         brand_dist = Levenshtein.distance(q_lower, product.brand.name.lower()) if product.brand else 999
                         ing_dist = Levenshtein.distance(q_lower, product.ingredient.name.lower()) if product.ingredient else 999
                         
-                        if name_dist <= 2 or brand_dist <= 2 or ing_dist <= 2:
+                        # Word-level fuzzy matches (for multi-word product/brand/ingredient names)
+                        words_match = False
+                        if len(q_lower) >= 2:
+                            words_match = any(Levenshtein.distance(q_lower, w) <= 1 for w in product.name.lower().split())
+                            if not words_match and product.brand:
+                                words_match = any(Levenshtein.distance(q_lower, w) <= 1 for w in product.brand.name.lower().split())
+                            if not words_match and product.ingredient:
+                                words_match = any(Levenshtein.distance(q_lower, w) <= 1 for w in product.ingredient.name.lower().split())
+
+                        if name_dist <= 2 or brand_dist <= 2 or ing_dist <= 2 or words_match:
                             fuzzy_pks.append(product.pk)
                     
                     if fuzzy_pks:

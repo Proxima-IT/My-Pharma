@@ -63,6 +63,7 @@ class ProductFilter(FilterSet):
         if not value or not value.strip():
             return queryset
         value = value.strip()
+        val_lower = value.lower()
         try:
             import Levenshtein
         except ImportError:
@@ -73,12 +74,25 @@ class ProductFilter(FilterSet):
         # may have select_related, and deferring a traversed field causes FieldError).
         candidates = queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))
         candidate_pks = list(candidates.values_list("pk", flat=True))
+        
+        # If no direct matches, try fuzzy matching against all products in queryset
+        if not candidate_pks and len(val_lower) >= 2:
+            candidate_pks = list(queryset.values_list("pk", flat=True))
+            
         if not candidate_pks:
             return queryset.none()
+            
         # Run Levenshtein on a separate minimal queryset (no select_related) to avoid conflict.
         pks = []
-        for p in Product.objects.filter(pk__in=candidate_pks).only("pk", "name").iterator():
-            if Levenshtein.distance(value.lower(), p.name.lower()) <= 2:
+        for p in Product.objects.filter(pk__in=candidate_pks).only("pk", "name", "description").iterator():
+            p_name_lower = p.name.lower()
+            p_desc_lower = (p.description or "").lower()
+            
+            # Direct substring matches in name or description are always kept
+            if val_lower in p_name_lower or val_lower in p_desc_lower:
+                pks.append(p.pk)
+            # Fuzzy word-level match for query typos
+            elif len(val_lower) >= 2 and any(Levenshtein.distance(val_lower, w) <= 1 for w in p_name_lower.split()):
                 pks.append(p.pk)
         return queryset.filter(pk__in=pks) if pks else queryset.none()
 

@@ -141,6 +141,12 @@ class RegisterPhoneView(APIView):
                 {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+        except Exception as exc:
+            logger.exception("register-phone failed: %s", exc)
+            return Response(
+                {"detail": "We're having trouble sending the SMS code. Please try again in a moment.", "code": "service_error"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         create_audit_log(None, AuditAction.OTP_SENT, request=request, metadata={"phone_masked": phone[-4:]})
         return Response(
             {"message": "OTP sent successfully.", "detail": "Check your phone for the code."},
@@ -498,6 +504,12 @@ class ChangeEmailRequestView(APIView):
                 {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
+        except Exception as exc:
+            logger.exception("change-email failed: %s", exc)
+            return Response(
+                {"detail": "We're having trouble sending the email verification code. Please try again in a moment.", "code": "service_error"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         utils.change_email_pending_set(request.user.id, new_email)
         create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_email", "email_masked": new_email[:2] + "***"})
         return Response(
@@ -551,6 +563,12 @@ class ChangePhoneRequestView(APIView):
             return Response(
                 {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        except Exception as exc:
+            logger.exception("change-phone failed: %s", exc)
+            return Response(
+                {"detail": "We're having trouble sending the SMS code. Please try again in a moment.", "code": "service_error"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         utils.change_phone_pending_set(request.user.id, new_phone)
         create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_phone", "phone_masked": new_phone[-4:]})
@@ -662,6 +680,12 @@ class MeView(APIView):
                     {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
                     status=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
+            except Exception as exc:
+                logger.exception("update-profile email verification failed: %s", exc)
+                return Response(
+                    {"detail": "We're having trouble sending the email verification code. Please try again in a moment.", "code": "service_error"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             utils.change_email_pending_set(request.user.id, raw_email)
             create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_email", "email_masked": raw_email[:2] + "***"})
             return Response(
@@ -718,6 +742,12 @@ class MeView(APIView):
                 return Response(
                     {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
                     status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            except Exception as exc:
+                logger.exception("update-profile phone verification failed: %s", exc)
+                return Response(
+                    {"detail": "We're having trouble sending the SMS code. Please try again in a moment.", "code": "service_error"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
             utils.change_phone_pending_set(request.user.id, normalized_phone)
             create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_phone", "phone_masked": normalized_phone[-4:]})

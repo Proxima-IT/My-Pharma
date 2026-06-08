@@ -56,24 +56,42 @@ const MobileDrawer = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resA, adsRes, countRes] = await Promise.all([
+        const results = await Promise.allSettled([
           fetch(`${API_BASE_URL}/categories/tree/`),
           fetch(`${API_BASE_URL}/ads/?is_active=true`),
           fetch(`${API_BASE_URL}/products/count-summary/`),
         ]);
 
-        const [dataA, adsData, countData] = await Promise.all([
-          parseJsonResponse(resA, []),
-          parseJsonResponse(adsRes, { results: [] }),
-          parseJsonResponse(countRes, {
+        const [categoriesRes, adsRes, countRes] = results;
+
+        if (categoriesRes.status === 'fulfilled' && categoriesRes.value.ok) {
+          const dataA = await parseJsonResponse(categoriesRes.value, []);
+          setCategories(Array.isArray(dataA) ? dataA : dataA.results || []);
+        } else {
+          console.error(
+            'Failed to fetch categories:',
+            categoriesRes.status === 'rejected'
+              ? categoriesRes.reason
+              : categoriesRes.value.statusText,
+          );
+        }
+
+        if (adsRes.status === 'fulfilled' && adsRes.value.ok) {
+          const adsData = await parseJsonResponse(adsRes.value, { results: [] });
+          setAds(Array.isArray(adsData) ? adsData : adsData.results || []);
+        } else {
+          console.error('Failed to fetch ads');
+        }
+
+        if (countRes.status === 'fulfilled' && countRes.value.ok) {
+          const countData = await parseJsonResponse(countRes.value, {
             total_products: 0,
             category_counts: [],
-          }),
-        ]);
-
-        setCategories(Array.isArray(dataA) ? dataA : dataA.results || []);
-        setAds(Array.isArray(adsData) ? adsData : adsData.results || []);
-        setCountSummary(countData);
+          });
+          setCountSummary(countData);
+        } else {
+          console.error('Failed to fetch product count summary');
+        }
       } catch (error) {
         console.error('Drawer API request failed', error);
       } finally {

@@ -251,6 +251,23 @@ class ProductSearchApiTests(APITestCase):
         self.assertIn("Napa Extra", product_names)
         self.assertIn("Ace 500mg", product_names)
 
+    def test_short_and_fuzzy_word_matching(self):
+        # 1. Search for short term "na" using search API
+        response = self.client.get("/api/products/search/?q=na")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        results = response.data["results"]
+        product_names = [p["name"] for p in results]
+        self.assertIn("Napa 500mg", product_names)
+        self.assertIn("Napa Extra", product_names)
+
+        # 2. Autocomplete search for word-level typo "npa"
+        response = self.client.get("/api/products/search/?q=npa&autocomplete=true")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        product_names = [p["name"] for p in response.data]
+        self.assertIn("Napa 500mg", product_names)
+        self.assertIn("Napa Extra", product_names)
+
+
 
 class BuyNowApiTests(APITestCase):
     def setUp(self):

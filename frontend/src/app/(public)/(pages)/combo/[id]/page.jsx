@@ -91,6 +91,7 @@ export default function ComboDetailsPage({ params }) {
 
   const displayOriginalPrice = getComboDisplayOriginalPrice(combo);
   const hasDiscount = getComboHasDiscount(combo);
+  const isTailwindBg = typeof combo.bg_color === 'string' && combo.bg_color.startsWith('bg-');
 
   return (
     <div className="w-full animate-in fade-in duration-700 pb-20 bg-gray-50/50 min-h-screen">
@@ -121,8 +122,10 @@ export default function ComboDetailsPage({ params }) {
             {/* Left: Image Container */}
             <div className="w-full lg:w-1/2 min-w-0">
               <div
-                className="rounded-[40px] p-8 border border-gray-100 w-full flex items-center justify-center overflow-hidden shadow-sm"
-                style={{ backgroundColor: combo.bg_color || '#F9FAFB' }}
+                className={`rounded-[40px] p-8 border border-gray-100 w-full flex items-center justify-center overflow-hidden shadow-sm ${
+                  isTailwindBg ? combo.bg_color : ''
+                }`}
+                style={isTailwindBg ? {} : { backgroundColor: combo.bg_color || '#F9FAFB' }}
               >
                 {combo.image_url ? (
                   <Image

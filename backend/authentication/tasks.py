@@ -17,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 def _send_mimsms_sms(phone: str, message: str) -> None:
     """Helper to send an arbitrary SMS via MiMSMS gateway."""
+    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
+        logger.info("[EAGER DEV/TEST MODE] SMS to ****%s: %s", phone[-4:], message)
+        return
+
     if not getattr(settings, "MIMSMS_ENABLED", True):
         logger.info("MiMSMS is disabled; skipped SMS for ****%s.", phone[-4:])
         return
@@ -114,7 +118,7 @@ def send_otp_email(self, email: str, otp: str):
     """
     try:
         if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
-            logger.info("OTP for email (masked): %s (dev mode)", email[:2] + "***", otp)
+            logger.info("OTP for email %s is: %s (dev mode)", email, otp)
             return
         subject = "My Pharma – Your verification code"
         message = f"Your verification code is: {otp}. It is valid for 5 minutes. Do not share it."

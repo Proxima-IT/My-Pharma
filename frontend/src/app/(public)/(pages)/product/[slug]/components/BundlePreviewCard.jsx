@@ -22,11 +22,15 @@ const BundlePreviewCard = ({ bundle }) => {
   const displayOriginalPrice = getComboDisplayOriginalPrice(bundle);
   const hasDiscount = getComboHasDiscount(bundle);
 
+  const isTailwindBg = typeof bundle.bgColor === 'string' && bundle.bgColor.startsWith('bg-');
+
   return (
     <Link href={`/combo/${bundle.id}`} className="block group">
       <div
-        className="relative rounded-[24px] w-full h-full flex flex-col overflow-hidden transition-all group-hover:shadow-lg"
-        style={{ backgroundColor: bundle.bgColor }}
+        className={`relative rounded-[24px] w-full h-full flex flex-col overflow-hidden transition-all group-hover:shadow-lg ${
+          isTailwindBg ? bundle.bgColor : ''
+        }`}
+        style={isTailwindBg ? {} : { backgroundColor: bundle.bgColor }}
       >
         {/* Top Content */}
         <div className="p-6 pb-3 w-full flex flex-col items-start gap-2 z-10">

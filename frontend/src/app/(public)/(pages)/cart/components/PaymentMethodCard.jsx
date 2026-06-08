@@ -5,13 +5,13 @@ import React from 'react';
 
 const PaymentMethodCard = ({ selected, onSelect }) => {
   const methods = [
-    // { id: 'NAGAD', name: 'Nagad', img: '/assets/images/nagad.png' },
-    // { id: 'BKASH', name: 'Bkash', img: '/assets/images/bkash.png' },
-    // { id: 'ROCKET', name: 'Rocket', img: '/assets/images/rocket.png' },
-    // { id: 'UPAY', name: 'Upay', img: '/assets/images/upay.png' },
-    { id: 'ONLINE', name: 'SSL Commerz', img: '/assets/images/ssl.png' },
-    // { id: 'CARD', name: 'Card', img: '/assets/images/card.png' },
-    { id: 'COD', name: 'Cash On Delivery', img: '/assets/images/cod.png' },
+    { id: 'NAGAD', name: 'Nagad', img: '/assets/images/nagad.png', display: 'none' },
+    { id: 'BKASH', name: 'Bkash', img: '/assets/images/bkash.png', display: 'none' },
+    { id: 'ROCKET', name: 'Rocket', img: '/assets/images/rocket.png', display: 'none' },
+    { id: 'UPAY', name: 'Upay', img: '/assets/images/upay.png', display: 'none' },
+    { id: 'ONLINE', name: 'SSL Commerz', img: '/assets/images/ssl.png', display: 'flex' },
+    { id: 'CARD', name: 'Card', img: '/assets/images/card.png', display: 'none' },
+    { id: 'COD', name: 'Cash on Delivery', img: '/assets/images/cod.png', display: 'flex' },
   ];
 
   return (
@@ -35,6 +35,7 @@ const PaymentMethodCard = ({ selected, onSelect }) => {
             <div
               key={method.id}
               onClick={() => onSelect?.(method.id)}
+              style={{ display: method.display || 'flex' }}
               className={`flex flex-col justify-center items-center p-4 rounded-[24px] border-2 transition-all cursor-pointer group ${
                 isActive
                   ? 'border-(--color-primary-500) bg-(--color-primary-25)'

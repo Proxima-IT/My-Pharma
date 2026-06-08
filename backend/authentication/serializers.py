@@ -383,6 +383,15 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ("username", "profile_picture", "gender", "date_of_birth")
 
+    def to_internal_value(self, data):
+        if isinstance(data, dict):
+            data = data.copy()
+            if "date_of_birth" in data and (data["date_of_birth"] == "" or data["date_of_birth"] is None):
+                data["date_of_birth"] = None
+            if "gender" in data and data["gender"] == "":
+                data["gender"] = None
+        return super().to_internal_value(data)
+
     def validate_username(self, value):
         v = (value or "").strip()
         if not v:

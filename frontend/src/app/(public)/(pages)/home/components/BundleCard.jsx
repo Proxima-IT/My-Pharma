@@ -21,10 +21,14 @@ const BundleCard = ({ bundle }) => {
   const displayOriginalPrice = getComboDisplayOriginalPrice(bundle);
   const hasDiscount = getComboHasDiscount(bundle);
 
+  const isTailwindBg = typeof bundle.bgColor === 'string' && bundle.bgColor.startsWith('bg-');
+
   return (
     <div
-      className="relative rounded-[40px] w-full h-full flex flex-col overflow-hidden transition-all"
-      style={{ backgroundColor: bundle.bgColor }}
+      className={`relative rounded-[40px] w-full h-full flex flex-col overflow-hidden transition-all ${
+        isTailwindBg ? bundle.bgColor : ''
+      }`}
+      style={isTailwindBg ? {} : { backgroundColor: bundle.bgColor }}
     >
       {/* 1. Top Content Section */}
       <div className="p-8 sm:p-10 pb-6 w-full flex flex-col items-start gap-4 z-10">

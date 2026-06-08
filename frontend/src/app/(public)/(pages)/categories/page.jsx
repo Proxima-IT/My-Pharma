@@ -18,20 +18,30 @@ const CategoriesPage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [resA, prodRes] = await Promise.all([
+        const results = await Promise.allSettled([
           fetch(`${API_BASE_URL}/categories/sidebar-category/`),
           fetch(`${API_BASE_URL}/products/?page_size=1000&is_active=true`),
         ]);
 
-        const [dataA, prodData] = await Promise.all([
-          parseJsonResponse(resA, []),
-          parseJsonResponse(prodRes, { results: [] }),
-        ]);
+        const [categoriesRes, productsRes] = results;
 
-        setCategoriesA(Array.isArray(dataA) ? dataA : dataA.results || []);
-        setAllProducts(
-          Array.isArray(prodData) ? prodData : prodData.results || [],
-        );
+        if (categoriesRes.status === 'fulfilled' && categoriesRes.value.ok) {
+          const dataA = await parseJsonResponse(categoriesRes.value, []);
+          setCategoriesA(Array.isArray(dataA) ? dataA : dataA.results || []);
+        } else {
+          console.error('Failed to fetch categories list');
+        }
+
+        if (productsRes.status === 'fulfilled' && productsRes.value.ok) {
+          const prodData = await parseJsonResponse(productsRes.value, {
+            results: [],
+          });
+          setAllProducts(
+            Array.isArray(prodData) ? prodData : prodData.results || [],
+          );
+        } else {
+          console.error('Failed to fetch products for count mapping');
+        }
       } catch (error) {
         console.error('Error fetching categories data:', error);
       } finally {

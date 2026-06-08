@@ -28,7 +28,7 @@ export default function StockPriceTab({ formData, handleInputChange }) {
   }, [formData.is_generic, handleInputChange]);
 
   // Use 'is_featured_home' to sync with the backend property provided in the product detail response
-  const flags = ['requires_prescription', 'is_active'];
+  const flags = ['requires_prescription', 'is_active', 'show_on_home'];
 
   return (
     <div className="space-y-10 animate-in slide-in-from-left-2 text-black">

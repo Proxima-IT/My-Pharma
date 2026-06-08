@@ -92,6 +92,12 @@ const Header = () => {
     return new File([u8arr], filename, { type: mime });
   };
 
+  // Sync isLoggedIn status when path changes
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    setIsLoggedIn(!!token);
+  }, [pathname]);
+
   // Click Outside logic for Profile and Search
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -323,14 +329,24 @@ const Header = () => {
               )}
             </Link>
             <div
-              className={iconContainerClass}
+              className={`${iconContainerClass} overflow-hidden`}
               onClick={() =>
                 isLoggedIn
                   ? setIsProfileOpen(!isProfileOpen)
                   : router.push('/login')
               }
             >
-              <FiUser size={18} className="text-gray-700" />
+              {isLoggedIn && profile?.avatar_preview ? (
+                <Image
+                  src={profile.avatar_preview}
+                  alt="Profile"
+                  width={36}
+                  height={36}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <FiUser size={18} className="text-gray-700" />
+              )}
             </div>
           </div>
         </div>
@@ -510,11 +526,11 @@ const Header = () => {
 
       {/* Mobile Profile Sidebar */}
       <div 
-        className={`fixed inset-0 z-[100] lg:hidden transition-all duration-500 ${isLoggedIn && isProfileOpen ? 'visible' : 'invisible'}`}
+        className={`fixed inset-0 z-[100] lg:hidden transition-all duration-500 ${isLoggedIn && isProfileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
       >
         {/* Backdrop */}
         <div 
-          className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-500 ${isLoggedIn && isProfileOpen ? 'opacity-100' : 'opacity-0'}`}
+          className="absolute inset-0 bg-black/30 backdrop-blur-sm"
           onClick={() => setIsProfileOpen(false)}
         />
         

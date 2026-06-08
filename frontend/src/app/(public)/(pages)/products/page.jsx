@@ -149,13 +149,7 @@ const Products = () => {
     return rangeWithDots;
   };
 
-  if (loading) {
-    return (
-      <div className="w-full h-[60vh] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
+
 
   return (
     <div className="flex flex-col lg:flex-row gap-8 items-start w-full">
@@ -412,61 +406,69 @@ const Products = () => {
           </h1>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-          {products.map(product => (
-            <PopularProductCard key={product.id} product={product} />
-          ))}
-        </div>
-
-        {products.length === 0 && (
-          <div className="w-full py-20 text-center bg-white rounded-[40px] border border-gray-100">
-            <p className="text-gray-400 font-medium text-lg">
-              No products found matching your criteria.
-            </p>
-            <button
-              onClick={clearAllFilters}
-              className="text-(--color-primary-500) font-bold mt-2 inline-block hover:underline cursor-pointer"
-            >
-              Reset all filters
-            </button>
+        {loading ? (
+          <div className="w-full h-[40vh] flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-(--color-primary-500) border-t-transparent rounded-full animate-spin" />
           </div>
-        )}
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              {products.map(product => (
+                <PopularProductCard key={product.id} product={product} />
+              ))}
+            </div>
 
-        {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 mt-12 pb-10">
-            <button
-              disabled={page === 1}
-              onClick={() => handlePageChange(page - 1)}
-              className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <FiChevronDown className="rotate-90" size={18} />
-            </button>
+            {products.length === 0 && (
+              <div className="w-full py-20 text-center bg-white rounded-[40px] border border-gray-100">
+                <p className="text-gray-400 font-medium text-lg">
+                  No products found matching your criteria.
+                </p>
+                <button
+                  onClick={clearAllFilters}
+                  className="text-(--color-primary-500) font-bold mt-2 inline-block hover:underline cursor-pointer"
+                >
+                  Reset all filters
+                </button>
+              </div>
+            )}
 
-            {getPaginationRange().map((p, i) => (
-              <button
-                key={i}
-                disabled={p === '...'}
-                onClick={() => p !== '...' && handlePageChange(p)}
-                className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
-                  page === p
-                    ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
-                    : p === '...'
-                      ? 'bg-transparent text-gray-400 cursor-default'
-                      : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-12 pb-10">
+                <button
+                  disabled={page === 1}
+                  onClick={() => handlePageChange(page - 1)}
+                  className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <FiChevronDown className="rotate-90" size={18} />
+                </button>
 
-            <button
-              disabled={page === totalPages}
-              onClick={() => handlePageChange(page + 1)}
-              className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            >
-              <FiChevronDown className="-rotate-90" size={18} />
-            </button>
-          </div>
+                {getPaginationRange().map((p, i) => (
+                  <button
+                    key={i}
+                    disabled={p === '...'}
+                    onClick={() => p !== '...' && handlePageChange(p)}
+                    className={`w-10 h-10 rounded-full text-sm font-bold transition-all ${
+                      page === p
+                        ? 'bg-(--color-primary-500) text-white shadow-lg shadow-(--color-primary-500)/20'
+                        : p === '...'
+                          ? 'bg-transparent text-gray-400 cursor-default'
+                          : 'bg-white border border-gray-100 text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+
+                <button
+                  disabled={page === totalPages}
+                  onClick={() => handlePageChange(page + 1)}
+                  className="w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                >
+                  <FiChevronDown className="-rotate-90" size={18} />
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
