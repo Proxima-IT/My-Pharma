@@ -52,6 +52,10 @@ def _send_mimsms_sms(phone: str, message: str) -> None:
         "Message": message,
     }
 
+    payload_for_log = payload.copy()
+    payload_for_log["Apikey"] = "********"
+    logger.debug("MiMSMS Request Payload: %s", json.dumps(payload_for_log))
+
     req = urllib_request.Request(
         endpoint,
         data=json.dumps(payload).encode("utf-8"),
@@ -59,8 +63,14 @@ def _send_mimsms_sms(phone: str, message: str) -> None:
         method="POST",
     )
     timeout = int(getattr(settings, "MIMSMS_TIMEOUT_SECONDS", 15))
-    with urllib_request.urlopen(req, timeout=timeout) as resp:
-        body = resp.read().decode("utf-8")
+    try:
+        with urllib_request.urlopen(req, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8")
+            logger.debug("MiMSMS Response: %s", body)
+    except HTTPError as e:
+        body = e.read().decode("utf-8")
+        logger.error("MiMSMS HTTP Error %s: %s", e.code, body)
+        raise ValueError(f"MiMSMS HTTP {e.code}: {body}")
 
     parsed = {}
     if body:
