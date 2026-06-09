@@ -103,10 +103,10 @@ function NewProductContent() {
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
-    getBrands(token);
-    getCategories(token);
-    fetchIngredients({ page_size: 200 });
-    fetchUnits({ page_size: 200 });
+    getBrands(token, { page_size: 5000 });
+    getCategories(token, { page_size: 5000 });
+    fetchIngredients({ page_size: 5000 });
+    fetchUnits({ page_size: 5000 });
   }, [getBrands, getCategories, fetchIngredients, fetchUnits]);
 
   // --- Handlers ---

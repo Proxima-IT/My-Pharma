@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useMemo, useEffect } from 'react';
 import RichTextEditor from '../RichTextEditor';
+import SearchableSelect from '@/app/(shared)/components/SearchableSelect';
 
 // Tailwind style constants for industrial "Sharp" design
 const inputClass =
@@ -126,39 +127,33 @@ export default function BasicInfoTab({
         {/* Ingredient Selection */}
         <div>
           <label className={labelClass}>Ingredient</label>
-          <select
+          <SearchableSelect
             name="ingredient"
-            className={inputClass}
             value={formData.ingredient}
             onChange={handleInputChange}
+            options={ingredients?.results?.map(ing => ({
+              value: ing.id,
+              label: ing.name
+            })) || []}
+            placeholder="SELECT INGREDIENT"
             required
-          >
-            <option value="">Select Ingredient</option>
-            {ingredients?.results?.map(ing => (
-              <option key={ing.id} value={ing.id}>
-                {ing.name.toUpperCase()}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         {/* Brand Selection */}
         <div>
           <label className={labelClass}>Brand</label>
-          <select
+          <SearchableSelect
             name="brand"
-            className={inputClass}
             value={formData.brand}
             onChange={handleInputChange}
+            options={brands?.results?.map(b => ({
+              value: b.id,
+              label: b.name
+            })) || []}
+            placeholder="SELECT BRAND"
             required
-          >
-            <option value="">Select Brand</option>
-            {brands?.results?.map(b => (
-              <option key={b.id} value={b.id}>
-                {b.name.toUpperCase()}
-              </option>
-            ))}
-          </select>
+          />
         </div>
 
         {/* Main Category Selection */}
