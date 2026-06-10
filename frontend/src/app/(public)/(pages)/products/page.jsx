@@ -38,7 +38,7 @@ const Products = () => {
   const [isAvailable, setIsAvailable] = useState('');
 
   // 3. Data Hook
-  const { loading, products, page, setPage, totalCount } = useProductData({
+  const { isLoading: loading, products, page, setPage, totalCount } = useProductData({
     category: categoryFilter,
     search: searchQuery,
     brand_id:
@@ -57,7 +57,7 @@ const Products = () => {
       try {
         // Fetch brands
         const brandsResponse = await fetch(
-          `${API_BASE_URL}/brands/?is_active=true`,
+          `${API_BASE_URL}/brands/?is_active=true&page_size=1000`,
         );
         const brandsData = await brandsResponse.json();
         const brandList = brandsData.results || brandsData;
@@ -71,7 +71,7 @@ const Products = () => {
         }
 
         // Fetch ingredients
-        const ingredientsResponse = await fetch(`${API_BASE_URL}/ingredients/`);
+        const ingredientsResponse = await fetch(`${API_BASE_URL}/ingredients/?page_size=1000`);
         const ingredientsData = await ingredientsResponse.json();
         const ingredientList = ingredientsData.results || ingredientsData;
         setIngredients(ingredientList);
@@ -85,9 +85,7 @@ const Products = () => {
   // 6. Handlers
   const toggleBrand = brandId => {
     setSelectedBrands(prev =>
-      prev.includes(brandId)
-        ? prev.filter(b => b !== brandId)
-        : [...prev, brandId],
+      prev.includes(brandId) ? [] : [brandId],
     );
     if (brandIdFromUrl) router.push('/products');
   };
@@ -95,9 +93,7 @@ const Products = () => {
   // FIXED: Logic updated to handle Ingredient IDs
   const toggleIngredient = ingredientId => {
     setSelectedIngredients(prev =>
-      prev.includes(ingredientId)
-        ? prev.filter(i => i !== ingredientId)
-        : [...prev, ingredientId],
+      prev.includes(ingredientId) ? [] : [ingredientId],
     );
   };
 
@@ -173,8 +169,23 @@ const Products = () => {
         </button>
 
         <div
-          className={`${isMobileFilterOpen ? 'flex' : 'hidden'} lg:flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300`}
+          className={`${
+            isMobileFilterOpen
+              ? 'fixed inset-0 z-50 bg-white overflow-y-auto p-6 flex'
+              : 'hidden'
+          } lg:relative lg:inset-auto lg:z-0 lg:bg-transparent lg:overflow-visible lg:p-0 lg:flex flex-col gap-6 animate-in fade-in slide-in-from-top-2 duration-300`}
         >
+          {/* Mobile Drawer Header */}
+          <div className="flex lg:hidden justify-between items-center pb-4 border-b border-gray-100">
+            <h2 className="text-xl font-bold text-gray-900">Filters & Categories</h2>
+            <button
+              onClick={() => setIsMobileFilterOpen(false)}
+              className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-500 hover:text-gray-900 transition-colors font-bold text-lg"
+            >
+              ✕
+            </button>
+          </div>
+
           <div className="flex justify-between items-center px-2">
             <h2 className="text-xl font-bold text-gray-900 tracking-tight">
               Product Filter
@@ -208,8 +219,14 @@ const Products = () => {
                 <input
                   type="number"
                   placeholder="Min"
+                  min="0"
                   value={minPrice}
-                  onChange={e => setMinPrice(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === '' || parseFloat(val) >= 0) {
+                      setMinPrice(val);
+                    }
+                  }}
                   className="w-full bg-transparent text-sm font-bold outline-none"
                 />
               </div>
@@ -219,8 +236,14 @@ const Products = () => {
                 <input
                   type="number"
                   placeholder="Max"
+                  min="0"
                   value={maxPrice}
-                  onChange={e => setMaxPrice(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val === '' || parseFloat(val) >= 0) {
+                      setMaxPrice(val);
+                    }
+                  }}
                   className="w-full bg-transparent text-sm font-bold outline-none"
                 />
               </div>
@@ -382,6 +405,14 @@ const Products = () => {
           </div>
 
           <Sidebar />
+
+          {/* Mobile Apply Button */}
+          <button
+            onClick={() => setIsMobileFilterOpen(false)}
+            className="lg:hidden w-full py-4 bg-[#233b8c] text-white font-bold rounded-full shadow-lg hover:bg-[#1a2e70] transition-all active:scale-95 text-center mt-4 cursor-pointer"
+          >
+            Apply & View {totalCount} Items
+          </button>
         </div>
       </aside>
 
