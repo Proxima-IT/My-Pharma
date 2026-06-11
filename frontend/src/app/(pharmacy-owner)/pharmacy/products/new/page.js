@@ -149,11 +149,28 @@ export default function AddProductPage() {
                       required
                     >
                       <option value="">SELECT_CATEGORY</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name.toUpperCase()}
-                        </option>
-                      ))}
+                      {(() => {
+                        const getCategoryPathName = (catId, categoriesList) => {
+                          const cat = categoriesList.find(c => c.id === Number(catId));
+                          if (!cat) return '';
+                          if (cat.parent) {
+                            const parentName = getCategoryPathName(cat.parent, categoriesList);
+                            return parentName ? `${parentName} > ${cat.name}` : cat.name;
+                          }
+                          return cat.name;
+                        };
+                        return categories
+                          .map(cat => ({
+                            id: cat.id,
+                            pathName: getCategoryPathName(cat.id, categories).toUpperCase()
+                          }))
+                          .sort((a, b) => a.pathName.localeCompare(b.pathName))
+                          .map(cat => (
+                            <option key={cat.id} value={cat.id}>
+                              {cat.pathName}
+                            </option>
+                          ));
+                      })()}
                     </select>
                   </div>
                 </div>

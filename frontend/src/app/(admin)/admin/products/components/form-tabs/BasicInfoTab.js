@@ -25,6 +25,7 @@ export default function BasicInfoTab({
   // ── Cascading Category Logic ────────────────────────────────────────
   const [selectedParentId, setSelectedParentId] = useState('');
   const [selectedChildId, setSelectedChildId] = useState('');
+  const [selectedSubSubId, setSelectedSubSubId] = useState('');
 
   // Main categories (where parent is null)
   const mainCategories = useMemo(() => {
@@ -40,7 +41,15 @@ export default function BasicInfoTab({
     );
   }, [categories, selectedParentId]);
 
-  // Handle Edit Mode: Initialize parent/child based on the assigned category ID
+  // Sub-sub-categories based on the selected sub-category
+  const subSubCategories = useMemo(() => {
+    if (!categories?.results || !selectedChildId) return [];
+    return categories.results.filter(
+      c => String(c.parent) === String(selectedChildId),
+    );
+  }, [categories, selectedChildId]);
+
+  // Handle Edit Mode: Initialize parent/child/sub-sub based on the assigned category ID
   useEffect(() => {
     if (formData.category && categories?.results && !selectedParentId) {
       const currentCat = categories.results.find(
@@ -48,13 +57,31 @@ export default function BasicInfoTab({
       );
       if (currentCat) {
         if (currentCat.parent) {
-          // Assigned category is a child
-          setSelectedParentId(String(currentCat.parent));
-          setSelectedChildId(String(currentCat.id));
+          // It has a parent. Let's find the parent category.
+          const parentCat = categories.results.find(
+            c => c.id === currentCat.parent,
+          );
+          if (parentCat && parentCat.parent) {
+            // Parent also has a parent, so:
+            // currentCat is Level 3 (Sub-Sub-Category)
+            // parentCat is Level 2 (Sub-Category)
+            // parentCat.parent is Level 1 (Main Category)
+            setSelectedParentId(String(parentCat.parent));
+            setSelectedChildId(String(parentCat.id));
+            setSelectedSubSubId(String(currentCat.id));
+          } else {
+            // Parent has no parent, so:
+            // currentCat is Level 2 (Sub-Category)
+            // parentCat is Level 1 (Main Category)
+            setSelectedParentId(String(currentCat.parent));
+            setSelectedChildId(String(currentCat.id));
+            setSelectedSubSubId('');
+          }
         } else {
           // Assigned category is a main category
           setSelectedParentId(String(currentCat.id));
           setSelectedChildId('');
+          setSelectedSubSubId('');
         }
       }
     }
@@ -64,6 +91,7 @@ export default function BasicInfoTab({
     const val = e.target.value;
     setSelectedParentId(val);
     setSelectedChildId(''); // Reset child on parent change
+    setSelectedSubSubId(''); // Reset sub-sub on parent change
 
     // Immediately update parent state: send Parent ID to database
     handleInputChange({ target: { name: 'category', value: val } });
@@ -72,9 +100,19 @@ export default function BasicInfoTab({
   const handleChildChange = e => {
     const val = e.target.value;
     setSelectedChildId(val);
+    setSelectedSubSubId(''); // Reset sub-sub on child change
 
     // If a child is selected, send its ID; if cleared, revert to Parent ID
     const finalId = val || selectedParentId;
+    handleInputChange({ target: { name: 'category', value: finalId } });
+  };
+
+  const handleSubSubChange = e => {
+    const val = e.target.value;
+    setSelectedSubSubId(val);
+
+    // If a sub-sub is selected, send its ID; if cleared, revert to Child ID
+    const finalId = val || selectedChildId || selectedParentId;
     handleInputChange({ target: { name: 'category', value: finalId } });
   };
 
@@ -185,6 +223,25 @@ export default function BasicInfoTab({
             >
               <option value="">No Sub-Category (Keep as Main)</option>
               {subCategories.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Sub-Sub-Category Selection (Conditional) */}
+        {selectedChildId && subSubCategories.length > 0 && (
+          <div>
+            <label className={labelClass}>Sub-Sub-Category (Optional)</label>
+            <select
+              value={selectedSubSubId}
+              onChange={handleSubSubChange}
+              className={inputClass}
+            >
+              <option value="">No Sub-Sub-Category (Keep as Sub)</option>
+              {subSubCategories.map(c => (
                 <option key={c.id} value={c.id}>
                   {c.name.toUpperCase()}
                 </option>

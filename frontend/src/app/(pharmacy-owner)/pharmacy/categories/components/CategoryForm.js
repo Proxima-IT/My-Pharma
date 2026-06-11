@@ -58,10 +58,10 @@ const CategoryForm = ({ initialData, categoryTree, onSubmit, isLoading }) => {
     if (!nodes || !Array.isArray(nodes)) return null;
     return nodes.map(node => (
       <React.Fragment key={node.id}>
-        <option value={node.id}>
+        <option value={node.id} disabled={depth >= 2}>
           {'\u00A0'.repeat(depth * 4)}
           {depth > 0 ? '↳ ' : ''}
-          {node.name.toUpperCase()}
+          {node.name.toUpperCase()} {depth >= 2 ? '(MAX DEPTH)' : ''}
         </option>
         {node.children && renderOptions(node.children, depth + 1)}
       </React.Fragment>

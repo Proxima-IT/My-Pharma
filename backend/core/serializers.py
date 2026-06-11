@@ -83,6 +83,7 @@ class SafeEmailField(serializers.EmailField):
 class CategorySerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
+    level = serializers.SerializerMethodField()
     sidebar_category_title = SafeCharField(
         source="sidebar_category.title",
         read_only=True,
@@ -94,6 +95,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "parent",
+            "level",
             "sidebar_category",
             "sidebar_category_title",
             "name",
@@ -111,7 +113,7 @@ class CategorySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         )
-        read_only_fields = ("id", "slug", "image_url", "product_count", "created_at", "updated_at")
+        read_only_fields = ("id", "slug", "image_url", "product_count", "level", "created_at", "updated_at")
 
     def get_image_url(self, obj):
         if obj.image and self.context.get("request"):
@@ -122,6 +124,14 @@ class CategorySerializer(serializers.ModelSerializer):
         if hasattr(obj, "product_count") and obj.product_count is not None:
             return obj.product_count
         return obj.products.filter(is_active=True).count()
+
+    def get_level(self, obj):
+        level = 1
+        curr = obj.parent
+        while curr:
+            level += 1
+            curr = curr.parent
+        return level
 
     def validate(self, attrs):
         instance = getattr(self, "instance", None)
@@ -135,6 +145,29 @@ class CategorySerializer(serializers.ModelSerializer):
         )
         if sidebar_category and not show_in_sidebar:
             attrs["show_in_sidebar"] = True
+
+        parent = attrs.get("parent")
+        if parent:
+            # Check depth of the proposed parent
+            parent_level = 1
+            curr = parent.parent
+            while curr:
+                parent_level += 1
+                curr = curr.parent
+            
+            # Check depth of descendants of the current category (if editing)
+            descendants_depth = 0
+            if instance:
+                def get_max_depth(cat):
+                    if not cat.children.exists():
+                        return 0
+                    return 1 + max(get_max_depth(child) for child in cat.children.all())
+                descendants_depth = get_max_depth(instance)
+            
+            if parent_level + 1 + descendants_depth > 3:
+                raise serializers.ValidationError(
+                    {"parent": "Category hierarchy is limited to 3 levels: Category > Sub-category > Sub-subcategory."}
+                )
         return attrs
 
 
@@ -143,6 +176,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     children = serializers.SerializerMethodField()
     image_url = serializers.SerializerMethodField()
     product_count = serializers.SerializerMethodField()
+    level = serializers.SerializerMethodField()
     is_home_categoery = serializers.BooleanField(required=False)
     forth_section = serializers.BooleanField(required=False)
 
@@ -151,6 +185,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "parent",
+            "level",
             "sidebar_category",
             "name",
             "slug",
@@ -178,6 +213,14 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         if hasattr(obj, "product_count") and obj.product_count is not None:
             return obj.product_count
         return obj.products.filter(is_active=True).count()
+
+    def get_level(self, obj):
+        level = 1
+        curr = obj.parent
+        while curr:
+            level += 1
+            curr = curr.parent
+        return level
 
     def get_children(self, obj):
         children = obj.children.filter(is_active=True).order_by("name")

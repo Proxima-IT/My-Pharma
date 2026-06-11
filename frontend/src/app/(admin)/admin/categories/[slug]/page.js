@@ -96,11 +96,13 @@ function CategoryDetailContent({ slug }) {
             </h1>
           </div>
         </div>
-        <Link href={`/admin/categories/new?parent=${currentCategory?.id}`}>
-          <button className="bg-[#3A5A40] text-white px-8 py-4 rounded-none font-bold text-xs tracking-widest flex items-center gap-3 hover:bg-black transition-all cursor-pointer uppercase border-none shadow-none">
-            <FiPlus size={18} /> New Sub-category
-          </button>
-        </Link>
+        {currentCategory && currentCategory.level < 3 && (
+          <Link href={`/admin/categories/new?parent=${currentCategory?.id}`}>
+            <button className="bg-[#3A5A40] text-white px-8 py-4 rounded-none font-bold text-xs tracking-widest flex items-center gap-3 hover:bg-black transition-all cursor-pointer uppercase border-none shadow-none">
+              <FiPlus size={18} /> New Sub-category
+            </button>
+          </Link>
+        )}
       </div>
 
       {/* Meta Info Grid */}
