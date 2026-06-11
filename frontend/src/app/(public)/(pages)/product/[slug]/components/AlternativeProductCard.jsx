@@ -27,7 +27,6 @@ const AlternativeProductCard = ({ currentProduct }) => {
         // Query parameters: Match ingredient, target generics, filter available, sort by price.
         const params = {
           ingredient_id: currentProduct.ingredient,
-          is_generic: true,
           available: true,
           ordering: 'price',
         };
@@ -35,11 +34,13 @@ const AlternativeProductCard = ({ currentProduct }) => {
         const response = await productApi.getProducts(params);
 
         // Filter out current product and ensure suggestions are actually cheaper
-        const cheaperItems = response.results.filter(
-          item =>
-            item.id !== currentProduct.id &&
-            parseFloat(item.price) < parseFloat(currentProduct.price),
-        );
+        const cheaperItems = response.results
+          .filter(
+            item =>
+              item.id !== currentProduct.id &&
+              parseFloat(item.price) < parseFloat(currentProduct.price),
+          )
+          .slice(0, 5);
 
         setSuggestions(cheaperItems);
       } catch (error) {
