@@ -146,6 +146,18 @@ class CategorySerializer(serializers.ModelSerializer):
         if sidebar_category and not show_in_sidebar:
             attrs["show_in_sidebar"] = True
 
+        name = attrs.get("name")
+        if name:
+            from django.utils.text import slugify
+            slug = slugify(name)
+            qs = Category.objects.filter(slug=slug)
+            if instance:
+                qs = qs.exclude(pk=instance.pk)
+            if qs.exists():
+                raise serializers.ValidationError(
+                    {"name": "A category with this name already exists."}
+                )
+
         parent = attrs.get("parent")
         if parent:
             # Check depth of the proposed parent

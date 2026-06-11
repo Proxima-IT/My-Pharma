@@ -86,7 +86,20 @@ export const useCategoryAdmin = () => {
       await categoryAdminApi.createCategory(token, dataToSend);
       return true;
     } catch (err) {
-      setError(err.detail || 'গ্রুপ তৈরি করা সম্ভব হয়নি।');
+      let msg = 'গ্রুপ তৈরি করা সম্ভব হয়নি।';
+      if (err && typeof err === 'object') {
+        if (err.detail) {
+          msg = err.detail;
+        } else {
+          const firstKey = Object.keys(err)[0];
+          if (firstKey && Array.isArray(err[firstKey]) && err[firstKey][0]) {
+            msg = `${firstKey.toUpperCase()}: ${err[firstKey][0]}`;
+          } else if (typeof err.message === 'string') {
+            msg = err.message;
+          }
+        }
+      }
+      setError(msg);
       return false;
     } finally {
       setIsUpdating(false);
@@ -114,7 +127,20 @@ export const useCategoryAdmin = () => {
       await categoryAdminApi.updateCategory(token, slug, dataToSend);
       return true;
     } catch (err) {
-      setError(err.detail || 'তথ্য আপডেট করা সম্ভব হয়নি।');
+      let msg = 'তথ্য আপডেট করা সম্ভব হয়নি।';
+      if (err && typeof err === 'object') {
+        if (err.detail) {
+          msg = err.detail;
+        } else {
+          const firstKey = Object.keys(err)[0];
+          if (firstKey && Array.isArray(err[firstKey]) && err[firstKey][0]) {
+            msg = `${firstKey.toUpperCase()}: ${err[firstKey][0]}`;
+          } else if (typeof err.message === 'string') {
+            msg = err.message;
+          }
+        }
+      }
+      setError(msg);
       return false;
     } finally {
       setIsUpdating(false);
