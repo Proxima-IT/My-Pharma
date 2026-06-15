@@ -37,23 +37,23 @@ def _send_mimsms_sms(phone: str, message: str) -> None:
         return
 
     base_url = getattr(settings, "MIMSMS_BASE_URL", "https://api.mimsms.com").strip().rstrip("/")
-    send_path = getattr(settings, "MIMSMS_SEND_SMS_PATH", "/api/SmsSending/SMS").strip()
+    send_path = getattr(settings, "MIMSMS_SEND_SMS_PATH", "/api/V2/SMS").strip()
     if not send_path.startswith("/"):
         send_path = "/" + send_path
     endpoint = f"{base_url}{send_path}"
 
     payload = {
-        "UserName": username,
-        "Apikey": apikey,
-        "MobileNumber": phone,
-        "CampaignId": getattr(settings, "MIMSMS_CAMPAIGN_ID", "null"),
-        "SenderName": sender_name,
-        "TransactionType": getattr(settings, "MIMSMS_TRANSACTION_TYPE", "T"),
-        "Message": message,
+        "userName": username,
+        "apiKey": apikey,
+        "mobileNumber": phone,
+        "campaignName": getattr(settings, "MIMSMS_CAMPAIGN_ID", "null"),
+        "senderName": sender_name,
+        "transactionType": getattr(settings, "MIMSMS_TRANSACTION_TYPE", "T"),
+        "message": message,
     }
 
     payload_for_log = payload.copy()
-    payload_for_log["Apikey"] = "********"
+    payload_for_log["apiKey"] = "********"
     logger.debug("MiMSMS Request Payload: %s", json.dumps(payload_for_log))
 
     req = urllib_request.Request(

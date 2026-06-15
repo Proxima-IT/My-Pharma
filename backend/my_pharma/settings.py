@@ -378,7 +378,7 @@ AUTH_REGISTRATION_TOKEN_EXPIRY_MINUTES = int(
 
 MIMSMS_ENABLED = os.environ.get("MIMSMS_ENABLED", "true").lower() in ("true", "1", "yes")
 MIMSMS_BASE_URL = os.environ.get("MIMSMS_BASE_URL", "https://api.mimsms.com").strip().strip("'\"").rstrip("/")
-MIMSMS_SEND_SMS_PATH = os.environ.get("MIMSMS_SEND_SMS_PATH", "/api/SmsSending/SMS").strip().strip("'\"")
+MIMSMS_SEND_SMS_PATH = os.environ.get("MIMSMS_SEND_SMS_PATH", "/api/V2/SMS").strip().strip("'\"")
 MIMSMS_USERNAME = os.environ.get("MIMSMS_USERNAME", "").strip().strip("'\"")
 MIMSMS_APIKEY = os.environ.get("MIMSMS_APIKEY", "").strip().strip("'\"")
 MIMSMS_SENDER_NAME = os.environ.get("MIMSMS_SENDER_NAME", "").strip().strip("'\"")
