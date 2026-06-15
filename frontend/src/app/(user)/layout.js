@@ -33,12 +33,12 @@ export default function UserDashboardLayout({ children }) {
           className={`${isHubPage ? 'hidden' : 'block'} lg:block flex-1 w-full space-y-5`}
         >
           {!isHubPage && (
-            <nav className="bg-white border border-gray-100/50 rounded-full px-6 py-2.5 w-fit">
-              <ol className="flex items-center gap-2 text-xs md:text-sm whitespace-nowrap">
+            <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5">
+              <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap uppercase tracking-wider">
                 <li className="flex items-center gap-2">
                   <Link
                     href="/"
-                    className="text-gray-400 hover:text-primary-500 transition-colors font-medium"
+                    className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
                   >
                     Home
                   </Link>
@@ -47,14 +47,14 @@ export default function UserDashboardLayout({ children }) {
                 {breadcrumbs.map(crumb => (
                   <li key={crumb.href} className="flex items-center gap-2">
                     {crumb.isLast ? (
-                      <span className="text-gray-900 font-bold">
+                      <span className="text-gray-900 font-black truncate max-w-[150px] lg:max-w-none">
                         {crumb.name}
                       </span>
                     ) : (
                       <>
                         <Link
                           href={crumb.href}
-                          className="text-gray-400 hover:text-primary-500 transition-colors font-medium"
+                          className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
                         >
                           {crumb.name}
                         </Link>

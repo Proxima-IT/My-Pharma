@@ -25,6 +25,7 @@ const Products = () => {
   const categoryFilter = searchParams.get('category') || '';
   const searchQuery = searchParams.get('search') || '';
   const brandIdFromUrl = searchParams.get('brand') || '';
+  const ingredientIdFromUrl = searchParams.get('ingredient_id') || '';
 
   // 2. State Declarations
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
@@ -43,8 +44,9 @@ const Products = () => {
     search: searchQuery,
     brand_id:
       brandIdFromUrl || (selectedBrands.length > 0 ? selectedBrands[0] : ''),
-    // FIXED: Passing the ID (integer) instead of the Name (string)
-    ingredient_id: selectedIngredients.length > 0 ? selectedIngredients[0] : '',
+    // FIXED: Passing the ID (integer) from URL or State instead of the Name (string)
+    ingredient_id:
+      ingredientIdFromUrl || (selectedIngredients.length > 0 ? selectedIngredients[0] : ''),
     discounted: hasDiscount,
     available: isAvailable,
     min_price: minPrice,
@@ -75,12 +77,19 @@ const Products = () => {
         const ingredientsData = await ingredientsResponse.json();
         const ingredientList = ingredientsData.results || ingredientsData;
         setIngredients(ingredientList);
+
+        if (ingredientIdFromUrl) {
+          const ingObj = ingredientList.find(
+            i => i.id.toString() === ingredientIdFromUrl,
+          );
+          if (ingObj) setSelectedIngredients([ingObj.id]);
+        }
       } catch (err) {
         console.error('Failed to fetch data:', err);
       }
     };
     fetchData();
-  }, [brandIdFromUrl]);
+  }, [brandIdFromUrl, ingredientIdFromUrl]);
 
   // 6. Handlers
   const toggleBrand = brandId => {
@@ -95,6 +104,7 @@ const Products = () => {
     setSelectedIngredients(prev =>
       prev.includes(ingredientId) ? [] : [ingredientId],
     );
+    if (ingredientIdFromUrl) router.push('/products');
   };
 
   const clearAllFilters = () => {

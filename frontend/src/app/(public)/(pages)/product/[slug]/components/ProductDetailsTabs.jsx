@@ -1,6 +1,8 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
+import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 import {
   FiStar,
   FiEdit3,
@@ -27,7 +29,27 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const [activeTab, setActiveTab] = useState('Description');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [categorySlug, setCategorySlug] = useState('');
   const PAGE_SIZE = 10;
+
+  // Fetch categories mapping to resolve the category slug for the technical specs tab Link
+  useEffect(() => {
+    const fetchCategorySlug = async () => {
+      if (!product?.category) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/categories/`);
+        const data = await parseJsonResponse(res);
+        const list = Array.isArray(data) ? data : data.results || [];
+        const match = list.find(c => c.id === product.category);
+        if (match) {
+          setCategorySlug(match.slug);
+        }
+      } catch (err) {
+        console.error('Failed to map category slug in tabs:', err);
+      }
+    };
+    fetchCategorySlug();
+  }, [product?.category]);
 
   const { reviews, loading, pagination, fetchReviews } = useReviews(
     product?.id,
@@ -73,9 +95,21 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
   const specs = useMemo(() => {
     if (!product) return [];
     const baseSpecs = [
-      { label: 'Generic Name', value: product.ingredient_name || 'N/A' },
-      { label: 'Brand', value: product.brand_name || 'N/A' },
-      { label: 'Category', value: product.category_name || 'N/A' },
+      {
+        label: 'Generic Name',
+        value: product.ingredient_name || 'N/A',
+        href: product.ingredient ? `/products?ingredient_id=${product.ingredient}` : null
+      },
+      {
+        label: 'Brand',
+        value: product.brand_name || 'N/A',
+        href: product.brand ? `/products?brand=${product.brand}` : null
+      },
+      {
+        label: 'Category',
+        value: product.category_name || 'N/A',
+        href: categorySlug ? `/category/${categorySlug}` : null
+      },
       { label: 'Therapeutic Class', value: product.therapeutic_class || 'N/A' },
       { label: 'Storage', value: product.storage_conditions || 'N/A' },
       // FIXED: Switched from unit_label to unit_name as per API Audit
@@ -85,7 +119,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       ([key, val]) => ({ label: key, value: val }),
     );
     return [...baseSpecs, ...customSpecs];
-  }, [product]);
+  }, [product, categorySlug]);
 
   const totalCount = pagination?.count || 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
@@ -225,7 +259,16 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
                     {spec.label}
                   </span>
                   <span className="text-[14px] font-bold text-gray-900 text-left sm:text-right uppercase">
-                    {spec.value}
+                    {spec.href ? (
+                      <Link
+                        href={spec.href}
+                        className="text-[#1D3583] hover:underline transition-all"
+                      >
+                        {spec.value}
+                      </Link>
+                    ) : (
+                      spec.value
+                    )}
                   </span>
                 </div>
               ))}

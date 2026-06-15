@@ -3,7 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiChevronRight, FiChevronDown } from 'react-icons/fi';
+import { FiChevronDown } from 'react-icons/fi';
 import PopularProductCard from '../../home/components/PopularProductCard';
 import {
   API_BASE_URL,
@@ -157,29 +157,46 @@ const DynamicCategoryPage = ({ params }) => {
   return (
     <div className="w-full space-y-12 pb-20 animate-in fade-in duration-700 bg-white">
       {/* Dynamic Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-gray-400 mt-4">
-        <Link href="/" className="hover:text-black transition-colors">
-          Home
-        </Link>
-        <FiChevronRight />
-        <Link href="/categories" className="hover:text-black transition-colors">
-          Shop
-        </Link>
-        {breadcrumbs.map((crumb, idx) => (
-          <React.Fragment key={crumb.path}>
-            <FiChevronRight />
+      <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5 mt-4">
+        <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap uppercase tracking-wider">
+          <li className="flex items-center gap-2">
             <Link
-              href={crumb.path}
-              className={
-                idx === breadcrumbs.length - 1
-                  ? 'text-black'
-                  : 'hover:text-black transition-colors'
-              }
+              href="/"
+              className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
             >
-              {crumb.name}
+              Home
             </Link>
-          </React.Fragment>
-        ))}
+            <span className="text-gray-300 font-light">{'>'}</span>
+          </li>
+          <li className="flex items-center gap-2">
+            <Link
+              href="/categories"
+              className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
+            >
+              Shop
+            </Link>
+            <span className="text-gray-300 font-light">{'>'}</span>
+          </li>
+          {breadcrumbs.map((crumb, idx) => (
+            <li key={crumb.path} className="flex items-center gap-2">
+              {idx === breadcrumbs.length - 1 ? (
+                <span className="text-gray-900 font-black truncate max-w-[150px] lg:max-w-none">
+                  {crumb.name}
+                </span>
+              ) : (
+                <>
+                  <Link
+                    href={crumb.path}
+                    className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
+                  >
+                    {crumb.name}
+                  </Link>
+                  <span className="text-gray-300 font-light">{'>'}</span>
+                </>
+              )}
+            </li>
+          ))}
+        </ol>
       </nav>
 
       {/* Sub-Categories Circle Grid */}
