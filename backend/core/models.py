@@ -609,6 +609,14 @@ class Order(models.Model):
                     import logging
                     logging.getLogger(__name__).warning("Failed to queue order SMS: %s", e)
 
+            if self.status == self.Status.CONFIRMED:
+                try:
+                    from authentication.tasks import send_order_invoice_email
+                    send_order_invoice_email.delay(self.id)
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning("Failed to queue invoice email: %s", e)
+
     def __str__(self):
         return f"Order #{self.id} ({self.user_id})"
 

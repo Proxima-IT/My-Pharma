@@ -1608,6 +1608,32 @@ class OrderViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED,
         )
 
+    @extend_schema(tags=["Orders"], summary="Download order invoice PDF")
+    @action(detail=True, methods=["get"], url_path="invoice")
+    def invoice(self, request, pk=None):
+        """
+        GET /api/orders/<id>/invoice/ – Download the PDF invoice for the order.
+        Only accessible by the order owner or staff/admin.
+        """
+        order = self.get_object()
+        
+        # Security check: order owner, super admin, or pharmacy admin only
+        role = getattr(request.user, "role", None)
+        if order.user_id != request.user.id and role not in (UserRole.SUPER_ADMIN, UserRole.PHARMACY_ADMIN):
+            return Response({"detail": "Not authorized to view this invoice."}, status=status.HTTP_403_FORBIDDEN)
+            
+        try:
+            from core.invoice_generator import generate_invoice_pdf
+            from django.http import HttpResponse
+            
+            pdf_bytes = generate_invoice_pdf(order)
+            
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="invoice_{order.id}.pdf"'
+            return response
+        except Exception as e:
+            return Response({"detail": f"Failed to generate invoice PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 # ---- Delivery duration (admin CRUD) ----
 @extend_schema_view(

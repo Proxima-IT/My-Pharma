@@ -590,6 +590,71 @@ class OrderApiTests(APITestCase):
         # Regular user PATCH on /api/orders/<id>/ returns 403 Forbidden because of ViewSet permission checks
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_generate_invoice_pdf_success(self):
+        from .models import OrderItem, Product, Category
+        from core.invoice_generator import generate_invoice_pdf
+        
+        # Create a product and add as an order item
+        category = Category.objects.create(name="Test Category", slug="test-category")
+        product = Product.objects.create(
+            name="Test Product",
+            slug="test-product",
+            category=category,
+            price=50.00,
+            quantity_in_stock=100
+        )
+        OrderItem.objects.create(
+            order=self.order,
+            product=product,
+            quantity=2,
+            price_at_order=50.00
+        )
+        
+        pdf_bytes = generate_invoice_pdf(self.order)
+        self.assertIsInstance(pdf_bytes, bytes)
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+
+    def test_invoice_download_by_owner(self):
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.get(f"/api/orders/{self.order.id}/invoice/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers["Content-Type"], "application/pdf")
+        self.assertTrue(response.content.startswith(b"%PDF"))
+
+    def test_invoice_download_by_admin(self):
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get(f"/api/orders/{self.order.id}/invoice/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.headers["Content-Type"], "application/pdf")
+
+    def test_invoice_download_by_other_customer(self):
+        from authentication.models import User
+        from authentication.constants import UserRole, UserStatus
+        other_customer = User.objects.create_user(
+            email="other_customer@example.com",
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+        self.client.force_authenticate(user=other_customer)
+        response = self.client.get(f"/api/orders/{self.order.id}/invoice/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_invoice_download_unauthorized(self):
+        self.client.logout()
+        response = self.client.get(f"/api/orders/{self.order.id}/invoice/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_order_confirmed_triggers_email(self):
+        from unittest.mock import patch
+        from .models import Order
+        
+        with patch("authentication.tasks.send_order_invoice_email.delay") as mock_task:
+            self.order.status = Order.Status.CONFIRMED
+            self.order.save()
+            mock_task.assert_called_once_with(self.order.id)
+
 
 class PrescriptionOrderApiTests(APITestCase):
     def setUp(self):

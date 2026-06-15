@@ -31,3 +31,4 @@ Pillow>=10.0.0
 Levenshtein>=0.25.0
 sslcommerz-lib>=1.0
 firebase-admin>=6.0.0
+reportlab>=4.1.0

@@ -167,3 +167,53 @@ def send_password_reset_email(self, user_id: int, reset_link: str):
     except Exception as exc:
         logger.warning("Password reset email failed: %s", exc)
         raise self.retry(exc=exc, countdown=60)
+
+
+@shared_task(bind=True, max_retries=3)
+def send_order_invoice_email(self, order_id: int):
+    """Generates PDF invoice for the given order and emails it to the customer."""
+    from core.models import Order
+    from core.invoice_generator import generate_invoice_pdf
+    from django.core.mail import EmailMessage
+
+    order = Order.objects.filter(pk=order_id).first()
+    if not order:
+        logger.warning("Order %s not found; skipping invoice email.", order_id)
+        return
+
+    email = order.user.email
+    if not email or email.endswith("@ph.local"):
+        logger.info("Order %s user has placeholder or no email (%s); skipping invoice email.", order_id, email)
+        return
+
+    try:
+        subject = f"My Pharma – Invoice for Order #{order.id}"
+        message = (
+            f"Dear {getattr(order.user, 'username', 'Valued Customer')},\n\n"
+            f"Thank you for your order! Your order #{order.id} has been confirmed. "
+            f"We have attached the PDF invoice for your purchase.\n\n"
+            f"Order Status: {order.get_status_display()}\n"
+            f"Total Amount: TK {order.total}\n\n"
+            f"If you have any questions, please reply to this email or contact our support team.\n\n"
+            f"Best regards,\n"
+            f"My Pharma Team"
+        )
+        from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@mypharma.com")
+        
+        # Generate the PDF content
+        pdf_content = generate_invoice_pdf(order)
+
+        email_message = EmailMessage(
+            subject=subject,
+            body=message,
+            from_email=from_email,
+            to=[email]
+        )
+        email_message.attach(f"invoice_{order.id}.pdf", pdf_content, "application/pdf")
+        email_message.send(fail_silently=False)
+        
+        logger.info("Invoice email sent successfully for order_id=%s to %s", order_id, email)
+    except Exception as exc:
+        logger.warning("Invoice email failed for order_id=%s: %s", order_id, exc)
+        raise self.retry(exc=exc, countdown=60)
+
