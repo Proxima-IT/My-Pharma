@@ -155,9 +155,9 @@ const DynamicCategoryPage = ({ params }) => {
   }
 
   return (
-    <div className="w-full space-y-12 pb-20 animate-in fade-in duration-700 bg-white">
+    <div className="w-full pb-20 animate-in fade-in duration-700">
       {/* Dynamic Breadcrumbs */}
-      <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5 mt-4">
+      <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5">
         <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap uppercase tracking-wider">
           <li className="flex items-center gap-2">
             <Link
@@ -198,6 +198,9 @@ const DynamicCategoryPage = ({ params }) => {
           ))}
         </ol>
       </nav>
+
+      {/* Main Content White Container */}
+      <div className="bg-white rounded-[32px] border border-gray-100/50 p-6 md:p-10 lg:p-12 shadow-[0_24px_80px_rgba(0,0,0,0.01)] space-y-12">
 
       {/* Sub-Categories Circle Grid */}
       {subCategories.length > 0 && (
@@ -279,6 +282,7 @@ const DynamicCategoryPage = ({ params }) => {
             </button>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

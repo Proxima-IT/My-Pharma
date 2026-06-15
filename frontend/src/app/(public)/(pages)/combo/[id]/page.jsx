@@ -96,27 +96,27 @@ export default function ComboDetailsPage({ params }) {
   return (
     <div className="w-full animate-in fade-in duration-700 pb-20 bg-gray-50/50 min-h-screen">
       <div className="max-w-[1440px] mx-auto px-4 md:px-6 lg:px-10 pt-8">
-        <div className="bg-white rounded-[48px] border border-gray-100 p-6 md:p-12 lg:p-16 shadow-[0_24px_80px_rgba(0,0,0,0.02)]">
-          {/* 1. Breadcrumbs */}
-          <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5">
-            <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap uppercase tracking-wider">
-              <li className="flex items-center gap-2">
-                <Link
-                  href="/"
-                  className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
-                >
-                  Home
-                </Link>
-                <span className="text-gray-300 font-light">{'>'}</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="text-gray-900 font-black truncate max-w-[150px] lg:max-w-none">
-                  {combo.title}
-                </span>
-              </li>
-            </ol>
-          </nav>
+        {/* 1. Breadcrumbs */}
+        <nav className="bg-white border border-gray-100/50 rounded-full px-4 md:px-6 py-2 w-fit mb-6 lg:mb-5">
+          <ol className="flex items-center gap-2 text-[10px] sm:text-xs lg:text-[11px] whitespace-nowrap uppercase tracking-wider">
+            <li className="flex items-center gap-2">
+              <Link
+                href="/"
+                className="text-gray-400 hover:text-(--color-primary-500) transition-colors font-bold"
+              >
+                Home
+              </Link>
+              <span className="text-gray-300 font-light">{'>'}</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="text-gray-900 font-black truncate max-w-[150px] lg:max-w-none">
+                {combo.title}
+              </span>
+            </li>
+          </ol>
+        </nav>
 
+        <div className="bg-white rounded-[48px] border border-gray-100 p-6 md:p-12 lg:p-16 shadow-[0_24px_80px_rgba(0,0,0,0.02)]">
           {/* 2. Main Detail Grid */}
           <div className="flex flex-col lg:flex-row gap-12 xl:gap-20 items-start w-full">
             {/* Left: Image Container */}
