@@ -639,7 +639,7 @@ class OrderApiTests(APITestCase):
         )
         self.client.force_authenticate(user=other_customer)
         response = self.client.get(f"/api/orders/{self.order.id}/invoice/")
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_invoice_download_unauthorized(self):
         self.client.logout()

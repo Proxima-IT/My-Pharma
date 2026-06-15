@@ -172,7 +172,7 @@ def generate_invoice_pdf(order) -> bytes:
     for item in order.items.all():
         if item.product:
             prod_name = item.product.name
-            unit_name = item.product.unit_name if item.product.unit_name else "N/A"
+            unit_name = item.product.unit.name if item.product.unit else "N/A"
         elif item.combo:
             prod_name = item.combo.title
             unit_name = "Combo"
