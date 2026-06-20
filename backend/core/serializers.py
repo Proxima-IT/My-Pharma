@@ -380,8 +380,37 @@ class IngredientSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "slug", "created_at", "updated_at")
 
 
+class SafeQuantityField(serializers.Field):
+    """
+    A field that safely serializes unit quantities as int or float,
+    avoiding ValueError when values like '7.10' are retrieved from DB.
+    """
+    def to_representation(self, value):
+        if value is None:
+            return None
+        try:
+            f_val = float(value)
+            if f_val.is_integer():
+                return int(f_val)
+            return f_val
+        except (ValueError, TypeError):
+            return value
+
+    def to_internal_value(self, data):
+        if data is None:
+            return None
+        try:
+            f_val = float(data)
+            if f_val.is_integer():
+                return int(f_val)
+            return f_val
+        except (ValueError, TypeError):
+            raise serializers.ValidationError("Must be a valid number.")
+
+
 # ---- Unit (medicine packaging) ----
 class UnitSerializer(serializers.ModelSerializer):
+    quantity = SafeQuantityField()
     name = serializers.SerializerMethodField()
 
     class Meta:

@@ -658,7 +658,7 @@ class UnitViewSet(viewsets.ModelViewSet):
     serializer_class = UnitSerializer
     filter_backends = [DjangoFilterBackend, SearchFilter]
     filterset_fields = ["is_active"]
-    search_fields = ["name", "slug"]
+    search_fields = ["unit_type", "content_type", "slug"]
     lookup_field = "slug"
     lookup_url_kwarg = "slug"
 
