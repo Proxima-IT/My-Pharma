@@ -66,6 +66,7 @@ const Checkout = () => {
   const [buyNowLoading, setBuyNowLoading] = useState(buyNow);
   const [buyNowError, setBuyNowError] = useState('');
   const [isPlacingBuyNowOrder, setIsPlacingBuyNowOrder] = useState(false);
+  const [isPlacingStandardOrder, setIsPlacingStandardOrder] = useState(false);
 
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState('ONLINE');
@@ -216,7 +217,7 @@ const Checkout = () => {
   // NOTE: useSearchParams() can return empty during Suspense hydration, so we
   // also read window.location.search directly to avoid a premature /cart redirect.
   useEffect(() => {
-    if (buyNow) return;
+    if (buyNow || isPlacingStandardOrder) return;
     const rawSearch =
       typeof window !== 'undefined' ? window.location.search : '';
     const paymentStatus =
@@ -226,7 +227,7 @@ const Checkout = () => {
     if (!isLoading && items.length === 0 && !orderSuccess) {
       router.replace('/cart');
     }
-  }, [items, isLoading, router, orderSuccess, buyNow, searchParams]);
+  }, [items, isLoading, router, orderSuccess, buyNow, searchParams, isPlacingStandardOrder]);
 
   // Coupon handling for stateless Buy Now flow
   const handleApplyBuyNowCoupon = async code => {
@@ -331,24 +332,31 @@ const Checkout = () => {
     }
 
     // Standard Cart flow
-    const orderPayload = {
-      shipping_address_id: Number(selectedAddressId),
-      delivery_method_id: selectedMethodId,
-      payment_method: paymentMethod,
-      notes: '',
-    };
+    setIsPlacingStandardOrder(true);
+    try {
+      const orderPayload = {
+        shipping_address_id: Number(selectedAddressId),
+        delivery_method_id: selectedMethodId,
+        payment_method: paymentMethod,
+        notes: '',
+      };
 
-    if (appliedCoupon?.code) {
-      orderPayload.coupon_code = appliedCoupon.code;
-    }
-
-    const result = await placeOrder(orderPayload);
-    if (result) {
-      if (paymentMethod !== 'COD' && result.gateway_url) {
-        window.location.href = result.gateway_url;
-        return;
+      if (appliedCoupon?.code) {
+        orderPayload.coupon_code = appliedCoupon.code;
       }
-      setOrderSuccess(result);
+
+      const result = await placeOrder(orderPayload);
+      if (result) {
+        if (paymentMethod !== 'COD' && result.gateway_url) {
+          window.location.href = result.gateway_url;
+          return;
+        }
+        setOrderSuccess(result);
+      }
+    } catch (err) {
+      console.error('Failed to place order:', err);
+    } finally {
+      setIsPlacingStandardOrder(false);
     }
   };
 
