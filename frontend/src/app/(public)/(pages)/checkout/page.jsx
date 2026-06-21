@@ -522,7 +522,26 @@ const Checkout = () => {
       ? [mockBuyNowItem]
       : []
     : items;
-  const displaySummary = buyNow ? calculatedBuyNowSummary : summary;
+  const displaySummary = buyNow
+    ? buyNowSummary
+      ? {
+          ...buyNowSummary,
+          sub_total: parseFloat(buyNowSummary.subtotal || 0),
+          discount_amount: parseFloat(buyNowSummary.discount_amount || 0),
+          delivery_fee: parseFloat(buyNowSummary.delivery_fee || 0),
+          total_amount: parseFloat(buyNowSummary.total_payable || 0),
+          base_delivery_fee:
+            buyNowSummary.base_delivery_fee != null
+              ? parseFloat(buyNowSummary.base_delivery_fee)
+              : null,
+          delivery_option_charge: parseFloat(
+            buyNowSummary.delivery_option_charge || 0,
+          ),
+          delivery_option_name: buyNowSummary.delivery_option_name || null,
+          delivery_option_type: buyNowSummary.delivery_option_type || null,
+        }
+      : calculatedBuyNowSummary
+    : summary;
 
   return (
     <div className="w-full px-4 md:px-7 pt-7 pb-28 animate-in fade-in duration-700">

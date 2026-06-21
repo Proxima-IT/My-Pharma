@@ -52,8 +52,8 @@ const OrderSummaryCard = ({
     return { subtotal, deliveryFee: 150 };
   }, [items]);
 
-  // Prioritize the hook's summary (which now maps subtotal_before_discount)
-  const activeSummary = cartSummary || propSummary;
+  // Prioritize the passed prop summary over the hook's (which might be empty/zero)
+  const activeSummary = propSummary || cartSummary;
 
   useEffect(() => {
     if (appliedCoupon) {
@@ -93,6 +93,7 @@ const OrderSummaryCard = ({
       : parseFloat(calculatedValues.deliveryFee || 0),
     total: parseFloat(
       activeSummary?.total_amount ||
+        activeSummary?.total_payable ||
         calculatedValues.subtotal + calculatedValues.deliveryFee,
     ),
     discountLabel: isApplied ? `Discount (${appliedCoupon.code})` : 'Discount',
