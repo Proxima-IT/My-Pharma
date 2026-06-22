@@ -7,3 +7,17 @@ serviceAccountKey.json
 
 
 
+# Antigravity Safe Git Sync Ignore Rules
+*.env
+*.env.*
+*.pem
+*.sql
+*.db
+*.zip
+.DS_Store
+.dart_tool/
+android/app/.cxx/
+.firebase/
+__pycache__/
+vendor/
+node_modules/
