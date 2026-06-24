@@ -6,6 +6,7 @@ import { IoPricetagOutline } from 'react-icons/io5';
 import { FiChevronRight, FiCheck, FiX } from 'react-icons/fi';
 import { formatCurrency } from '@/app/(user)/lib/formatters';
 import { useCart } from '../../../hooks/useCart';
+import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * OrderSummaryCard Component
@@ -42,6 +43,27 @@ const OrderSummaryCard = ({
   const [couponCode, setCouponCode] = useState('');
   const [loginError, setLoginError] = useState('');
 
+  const [deliveryOptions, setDeliveryOptions] = useState([]);
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/delivery-methods/`);
+        if (response.ok) {
+          const data = await response.json();
+          const list = data.results || data;
+          setDeliveryOptions(list.filter(m => m.is_active));
+        }
+      } catch (err) {
+        console.error('Failed to load delivery methods in OrderSummaryCard', err);
+      }
+    };
+    loadOptions();
+  }, []);
+
+  const standardMethod = deliveryOptions.find(opt => opt.delivery_type === 'STANDARD') || deliveryOptions[0];
+  const standardPrice = standardMethod ? parseFloat(standardMethod.price || 0) : 60;
+
   // 1. Manual Calculation Fallback (Used for Guest/Initial states)
   const calculatedValues = useMemo(() => {
     const subtotal = items.reduce(
@@ -49,8 +71,15 @@ const OrderSummaryCard = ({
         acc + parseFloat(item.current_price || 0) * (item.quantity || 0),
       0,
     );
-    return { subtotal, deliveryFee: 150 };
-  }, [items]);
+    const originalSubtotal = items.reduce(
+      (acc, item) =>
+        acc + parseFloat(item.product_original_price || item.current_price || 0) * (item.quantity || 0),
+      0,
+    );
+    const discount = Math.max(0, originalSubtotal - subtotal);
+    const deliveryFee = subtotal >= 500 ? 0 : standardPrice;
+    return { subtotal: originalSubtotal, discount, deliveryFee };
+  }, [items, standardPrice]);
 
   // Prioritize the passed prop summary over the hook's (which might be empty/zero)
   const activeSummary = propSummary || cartSummary;
@@ -80,7 +109,7 @@ const OrderSummaryCard = ({
             0),
     ),
 
-    discount: parseFloat(activeSummary?.discount_amount || 0),
+    discount: parseFloat(activeSummary?.discount_amount ?? calculatedValues.discount ?? 0),
     // Breakdown fields for shipping — trust backend values (including 0) when present
     baseDelivery: hasBackendSummary
       ? parseFloat(activeSummary.base_delivery_fee)
@@ -94,7 +123,7 @@ const OrderSummaryCard = ({
     total: parseFloat(
       activeSummary?.total_amount ||
         activeSummary?.total_payable ||
-        calculatedValues.subtotal + calculatedValues.deliveryFee,
+        (calculatedValues.subtotal - (calculatedValues.discount || 0)) + calculatedValues.deliveryFee,
     ),
     discountLabel: isApplied ? `Discount (${appliedCoupon.code})` : 'Discount',
   };

@@ -498,24 +498,32 @@ const Checkout = () => {
       }
     : null;
 
+  const standardMethod = deliveryOptions.find(opt => opt.delivery_type === 'STANDARD') || deliveryOptions[0];
+  const standardPrice = standardMethod ? parseFloat(standardMethod.price || 0) : 60;
+
+  const buyNowSubtotal = parseFloat(buyNowProduct?.price || 0) * buyNowQty;
+  const isFreeDelivery = buyNowSubtotal >= 500 && (!selectedMethodId || deliveryOptions.find(opt => opt.id === selectedMethodId)?.delivery_type === 'STANDARD');
+
   const defaultDeliveryPrice = selectedMethodId
     ? parseFloat(
         deliveryOptions.find(opt => opt.id === selectedMethodId)?.price || 0,
       )
-    : 150;
+    : standardPrice;
+
+  const finalDeliveryPrice = isFreeDelivery ? 0 : defaultDeliveryPrice;
 
   const calculatedBuyNowSummary = buyNowSummary || {
-    sub_total: (parseFloat(buyNowProduct?.price || 0) * buyNowQty).toFixed(2),
+    sub_total: buyNowSubtotal.toFixed(2),
     discount_amount: buyNowCoupon?.discount_amount
       ? parseFloat(buyNowCoupon.discount_amount).toFixed(2)
       : '0.00',
-    delivery_fee: defaultDeliveryPrice.toFixed(2),
+    delivery_fee: finalDeliveryPrice.toFixed(2),
     total_amount: (
-      parseFloat(buyNowProduct?.price || 0) * buyNowQty -
+      buyNowSubtotal -
       (buyNowCoupon?.discount_amount
         ? parseFloat(buyNowCoupon.discount_amount)
         : 0) +
-      defaultDeliveryPrice
+      finalDeliveryPrice
     ).toFixed(2),
     base_delivery_fee: defaultDeliveryPrice.toFixed(2),
     delivery_option_charge: 0,
@@ -676,7 +684,7 @@ const Checkout = () => {
                   </p>
                   <p className="text-(--success-600) text-xs font-medium">
                     You saved{' '}
-                    {formatCurrency(displaySummary.base_delivery_fee || 150)} on
+                    {formatCurrency(displaySummary.base_delivery_fee ?? standardPrice)} on
                     shipping!
                   </p>
                 </div>

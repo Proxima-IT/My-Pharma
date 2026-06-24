@@ -104,8 +104,7 @@ def validate_coupon(code: str, subtotal: Decimal):
 def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_method: DeliveryMethod = None):
     """
     Return dict: subtotal, delivery_fee, discount_amount, total_payable, discount_display, coupon_code.
-    If coupon was already applied and persisted to cart item prices, discount_amount is computed as the
-    difference between original_subtotal and current subtotal.
+    All calculations are database-driven without hardcoded fallback zones.
     """
     items = cart.items.select_related("product", "combo").all()
     subtotal = sum((item.price_at_order * item.quantity for item in items), Decimal("0"))
@@ -113,16 +112,29 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_meth
         ((item.original_price_at_order or item.price_at_order) * item.quantity for item in items),
         Decimal("0"),
     )
-    base_delivery_fee = get_delivery_fee(subtotal, delivery_zone)
-    delivery_option_charge = Decimal("0.00")
-    if delivery_method and getattr(delivery_method, "is_active", True):
-        delivery_option_charge = Decimal(str(delivery_method.price or "0")).quantize(Decimal("0.01"))
-    # If the selected delivery option has its own charge, use ONLY that charge
-    # (replaces base fee). Otherwise fall back to the zone-based base fee.
-    if delivery_option_charge > 0:
-        delivery_fee = delivery_option_charge
+    
+    # Resolve active delivery method from selected or fallback to default standard from DB
+    active_method = delivery_method
+    if not active_method:
+        active_method = DeliveryMethod.objects.filter(is_active=True, delivery_type="STANDARD").first() or DeliveryMethod.objects.filter(is_active=True).first()
+        
+    if active_method:
+        delivery_option_id = active_method.id
+        delivery_option_name = active_method.name
+        delivery_option_type = active_method.delivery_type
+        base_delivery_fee = Decimal(str(active_method.price or "0.00")).quantize(Decimal("0.01"))
+    else:
+        delivery_option_id = None
+        delivery_option_name = None
+        delivery_option_type = None
+        base_delivery_fee = Decimal("0.00")
+
+    # Apply free delivery waiver for STANDARD delivery if subtotal >= 500
+    if subtotal >= FREE_DELIVERY_ABOVE_BDT and delivery_option_type == "STANDARD":
+        delivery_fee = Decimal("0.00")
     else:
         delivery_fee = base_delivery_fee
+
     # Discount applies to product subtotal (not delivery fee).
     # If prices already discounted, this will be computed from original_subtotal.
     discount_amount = max(Decimal("0"), (original_subtotal - subtotal).quantize(Decimal("0.01")))
@@ -144,18 +156,20 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_meth
             coupon_code = coupon.code
         else:
             coupon_code = str(coupon)
+            
     # If discount already reflected in subtotal, do not subtract again.
     discount_persisted = (original_subtotal - subtotal) > 0
     total_payable = (subtotal + delivery_fee) if discount_persisted else ((subtotal - discount_amount) + delivery_fee)
     total_payable = max(Decimal("0"), total_payable).quantize(Decimal("0.01"))
+    
     return {
         "subtotal_before_discount": original_subtotal,
         "subtotal": subtotal,
         "base_delivery_fee": base_delivery_fee,
-        "delivery_option_id": getattr(delivery_method, "id", None),
-        "delivery_option_name": getattr(delivery_method, "name", None),
-        "delivery_option_type": getattr(delivery_method, "delivery_type", None),
-        "delivery_option_charge": delivery_option_charge,
+        "delivery_option_id": delivery_option_id,
+        "delivery_option_name": delivery_option_name,
+        "delivery_option_type": delivery_option_type,
+        "delivery_option_charge": base_delivery_fee,
         "delivery_fee": delivery_fee,
         "discount_amount": discount_amount,
         "total_payable": total_payable,
@@ -183,22 +197,32 @@ def get_buy_now_summary(product: Product, quantity: int, delivery_zone: str = No
     subtotal = product.price * quantity
     original_subtotal = (product.original_price or product.price) * quantity
     
-    base_delivery_fee = get_delivery_fee(subtotal, delivery_zone)
-    delivery_option_charge = Decimal("0.00")
-    if delivery_method and getattr(delivery_method, "is_active", True):
-        delivery_option_charge = Decimal(str(delivery_method.price or "0")).quantize(Decimal("0.01"))
-    
-    if delivery_option_charge > 0:
-        delivery_fee = delivery_option_charge
+    # Resolve active delivery method from selected or fallback to default standard from DB
+    active_method = delivery_method
+    if not active_method:
+        active_method = DeliveryMethod.objects.filter(is_active=True, delivery_type="STANDARD").first() or DeliveryMethod.objects.filter(is_active=True).first()
+
+    if active_method:
+        delivery_option_id = active_method.id
+        delivery_option_name = active_method.name
+        delivery_option_type = active_method.delivery_type
+        base_delivery_fee = Decimal(str(active_method.price or "0.00")).quantize(Decimal("0.01"))
+    else:
+        delivery_option_id = None
+        delivery_option_name = None
+        delivery_option_type = None
+        base_delivery_fee = Decimal("0.00")
+
+    # Apply free delivery waiver for STANDARD delivery if subtotal >= 500
+    if subtotal >= FREE_DELIVERY_ABOVE_BDT and delivery_option_type == "STANDARD":
+        delivery_fee = Decimal("0.00")
     else:
         delivery_fee = base_delivery_fee
         
-    discount_amount = Decimal("0.00")
+    catalog_discount = max(Decimal("0"), original_subtotal - subtotal)
+    discount_amount = catalog_discount
     discount_display = None
     coupon_code = None
-    
-    # 1. Product catalog discount (original_price - price)
-    catalog_discount = max(Decimal("0"), original_subtotal - subtotal)
     
     # 2. Coupon discount
     if coupon:
@@ -213,8 +237,6 @@ def get_buy_now_summary(product: Product, quantity: int, delivery_zone: str = No
         # apply coupon discount to subtotal
         subtotal = max(Decimal("0.00"), subtotal - coupon_discount)
         discount_amount = catalog_discount + coupon_discount
-    else:
-        discount_amount = catalog_discount
         
     total_payable = max(Decimal("0"), subtotal + delivery_fee).quantize(Decimal("0.01"))
     
@@ -222,14 +244,13 @@ def get_buy_now_summary(product: Product, quantity: int, delivery_zone: str = No
         "subtotal_before_discount": original_subtotal,
         "subtotal": product.price * quantity,  # Subtotal before coupon but after catalog discount
         "base_delivery_fee": base_delivery_fee,
-        "delivery_option_id": getattr(delivery_method, "id", None),
-        "delivery_option_name": getattr(delivery_method, "name", None),
-        "delivery_option_type": getattr(delivery_method, "delivery_type", None),
-        "delivery_option_charge": delivery_option_charge,
+        "delivery_option_id": delivery_option_id,
+        "delivery_option_name": delivery_option_name,
+        "delivery_option_type": delivery_option_type,
+        "delivery_option_charge": base_delivery_fee,
         "delivery_fee": delivery_fee,
         "discount_amount": discount_amount,
         "total_payable": total_payable,
         "discount_display": discount_display,
         "coupon_code": coupon_code,
     }
-

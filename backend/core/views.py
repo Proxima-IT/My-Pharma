@@ -1058,6 +1058,9 @@ class ProductViewSet(viewsets.ModelViewSet):
                     "dosage": product.dosage,
                     "requires_prescription": product.requires_prescription,
                     "quantity_in_stock": product.quantity_in_stock,
+                    "unit_type": product.unit.unit_type if product.unit else None,
+                    "content_type": product.unit.content_type if product.unit else None,
+                    "unit_name": product.unit.name if product.unit else None,
                 })
             return Response(suggestions, status=status.HTTP_200_OK)
 
@@ -1647,11 +1650,11 @@ class OrderViewSet(viewsets.ModelViewSet):
 class DeliveryMethodViewSet(viewsets.ModelViewSet):
     queryset = DeliveryMethod.objects.all()
     serializer_class = DeliveryMethodSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAnyIncludingGuest]
 
     def get_permissions(self):
         if self.action in ("list", "retrieve"):
-            return [IsAuthenticated()]  # Any authenticated user can read (e.g. select when placing order)
+            return [AllowAnyIncludingGuest()]  # Any guest or authenticated user can read delivery options
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
     def get_queryset(self):

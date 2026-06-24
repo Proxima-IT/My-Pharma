@@ -10,7 +10,7 @@ import {
   removeCartCouponApi,
 } from '../api/cartApi';
 import { useCartContext } from '../context/CartContext';
-import { getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
+import { getProductImageUrl, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * useCart Hook
@@ -24,28 +24,55 @@ export const useCart = () => {
   const [guestItems, setGuestItems] = useState([]);
   const [guestSummary, setGuestSummary] = useState(null);
   const [error, setError] = useState(null);
+  const [deliveryOptions, setDeliveryOptions] = useState([]);
+
+  useEffect(() => {
+    const loadOptions = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/delivery-methods/`);
+        if (response.ok) {
+          const data = await response.json();
+          const list = data.results || data;
+          setDeliveryOptions(list.filter(m => m.is_active));
+        }
+      } catch (err) {
+        console.error('Failed to load delivery methods in useCart', err);
+      }
+    };
+    loadOptions();
+  }, []);
 
   const getGuestCart = () =>
     JSON.parse(localStorage.getItem('guest_cart') || '{"items": []}');
+
+  const calculateGuestSummary = useCallback((items, options = deliveryOptions) => {
+    const originalSubTotal = items.reduce(
+      (acc, item) => acc + parseFloat(item.product_original_price || item.current_price || 0) * item.quantity,
+      0,
+    );
+    const subTotal = items.reduce(
+      (acc, item) => acc + parseFloat(item.current_price || 0) * item.quantity,
+      0,
+    );
+    const discountAmount = Math.max(0, originalSubTotal - subTotal);
+    
+    // Find default standard delivery method price from options
+    const standardMethod = options.find(opt => opt.delivery_type === 'STANDARD') || options[0];
+    const basePrice = standardMethod ? parseFloat(standardMethod.price || 0) : 60;
+    
+    const shipping = subTotal >= 500 ? 0 : basePrice;
+    setGuestSummary({
+      sub_total: originalSubTotal,
+      total_amount: subTotal + shipping,
+      shipping_charge: shipping,
+      discount_amount: discountAmount,
+    });
+  }, [deliveryOptions]);
 
   const saveGuestCart = data => {
     localStorage.setItem('guest_cart', JSON.stringify(data));
     setGuestItems(data.items);
     calculateGuestSummary(data.items);
-  };
-
-  const calculateGuestSummary = items => {
-    const subTotal = items.reduce(
-      (acc, item) => acc + parseFloat(item.current_price || 0) * item.quantity,
-      0,
-    );
-    const shipping = 150;
-    setGuestSummary({
-      sub_total: subTotal,
-      total_amount: subTotal + shipping,
-      shipping_charge: shipping,
-      discount_amount: 0,
-    });
   };
 
   useEffect(() => {
@@ -55,7 +82,7 @@ export const useCart = () => {
       setGuestItems(local.items || []);
       calculateGuestSummary(local.items || []);
     }
-  }, [cart]);
+  }, [cart, deliveryOptions, calculateGuestSummary]);
 
   /**
    * Add a product or combo to the cart.
@@ -253,17 +280,20 @@ export const useCart = () => {
       const s = cart?.summary;
       if (!s) return null;
 
+      const standardMethod = deliveryOptions.find(opt => opt.delivery_type === 'STANDARD') || deliveryOptions[0];
+      const basePrice = standardMethod ? parseFloat(standardMethod.price || 0) : 60;
+
       return {
         ...s,
         // Map backend fields to frontend expected keys
         sub_total: parseFloat(s.subtotal_before_discount || s.subtotal || 0),
         discount_amount: parseFloat(s.discount_amount || 0),
-        shipping_charge: parseFloat(s.shipping_charge || s.delivery_fee || 150),
+        shipping_charge: s.delivery_fee != null ? parseFloat(s.delivery_fee) : (s.shipping_charge != null ? parseFloat(s.shipping_charge) : (s.subtotal >= 500 ? 0 : basePrice)),
         total_amount: parseFloat(s.total_payable || s.total_amount || 0),
         coupon_code: s.coupon_code || null,
         // Delivery breakdown fields — preserve backend values (including 0)
         base_delivery_fee:
-          s.base_delivery_fee != null ? parseFloat(s.base_delivery_fee) : null,
+          s.base_delivery_fee != null ? parseFloat(s.base_delivery_fee) : basePrice,
         delivery_option_charge: parseFloat(s.delivery_option_charge || 0),
         delivery_option_name: s.delivery_option_name || null,
         delivery_option_type: s.delivery_option_type || null,
@@ -272,7 +302,7 @@ export const useCart = () => {
       };
     }
     return guestSummary;
-  }, [cart?.summary, guestSummary, token]);
+  }, [cart?.summary, guestSummary, token, deliveryOptions]);
 
   return {
     cart,
