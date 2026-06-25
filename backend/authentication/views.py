@@ -26,6 +26,7 @@ from .serializers import (
     GoogleAuthRequestSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
+    PasswordResetVerifyOTPSerializer,
     ChangeEmailRequestSerializer,
     ChangeEmailConfirmSerializer,
     ChangePhoneRequestSerializer,
@@ -427,35 +428,118 @@ class LogoutView(APIView):
 
 
 class PasswordResetView(APIView):
-    """POST /api/auth/password-reset/ – Request password reset; sends reset link to registered email."""
+    """POST /api/auth/password-reset/ – Request password reset; sends reset link to registered email or OTP to registered phone."""
     permission_classes = [AllowAny]
     serializer_class = PasswordResetRequestSerializer
 
     def post(self, request):
         ser = PasswordResetRequestSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
-        email = ser.validated_data["email"].lower()
-        user = User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).first()
+        email = ser.validated_data.get("email", "")
+        phone = ser.validated_data.get("phone", "")
+
+        if email:
+            email_lower = email.lower()
+            user = User.objects.filter(email__iexact=email_lower).exclude(deleted_at__isnull=False).first()
+            if not user:
+                return Response(
+                    {"detail": "Email does not exist.", "code": "email_not_found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            token = create_password_reset_token(user.id)
+            reset_link = build_password_reset_link(token)
+            from .tasks import send_password_reset_email
+            send_password_reset_email.delay(user.id, reset_link)
+            create_audit_log(
+                user.id,
+                AuditAction.PASSWORD_RESET_REQUEST,
+                request=request,
+                metadata={"email_masked": email_lower[:2] + "***"},
+            )
+            return Response(
+                {"message": "Password reset link sent to your email."},
+                status=status.HTTP_200_OK,
+            )
+        else:
+            phone_normalized = normalize_phone(phone)
+            user = User.objects.filter(phone=phone_normalized).exclude(deleted_at__isnull=False).first()
+            if not user:
+                return Response(
+                    {"detail": "User with this phone number does not exist.", "code": "phone_not_found"},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+            try:
+                request_otp_for_phone(
+                    phone_normalized,
+                    ip=request.META.get("REMOTE_ADDR", ""),
+                    user_agent=request.META.get("HTTP_USER_AGENT", ""),
+                )
+            except OTPRateLimitError:
+                return Response(
+                    {"detail": "Too many OTP requests. Try again later.", "code": "otp_rate_limit"},
+                    status=status.HTTP_429_TOO_MANY_REQUESTS,
+                )
+            except Exception as exc:
+                logger.exception("password-reset-otp request failed: %s", exc)
+                return Response(
+                    {"detail": "We're having trouble sending the code. Please try again in a moment.", "code": "service_error"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+            create_audit_log(
+                user.id,
+                AuditAction.PASSWORD_RESET_REQUEST,
+                request=request,
+                metadata={"phone_masked": phone_normalized[-4:]},
+            )
+            return Response(
+                {"message": "OTP sent successfully. Check your phone for the code."},
+                status=status.HTTP_200_OK,
+            )
+
+
+class PasswordResetVerifyOTPView(APIView):
+    """POST /api/auth/password-reset/verify-otp/ – Verify OTP sent to phone for password reset. Returns password reset token."""
+    permission_classes = [AllowAny]
+    throttle_classes = [OTPVerifyRateThrottle]
+    serializer_class = PasswordResetVerifyOTPSerializer
+
+    def post(self, request):
+        ser = PasswordResetVerifyOTPSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+        phone = ser.validated_data["phone"]
+        otp = ser.validated_data["otp"]
+
+        stored = utils.otp_get(phone)
+        if not stored or stored != otp:
+            return Response(
+                {"detail": "Invalid or expired OTP.", "code": "invalid_otp"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        utils.otp_delete(phone)
+
+        user = User.objects.filter(phone=phone).exclude(deleted_at__isnull=False).first()
         if not user:
             return Response(
-                {"detail": "Email does not exist.", "code": "email_not_found"},
+                {"detail": "User with this phone number does not exist.", "code": "phone_not_found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         token = create_password_reset_token(user.id)
-        reset_link = build_password_reset_link(token)
-        from .tasks import send_password_reset_email
-        send_password_reset_email.delay(user.id, reset_link)
         create_audit_log(
             user.id,
-            AuditAction.PASSWORD_RESET_REQUEST,
+            AuditAction.OTP_VERIFIED,
             request=request,
-            metadata={"email_masked": email[:2] + "***" if email else ""},
+            metadata={"channel": "phone", "phone_masked": phone[-4:], "purpose": "password_reset"},
         )
         return Response(
-            {"message": "Password reset link sent to your email."},
+            {
+                "message": "OTP verified successfully.",
+                "token": token,
+            },
             status=status.HTTP_200_OK,
         )
+
 
 
 class PasswordResetConfirmView(APIView):

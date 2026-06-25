@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { verifyOtpApi, requestOtpApi } from '../../../register/api/registerApi';
+import { requestPasswordResetApi, verifyPasswordResetOtpApi } from '../../api/forgotPasswordApi';
 
 export const useVerifyResetOtp = () => {
   const router = useRouter();
@@ -10,14 +10,17 @@ export const useVerifyResetOtp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [email, setEmail] = useState('');
+  const [identifierType, setIdentifierType] = useState('phone');
   const inputRefs = useRef([]);
 
   useEffect(() => {
-    const storedEmail = sessionStorage.getItem('reset_email');
-    if (!storedEmail) {
+    const storedIdentifier = sessionStorage.getItem('reset_identifier') || sessionStorage.getItem('reset_email');
+    const storedType = sessionStorage.getItem('reset_type') || (storedIdentifier?.includes('@') ? 'email' : 'phone');
+    if (!storedIdentifier) {
       router.replace('/forgot-password');
     } else {
-      setEmail(storedEmail);
+      setEmail(storedIdentifier);
+      setIdentifierType(storedType);
     }
   }, [router]);
 
@@ -69,7 +72,8 @@ export const useVerifyResetOtp = () => {
   const handleResend = async () => {
     if (timer > 0) return;
     try {
-      await requestOtpApi(email);
+      const payload = identifierType === 'email' ? { email } : { phone: email };
+      await requestPasswordResetApi(payload);
       setTimer(60);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0].focus();
@@ -86,10 +90,8 @@ export const useVerifyResetOtp = () => {
     setError(null);
 
     try {
-      const verifyData = await verifyOtpApi(email, otpString);
-      // Store registration token for the reset-password page
-      sessionStorage.setItem('reset_token', verifyData.registration_token);
-      router.push('/reset-password');
+      const verifyData = await verifyPasswordResetOtpApi(email, otpString);
+      router.push(`/reset-password?token=${verifyData.token}`);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -100,6 +102,7 @@ export const useVerifyResetOtp = () => {
   return {
     otp,
     email,
+    identifierType,
     timer,
     isLoading,
     error,

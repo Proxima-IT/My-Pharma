@@ -209,7 +209,37 @@ class ChangePhoneConfirmSerializer(serializers.Serializer):
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False, allow_blank=True)
+    phone = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        email = (attrs.get("email") or "").strip()
+        phone = (attrs.get("phone") or "").strip()
+        if not email and not phone:
+            raise serializers.ValidationError("Provide email or phone.")
+        if email and phone:
+            raise serializers.ValidationError("Provide either email or phone, not both.")
+        attrs["email"] = email.lower() if email else ""
+        if phone:
+            normalized = normalize_phone(phone)
+            if len(normalized) < 10:
+                raise serializers.ValidationError({"phone": "Invalid phone number."})
+            attrs["phone"] = normalized
+        else:
+            attrs["phone"] = ""
+        return attrs
+
+
+class PasswordResetVerifyOTPSerializer(serializers.Serializer):
+    phone = serializers.CharField(max_length=20, required=True, trim_whitespace=True)
+    otp = serializers.CharField(max_length=8, min_length=6)
+
+    def validate_phone(self, value):
+        normalized = normalize_phone(value)
+        if len(normalized) < 10:
+            raise serializers.ValidationError("Invalid phone number.")
+        return normalized
+
 
 
 class PasswordResetConfirmSerializer(serializers.Serializer):

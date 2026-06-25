@@ -60,14 +60,19 @@ export default function LoginForm({ isModal = false, onSuccess = null }) {
       {/* Form Section */}
       <form onSubmit={onFormSubmit} className="w-full space-y-6">
         <UiInput
-          label="Email Address"
-          type="email"
-          placeholder="Enter your email"
+          label="Email or Phone Number"
+          type="text"
+          placeholder="Enter your email or phone number"
           value={formData.email}
           onChange={e => setFormData({ ...formData, email: e.target.value })}
           required
           leftIcon={<FiMail />}
-          error={error?.toLowerCase().includes('email') ? error : null}
+          error={
+            error?.toLowerCase().includes('email') ||
+            error?.toLowerCase().includes('phone')
+              ? error
+              : null
+          }
         />
 
         <UiInput

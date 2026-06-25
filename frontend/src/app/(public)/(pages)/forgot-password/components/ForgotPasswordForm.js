@@ -56,9 +56,8 @@ export default function ForgotPasswordForm() {
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
             Forgot Password
           </h1>
-          <p className="text-gray-500 mt-3 font-medium leading-relaxed w-full">
-            Enter your email address and we’ll send you password reset
-            instructions.
+          <p className="text-gray-500 mt-3 font-medium leading-relaxed w-full text-center">
+            Enter your email or phone number and we’ll send you instructions to reset your password.
           </p>
         </div>
       </div>
@@ -66,9 +65,9 @@ export default function ForgotPasswordForm() {
       {/* Form Section */}
       <form onSubmit={handleRequestReset} className="w-full space-y-6">
         <UiInput
-          label="Email Address"
-          type="email"
-          placeholder="johndoe@example.com"
+          label="Email or Phone Number"
+          type="text"
+          placeholder="e.g. user@email.com or 017XXXXXXXX"
           value={email}
           onChange={e => setEmail(e.target.value)}
           required

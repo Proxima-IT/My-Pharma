@@ -30,12 +30,13 @@ export const useLogin = () => {
       notificationDebug(
         'Login started. Attempting notification-ready session.',
       );
-      const email = (formData.email || '').trim().toLowerCase();
-      const password = (formData.password || '').trim();
-      const result = await loginApi({
-        email,
-        password,
-      });
+      const identifier = (formData.email || '').trim();
+      const isEmail = identifier.includes('@');
+      const payload = isEmail
+        ? { email: identifier.toLowerCase(), password: (formData.password || '').trim() }
+        : { phone: identifier, password: (formData.password || '').trim() };
+
+      const result = await loginApi(payload);
 
       // Store tokens and user data
       // Important: storing refresh_token to allow the interceptor to renew the session
