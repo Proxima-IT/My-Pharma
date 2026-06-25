@@ -19,14 +19,18 @@ export const useRegister = () => {
     setIsLoading(true);
     setError(null);
 
+    const identifier = formData.email.trim();
+    const isEmail = identifier.includes('@');
+
     try {
       // 1. Request OTP from Backend
-      await requestOtpApi(formData.email, 'register');
+      await requestOtpApi(identifier, 'register');
 
       // 2. Store details in sessionStorage to "remember" them after redirect
       // These will be used in the verify step to complete the registration
       sessionStorage.setItem('temp_reg_name', formData.fullName);
-      sessionStorage.setItem('temp_reg_email', formData.email);
+      sessionStorage.setItem('temp_reg_email', identifier);
+      sessionStorage.setItem('temp_reg_type', isEmail ? 'email' : 'phone');
       sessionStorage.setItem('temp_reg_password', formData.password);
 
       // 3. Redirect to the separate OTP verification page

@@ -47,8 +47,10 @@ export default function RegisterForm() {
     }
 
     if (!formData.email.trim()) {
-      errors.email = 'Email address is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Email address or phone number is required';
+    } else if (!formData.email.includes('@') && !/^[0-9+]{8,15}$/.test(formData.email.replace(/[-\s]/g, ''))) {
+      errors.email = 'Please enter a valid email address or phone number';
+    } else if (formData.email.includes('@') && !/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email address';
     }
 
@@ -107,9 +109,9 @@ export default function RegisterForm() {
         />
 
         <UiInput
-          label="Email Address"
-          type="email"
-          placeholder="Enter your email"
+          label="Email or Phone Number"
+          type="text"
+          placeholder="Enter your email or phone number"
           value={formData.email}
           onChange={e => {
             setFormData({ ...formData, email: e.target.value });
@@ -121,7 +123,9 @@ export default function RegisterForm() {
             fieldErrors.email ||
             (error?.toLowerCase().includes('email')
               ? 'This email is already registered'
-              : error)
+              : error?.toLowerCase().includes('phone')
+                ? 'This phone number is already registered'
+                : error)
           }
           leftIcon={<FiMail />}
         />

@@ -14,14 +14,17 @@ export const useVerifyOtp = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [email, setEmail] = useState('');
+  const [identifierType, setIdentifierType] = useState('email');
   const inputRefs = useRef([]);
 
   useEffect(() => {
     const storedEmail = sessionStorage.getItem('temp_reg_email');
+    const storedType = sessionStorage.getItem('temp_reg_type') || (storedEmail?.includes('@') ? 'email' : 'phone');
     if (!storedEmail) {
       router.replace('/register');
     } else {
       setEmail(storedEmail);
+      setIdentifierType(storedType);
     }
   }, [router]);
 
@@ -133,6 +136,7 @@ export const useVerifyOtp = () => {
   return {
     otp,
     email,
+    identifierType,
     timer,
     isLoading,
     error,

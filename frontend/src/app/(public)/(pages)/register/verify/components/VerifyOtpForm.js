@@ -8,6 +8,7 @@ export default function VerifyOtpForm() {
   const {
     otp,
     email,
+    identifierType,
     timer,
     isLoading,
     error,
@@ -43,8 +44,8 @@ export default function VerifyOtpForm() {
         <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
           OTP Verification
         </h1>
-        <p className="text-gray-500 mt-3 font-medium leading-relaxed max-w-xs mx-auto">
-          We have sent a verification code to email address{' '}
+        <p className="text-gray-500 mt-3 font-medium leading-relaxed max-w-xs mx-auto text-center">
+          We have sent a verification code to {identifierType === 'email' ? 'email address' : 'phone number'}{' '}
           <span className="text-gray-900 font-bold">{email}</span>
         </p>
       </div>

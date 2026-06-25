@@ -2,8 +2,9 @@ import { API_BASE_URL, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
 
 const AUTH_BASE = `${API_BASE_URL}/auth`;
 
-export const requestOtpApi = async (email, purpose) => {
-  const payload = { email };
+export const requestOtpApi = async (identifier, purpose) => {
+  const isEmail = identifier.includes('@');
+  const payload = isEmail ? { email: identifier.toLowerCase() } : { phone: identifier };
   if (purpose) payload.purpose = purpose;
 
   const response = await fetch(`${AUTH_BASE}/request-otp/`, {
@@ -16,8 +17,12 @@ export const requestOtpApi = async (email, purpose) => {
   return data;
 };
 
-export const verifyOtpApi = async (email, otp, purpose) => {
-  const payload = { email, otp };
+export const verifyOtpApi = async (identifier, otp, purpose) => {
+  const isEmail = identifier.includes('@');
+  const payload = {
+    [isEmail ? 'email' : 'phone']: isEmail ? identifier.toLowerCase() : identifier,
+    otp,
+  };
   if (purpose) payload.purpose = purpose;
 
   const response = await fetch(`${AUTH_BASE}/verify-otp/`, {
