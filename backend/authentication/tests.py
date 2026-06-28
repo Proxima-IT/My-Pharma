@@ -117,6 +117,7 @@ class PasswordResetOtpTests(APITestCase):
             format="json"
         )
 
+        # 2. Verify OTP
         response = self.client.post(
             "/api/auth/password-reset/verify-otp/",
             {"phone": "01711112222", "otp": "999999"},
@@ -124,3 +125,70 @@ class PasswordResetOtpTests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data["code"], "invalid_otp")
+
+
+class UserSoftDeleteTests(APITestCase):
+    def test_soft_delete_anonymization_and_re_registration(self):
+        # 1. Create a user
+        email = "todelete@example.com"
+        phone = "01755554444"
+        username = "todelete"
+        user = User.objects.create_user(
+            email=email,
+            phone=phone,
+            username=username,
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+        )
+
+        # Verify initial state
+        self.assertEqual(user.email, email)
+        self.assertEqual(user.phone, phone)
+        self.assertEqual(user.username, username)
+        self.assertTrue(user.is_active)
+
+        # 2. Soft-delete the user
+        user.soft_delete()
+        user.refresh_from_db()
+
+        # Verify anonymization occurred
+        self.assertNotEqual(user.email, email)
+        self.assertIn("_del_", user.email)
+        self.assertEqual(user.phone, "")
+        self.assertNotEqual(user.username, username)
+        self.assertIn("_del_", user.username)
+        self.assertFalse(user.is_active)
+
+        # 3. Request password reset with the old email and old phone -> should return 404
+        reset_email_res = self.client.post(
+            "/api/auth/password-reset/",
+            {"email": email},
+            format="json"
+        )
+        self.assertEqual(reset_email_res.status_code, status.HTTP_404_NOT_FOUND)
+
+        reset_phone_res = self.client.post(
+            "/api/auth/password-reset/",
+            {"phone": phone},
+            format="json"
+        )
+        self.assertEqual(reset_phone_res.status_code, status.HTTP_404_NOT_FOUND)
+
+        # 4. Try to re-register with the exact same email -> should succeed (no 500 IntegrityError)
+        register_res = self.client.post(
+            "/api/auth/register/email/",
+            {
+                "email": email,
+                "password": "NewStrongPass123!"
+            },
+            format="json"
+        )
+        self.assertEqual(register_res.status_code, status.HTTP_200_OK)
+        self.assertIn("access", register_res.data)
+
+        # Verify new user is created and is distinct from the old soft-deleted user
+        new_user = User.objects.get(email=email)
+        self.assertNotEqual(new_user.pk, user.pk)
+        self.assertEqual(new_user.email, email)
+        self.assertTrue(new_user.is_active)

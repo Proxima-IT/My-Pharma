@@ -108,7 +108,32 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def soft_delete(self):
         self.deleted_at = timezone.now()
-        self.save(update_fields=["deleted_at", "updated_at"])
+        self.is_active = False
+
+        # Suffix/anonymize unique fields to free them up for re-registration
+        timestamp = int(self.deleted_at.timestamp())
+        suffix = f"_del_{timestamp}_{self.pk}"
+
+        if self.email:
+            parts = self.email.split("@")
+            if len(parts) == 2:
+                local_part, domain_part = parts
+                # Ensure the email field max length of 255 is not exceeded
+                max_local_len = max(1, 255 - len(domain_part) - len(suffix) - 1)
+                self.email = f"{local_part[:max_local_len]}{suffix}@{domain_part}"
+            else:
+                self.email = f"deleted_{timestamp}_{self.pk}@deleted.local"
+
+        if self.username:
+            # Ensure the username field max length of 150 is not exceeded
+            max_username_len = max(1, 150 - len(suffix))
+            self.username = f"{self.username[:max_username_len]}{suffix}"
+
+        if self.phone:
+            # Setting phone to empty string releases the unique constraint
+            self.phone = ""
+
+        self.save(update_fields=["deleted_at", "is_active", "email", "username", "phone", "updated_at"])
 
     def is_locked(self):
         if not self.locked_until:
