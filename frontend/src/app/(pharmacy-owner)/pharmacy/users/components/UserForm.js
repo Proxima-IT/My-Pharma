@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 const UserForm = ({ initialData, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
     role: 'REGISTERED_USER',
     is_active: true,
   });
+  const [phoneError, setPhoneError] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -29,12 +31,18 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
   const inputClass =
     'w-full h-12 px-4 bg-white border border-(--color-admin-border) rounded-none text-sm font-mono focus:outline-none focus:border-(--color-admin-accent) transition-all uppercase';
 
+  const handleSubmit = e => {
+    e.preventDefault();
+    if (formData.phone && !isValidBDPhone(formData.phone)) {
+      setPhoneError('Please enter a valid Bangladeshi phone number.');
+      return;
+    }
+    onSubmit(formData);
+  };
+
   return (
     <form
-      onSubmit={e => {
-        e.preventDefault();
-        onSubmit(formData);
-      }}
+      onSubmit={handleSubmit}
       className="w-full flex flex-col gap-8"
     >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -64,10 +72,18 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
           <label className={labelClass}>PHONE NUMBER</label>
           <input
             type="text"
-            className={inputClass}
+            className={`${inputClass} ${phoneError ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.phone}
-            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+            onChange={e => {
+              setFormData({ ...formData, phone: e.target.value });
+              if (phoneError) setPhoneError('');
+            }}
           />
+          {phoneError && (
+            <p className="text-[11px] font-bold text-red-500 mt-1.5 font-mono uppercase tracking-wider">
+              {phoneError}
+            </p>
+          )}
         </div>
         <div>
           <label className={labelClass}>

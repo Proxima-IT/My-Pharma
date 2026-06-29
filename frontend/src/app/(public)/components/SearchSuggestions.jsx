@@ -14,7 +14,7 @@ import toast from 'react-hot-toast';
  * Displays a floating list of product matches under the search bar.
  * Design: Public Premium (rounded-[24px], soft shadows).
  */
-const SearchSuggestions = ({ suggestions, isLoading, onSelect, visible }) => {
+const SearchSuggestions = ({ suggestions, isLoading, onSelect, visible, searchQuery }) => {
   const { addItem } = useCart();
   const [addingProductId, setAddingProductId] = useState(null);
 
@@ -175,7 +175,7 @@ const SearchSuggestions = ({ suggestions, isLoading, onSelect, visible }) => {
               </Link>
             ))}
             <Link
-              href={`/products?search=${suggestions[0]?.name}`}
+              href={`/products?search=${encodeURIComponent(searchQuery || '')}`}
               onClick={onSelect}
               className="flex items-center justify-center gap-2 py-4 bg-gray-50/50 text-(--color-primary-500) text-sm font-bold hover:bg-gray-50 transition-colors"
             >

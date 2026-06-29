@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
 import { AUTH_ENDPOINTS, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 export default function RequestOtpForm() {
   const router = useRouter();
@@ -28,6 +29,19 @@ export default function RequestOtpForm() {
     setError('');
     // Logic to determine if identifier is email or phone
     const isEmail = identifier.includes('@');
+    if (!isEmail) {
+      if (!isValidBDPhone(identifier)) {
+        setError('Please enter a valid Bangladeshi phone number.');
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      if (!/\S+@\S+\.\S+/.test(identifier)) {
+        setError('Please enter a valid email address.');
+        setIsLoading(false);
+        return;
+      }
+    }
     const payload = isEmail
       ? { email: identifier, purpose: 'register' }
       : { phone: identifier, purpose: 'register' };

@@ -6,6 +6,7 @@ import { useRegister } from '../hooks/useRegister';
 import { useGoogleAuth } from '../../login/hooks/useGoogleAuth';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 export default function RegisterForm() {
   const {
@@ -48,7 +49,7 @@ export default function RegisterForm() {
 
     if (!formData.email.trim()) {
       errors.email = 'Email address or phone number is required';
-    } else if (!formData.email.includes('@') && !/^[0-9+]{8,15}$/.test(formData.email.replace(/[-\s]/g, ''))) {
+    } else if (!formData.email.includes('@') && !isValidBDPhone(formData.email)) {
       errors.email = 'Please enter a valid email address or phone number';
     } else if (formData.email.includes('@') && !/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Please enter a valid email address';

@@ -56,6 +56,14 @@ export const WishlistProvider = ({ children }) => {
     fetchWishlist();
   }, [fetchWishlist]);
 
+  useEffect(() => {
+    const handleAuthChange = () => {
+      fetchWishlist();
+    };
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
+  }, [fetchWishlist]);
+
   /**
    * toggleWishlist
    * High-performance toggle logic. Uses the Product ID directly

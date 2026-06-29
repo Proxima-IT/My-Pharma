@@ -69,10 +69,26 @@ class ProductFilter(FilterSet):
         except ImportError:
             Levenshtein = None
         if Levenshtein is None:
-            return queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))
+            return queryset.filter(
+                Q(name__icontains=value) |
+                Q(description__icontains=value) |
+                Q(brand__name__icontains=value) |
+                Q(ingredient__name__icontains=value) |
+                Q(dosage__icontains=value) |
+                Q(category__name__icontains=value) |
+                Q(slug__icontains=value)
+            )
         # Get candidate PKs from the filtered queryset (do not use .only() here: queryset
         # may have select_related, and deferring a traversed field causes FieldError).
-        candidates = queryset.filter(Q(name__icontains=value) | Q(description__icontains=value))
+        candidates = queryset.filter(
+            Q(name__icontains=value) |
+            Q(description__icontains=value) |
+            Q(brand__name__icontains=value) |
+            Q(ingredient__name__icontains=value) |
+            Q(dosage__icontains=value) |
+            Q(category__name__icontains=value) |
+            Q(slug__icontains=value)
+        )
         candidate_pks = list(candidates.values_list("pk", flat=True))
         
         # If no direct matches, try fuzzy matching against all products in queryset
@@ -84,15 +100,34 @@ class ProductFilter(FilterSet):
             
         # Run Levenshtein on a separate minimal queryset (no select_related) to avoid conflict.
         pks = []
-        for p in Product.objects.filter(pk__in=candidate_pks).only("pk", "name", "description").iterator():
+        for p in Product.objects.filter(pk__in=candidate_pks).select_related("brand", "ingredient", "category").only(
+            "pk", "name", "description", "brand__name", "ingredient__name", "dosage", "category__name", "slug"
+        ).iterator():
             p_name_lower = p.name.lower()
             p_desc_lower = (p.description or "").lower()
+            p_brand_lower = (p.brand.name if p.brand else "").lower()
+            p_ing_lower = (p.ingredient.name if p.ingredient else "").lower()
+            p_dosage_lower = (p.dosage or "").lower()
+            p_cat_lower = (p.category.name if p.category else "").lower()
+            p_slug_lower = (p.slug or "").lower()
             
-            # Direct substring matches in name or description are always kept
-            if val_lower in p_name_lower or val_lower in p_desc_lower:
+            # Direct substring matches in any field are always kept
+            if (val_lower in p_name_lower or 
+                val_lower in p_desc_lower or 
+                val_lower in p_brand_lower or 
+                val_lower in p_ing_lower or 
+                val_lower in p_dosage_lower or 
+                val_lower in p_cat_lower or 
+                val_lower in p_slug_lower):
                 pks.append(p.pk)
             # Fuzzy word-level match for query typos
-            elif len(val_lower) >= 2 and any(Levenshtein.distance(val_lower, w) <= 1 for w in p_name_lower.split()):
+            elif len(val_lower) >= 2 and (
+                any(Levenshtein.distance(val_lower, w) <= 1 for w in p_name_lower.split()) or
+                any(Levenshtein.distance(val_lower, w) <= 1 for w in p_brand_lower.split()) or
+                any(Levenshtein.distance(val_lower, w) <= 1 for w in p_ing_lower.split()) or
+                any(Levenshtein.distance(val_lower, w) <= 1 for w in p_dosage_lower.split()) or
+                any(Levenshtein.distance(val_lower, w) <= 1 for w in p_cat_lower.split())
+            ):
                 pks.append(p.pk)
         return queryset.filter(pk__in=pks) if pks else queryset.none()
 

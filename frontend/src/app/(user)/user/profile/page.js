@@ -18,6 +18,7 @@ import { IoMaleFemaleOutline } from 'react-icons/io5';
 import { useProfile } from '../../hooks/useProfile';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 export default function UserProfilePage() {
   const {
@@ -211,7 +212,7 @@ export default function UserProfilePage() {
                   leftIcon={<FiPhone />}
                   icon={
                     !initialData.phone &&
-                    formData.phone.length >= 10 && (
+                    isValidBDPhone(formData.phone) && (
                       <button
                         type="button"
                         onClick={() => requestVerification('phone')}

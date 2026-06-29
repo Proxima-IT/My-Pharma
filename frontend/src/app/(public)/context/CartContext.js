@@ -78,6 +78,14 @@ export const CartProvider = ({ children }) => {
     refreshCart();
   }, [refreshCart]);
 
+  useEffect(() => {
+    const handleAuthChange = () => {
+      refreshCart();
+    };
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
+  }, [refreshCart]);
+
   return (
     <CartContext.Provider
       value={{

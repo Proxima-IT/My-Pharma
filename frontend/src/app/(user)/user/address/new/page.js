@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import UiInput from '@/app/(public)/components/UiInput';
 import { useAddress } from '../../../hooks/useAddress';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 export default function AddNewAddressPage() {
   const router = useRouter();
@@ -28,8 +29,14 @@ export default function AddNewAddressPage() {
     is_default: false,
   });
 
+  const [phoneError, setPhoneError] = useState('');
+
   const handleSubmit = async e => {
     e.preventDefault();
+    if (!isValidBDPhone(formData.phone)) {
+      setPhoneError('Please enter a valid Bangladeshi phone number.');
+      return;
+    }
     const success = await addAddress(formData);
     if (success) {
       router.push('/user/address');
@@ -105,9 +112,11 @@ export default function AddNewAddressPage() {
               label="Phone Number"
               placeholder="01XXXXXXXXX"
               value={formData.phone}
-              onChange={e =>
-                setFormData({ ...formData, phone: e.target.value })
-              }
+              onChange={e => {
+                setFormData({ ...formData, phone: e.target.value });
+                if (phoneError) setPhoneError('');
+              }}
+              error={phoneError}
               required
             />
           </div>

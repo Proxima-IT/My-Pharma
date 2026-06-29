@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import UiInput from '@/app/(public)/components/UiInput';
 import UiButton from '@/app/(public)/components/UiButton';
 import { AUTH_ENDPOINTS, parseJsonResponse } from '@/app/(shared)/lib/apiConfig';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 export default function CompleteRegistrationForm() {
   const router = useRouter();
@@ -179,6 +180,7 @@ export default function CompleteRegistrationForm() {
       localStorage.setItem('access_token', result.access);
       localStorage.setItem('user', JSON.stringify(result.user));
       sessionStorage.clear();
+      window.dispatchEvent(new Event('auth-change'));
       router.push('/user');
     } catch (err) {
       setError(err.message);
@@ -198,7 +200,7 @@ export default function CompleteRegistrationForm() {
   const isOtherValid =
     verifiedType === 'phone'
       ? formData.email.includes('@') && formData.email.length > 5
-      : formData.phone.length >= 10;
+      : isValidBDPhone(formData.phone);
 
   const handleFileChange = e => {
     const file = e.target.files[0];

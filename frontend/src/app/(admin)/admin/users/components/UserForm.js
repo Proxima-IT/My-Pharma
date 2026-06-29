@@ -1,5 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 const UserForm = ({ initialData, onSubmit, isLoading }) => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,7 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
     role: 'REGISTERED_USER',
     is_active: true,
   });
+  const [phoneError, setPhoneError] = useState('');
 
   useEffect(() => {
     if (initialData) {
@@ -26,6 +28,11 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
 
   const handleSubmit = e => {
     e.preventDefault();
+
+    if (formData.phone && !isValidBDPhone(formData.phone)) {
+      setPhoneError('Please enter a valid Bangladeshi phone number.');
+      return;
+    }
 
     // হাইপোথিসিস ফিক্স: পাসওয়ার্ড খালি থাকলে সেটি রিকোয়েস্ট থেকে বাদ দেওয়া
     const finalPayload = { ...formData };
@@ -75,10 +82,18 @@ const UserForm = ({ initialData, onSubmit, isLoading }) => {
           <input
             type="text"
             placeholder="017XXXXXXXX"
-            className={inputClass}
+            className={`${inputClass} ${phoneError ? 'border-red-500 bg-red-50' : ''}`}
             value={formData.phone}
-            onChange={e => setFormData({ ...formData, phone: e.target.value })}
+            onChange={e => {
+              setFormData({ ...formData, phone: e.target.value });
+              if (phoneError) setPhoneError('');
+            }}
           />
+          {phoneError && (
+            <p className="text-[11px] font-bold text-red-500 mt-1.5 font-mono uppercase tracking-wider">
+              {phoneError}
+            </p>
+          )}
         </div>
 
         <div>

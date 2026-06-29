@@ -125,6 +125,7 @@ export const useVerifyOtp = () => {
       localStorage.setItem('access_token', result.access);
       localStorage.setItem('user', JSON.stringify(result.user));
       sessionStorage.clear();
+      window.dispatchEvent(new Event('auth-change'));
       router.push('/user');
     } catch (err) {
       setError(err.message);

@@ -958,14 +958,22 @@ class ProductViewSet(viewsets.ModelViewSet):
             w_starts_name = When(name__istartswith=q_lower, then=Value(8))
             w_exact_brand = When(brand__name__iexact=q_lower, then=Value(7))
             w_exact_ingredient = When(ingredient__name__iexact=q_lower, then=Value(7))
+            w_exact_category = When(category__name__iexact=q_lower, then=Value(7))
+            w_exact_dosage = When(dosage__iexact=q_lower, then=Value(7))
             w_contains_name = When(name__icontains=q_lower, then=Value(5))
             w_contains_ingredient = When(ingredient__name__icontains=q_lower, then=Value(4))
             w_contains_brand = When(brand__name__icontains=q_lower, then=Value(4))
+            w_contains_category = When(category__name__icontains=q_lower, then=Value(4))
+            w_contains_dosage = When(dosage__icontains=q_lower, then=Value(4))
+            w_contains_slug = When(slug__icontains=q_lower, then=Value(3))
 
             qs_matches = qs.filter(
                 Q(name__icontains=q) |
                 Q(brand__name__icontains=q) |
-                Q(ingredient__name__icontains=q)
+                Q(ingredient__name__icontains=q) |
+                Q(dosage__icontains=q) |
+                Q(category__name__icontains=q) |
+                Q(slug__icontains=q)
             )
 
             # Annotate with relevance rank
@@ -975,9 +983,14 @@ class ProductViewSet(viewsets.ModelViewSet):
                     w_starts_name,
                     w_exact_brand,
                     w_exact_ingredient,
+                    w_exact_category,
+                    w_exact_dosage,
                     w_contains_name,
                     w_contains_ingredient,
                     w_contains_brand,
+                    w_contains_category,
+                    w_contains_dosage,
+                    w_contains_slug,
                     default=Value(0),
                     output_field=IntegerField()
                 )

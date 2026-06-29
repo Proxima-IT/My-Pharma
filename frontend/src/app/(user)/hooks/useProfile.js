@@ -7,6 +7,7 @@ import {
   verifyIdentityOtpApi,
 } from '../api/profileApi';
 import { getMediaUrl } from '@/app/(shared)/lib/apiConfig';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 export const useProfile = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -85,6 +86,11 @@ export const useProfile = () => {
       data.append('email', formData.email);
     }
     if (formData.phone && formData.phone !== initialData.phone) {
+      if (!isValidBDPhone(formData.phone)) {
+        setError('Please enter a valid Bangladeshi phone number.');
+        setIsUpdating(false);
+        return;
+      }
       data.append('phone', formData.phone);
     }
 
@@ -113,6 +119,10 @@ export const useProfile = () => {
   };
 
   const requestVerification = async type => {
+    if (type === 'phone' && !isValidBDPhone(formData.phone)) {
+      setError('Please enter a valid Bangladeshi phone number.');
+      return;
+    }
     setIsUpdating(true);
     setError(null);
     try {

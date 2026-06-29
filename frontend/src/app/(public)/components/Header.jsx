@@ -98,6 +98,16 @@ const Header = () => {
     setIsLoggedIn(!!token);
   }, [pathname]);
 
+  // Sync isLoggedIn status when auth-change event fires
+  useEffect(() => {
+    const handleAuthChange = () => {
+      const token = localStorage.getItem('access_token');
+      setIsLoggedIn(!!token);
+    };
+    window.addEventListener('auth-change', handleAuthChange);
+    return () => window.removeEventListener('auth-change', handleAuthChange);
+  }, []);
+
   // Click Outside logic for Profile and Search
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -200,6 +210,7 @@ const Header = () => {
     sessionStorage.clear();
     setIsLoggedIn(false);
     setIsProfileOpen(false);
+    window.dispatchEvent(new Event('auth-change'));
     router.replace('/login');
   };
 
@@ -383,6 +394,7 @@ const Header = () => {
             suggestions={suggestions}
             isLoading={isSearching}
             visible={showSuggestions}
+            searchQuery={searchQuery}
             onSelect={() => {
               setShowSuggestions(false);
               setSearchQuery('');

@@ -6,6 +6,7 @@ import {
   notificationDebug,
   notificationError,
 } from '../../../../(shared)/lib/notificationDebug';
+import { isValidBDPhone } from '@/app/(shared)/lib/validation';
 
 /**
  * useLogin hook
@@ -32,6 +33,19 @@ export const useLogin = () => {
       );
       const identifier = (formData.email || '').trim();
       const isEmail = identifier.includes('@');
+      if (!isEmail) {
+        if (!isValidBDPhone(identifier)) {
+          setError('Please enter a valid Bangladeshi phone number.');
+          setIsLoading(false);
+          return;
+        }
+      } else {
+        if (!/\S+@\S+\.\S+/.test(identifier)) {
+          setError('Please enter a valid email address.');
+          setIsLoading(false);
+          return;
+        }
+      }
       const payload = isEmail
         ? { email: identifier.toLowerCase(), password: (formData.password || '').trim() }
         : { phone: identifier, password: (formData.password || '').trim() };
@@ -43,6 +57,7 @@ export const useLogin = () => {
       localStorage.setItem('access_token', result.access);
       localStorage.setItem('refresh_token', result.refresh);
       localStorage.setItem('user', JSON.stringify(result.user));
+      window.dispatchEvent(new Event('auth-change'));
 
       notificationDebug(
         'Login success. Tokens saved for session persistence.',
