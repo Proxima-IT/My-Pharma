@@ -36,18 +36,77 @@ const SearchSuggestions = ({ suggestions, isLoading, onSelect, visible, searchQu
   };
 
   const getDisplayForm = (product) => {
-    if (product.content_type) {
-      let form = product.content_type;
-      if (form.toLowerCase().endsWith('tablets')) form = 'Tablet';
-      else if (form.toLowerCase().endsWith('capsules')) form = 'Capsule';
-      else if (form.toLowerCase().includes('cream')) form = 'Cream';
-      else if (form.toLowerCase().includes('liquid')) form = 'Liquid';
-      else if (form.toLowerCase().includes('condoms')) form = 'Condom';
-      else if (form.endsWith('s') && !form.toLowerCase().endsWith('drops') && !form.toLowerCase().endsWith('syrup')) {
-        form = form.slice(0, -1);
+    // 1. Try product.dosage (if it's a non-numeric string, it's the form in production)
+    if (product.dosage) {
+      const val = product.dosage.trim();
+      const hasDigits = /\d/.test(val);
+      const isStrengthUnit = /^(mg|ml|gm|g|iu|mcg)$/i.test(val);
+      if (!hasDigits && !isStrengthUnit) {
+        let form = val;
+        if (form.toLowerCase().endsWith('tablets')) form = 'Tablet';
+        else if (form.toLowerCase().endsWith('capsules')) form = 'Capsule';
+        else if (form.endsWith('s') && !form.toLowerCase().endsWith('drops') && !form.toLowerCase().endsWith('syrup')) {
+          form = form.slice(0, -1);
+        }
+        return form;
       }
-      return form;
     }
+
+    // 2. Try product.content_type (if it's a non-numeric string, and not a simple strength unit, it's the form in local/seeded)
+    if (product.content_type) {
+      const val = product.content_type.trim();
+      const isStrengthUnit = /^(mg|ml|gm|g|iu|mcg)$/i.test(val);
+      if (!isStrengthUnit) {
+        let form = val;
+        // Strip any leading measurements if any (e.g. "ml Syrup" -> "Syrup")
+        const words = form.split(/\s+/);
+        if (words.length > 1 && /^(ml|mg|gm|g)$/i.test(words[0])) {
+          form = words.slice(1).join(' ');
+        }
+        
+        if (form.toLowerCase().endsWith('tablets')) form = 'Tablet';
+        else if (form.toLowerCase().endsWith('capsules')) form = 'Capsule';
+        else if (form.toLowerCase().includes('cream')) form = 'Cream';
+        else if (form.toLowerCase().includes('liquid')) form = 'Liquid';
+        else if (form.toLowerCase().includes('condoms')) form = 'Condom';
+        else if (form.endsWith('s') && !form.toLowerCase().endsWith('drops') && !form.toLowerCase().endsWith('syrup')) {
+          form = form.slice(0, -1);
+        }
+        return form;
+      }
+    }
+
+    // 3. Try parsing from product.unit_type (e.g., "Strip x 10 Tablets" -> "Tablet")
+    if (product.unit_type) {
+      const val = product.unit_type.toLowerCase();
+      if (val.includes('tablet')) return 'Tablet';
+      if (val.includes('capsule')) return 'Capsule';
+      if (val.includes('syrup')) return 'Syrup';
+      if (val.includes('suspension')) return 'Suspension';
+      if (val.includes('cream')) return 'Cream';
+      if (val.includes('gel')) return 'Gel';
+      if (val.includes('ointment')) return 'Ointment';
+      if (val.includes('injection')) return 'Injection';
+      if (val.includes('drop')) return 'Drops';
+      if (val.includes('spray')) return 'Spray';
+      if (val.includes('sachet')) return 'Sachet';
+      if (val.includes('condom')) return 'Condom';
+      if (val.includes('shampoo')) return 'Shampoo';
+    }
+
+    // 4. Try parsing from name
+    const nameLower = (product.name || '').toLowerCase();
+    if (nameLower.includes('tablet')) return 'Tablet';
+    if (nameLower.includes('capsule')) return 'Capsule';
+    if (nameLower.includes('syrup')) return 'Syrup';
+    if (nameLower.includes('suspension')) return 'Suspension';
+    if (nameLower.includes('cream')) return 'Cream';
+    if (nameLower.includes('ointment')) return 'Ointment';
+    if (nameLower.includes('gel')) return 'Gel';
+    if (nameLower.includes('drop')) return 'Drops';
+    if (nameLower.includes('spray')) return 'Spray';
+
+    // 5. Fallback to product.unit_type
     return product.unit_type || '';
   };
 
