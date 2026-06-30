@@ -9,6 +9,7 @@ import {
   FaInstagram,
   FaXTwitter,
   FaWhatsapp,
+  FaLinkedin,
 } from 'react-icons/fa6';
 import { SlPhone } from 'react-icons/sl';
 import { CiMail, CiLocationOn } from 'react-icons/ci';
@@ -53,8 +54,9 @@ const Footer = () => {
             </div>
             <div className="flex gap-3 pt-2">
               {[
-                { icon: <FaFacebook />, href: 'https://facebook.com' },
-                { icon: <FaInstagram />, href: 'https://instagram.com' },
+                { icon: <FaFacebook />, href: 'https://www.facebook.com/mypharmabd' },
+                { icon: <FaInstagram />, href: 'https://www.instagram.com/mypharmaltd' },
+                { icon: <FaLinkedin />, href: 'https://www.linkedin.com/company/mypharmabd/' },
                 { icon: <FaXTwitter />, href: 'https://x.com' },
                 { icon: <FaWhatsapp />, href: 'https://wa.me/8801755697233' },
               ].map((social, idx) => (
@@ -222,7 +224,7 @@ const Footer = () => {
                       Address
                     </p>
                     <p className="text-xs text-white font-bold leading-relaxed">
-                      Mirpur, Dhaka-1208
+                      Flat B-4, Dominno Sorrel, 131/1 New Eskaton Road, Ramna, Dhaka-1000
                     </p>
                   </div>
                 </div>

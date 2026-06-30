@@ -63,8 +63,7 @@ export default function PrivacyPolicyPage() {
                 </p>
                 <div className="bg-gray-50 p-4 rounded-2xl space-y-1 text-sm border border-gray-100">
                   <p>
-                    <strong>Registered Address:</strong> Pyramid Prottasha, 75
-                    East Raza Bazar, Panthapath, Dhaka-1215
+                    <strong>Registered Address:</strong> Flat B-4, Dominno Sorrel, 131/1 New Eskaton Road, Ramna, Dhaka-1000
                   </p>
                   <p>
                     <strong>Phone:</strong> 01335236650

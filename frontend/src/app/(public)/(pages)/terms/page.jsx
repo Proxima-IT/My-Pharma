@@ -73,8 +73,7 @@ export default function TermsAndConditionsPage() {
                     <strong>Email:</strong> support@mypharma.com.bd
                   </p>
                   <p>
-                    <strong>Address:</strong> Pyramid Prottasha, 75 East Raza
-                    Bazar, Panthapath, Dhaka-1215
+                    <strong>Address:</strong> Flat B-4, Dominno Sorrel, 131/1 New Eskaton Road, Ramna, Dhaka-1000
                   </p>
                 </div>
               </div>

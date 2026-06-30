@@ -294,13 +294,13 @@ const Header = () => {
           Medicines and healthcare products delivered to your doorstep
         </p>
         <div className="flex items-center gap-5 text-lg">
-          <a href="#">
+          <a href="https://www.facebook.com/mypharmabd" target="_blank" rel="noopener noreferrer">
             <FaFacebook />
           </a>
-          <a href="#">
+          <a href="https://www.linkedin.com/company/mypharmabd/" target="_blank" rel="noopener noreferrer">
             <FaLinkedin />
           </a>
-          <a href="#">
+          <a href="https://www.instagram.com/mypharmaltd" target="_blank" rel="noopener noreferrer">
             <BsInstagram />
           </a>
         </div>
