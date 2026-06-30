@@ -86,7 +86,9 @@ const Checkout = () => {
         setDeliveryOptions(activeOptions);
 
         if (activeOptions.length > 0) {
-          setSelectedMethodId(activeOptions[0].id);
+          const savedId = localStorage.getItem('selected_delivery_id');
+          const hasSaved = activeOptions.some(opt => String(opt.id) === String(savedId));
+          setSelectedMethodId(hasSaved ? Number(savedId) : activeOptions[0].id);
         }
       } catch (err) {
         console.error('Failed to load delivery methods', err);
@@ -284,6 +286,7 @@ const Checkout = () => {
 
   // Order Placement
   const handleConfirmOrder = async () => {
+    if (isPlacingStandardOrder || isPlacingBuyNowOrder) return;
     const token = localStorage.getItem('access_token');
     if (!token) {
       openAuthModal();
@@ -607,7 +610,10 @@ const Checkout = () => {
               {deliveryOptions.map(option => (
                 <button
                   key={option.id}
-                  onClick={() => setSelectedMethodId(option.id)}
+                  onClick={() => {
+                    setSelectedMethodId(option.id);
+                    localStorage.setItem('selected_delivery_id', option.id);
+                  }}
                   className={`flex items-center justify-between p-4 rounded-[24px] border transition-all cursor-pointer text-left shadow-none ${
                     selectedMethodId === option.id
                       ? 'border-(--color-primary-500) bg-(--color-primary-25)'
@@ -698,7 +704,8 @@ const Checkout = () => {
               applyCoupon={buyNow ? handleApplyBuyNowCoupon : undefined}
               removeCoupon={buyNow ? handleRemoveBuyNowCoupon : undefined}
               appliedCoupon={buyNow ? buyNowCoupon : undefined}
-              isApplyingCoupon={buyNow ? isApplyingBuyNowCoupon : undefined}
+              isApplyingCoupon={buyNow ? isApplyingCoupon : undefined}
+              isPlacing={buyNow ? isPlacingBuyNowOrder : isPlacingStandardOrder}
               error={buyNow ? buyNowCouponError : undefined}
             />
           </div>

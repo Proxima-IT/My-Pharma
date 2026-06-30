@@ -17,12 +17,15 @@ logger = logging.getLogger(__name__)
 
 def _send_mimsms_sms(phone: str, message: str) -> None:
     """Helper to send an arbitrary SMS via MiMSMS gateway."""
+    if getattr(settings, "DEBUG", False):
+        logger.info("[DEBUG] SMS to ****%s: %s", phone[-4:], message)
+
     if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
         logger.info("[EAGER DEV/TEST MODE] SMS to ****%s: %s", phone[-4:], message)
         return
 
     if not getattr(settings, "MIMSMS_ENABLED", True):
-        logger.info("MiMSMS is disabled; skipped SMS for ****%s.", phone[-4:])
+        logger.info("MiMSMS is disabled; skipped SMS for ****%s. Message: %s", phone[-4:], message)
         return
 
     username = getattr(settings, "MIMSMS_USERNAME", "").strip()
@@ -100,7 +103,7 @@ def send_otp_sms(self, phone: str, otp: str):
             detail = f"URL error: {exc.reason}"
         else:
             detail = str(exc)
-        logger.warning("OTP send failed for ****%s: %s", phone[-4:], detail)
+        logger.warning("OTP send failed for ****%s: %s. OTP code: %s", phone[-4:], detail, otp)
         raise self.retry(exc=exc, countdown=60)
 
 
@@ -130,6 +133,8 @@ def send_otp_email(self, email: str, otp: str):
         if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False):
             logger.info("OTP for email %s is: %s (dev mode)", email, otp)
             return
+        if getattr(settings, "DEBUG", False):
+            logger.info("[DEBUG] Generated OTP for email %s is: %s", email, otp)
         subject = "My Pharma – Your verification code"
         message = f"Your verification code is: {otp}. It is valid for 5 minutes. Do not share it."
         from_email = getattr(settings, "DEFAULT_FROM_EMAIL", "noreply@mypharma.com")

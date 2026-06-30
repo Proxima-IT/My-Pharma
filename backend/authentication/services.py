@@ -76,6 +76,8 @@ def request_otp_for_phone(phone: str, ip: str = "", user_agent: str = "") -> Non
     otp = _generate_otp()
     utils.otp_set(normalized, otp)
     utils.otp_resend_increment(normalized)
+    if getattr(settings, "DEBUG", False):
+        logger.info("[DEBUG] Generated OTP for phone %s is: %s", normalized, otp)
     send_otp_sms.delay(normalized, otp)
     logger.info("OTP requested for phone (masked); resend count incremented.")
 
@@ -94,6 +96,8 @@ def request_otp_for_email(email: str, ip: str = "", user_agent: str = "") -> Non
     otp = _generate_otp()
     utils.otp_set(normalized, otp)
     utils.otp_resend_increment(normalized)
+    if getattr(settings, "DEBUG", False):
+        logger.info("[DEBUG] Generated OTP for email %s is: %s", normalized, otp)
     send_otp_email.delay(normalized, otp)
     logger.info("OTP requested for email (masked); resend count incremented.")
 

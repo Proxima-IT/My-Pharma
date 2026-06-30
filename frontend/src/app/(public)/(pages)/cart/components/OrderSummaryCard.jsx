@@ -21,6 +21,7 @@ const OrderSummaryCard = ({
   removeCoupon: customRemoveCoupon,
   appliedCoupon: customAppliedCoupon,
   isApplyingCoupon: customIsApplyingCoupon,
+  isPlacing = false,
   error: customError,
   showDiscountBreakdown = true,
 }) => {
@@ -261,10 +262,11 @@ const OrderSummaryCard = ({
       <div className="space-y-3">
         <button
           onClick={handleAction}
-          className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer shadow-none"
+          disabled={isPlacing || isApplyingCoupon}
+          className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer shadow-none disabled:opacity-50"
         >
-          <span>{onPlaceOrder ? 'Confirm Order' : 'Place Order'}</span>
-          <FiChevronRight size={20} strokeWidth={3} />
+          <span>{isPlacing ? 'Placing Order...' : (onPlaceOrder ? 'Confirm Order' : 'Place Order')}</span>
+          {!isPlacing && <FiChevronRight size={20} strokeWidth={3} />}
         </button>
         {loginError && !onPlaceOrder && (
           <p className="text-[13px] font-bold text-red-500 text-center animate-in fade-in uppercase tracking-tighter">

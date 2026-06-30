@@ -328,7 +328,7 @@ const Header = () => {
           </div>
 
           <div className="flex lg:hidden items-center gap-2">
-            <Link href="/user/orders" className={iconContainerClass}>
+            <Link href={isLoggedIn ? "/user/orders" : "/track-order"} className={iconContainerClass}>
               <TrackOrderIcon size={18} className="text-gray-700" />
             </Link>
             <Link href="/cart" className={`relative ${iconContainerClass}`}>
@@ -425,7 +425,7 @@ const Header = () => {
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileUpload}
           />
-          <Link href="/user/orders" className={iconContainerClass}>
+          <Link href={isLoggedIn ? "/user/orders" : "/track-order"} className={iconContainerClass}>
             <TrackOrderIcon className="text-gray-700" />
           </Link>
           <div className={iconContainerClass}>

@@ -31,6 +31,7 @@ export default function LayoutWrapper({ children }) {
   const isCheckoutPage = pathname.startsWith('/checkout');
   const isUploadPrescriptionPage = pathname.startsWith('/upload-prescription');
   const isBlogsPage = pathname.startsWith('/blogs');
+  const isTrackOrderPage = pathname.startsWith('/track-order');
 
   // 3. Logic: Show Sidebar only on Home and Product Details
   const showSidebar =
@@ -43,7 +44,8 @@ export default function LayoutWrapper({ children }) {
     !isCartPage &&
     !isUploadPrescriptionPage &&
     !isCheckoutPage &&
-    !isBlogsPage;
+    !isBlogsPage &&
+    !isTrackOrderPage;
 
   // Auth pages should not show notification prompt/layout chrome.
   if (isAuthPage) {

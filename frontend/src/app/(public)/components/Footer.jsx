@@ -85,6 +85,12 @@ const Footer = () => {
                   Home
                 </Link>
                 <Link
+                  href="/track-order"
+                  className="hover:text-white transition-colors"
+                >
+                  Track Order
+                </Link>
+                <Link
                   href="/order-medicine"
                   className="hover:text-white transition-colors"
                 >

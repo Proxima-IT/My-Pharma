@@ -1114,6 +1114,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         return qs.filter(user=self.request.user)
 
     def get_permissions(self):
+        if self.action == "track_order":
+            return [AllowAnyIncludingGuest()]
         if self.action in ("create", "buy_now"):
             return [IsAuthenticated(), IsRegisteredUserOnly()]
         return [IsAuthenticated(), IsRegisteredUser()]
@@ -1649,6 +1651,55 @@ class OrderViewSet(viewsets.ModelViewSet):
             return response
         except Exception as e:
             return Response({"detail": f"Failed to generate invoice PDF: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=False, methods=["post"], url_path="track", permission_classes=[AllowAnyIncludingGuest])
+    def track_order(self, request):
+        """
+        POST /api/orders/track/
+        Public endpoint for tracking an order.
+        Expects: { "order_id": int/str, "email_or_phone": str }
+        """
+        order_id = request.data.get("order_id")
+        email_or_phone = request.data.get("email_or_phone")
+
+        if not order_id or not email_or_phone:
+            raise ValidationError({"detail": "Both order_id and email_or_phone are required."})
+
+        email_or_phone = str(email_or_phone).strip()
+
+        try:
+            order = (
+                Order.objects.select_related("user", "prescription", "delivery_method", "coupon", "settlement")
+                .prefetch_related("items__product", "items__combo", "images", "status_history")
+                .get(id=order_id)
+            )
+        except (Order.DoesNotExist, ValueError, TypeError):
+            return Response({"detail": "Order not found or invalid credentials."}, status=status.HTTP_404_NOT_FOUND)
+
+        user = order.user
+        user_email = (user.email or "").strip().lower()
+        user_phone = (user.phone or "").strip()
+
+        input_value = email_or_phone.strip()
+        input_value_lower = input_value.lower()
+
+        match = False
+        if user_email and user_email == input_value_lower:
+            match = True
+        elif user_phone:
+            clean_user_phone = "".join(c for c in user_phone if c.isdigit())
+            clean_input = "".join(c for c in input_value if c.isdigit())
+            if clean_user_phone == clean_input:
+                match = True
+            elif len(clean_user_phone) >= 10 and len(clean_input) >= 10:
+                if clean_user_phone[-10:] == clean_input[-10:]:
+                    match = True
+
+        if not match:
+            return Response({"detail": "Order not found or invalid credentials."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = OrderSerializer(order, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 # ---- Delivery duration (admin CRUD) ----

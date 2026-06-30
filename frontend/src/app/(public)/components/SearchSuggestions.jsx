@@ -176,11 +176,6 @@ const SearchSuggestions = ({ suggestions, isLoading, onSelect, visible, searchQu
                       <h4 className="text-[15px] font-bold text-gray-900 group-hover:text-(--color-primary-500) transition-colors truncate">
                         {getDisplayName(product)}
                       </h4>
-                      {product.requires_prescription && (
-                        <span className="px-1.5 py-0.5 bg-red-50 text-red-600 text-[9px] font-black rounded-md uppercase tracking-wider border border-red-100 shrink-0">
-                          Prescription Required
-                        </span>
-                      )}
                     </div>
                     {getDisplayForm(product) && (
                       <p className="text-[12px] text-gray-600 font-semibold uppercase tracking-wider text-[10px] leading-tight">

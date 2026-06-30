@@ -31,10 +31,13 @@ const Cart = () => {
     updateQuantity,
     removeItem,
     refresh,
+    selectedDeliveryId,
+    updateDeliveryOption,
   } = useCart();
 
   const [deliveryMethods, setDeliveryMethods] = React.useState([]);
-  const [selectedMethodId, setSelectedMethodId] = React.useState(null);
+  const selectedMethodId = selectedDeliveryId;
+  const setSelectedMethodId = updateDeliveryOption;
 
   /**
    * Intercepts the proceed action.
@@ -54,19 +57,20 @@ const Cart = () => {
       try {
         const methods = await fetchDeliveryMethodsApi();
         const methodList = methods.results || methods;
-        setDeliveryMethods(methodList.filter(m => m.is_active));
+        const active = methodList.filter(m => m.is_active);
+        setDeliveryMethods(active);
+
+        // Auto-select first method if none selected/saved
+        const savedId = localStorage.getItem('selected_delivery_id');
+        if (!savedId && active.length > 0) {
+          updateDeliveryOption(active[0].id);
+        }
       } catch (err) {
         console.error('Failed to fetch delivery methods:', err);
       }
     };
     getMethods();
-  }, []);
-
-  React.useEffect(() => {
-    if (selectedMethodId) {
-      refresh({ delivery_method_id: selectedMethodId }, false);
-    }
-  }, [selectedMethodId, refresh]);
+  }, [updateDeliveryOption]);
 
   if (isLoading) {
     return (
@@ -122,12 +126,12 @@ const Cart = () => {
           <div className="w-full lg:w-[42%] flex flex-col gap-8">
             <ShippingAddressCard />
 
-            {/* Estimate Delivery Selection */}
+            {/* Select Delivery Selection */}
             {deliveryMethods.length > 0 && (
               <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 transition-all shadow-none">
                 <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
                   <FiShoppingBag className="text-(--color-primary-500)" />
-                  Estimate Delivery
+                  Select Delivery
                 </h3>
                 <div className="flex flex-col gap-3">
                   {deliveryMethods.map(method => (

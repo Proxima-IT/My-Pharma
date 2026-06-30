@@ -655,6 +655,64 @@ class OrderApiTests(APITestCase):
             self.order.save()
             mock_task.assert_called_once_with(self.order.id)
 
+    def test_public_track_order_by_email_success(self):
+        self.client.logout()
+        payload = {
+            "order_id": self.order.id,
+            "email_or_phone": "order_customer@example.com"
+        }
+        response = self.client.post("/api/orders/track/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.order.id)
+        self.assertEqual(response.data["status"], self.order.status)
+
+    def test_public_track_order_by_phone_success(self):
+        self.client.logout()
+        self.customer.phone = "+880-1711-223344"
+        self.customer.save()
+
+        payload = {
+            "order_id": self.order.id,
+            "email_or_phone": "+880-1711-223344"
+        }
+        response = self.client.post("/api/orders/track/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        payload = {
+            "order_id": self.order.id,
+            "email_or_phone": "8801711223344"
+        }
+        response = self.client.post("/api/orders/track/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_public_track_order_not_found(self):
+        self.client.logout()
+        payload = {
+            "order_id": 99999,
+            "email_or_phone": "order_customer@example.com"
+        }
+        response = self.client.post("/api/orders/track/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["detail"], "Order not found or invalid credentials.")
+
+    def test_public_track_order_invalid_credentials(self):
+        self.client.logout()
+        payload = {
+            "order_id": self.order.id,
+            "email_or_phone": "wrong_email@example.com"
+        }
+        response = self.client.post("/api/orders/track/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data["detail"], "Order not found or invalid credentials.")
+
+    def test_public_track_order_missing_parameters(self):
+        self.client.logout()
+        payload = {
+            "order_id": self.order.id
+        }
+        response = self.client.post("/api/orders/track/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class PrescriptionOrderApiTests(APITestCase):
     def setUp(self):

@@ -18,7 +18,13 @@ import { getProductImageUrl, API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
  * Logic: For authenticated users, the backend persists the coupon and returns a pre-calculated summary.
  */
 export const useCart = () => {
-  const { cart, refreshCart, isLoading: contextLoading } = useCartContext();
+  const {
+    cart,
+    refreshCart,
+    isLoading: contextLoading,
+    selectedDeliveryId,
+    updateDeliveryOption,
+  } = useCartContext();
   const [isUpdating, setIsUpdating] = useState(false);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [guestItems, setGuestItems] = useState([]);
@@ -320,5 +326,7 @@ export const useCart = () => {
     placeOrder,
     applyCoupon,
     removeCoupon,
+    selectedDeliveryId,
+    updateDeliveryOption,
   };
 };

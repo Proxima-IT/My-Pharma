@@ -68,6 +68,10 @@ export const USER_ENDPOINTS = {
   ADDRESSES: `${API_BASE_URL}/auth/addresses/`,
 };
 
+export const ORDER_ENDPOINTS = {
+  TRACK: `${API_BASE_URL}/orders/track/`,
+};
+
 export const CART_ENDPOINTS = {
   BASE: `${API_BASE_URL}/cart/`,
   ADD: `${API_BASE_URL}/cart/add/`,

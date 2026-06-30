@@ -48,7 +48,9 @@ export const CartProvider = ({ children }) => {
 
         const params = {
           delivery_method_id:
-            selectedDeliveryId || localStorage.getItem('selected_delivery_id'),
+            extraParams?.delivery_method_id ||
+            selectedDeliveryId ||
+            localStorage.getItem('selected_delivery_id'),
           ...extraParams,
         };
 
@@ -71,7 +73,7 @@ export const CartProvider = ({ children }) => {
     setSelectedDeliveryId(id);
     localStorage.setItem('selected_delivery_id', id);
     // Immediately refresh with the new ID to ensure summary updates
-    await refreshCart(null, true, id);
+    await refreshCart({ delivery_method_id: id }, true);
   };
 
   useEffect(() => {

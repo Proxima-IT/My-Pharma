@@ -1,10 +1,12 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { FiChevronRight, FiRotateCcw, FiPackage, FiInfo } from 'react-icons/fi';
 import { formatCurrency } from '../../../../lib/formatters';
 import { getMediaUrl, getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
+import { useCart } from '@/app/(public)/hooks/useCart';
+import toast from 'react-hot-toast';
 
 /**
  * OrderedProductCard Component
@@ -13,8 +15,30 @@ import { getMediaUrl, getProductImageUrl } from '@/app/(shared)/lib/apiConfig';
  */
 export default function OrderedProductCard({ item, productInfo }) {
   const router = useRouter();
+  const { addItem } = useCart();
+  const [isPlacing, setIsPlacing] = useState(false);
 
   const isCombo = item.item_type === 'COMBO';
+
+  const handleBuyAgain = async () => {
+    setIsPlacing(true);
+    try {
+      const productObj = isCombo
+        ? { _isCombo: true, id: item.combo_id }
+        : {
+            ...productInfo,
+            id: item.product || item.product_id || productInfo?.id,
+            selected_dosage: item.dosage || '',
+          };
+      await addItem(productObj, item.quantity || 1);
+      toast.success(`${item.product_name || 'Item'} added to cart!`);
+      router.push('/cart');
+    } catch (err) {
+      toast.error(err.message || 'Failed to add item to cart');
+    } finally {
+      setIsPlacing(false);
+    }
+  };
 
   // Determine the correct detail path and slug
   const detailPath = isCombo
@@ -166,11 +190,12 @@ export default function OrderedProductCard({ item, productInfo }) {
           </Link>
 
           <button
-            onClick={() => router.push(detailPath)}
-            className="min-w-[160px] flex-1 sm:flex-none h-11 px-8 bg-gray-900 hover:bg-black text-white text-[11px] font-black rounded-full transition-all cursor-pointer uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-none active:scale-95 shadow-none"
+            onClick={handleBuyAgain}
+            disabled={isPlacing}
+            className="min-w-[160px] flex-1 sm:flex-none h-11 px-8 bg-gray-900 hover:bg-black text-white text-[11px] font-black rounded-full transition-all cursor-pointer uppercase tracking-[0.2em] flex items-center justify-center gap-2 border-none active:scale-95 shadow-none disabled:opacity-50"
           >
-            <FiRotateCcw size={14} />
-            Buy Again
+            <FiRotateCcw size={14} className={isPlacing ? "animate-spin" : ""} />
+            {isPlacing ? 'Adding...' : 'Buy Again'}
           </button>
         </div>
       </div>
