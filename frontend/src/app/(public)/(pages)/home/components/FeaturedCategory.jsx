@@ -177,7 +177,7 @@ const FeaturedCategory = () => {
 
             {/* Category Info */}
             <div className="mt-4 space-y-1">
-              <h3 className="font-bold text-xs sm:text-sm lg:text-base text-gray-900 leading-tight group-hover:text-(--color-primary-500) transition-colors line-clamp-1 uppercase">
+              <h3 className="font-bold text-xs sm:text-sm lg:text-base text-gray-900 leading-tight group-hover:text-(--color-primary-500) transition-colors uppercase">
                 {item.name}
               </h3>
               <p className="text-[10px] sm:text-xs lg:text-sm text-gray-400 font-black uppercase tracking-tighter">

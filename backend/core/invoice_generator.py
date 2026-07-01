@@ -1,7 +1,9 @@
 import io
+import os
+from django.conf import settings
 from reportlab.lib.pagesizes import letter
 from reportlab.lib import colors
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
 def generate_invoice_pdf(order) -> bytes:
@@ -88,10 +90,37 @@ def generate_invoice_pdf(order) -> bytes:
         leading=12
     )
 
-    # Header section (Company Name & Invoice metadata)
+    # Try to load custom logo from DB, fall back to static logo file
+    logo_path = None
+    try:
+        from core.models import AppLogo
+        app_logo = AppLogo.objects.filter(slug='header').first()
+        if app_logo and app_logo.image:
+            if os.path.exists(app_logo.image.path):
+                logo_path = app_logo.image.path
+    except Exception:
+        pass
+
+    if not logo_path:
+        logo_path = os.path.join(settings.BASE_DIR, 'core', 'static', 'images', 'my-pharma-logo.png')
+
+    logo_img = None
+    if logo_path and os.path.exists(logo_path):
+        try:
+            # Scale logo to fit nicely. Original aspect ratio: 789 x 248 (~3.18)
+            logo_img = Image(logo_path, width=120, height=38)
+        except Exception:
+            pass
+
+    if logo_img:
+        left_header = logo_img
+    else:
+        left_header = Paragraph("MY PHARMA", title_style)
+
+    # Header section (Company Name/Logo & Invoice metadata)
     header_data = [
         [
-            Paragraph("MY PHARMA", title_style),
+            left_header,
             Paragraph(f"INVOICE #: {order.id}", ParagraphStyle('RightBold', parent=title_style, alignment=2, fontSize=16))
         ],
         [

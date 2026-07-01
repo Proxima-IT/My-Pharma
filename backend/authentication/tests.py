@@ -192,3 +192,30 @@ class UserSoftDeleteTests(APITestCase):
         self.assertNotEqual(new_user.pk, user.pk)
         self.assertEqual(new_user.email, email)
         self.assertTrue(new_user.is_active)
+
+
+class PasswordStrengthTests(APITestCase):
+    def test_simple_six_character_password_success(self):
+        response = self.client.post(
+            "/api/auth/register/email/",
+            {
+                "email": "simplepass@example.com",
+                "password": "123456"
+            },
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("access", response.data)
+
+    def test_five_character_password_fails(self):
+        response = self.client.post(
+            "/api/auth/register/email/",
+            {
+                "email": "shortpass@example.com",
+                "password": "12345"
+            },
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("password", response.data)
+

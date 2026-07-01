@@ -3,7 +3,7 @@
 import React, { useEffect, use, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { FiArrowLeft, FiCheck, FiBox, FiHome } from 'react-icons/fi';
+import { FiArrowLeft, FiCheck, FiBox, FiHome, FiDownload } from 'react-icons/fi';
 import { TbTruckDelivery, TbBike } from 'react-icons/tb';
 import { useOrders } from '../../../hooks/useOrders';
 import { orderApi } from '../../../api/orderApi';
@@ -28,6 +28,27 @@ export default function OrderDetailsPage({ params }) {
   } = useOrders();
   const { products } = useProductData({ page_size: 1000, is_active: true });
   const [payLoading, setPayLoading] = useState(false);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+
+  const handleDownloadInvoice = async () => {
+    setDownloadingInvoice(true);
+    try {
+      const token = localStorage.getItem('access_token');
+      const blob = await orderApi.downloadInvoice(token, orderDetails.id);
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `invoice_${orderDetails.id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(err.message || 'Failed to download invoice. Please try again.');
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  };
 
   useEffect(() => {
     if (resolvedParams?.id) loadOrderDetails(resolvedParams.id);
@@ -141,6 +162,14 @@ export default function OrderDetailsPage({ params }) {
                 {formatDate(orderDetails.created_at)}
               </span>
             </p>
+            <button
+              onClick={handleDownloadInvoice}
+              disabled={downloadingInvoice}
+              className="mt-2 flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-100 hover:bg-gray-100 rounded-full text-xs font-bold text-black transition-all cursor-pointer disabled:opacity-50"
+            >
+              <FiDownload size={14} />
+              {downloadingInvoice ? 'Downloading...' : 'Download Invoice'}
+            </button>
           </div>
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-6 md:gap-10 lg:gap-16 w-full lg:w-auto">
             <div className="text-left sm:text-center md:text-right">

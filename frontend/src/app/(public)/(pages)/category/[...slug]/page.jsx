@@ -221,7 +221,7 @@ const DynamicCategoryPage = ({ params }) => {
                     unoptimized
                   />
                 </div>
-                <h3 className="font-bold text-[13px] text-gray-900 group-hover:text-(--color-primary-500) transition-colors uppercase tracking-tight text-center max-w-[100px] line-clamp-1">
+                <h3 className="font-bold text-[13px] text-gray-900 group-hover:text-(--color-primary-500) transition-colors uppercase tracking-tight text-center max-w-[100px]">
                   {sub.name}
                 </h3>
               </Link>

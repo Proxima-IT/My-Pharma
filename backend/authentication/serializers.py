@@ -74,7 +74,7 @@ class VerifyOTPRequestSerializer(serializers.Serializer):
 
 class RegisterEmailRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=6, write_only=True)
 
     def validate_password(self, value):
         ok, msg = validate_password_strength(value)
@@ -132,7 +132,7 @@ class GoogleAuthRequestSerializer(serializers.Serializer):
 class RegisterCompleteRequestSerializer(serializers.Serializer):
     """Payload to complete registration: username, password, email or phone (the one not verified), profile_picture. Add addresses after login via /api/auth/addresses/."""
     registration_token = serializers.CharField()
-    password = serializers.CharField(min_length=8, write_only=True)
+    password = serializers.CharField(min_length=6, write_only=True)
     username = serializers.CharField(max_length=150, trim_whitespace=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     phone = serializers.CharField(max_length=20, required=False, allow_blank=True, trim_whitespace=True)
@@ -245,7 +245,7 @@ class PasswordResetVerifyOTPSerializer(serializers.Serializer):
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField(required=False, allow_blank=True)
     registration_token = serializers.CharField(required=False, allow_blank=True)
-    new_password = serializers.CharField(min_length=8, write_only=True)
+    new_password = serializers.CharField(min_length=6, write_only=True)
 
     def validate_new_password(self, value):
         ok, msg = validate_password_strength(value)
@@ -437,7 +437,7 @@ class UserManagementSerializer(serializers.ModelSerializer):
     """Admin user management (SUPER_ADMIN only)."""
     role_display = serializers.CharField(source="get_role_display", read_only=True)
     status_display = serializers.CharField(source="get_status_display", read_only=True)
-    password = serializers.CharField(write_only=True, required=False, min_length=8)
+    password = serializers.CharField(write_only=True, required=False, min_length=6)
 
     class Meta:
         model = User

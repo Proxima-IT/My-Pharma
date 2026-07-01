@@ -100,4 +100,23 @@ export const orderApi = {
     }
     return data;
   },
+
+  /**
+   * GET /api/orders/{id}/invoice/
+   * Download the PDF invoice.
+   */
+  downloadInvoice: async (token, orderId) => {
+    const response = await fetchWithAuth(
+      `${API_BASE_URL}/orders/${orderId}/invoice/`,
+      {
+        method: 'GET',
+      },
+    );
+
+    if (!response.ok) {
+      const data = await parseJsonResponse(response).catch(() => ({}));
+      throw new Error(data.detail || 'Failed to download invoice');
+    }
+    return await response.blob();
+  },
 };

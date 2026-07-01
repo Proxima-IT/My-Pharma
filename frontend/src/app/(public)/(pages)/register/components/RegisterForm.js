@@ -29,15 +29,9 @@ export default function RegisterForm() {
 
   // Password Requirement Logic
   const passwordRules = [
-    { label: 'at least 8 characters', test: pw => pw.length >= 8 },
-    { label: 'one uppercase letter', test: pw => /[A-Z]/.test(pw) },
-    { label: 'one lowercase letter', test: pw => /[a-z]/.test(pw) },
-    { label: 'one digit', test: pw => /\d/.test(pw) },
-    {
-      label: 'one special character (@$!%*?&#)',
-      test: pw => /[@$!%*?&#]/.test(pw),
-    },
+    { label: 'at least 6 characters', test: pw => pw.length >= 6 },
   ];
+
 
   const validateForm = e => {
     e.preventDefault();

@@ -15,11 +15,6 @@ from . import utils
 
 logger = logging.getLogger(__name__)
 
-# Password: min 8, upper, lower, number, special
-PASSWORD_REGEX = re.compile(
-    r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$"
-)
-
 
 def normalize_phone(phone: str) -> str:
     """Normalize phone for storage and Redis keys (digits only, BD prefix optional).
@@ -43,11 +38,11 @@ def normalize_phone(phone: str) -> str:
 
 def validate_password_strength(password: str) -> tuple[bool, str]:
     """Returns (ok, error_message)."""
-    if len(password) < getattr(settings, "AUTH_PASSWORD_MIN_LENGTH", 8):
-        return False, "Password must be at least 8 characters."
-    if not PASSWORD_REGEX.match(password):
-        return False, "Password must contain uppercase, lowercase, number and special character."
+    min_len = getattr(settings, "AUTH_PASSWORD_MIN_LENGTH", 6)
+    if len(password) < min_len:
+        return False, f"Password must be at least {min_len} characters."
     return True, ""
+
 
 
 def _build_unique_username(seed: str) -> str:

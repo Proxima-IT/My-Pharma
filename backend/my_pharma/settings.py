@@ -366,6 +366,8 @@ AUTH_PASSWORD_RESET_FRONTEND_URL = os.environ.get(
 AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES = int(
     os.environ.get("AUTH_PASSWORD_RESET_TOKEN_EXPIRY_MINUTES", "30")
 )
+AUTH_PASSWORD_MIN_LENGTH = 6
+
 
 # --------------------------------------------------------------------------
 # OTP / SMS (MiMSMS)
