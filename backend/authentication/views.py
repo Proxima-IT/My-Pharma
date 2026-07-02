@@ -770,6 +770,14 @@ class MeView(APIView):
                     {"detail": "We're having trouble sending the email verification code. Please try again in a moment.", "code": "service_error"},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
+            # Update other profile fields before email verification is finalized
+            other_data = data.copy()
+            for k in ("email", "phone", "otp"):
+                other_data.pop(k, None)
+            if other_data:
+                serializer = UserProfileUpdateSerializer(user, data=other_data, partial=True, context={"request": request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
             utils.change_email_pending_set(request.user.id, raw_email)
             create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_email", "email_masked": raw_email[:2] + "***"})
             return Response(
@@ -833,6 +841,14 @@ class MeView(APIView):
                     {"detail": "We're having trouble sending the SMS code. Please try again in a moment.", "code": "service_error"},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
+            # Update other profile fields before phone verification is finalized
+            other_data = data.copy()
+            for k in ("email", "phone", "otp"):
+                other_data.pop(k, None)
+            if other_data:
+                serializer = UserProfileUpdateSerializer(user, data=other_data, partial=True, context={"request": request})
+                serializer.is_valid(raise_exception=True)
+                serializer.save()
             utils.change_phone_pending_set(request.user.id, normalized_phone)
             create_audit_log(request.user.id, AuditAction.OTP_SENT, request=request, metadata={"intent": "change_phone", "phone_masked": normalized_phone[-4:]})
             return Response(
