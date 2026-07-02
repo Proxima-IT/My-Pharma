@@ -273,7 +273,7 @@ class BuyNowApiTests(APITestCase):
     def setUp(self):
         from decimal import Decimal
         from authentication.models import UserAddress
-        from .models import Coupon, Prescription, PrescriptionItem
+        from .models import Coupon, Prescription, PrescriptionItem, DeliveryMethod
 
         # Create categories, brands, products
         self.category = Category.objects.create(name="Medicines", slug="meds")
@@ -313,6 +313,13 @@ class BuyNowApiTests(APITestCase):
             district="Dhaka",
             thana="Dhanmondi",
             address="House 12, Road 5",
+        )
+        # Create standard delivery method for the tests
+        self.delivery_method = DeliveryMethod.objects.create(
+            name="Standard Delivery",
+            delivery_type="STANDARD",
+            price=Decimal("50.00"),
+            is_active=True
         )
         self.client.force_authenticate(user=self.user)
 

@@ -3,6 +3,7 @@
 {% block title %}My Pharma – Order Confirmed #{{ order.id }}{% endblock %}
 
 {% block extra_style %}
+<style>
   .order-details {
     width: 100%;
     margin: 24px 0;
@@ -29,6 +30,7 @@
   .order-details tr:last-child td {
     border-bottom: none;
   }
+</style>
 {% endblock %}
 
 {% block content %}

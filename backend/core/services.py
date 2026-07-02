@@ -29,8 +29,6 @@ def get_delivery_fee(subtotal: Decimal, delivery_zone: str = None) -> Decimal:
     Base fee BDT 50 city, BDT 100 suburbs, BDT 150+ other.
     Delivery fee waived for orders above BDT 500. If delivery_zone is None, returns DEFAULT_DELIVERY_FEE_BDT.
     """
-    if subtotal >= FREE_DELIVERY_ABOVE_BDT:
-        return Decimal("0")
     if not delivery_zone:
         return DEFAULT_DELIVERY_FEE_BDT
     return DELIVERY_FEES.get(delivery_zone, DELIVERY_FEES[DELIVERY_ZONE_OTHER])
@@ -129,11 +127,7 @@ def get_cart_summary(cart, delivery_zone: str = None, coupon=None, delivery_meth
         delivery_option_type = None
         base_delivery_fee = Decimal("0.00")
 
-    # Apply free delivery waiver for STANDARD delivery if subtotal >= 500
-    if subtotal >= FREE_DELIVERY_ABOVE_BDT and delivery_option_type == "STANDARD":
-        delivery_fee = Decimal("0.00")
-    else:
-        delivery_fee = base_delivery_fee
+    delivery_fee = base_delivery_fee
 
     # Discount applies to product subtotal (not delivery fee).
     # If prices already discounted, this will be computed from original_subtotal.
@@ -213,11 +207,7 @@ def get_buy_now_summary(product: Product, quantity: int, delivery_zone: str = No
         delivery_option_type = None
         base_delivery_fee = Decimal("0.00")
 
-    # Apply free delivery waiver for STANDARD delivery if subtotal >= 500
-    if subtotal >= FREE_DELIVERY_ABOVE_BDT and delivery_option_type == "STANDARD":
-        delivery_fee = Decimal("0.00")
-    else:
-        delivery_fee = base_delivery_fee
+    delivery_fee = base_delivery_fee
         
     catalog_discount = max(Decimal("0"), original_subtotal - subtotal)
     discount_amount = catalog_discount

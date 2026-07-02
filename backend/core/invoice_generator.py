@@ -155,6 +155,19 @@ def generate_invoice_pdf(order) -> bytes:
     email = customer.email if customer.email and not customer.email.endswith("@ph.local") else "N/A"
     address_text = order.shipping_address or "N/A"
 
+    payment_method = "Cash on Delivery"
+    try:
+        if hasattr(order, "settlement") and order.settlement:
+            pm = order.settlement.payment_method
+            if pm == "ONLINE":
+                payment_method = "SSL Commerz"
+            elif pm == "COD":
+                payment_method = "Cash on Delivery"
+            else:
+                payment_method = pm
+    except Exception:
+        pass
+
     info_data = [
         [
             Paragraph("Billed To:", h2_style),
@@ -162,7 +175,7 @@ def generate_invoice_pdf(order) -> bytes:
         ],
         [
             Paragraph(f"<b>Name:</b> {full_name}<br/><b>Phone:</b> {phone}<br/><b>Email:</b> {email}", body_style),
-            Paragraph(f"<b>Status:</b> {order.get_status_display()}<br/><b>Payment:</b> Cash on Delivery", body_style)
+            Paragraph(f"<b>Status:</b> {order.get_status_display()}<br/><b>Payment:</b> {payment_method}", body_style)
         ],
         [
             Spacer(1, 10),

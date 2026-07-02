@@ -78,7 +78,7 @@ const OrderSummaryCard = ({
       0,
     );
     const discount = Math.max(0, originalSubtotal - subtotal);
-    const deliveryFee = subtotal >= 500 ? 0 : standardPrice;
+    const deliveryFee = standardPrice;
     return { subtotal: originalSubtotal, discount, deliveryFee };
   }, [items, standardPrice]);
 

@@ -202,7 +202,7 @@ export default function OrderDetailsPage({ params }) {
             <div className="text-left sm:text-center md:text-right">
               <span className="px-4 py-1.5 bg-gray-50 text-black text-[11px] md:text-[13px] font-bold rounded-full uppercase">
                 {orderDetails.payment_method === 'ONLINE'
-                  ? 'Online'
+                  ? 'SSL Commerz'
                   : orderDetails.payment_method === 'COD'
                     ? 'Cash on Delivery'
                     : orderDetails.payment_method || 'COD'}

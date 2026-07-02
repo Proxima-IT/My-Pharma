@@ -40,6 +40,7 @@ const Sidebar = () => {
   const [categories, setCategories] = useState([]); // All categories in tree format
   const [countSummary, setCountSummary] = useState({
     total_products: 0,
+    total_combos: 0,
     category_counts: [],
   });
   const [ads, setAds] = useState([]);
@@ -80,6 +81,7 @@ const Sidebar = () => {
         if (countRes.status === 'fulfilled' && countRes.value.ok) {
           const countData = await parseJsonResponse(countRes.value, {
             total_products: 0,
+            total_combos: 0,
             category_counts: [],
           });
           setCountSummary(countData);
@@ -319,6 +321,11 @@ const Sidebar = () => {
                 All Combos
               </span>
             </div>
+            <span
+              className={`text-xs font-bold ${isAllCombosActive ? 'text-white/60' : 'text-gray-300'}`}
+            >
+              {countSummary.total_combos || 0}
+            </span>
           </Link>
         </nav>
       </div>

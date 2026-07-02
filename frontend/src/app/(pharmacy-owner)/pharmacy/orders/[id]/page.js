@@ -192,7 +192,7 @@ export default function PharmacyOrderDetailsPage({ params }) {
                   Delivery Fee
                 </span>
                 <span className="font-black">
-                  {formatCurrency(orderDetails.delivery_fee || 150)}
+                  {formatCurrency(orderDetails.delivery_fee)}
                 </span>
               </div>
 

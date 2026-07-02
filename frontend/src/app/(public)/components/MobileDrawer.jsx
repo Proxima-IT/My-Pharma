@@ -40,6 +40,7 @@ const MobileDrawer = () => {
   const [categories, setCategories] = useState([]); // Tree representation
   const [countSummary, setCountSummary] = useState({
     total_products: 0,
+    total_combos: 0,
     category_counts: [],
   });
   const [ads, setAds] = useState([]);
@@ -86,6 +87,7 @@ const MobileDrawer = () => {
         if (countRes.status === 'fulfilled' && countRes.value.ok) {
           const countData = await parseJsonResponse(countRes.value, {
             total_products: 0,
+            total_combos: 0,
             category_counts: [],
           });
           setCountSummary(countData);
@@ -274,6 +276,11 @@ const MobileDrawer = () => {
                       All Combos
                     </span>
                   </div>
+                  <span
+                    className={`text-xs font-bold ${isAllCombosActive ? 'text-white/60' : 'text-gray-300'}`}
+                  >
+                    {countSummary.total_combos || 0}
+                  </span>
                 </Link>
 
                 <div className="h-px bg-gray-100 my-1 w-full opacity-50" />

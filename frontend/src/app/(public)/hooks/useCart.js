@@ -294,7 +294,7 @@ export const useCart = () => {
         // Map backend fields to frontend expected keys
         sub_total: parseFloat(s.subtotal_before_discount || s.subtotal || 0),
         discount_amount: parseFloat(s.discount_amount || 0),
-        shipping_charge: s.delivery_fee != null ? parseFloat(s.delivery_fee) : (s.shipping_charge != null ? parseFloat(s.shipping_charge) : (s.subtotal >= 500 ? 0 : basePrice)),
+        shipping_charge: s.delivery_fee != null ? parseFloat(s.delivery_fee) : (s.shipping_charge != null ? parseFloat(s.shipping_charge) : basePrice),
         total_amount: parseFloat(s.total_payable || s.total_amount || 0),
         coupon_code: s.coupon_code || null,
         // Delivery breakdown fields — preserve backend values (including 0)

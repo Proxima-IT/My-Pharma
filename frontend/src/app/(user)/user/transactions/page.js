@@ -177,7 +177,9 @@ export default function TransactionHistoryPage() {
                       {txn.txn_id}
                     </td>
                     <td className="px-4 py-5 text-[11px] font-black text-gray-500 uppercase tracking-tight">
-                      {txn.payment_method?.replace(/_/g, ' ')}
+                      {txn.payment_method === 'ONLINE'
+                        ? 'SSL Commerz'
+                        : txn.payment_method?.replace(/_/g, ' ')}
                     </td>
                     <td className="px-4 py-5">
                       <span

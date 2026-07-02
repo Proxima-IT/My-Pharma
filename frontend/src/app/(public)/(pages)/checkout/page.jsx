@@ -505,7 +505,7 @@ const Checkout = () => {
   const standardPrice = standardMethod ? parseFloat(standardMethod.price || 0) : 60;
 
   const buyNowSubtotal = parseFloat(buyNowProduct?.price || 0) * buyNowQty;
-  const isFreeDelivery = buyNowSubtotal >= 500 && (!selectedMethodId || deliveryOptions.find(opt => opt.id === selectedMethodId)?.delivery_type === 'STANDARD');
+  const isFreeDelivery = false;
 
   const defaultDeliveryPrice = selectedMethodId
     ? parseFloat(

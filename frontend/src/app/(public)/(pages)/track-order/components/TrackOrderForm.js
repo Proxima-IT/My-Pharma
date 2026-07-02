@@ -364,7 +364,14 @@ export default function TrackOrderForm() {
                   </h3>
                   <div className="space-y-1">
                     <p className="text-sm font-bold text-gray-800">
-                      Method: <span className="text-gray-600 font-semibold">{orderData.payment_method}</span>
+                      Method:{' '}
+                      <span className="text-gray-600 font-semibold">
+                        {orderData.payment_method === 'ONLINE'
+                          ? 'SSL Commerz'
+                          : orderData.payment_method === 'COD'
+                            ? 'Cash on Delivery'
+                            : orderData.payment_method || 'COD'}
+                      </span>
                     </p>
                     <p className="text-sm font-bold text-gray-800">
                       Status: <span className={`font-semibold ${orderData.payment_status === 'PAID' ? 'text-emerald-600' : 'text-amber-600'}`}>{orderData.payment_status}</span>

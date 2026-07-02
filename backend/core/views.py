@@ -904,6 +904,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         Returns the total count of active products and the count of active products per category.
         """
         total_products = Product.objects.filter(is_active=True).count()
+        total_combos = Combo.objects.filter(is_active=True).count()
         
         category_counts = Category.objects.filter(is_active=True).annotate(
             product_count=Count("products", filter=Q(products__is_active=True), distinct=True)
@@ -911,6 +912,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         return Response({
             "total_products": total_products,
+            "total_combos": total_combos,
             "category_counts": list(category_counts)
         })
 
