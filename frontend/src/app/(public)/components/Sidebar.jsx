@@ -189,6 +189,7 @@ const Sidebar = () => {
         >
           <Link
             href={`/category/${item.slug}`}
+            prefetch={false}
             className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all ${
               isActive
                 ? 'bg-[#233b8c] text-white shadow-none'
@@ -266,6 +267,7 @@ const Sidebar = () => {
         <nav className="flex flex-col gap-0.5">
           <Link
             href="/products"
+            prefetch={false}
             className={`flex items-center justify-between px-4 py-3 rounded-full transition-all ${
               isAllProductsActive
                 ? 'bg-[#233b8c] text-white shadow-none'
@@ -309,6 +311,7 @@ const Sidebar = () => {
 
           <Link
             href="/combos"
+            prefetch={false}
             className={`flex items-center justify-between px-4 py-3 rounded-full transition-all ${
               isAllCombosActive
                 ? 'bg-[#233b8c] text-white shadow-none'

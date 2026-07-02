@@ -103,6 +103,7 @@ const UserSidebar = () => {
     return (
       <Link
         href={item.href}
+        prefetch={false}
         className={`flex items-center justify-between px-4 py-2.5 rounded-full transition-all duration-300 group ${
           isActive
             ? 'bg-primary-500 text-white'

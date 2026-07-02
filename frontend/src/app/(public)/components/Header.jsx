@@ -270,6 +270,7 @@ const Header = () => {
     return (
       <Link
         href={href}
+        prefetch={false}
         onClick={() => setIsProfileOpen(false)}
         className={`flex items-center gap-4 px-4 py-2 rounded-full text-[14px] transition-all duration-200 group ${isActive ? 'bg-[#233b8c] text-white shadow-md' : 'text-gray-700 hover:bg-[#233b8c] hover:text-white'}`}
       >
@@ -328,10 +329,10 @@ const Header = () => {
           </div>
 
           <div className="flex lg:hidden items-center gap-2">
-            <Link href={isLoggedIn ? "/user/orders" : "/track-order"} className={iconContainerClass}>
+            <Link href={isLoggedIn ? "/user/orders" : "/track-order"} prefetch={false} className={iconContainerClass}>
               <TrackOrderIcon size={18} className="text-gray-700" />
             </Link>
-            <Link href="/cart" className={`relative ${iconContainerClass}`}>
+            <Link href="/cart" prefetch={false} className={`relative ${iconContainerClass}`}>
               <BsCart3 size={18} className="text-gray-700" />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
@@ -425,13 +426,13 @@ const Header = () => {
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileUpload}
           />
-          <Link href={isLoggedIn ? "/user/orders" : "/track-order"} className={iconContainerClass}>
+          <Link href={isLoggedIn ? "/user/orders" : "/track-order"} prefetch={false} className={iconContainerClass}>
             <TrackOrderIcon className="text-gray-700" />
           </Link>
           <div className={iconContainerClass}>
             <FiBell size={20} className="text-gray-700" />
           </div>
-          <Link href="/cart" className={`relative ${iconContainerClass}`}>
+          <Link href="/cart" prefetch={false} className={`relative ${iconContainerClass}`}>
             <BsCart3 size={20} className="text-gray-700" />
             {cartCount > 0 && (
               <span className="absolute -top-1 -right-1 bg-(--color-primary-500) text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">

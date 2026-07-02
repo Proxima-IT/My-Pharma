@@ -154,6 +154,7 @@ const MobileDrawer = () => {
         >
           <Link
             href={`/category/${item.slug}`}
+            prefetch={false}
             onClick={() => setOpen(false)}
             className={`flex-1 flex items-center justify-between px-4 py-2.5 rounded-full transition-all border border-transparent ${
               isActive
@@ -249,6 +250,7 @@ const MobileDrawer = () => {
               <nav className="flex flex-col gap-0.5">
                 <Link
                   href="/products"
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className={`flex items-center justify-between px-4 py-3 rounded-full transition-all border border-transparent ${isAllProductsActive ? 'bg-[#233b8c] text-white shadow-none' : 'bg-white text-gray-500 border-gray-50 shadow-none'}`}
                 >
@@ -267,6 +269,7 @@ const MobileDrawer = () => {
 
                 <Link
                   href="/combos"
+                  prefetch={false}
                   onClick={() => setOpen(false)}
                   className={`flex items-center justify-between px-4 py-3 rounded-full transition-all border border-transparent ${isAllCombosActive ? 'bg-[#233b8c] text-white shadow-none' : 'bg-white text-gray-500 border-gray-50 shadow-none'}`}
                 >
