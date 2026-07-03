@@ -161,13 +161,26 @@ const Cart = () => {
               </div>
             )}
 
-            <OrderSummaryCard
-              summary={summary}
-              items={items}
-              refresh={refresh}
-              onPlaceOrder={handleProceedToCheckout}
-              showDiscountBreakdown={false}
-            />
+            {(() => {
+              const cartSubtotal = parseFloat(summary?.subtotal_before_discount ?? summary?.subtotal ?? 0);
+              const isCartValid = items.length > 0 && cartSubtotal >= 100;
+              const cartValidationError = items.length > 0 && cartSubtotal < 100
+                ? 'Minimum order amount is ৳100.'
+                : '';
+
+              return (
+                <OrderSummaryCard
+                  summary={summary}
+                  items={items}
+                  refresh={refresh}
+                  onPlaceOrder={handleProceedToCheckout}
+                  showDiscountBreakdown={false}
+                  disabled={!isCartValid}
+                  validationError={cartValidationError}
+                  actionLabel="Proceed to Checkout"
+                />
+              );
+            })()}
           </div>
         </div>
       ) : (

@@ -298,6 +298,11 @@ const Checkout = () => {
       return;
     }
 
+    if (!selectedMethodId) {
+      alert('Please select a delivery method');
+      return;
+    }
+
     if (buyNow) {
       setIsPlacingBuyNowOrder(true);
       setBuyNowError('');
@@ -319,11 +324,11 @@ const Checkout = () => {
 
         const result = await buyNowPlaceOrderApi(orderPayload);
         if (result) {
+          setOrderSuccess(result);
           if (paymentMethod !== 'COD' && result.gateway_url) {
             window.location.href = result.gateway_url;
             return;
           }
-          setOrderSuccess(result);
         }
       } catch (err) {
         console.error('Failed to place Buy Now order', err);
@@ -350,11 +355,11 @@ const Checkout = () => {
 
       const result = await placeOrder(orderPayload);
       if (result) {
+        setOrderSuccess(result);
         if (paymentMethod !== 'COD' && result.gateway_url) {
           window.location.href = result.gateway_url;
           return;
         }
-        setOrderSuccess(result);
       }
     } catch (err) {
       console.error('Failed to place order:', err);
@@ -387,6 +392,10 @@ const Checkout = () => {
   if (orderSuccess) {
     const isOnlinePayment =
       orderSuccess.payment_required && orderSuccess.gateway_url;
+    const isPaymentFailed =
+      orderSuccess.payment_init_failed ||
+      (orderSuccess.payment_required && !orderSuccess.gateway_url);
+
     return (
       <div className="w-full px-4 md:px-7 pt-10 pb-28 flex justify-center items-center animate-in fade-in duration-700">
         <div className="bg-white rounded-[32px] border border-gray-100 p-8 md:p-16 max-w-3xl w-full flex flex-col items-center text-center shadow-none">
@@ -404,7 +413,16 @@ const Checkout = () => {
             <span className="text-gray-900 font-bold">#{orderSuccess.id}</span>
           </p>
 
-          {isOnlinePayment ? (
+          {isPaymentFailed ? (
+            <div className="mb-8 px-6 py-4 bg-red-50 border border-red-200 rounded-[24px] max-w-xl text-center">
+              <span className="text-red-700 text-sm font-bold uppercase tracking-wider block mb-1">
+                ⚠️ Payment Gateway Error
+              </span>
+              <span className="text-red-600 text-[13px] font-medium leading-relaxed">
+                {orderSuccess.detail || 'The order has been created, but we could not initiate online payment at this moment. You can view your order and pay later.'}
+              </span>
+            </div>
+          ) : isOnlinePayment ? (
             <div className="mb-8 px-5 py-2.5 bg-amber-50 border border-amber-200 rounded-full">
               <span className="text-amber-700 text-sm font-bold uppercase tracking-wider">
                 ⏳ Payment Pending
@@ -419,7 +437,32 @@ const Checkout = () => {
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl">
-            {isOnlinePayment ? (
+            {isPaymentFailed ? (
+              <>
+                <Link
+                  href={`/user/orders/${orderSuccess.id}`}
+                  className="w-full"
+                >
+                  <UiButton className="w-full h-14 bg-amber-600 hover:bg-amber-700 shadow-none border-none">
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                      <span>View Order / Pay Later</span>
+                      <FiArrowRight />
+                    </div>
+                  </UiButton>
+                </Link>
+                <Link href="/" className="w-full">
+                  <UiButton
+                    variant="outline"
+                    className="w-full h-14 shadow-none border-gray-100"
+                  >
+                    <div className="flex items-center justify-center gap-2 whitespace-nowrap">
+                      <FiShoppingBag />
+                      <span>Continue Shopping</span>
+                    </div>
+                  </UiButton>
+                </Link>
+              </>
+            ) : isOnlinePayment ? (
               <>
                 <a href={orderSuccess.gateway_url} className="w-full">
                   <UiButton className="w-full h-14 bg-emerald-600 hover:bg-emerald-700 shadow-none border-none">
@@ -696,18 +739,49 @@ const Checkout = () => {
                 </div>
               </div>
             )}
-            <OrderSummaryCard
-              summary={displaySummary}
-              items={displayItems}
-              refresh={buyNow ? () => {} : refresh}
-              onPlaceOrder={handleConfirmOrder}
-              applyCoupon={buyNow ? handleApplyBuyNowCoupon : undefined}
-              removeCoupon={buyNow ? handleRemoveBuyNowCoupon : undefined}
-              appliedCoupon={buyNow ? buyNowCoupon : undefined}
-              isApplyingCoupon={buyNow ? isApplyingCoupon : undefined}
-              isPlacing={buyNow ? isPlacingBuyNowOrder : isPlacingStandardOrder}
-              error={buyNow ? buyNowCouponError : undefined}
-            />
+            {(() => {
+              const checkoutSubtotal = parseFloat(
+                displaySummary?.subtotal_before_discount ??
+                displaySummary?.sub_total ??
+                displaySummary?.subtotal ??
+                0
+              );
+              const hasItems = displayItems.length > 0;
+              const hasAddress = !!selectedAddressId;
+              const hasDeliveryMethod = !!selectedMethodId;
+              const meetsMinOrder = checkoutSubtotal >= 100;
+
+              let checkoutValidationError = '';
+              if (hasItems) {
+                if (!meetsMinOrder) {
+                  checkoutValidationError = 'Minimum order amount is ৳100.';
+                } else if (!hasAddress) {
+                  checkoutValidationError = 'Please select a shipping address.';
+                } else if (!hasDeliveryMethod) {
+                  checkoutValidationError = 'Please select a delivery method.';
+                }
+              }
+
+              const isCheckoutValid = hasItems && meetsMinOrder && hasAddress && hasDeliveryMethod;
+
+              return (
+                <OrderSummaryCard
+                  summary={displaySummary}
+                  items={displayItems}
+                  refresh={buyNow ? () => {} : refresh}
+                  onPlaceOrder={handleConfirmOrder}
+                  applyCoupon={buyNow ? handleApplyBuyNowCoupon : undefined}
+                  removeCoupon={buyNow ? handleRemoveBuyNowCoupon : undefined}
+                  appliedCoupon={buyNow ? buyNowCoupon : undefined}
+                  isApplyingCoupon={buyNow ? isApplyingBuyNowCoupon : undefined}
+                  isPlacing={buyNow ? isPlacingBuyNowOrder : isPlacingStandardOrder}
+                  error={buyNow ? buyNowCouponError : undefined}
+                  disabled={!isCheckoutValid}
+                  validationError={checkoutValidationError}
+                  actionLabel="Confirm Order"
+                />
+              );
+            })()}
           </div>
         </div>
       </div>

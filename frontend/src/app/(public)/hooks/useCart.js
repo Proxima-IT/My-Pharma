@@ -188,38 +188,51 @@ export const useCart = () => {
 
   const updateQuantity = async (itemId, newQuantity) => {
     setIsUpdating(true);
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      const currentItem = cart?.items?.find(i => i.id === itemId);
-      await updateCartItemApi(token, itemId, newQuantity, currentItem?.dosage);
-    } else {
-      const guestCart = getGuestCart();
-      const item = guestCart.items.find(i => i.id === itemId);
-      if (item) item.quantity = newQuantity;
-      saveGuestCart(guestCart);
+    setError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        const currentItem = cart?.items?.find(i => i.id === itemId);
+        await updateCartItemApi(token, itemId, newQuantity, currentItem?.dosage);
+      } else {
+        const guestCart = getGuestCart();
+        const item = guestCart.items.find(i => i.id === itemId);
+        if (item) item.quantity = newQuantity;
+        saveGuestCart(guestCart);
+      }
+      await refreshCart(null, false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsUpdating(false);
     }
-    await refreshCart(null, false);
-    setIsUpdating(false);
   };
 
   const removeItem = async itemId => {
     setIsUpdating(true);
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      await removeFromCartApi(token, itemId);
-    } else {
-      const guestCart = getGuestCart();
-      guestCart.items = guestCart.items.filter(i => i.id !== itemId);
-      saveGuestCart(guestCart);
+    setError(null);
+    try {
+      const token = localStorage.getItem('access_token');
+      if (token) {
+        await removeFromCartApi(token, itemId);
+      } else {
+        const guestCart = getGuestCart();
+        guestCart.items = guestCart.items.filter(i => i.id !== itemId);
+        saveGuestCart(guestCart);
+      }
+      await refreshCart(null, false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsUpdating(false);
     }
-    await refreshCart(null, false);
-    setIsUpdating(false);
   };
 
   const placeOrder = async orderData => {
     const token = localStorage.getItem('access_token');
     if (!token) return null;
     setIsUpdating(true);
+    setError(null);
     try {
       const result = await placeOrderApi(token, orderData);
       await refreshCart(null, true);

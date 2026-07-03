@@ -24,6 +24,9 @@ const OrderSummaryCard = ({
   isPlacing = false,
   error: customError,
   showDiscountBreakdown = true,
+  disabled = false,
+  validationError = '',
+  actionLabel = '',
 }) => {
   const router = useRouter();
   const cartHook = useCart();
@@ -162,6 +165,8 @@ const OrderSummaryCard = ({
     router.push('/checkout');
   };
 
+  const defaultActionLabel = onPlaceOrder ? 'Confirm Order' : 'Place Order';
+
   return (
     <div className="bg-white border border-gray-100 rounded-[32px] p-6 sm:p-8 w-full transition-all shadow-none">
       <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-8">
@@ -259,13 +264,19 @@ const OrderSummaryCard = ({
         )}
       </div>
 
+      {validationError && (
+        <p className="text-xs font-bold text-red-500 text-center animate-in fade-in mb-4 uppercase tracking-wider">
+          ⚠️ {validationError}
+        </p>
+      )}
+
       <div className="space-y-3">
         <button
           onClick={handleAction}
-          disabled={isPlacing || isApplyingCoupon}
+          disabled={isPlacing || isApplyingCoupon || disabled}
           className="w-full h-14 bg-(--color-primary-500) hover:bg-(--color-primary-600) transition-all text-white text-[15px] font-bold uppercase tracking-[0.1em] rounded-full flex items-center justify-center gap-3 cursor-pointer shadow-none disabled:opacity-50"
         >
-          <span>{isPlacing ? 'Placing Order...' : (onPlaceOrder ? 'Confirm Order' : 'Place Order')}</span>
+          <span>{isPlacing ? 'Placing Order...' : (actionLabel || defaultActionLabel)}</span>
           {!isPlacing && <FiChevronRight size={20} strokeWidth={3} />}
         </button>
         {loginError && !onPlaceOrder && (
