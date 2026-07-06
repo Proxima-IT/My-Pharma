@@ -124,6 +124,18 @@ export const WEB_PUSH_VAPID_PUBLIC_KEY =
 
 // --- AUTHENTICATED FETCH (INTERCEPTOR) ---
 
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const subscribeTokenRefresh = (cb) => {
+  refreshSubscribers.push(cb);
+};
+
+const onRefreshed = (newToken) => {
+  refreshSubscribers.forEach((cb) => cb(newToken));
+  refreshSubscribers = [];
+};
+
 /**
  * fetchWithAuth
  * A professional wrapper around native fetch that handles:
@@ -146,6 +158,11 @@ export const fetchWithAuth = async (url, options = {}) => {
     },
   };
 
+  // Automatically detect FormData and remove Content-Type to let browser set boundary
+  if (options.body instanceof FormData) {
+    delete authOptions.headers['Content-Type'];
+  }
+
   // If Content-Type is explicitly set to null (for FormData), remove it
   if (authOptions.headers['Content-Type'] === null) {
     delete authOptions.headers['Content-Type'];
@@ -158,25 +175,53 @@ export const fetchWithAuth = async (url, options = {}) => {
     const refreshToken = localStorage.getItem('refresh_token');
 
     if (refreshToken) {
-      try {
-        const refreshResponse = await fetch(AUTH_ENDPOINTS.REFRESH, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refresh: refreshToken }),
-        });
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          const refreshResponse = await fetch(AUTH_ENDPOINTS.REFRESH, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: refreshToken }),
+          });
 
-        if (refreshResponse.ok) {
-          const newData = await refreshResponse.json();
-          // Save new valid access token
-          localStorage.setItem('access_token', newData.access);
-
-          // RETRY: Re-execute the original request with the NEW token
-          authOptions.headers['Authorization'] = `Bearer ${newData.access}`;
-          return fetch(url, authOptions);
+          if (refreshResponse.ok) {
+            const newData = await refreshResponse.json();
+            // Save new valid access token AND new rotated refresh token
+            localStorage.setItem('access_token', newData.access);
+            if (newData.refresh) {
+              localStorage.setItem('refresh_token', newData.refresh);
+            }
+            isRefreshing = false;
+            onRefreshed(newData.access);
+          } else {
+            isRefreshing = false;
+            // Clear session if refresh fails
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            onRefreshed(null);
+          }
+        } catch (err) {
+          console.error('Critical: Token refresh failed', err);
+          isRefreshing = false;
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          onRefreshed(null);
         }
-      } catch (err) {
-        console.error('Critical: Token refresh failed', err);
       }
+
+      // Return a promise that resolves with the retried fetch call using the new token
+      return new Promise((resolve) => {
+        subscribeTokenRefresh((newToken) => {
+          if (newToken) {
+            authOptions.headers['Authorization'] = `Bearer ${newToken}`;
+            resolve(fetch(url, authOptions));
+          } else {
+            resolve(response);
+          }
+        });
+      });
     }
 
     // Fallback: Clear session if refresh fails or no token exists
@@ -188,6 +233,7 @@ export const fetchWithAuth = async (url, options = {}) => {
 
   return response;
 };
+
 
 // --- HELPER UTILITIES ---
 

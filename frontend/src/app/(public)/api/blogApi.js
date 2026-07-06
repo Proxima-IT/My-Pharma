@@ -1,32 +1,20 @@
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { API_BASE_URL, fetchWithAuth } from '@/app/(shared)/lib/apiConfig';
 
 /**
  * Pure API functions for Blog management
  * Handles Categories, Post Lists, and Detailed Article retrieval.
+ * Uses fetchWithAuth interceptor for silent token refresh and session persistence.
  */
-
-// Helper to get token
-const getAuthHeader = () => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('access_token');
-    return token ? { Authorization: `Bearer ${token}` } : {};
-  }
-  return {};
-};
 
 /**
  * GET /api/blog-categories/
  * List all active blog categories for filtering.
  */
 export const fetchBlogCategoriesApi = async () => {
-  const response = await fetch(
+  const response = await fetchWithAuth(
     `${API_BASE_URL}/blog-categories/?is_active=true`,
     {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader(),
-      },
     },
   );
 
@@ -51,12 +39,8 @@ export const fetchBlogPostsApi = async (params = {}) => {
   const queryString = new URLSearchParams(cleanParams).toString();
   const url = `${API_BASE_URL}/blog-posts/${queryString ? `?${queryString}` : ''}`;
 
-  const response = await fetch(url, {
+  const response = await fetchWithAuth(url, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeader(),
-    },
   });
 
   const data = await response.json();
@@ -71,12 +55,8 @@ export const fetchBlogPostsApi = async (params = {}) => {
  * Retrieves a single detailed blog post by its slug.
  */
 export const fetchBlogPostDetailsApi = async slug => {
-  const response = await fetch(`${API_BASE_URL}/blog-posts/${slug}/`, {
+  const response = await fetchWithAuth(`${API_BASE_URL}/blog-posts/${slug}/`, {
     method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      ...getAuthHeader(),
-    },
   });
 
   const data = await response.json();
@@ -85,3 +65,4 @@ export const fetchBlogPostDetailsApi = async slug => {
   }
   return data;
 };
+

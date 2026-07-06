@@ -510,6 +510,45 @@ class ComboSerializer(serializers.ModelSerializer):
         return obj.image.url if obj.image else None
 
 
+class ComboListProductSerializer(serializers.ModelSerializer):
+    """Minimized product representation for combo listings."""
+    class Meta:
+        model = Product
+        fields = ("id", "name", "slug", "price", "image")
+
+
+class ComboListSerializer(serializers.ModelSerializer):
+    image_url = serializers.SerializerMethodField()
+    products = ComboListProductSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Combo
+        fields = (
+            "id",
+            "title",
+            "description",
+            "image",
+            "image_url",
+            "products",
+            "price",
+            "original_price",
+            "custom_price",
+            "discount_price",
+            "bg_color",
+            "order",
+            "is_active",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = ("id", "image_url", "created_at", "updated_at")
+
+    def get_image_url(self, obj):
+        if obj.image and self.context.get("request"):
+            return self.context["request"].build_absolute_uri(obj.image.url)
+        return obj.image.url if obj.image else None
+
+
+
 class ProductDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
@@ -849,6 +888,40 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "total", "created_at", "updated_at")
 
 
+class OrderListSerializer(serializers.ModelSerializer):
+    user_email = serializers.CharField(source="user.email", read_only=True)
+    user_username = serializers.CharField(source="user.username", read_only=True)
+    delivery_method_name = serializers.CharField(source="delivery_method.name", read_only=True, allow_null=True)
+    delivery_method_duration = serializers.CharField(source="delivery_method.duration", read_only=True, allow_null=True)
+    payment_status = serializers.CharField(source="settlement.payment_status", read_only=True, default="PENDING")
+    payment_method = serializers.CharField(source="settlement.payment_method", read_only=True, default="COD")
+    item_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = (
+            "id", "user", "user_email", "user_username", "prescription", "delivery_method", "delivery_method_name", "delivery_method_duration",
+            "status",
+            "is_seen",
+            "payment_status",
+            "payment_method",
+            "subtotal_before_discount",
+            "discount_amount",
+            "delivery_fee",
+            "coupon",
+            "total",
+            "shipping_address",
+            "notes",
+            "message",
+            "item_count",
+            "created_at", "updated_at",
+        )
+        read_only_fields = ("id", "total", "created_at", "updated_at")
+
+    def get_item_count(self, obj):
+        return len(obj.items.all())
+
+
 class OrderWriteSerializer(serializers.ModelSerializer):
     items = OrderItemWriteSerializer(many=True)
     prescription = serializers.PrimaryKeyRelatedField(
@@ -914,6 +987,12 @@ class OrderWriteSerializer(serializers.ModelSerializer):
             delivery_method=validated_data.pop("delivery_method", None),
             **validated_data,
         )
+        # Clear any dangling related items due to potential database referential integrity issues
+        OrderItem.objects.filter(order=order).delete()
+        OrderStatusHistory.objects.filter(order=order).delete()
+        OrderImage.objects.filter(order=order).delete()
+        OrderSettlement.objects.filter(order=order).delete()
+
         total = Decimal("0")
         for item_data in items_data:
             product = item_data["product"]
@@ -1004,7 +1083,6 @@ class CartItemSerializer(serializers.ModelSerializer):
     product_id = serializers.SerializerMethodField()
     product_name = serializers.SerializerMethodField()
     product_slug = serializers.SerializerMethodField()
-    product_description = serializers.SerializerMethodField()
     product_original_price = serializers.SerializerMethodField()
     product_unit_name = serializers.SerializerMethodField()
     product_dosage = serializers.SerializerMethodField()
@@ -1024,7 +1102,6 @@ class CartItemSerializer(serializers.ModelSerializer):
             "product_id",
             "product_name",
             "product_slug",
-            "product_description",
             "product_original_price",
             "product_unit_name",
             "product_dosage",
@@ -1046,7 +1123,6 @@ class CartItemSerializer(serializers.ModelSerializer):
             "price_at_order",
             "product_name",
             "product_slug",
-            "product_description",
             "product_original_price",
             "product_unit_name",
             "product_dosage",
@@ -1074,11 +1150,6 @@ class CartItemSerializer(serializers.ModelSerializer):
         if obj.product:
             return obj.product.slug
         return None
-
-    def get_product_description(self, obj):
-        if obj.product:
-            return obj.product.description
-        return obj.combo.description if obj.combo else None
 
     def get_product_original_price(self, obj):
         if obj.product:
@@ -1478,6 +1549,23 @@ class PrescriptionSerializer(serializers.ModelSerializer):
             "address_type": addr.address_type,
             "is_default": addr.is_default,
         }
+
+
+class PrescriptionListSerializer(serializers.ModelSerializer):
+    user_email = serializers.CharField(source="user.email", read_only=True)
+    item_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Prescription
+        fields = (
+            "id", "user", "user_email", "save_prescription", "status", "is_seen", "issue_date",
+            "patient_name_on_rx", "doctor_name", "doctor_reg_number", "has_signature",
+            "verified_by", "verified_at", "item_count", "created_at", "updated_at",
+        )
+        read_only_fields = ("id", "status", "verified_by", "verified_at", "created_at", "updated_at")
+
+    def get_item_count(self, obj):
+        return len(obj.items.all())
 
 
 class PrescriptionUploadSerializer(serializers.ModelSerializer):

@@ -5,7 +5,7 @@ set -euo pipefail
 # Configurations
 DEPLOY_HOST="${DEPLOY_HOST:-46.202.194.251}"
 DEPLOY_USER="${DEPLOY_USER:-root}"
-DEPLOY_PASS="${DEPLOY_PASS:-@SA123456sa@}"
+DEPLOY_PASS="${DEPLOY_PASS:-@@@SA123456sa@@@}"
 TARGET_DIR="${TARGET_DIR:-/root/My-Pharma}"
 
 echo "=========================================="

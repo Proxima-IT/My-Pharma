@@ -709,7 +709,7 @@ paths:
     post:
       operationId: auth_password_reset_create
       description: POST /api/auth/password-reset/ – Request password reset; sends
-        reset link to registered email.
+        reset link to registered email or OTP to registered phone.
       tags:
       - auth
       requestBody:
@@ -723,7 +723,6 @@ paths:
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/PasswordResetRequest'
-        required: true
       security:
       - {}
       responses:
@@ -760,6 +759,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PasswordResetConfirm'
+          description: ''
+  /api/auth/password-reset/verify-otp/:
+    post:
+      operationId: auth_password_reset_verify_otp_create
+      description: POST /api/auth/password-reset/verify-otp/ – Verify OTP sent to
+        phone for password reset. Returns password reset token.
+      tags:
+      - auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordResetVerifyOTP'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PasswordResetVerifyOTP'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PasswordResetVerifyOTP'
+        required: true
+      security:
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PasswordResetVerifyOTP'
           description: ''
   /api/auth/register/complete/:
     post:
@@ -1551,9 +1578,7 @@ paths:
           description: No response body
   /api/cart/:
     get:
-      operationId: cart_list
-      description: GET /api/cart/ – my cart with items and summary. POST add, POST
-        place-order.
+      operationId: cart_retrieve
       summary: Get my cart
       tags:
       - Cart
@@ -1562,15 +1587,15 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Cart'
+                $ref: '#/components/schemas/Cart'
           description: ''
   /api/cart/add/:
     post:
       operationId: cart_add_create
-      description: 'POST /api/cart/add/ - body: { product?: id, combo?: id, quantity:
-        int, dosage?: str }.'
+      description: |-
+        POST /api/cart/add/ - body: { product?: id, combo?: id, quantity: int, dosage?: str }.
+
+        For combos, price_at_order is determined by Combo.get_cart_price() (discount_price > custom_price > sum of products).
       summary: Add product or combo to cart
       tags:
       - Cart
@@ -2209,7 +2234,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedComboList'
+                $ref: '#/components/schemas/PaginatedComboListList'
           description: ''
     post:
       operationId: combos_create
@@ -3445,7 +3470,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedOrderList'
+                $ref: '#/components/schemas/PaginatedOrderListList'
           description: ''
     post:
       operationId: orders_create
@@ -3516,6 +3541,28 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/orders/{id}/invoice/:
+    get:
+      operationId: orders_invoice_retrieve
+      description: |-
+        GET /api/orders/<id>/invoice/ – Download the PDF invoice for the order.
+        Only accessible by the order owner or staff/admin.
+      summary: Download order invoice PDF
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Orders
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
   /api/orders/{id}/pay/:
     post:
       operationId: orders_pay_create
@@ -3587,6 +3634,34 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BuyNowPreview'
+          description: ''
+  /api/orders/track/:
+    post:
+      operationId: orders_track_create
+      description: |-
+        POST /api/orders/track/
+        Public endpoint for tracking an order.
+        Expects: { "order_id": int/str, "email_or_phone": str }
+      tags:
+      - orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Order'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Order'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Order'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
           description: ''
   /api/pages/:
     get:
@@ -3835,7 +3910,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PaginatedPrescriptionList'
+                $ref: '#/components/schemas/PaginatedPrescriptionListList'
           description: ''
     post:
       operationId: prescriptions_create
@@ -5793,9 +5868,6 @@ components:
         product_slug:
           type: string
           readOnly: true
-        product_description:
-          type: string
-          readOnly: true
         product_original_price:
           type: string
           readOnly: true
@@ -5857,7 +5929,6 @@ components:
       - original_price_at_order
       - price_at_order
       - product
-      - product_description
       - product_dosage
       - product_id
       - product_name
@@ -5874,6 +5945,9 @@ components:
         parent:
           type: integer
           nullable: true
+        level:
+          type: string
+          readOnly: true
         sidebar_category:
           type: integer
           nullable: true
@@ -5935,6 +6009,7 @@ components:
       - created_at
       - id
       - image_url
+      - level
       - name
       - product_count
       - sidebar_category_title
@@ -6021,6 +6096,9 @@ components:
         parent:
           type: integer
           nullable: true
+        level:
+          type: string
+          readOnly: true
         sidebar_category:
           type: integer
           nullable: true
@@ -6080,6 +6158,7 @@ components:
       - created_at
       - id
       - image_url
+      - level
       - name
       - product_count
       - slug
@@ -6123,6 +6202,20 @@ components:
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           nullable: true
           description: Optional struck-through price for showing discount on combo.
+        custom_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: Admin-set fixed price for the whole combo bundle. Overrides
+            product sum for cart if no discount_price.
+        discount_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: If set, this is the effective sale price used for CartItem.price_at_order
+            (and thus charged at checkout). Takes highest precedence.
         bg_color:
           type: string
           description: Optional background color for combo card (e.g. hex code or
@@ -6151,6 +6244,108 @@ components:
       - products
       - title
       - updated_at
+    ComboList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+        image:
+          type: string
+          format: uri
+          nullable: true
+        image_url:
+          type: string
+          readOnly: true
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComboListProduct'
+          readOnly: true
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        original_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: Optional struck-through price for showing discount on combo.
+        custom_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: Admin-set fixed price for the whole combo bundle. Overrides
+            product sum for cart if no discount_price.
+        discount_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: If set, this is the effective sale price used for CartItem.price_at_order
+            (and thus charged at checkout). Takes highest precedence.
+        bg_color:
+          type: string
+          description: Optional background color for combo card (e.g. hex code or
+            Tailwind class).
+          maxLength: 32
+        order:
+          type: integer
+          maximum: 65535
+          minimum: 0
+          description: Display order; lower first.
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - image_url
+      - price
+      - products
+      - title
+      - updated_at
+    ComboListProduct:
+      type: object
+      description: Minimized product representation for combo listings.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 200
+          pattern: ^[-a-zA-Z0-9_]+$
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        image:
+          type: string
+          format: uri
+          nullable: true
+      required:
+      - id
+      - name
+      - price
+      - slug
     Consultation:
       type: object
       properties:
@@ -6988,6 +7183,100 @@ components:
       - price_at_order
       - product_name
       - quantity
+    OrderList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+        user_email:
+          type: string
+          readOnly: true
+        user_username:
+          type: string
+          readOnly: true
+        prescription:
+          type: integer
+          nullable: true
+          description: Linked prescription when order contains prescription-only medicines.
+        delivery_method:
+          type: integer
+          nullable: true
+          description: Selected delivery method.
+        delivery_method_name:
+          type: string
+          readOnly: true
+          nullable: true
+        delivery_method_duration:
+          type: string
+          readOnly: true
+          nullable: true
+        status:
+          $ref: '#/components/schemas/Status657Enum'
+        is_seen:
+          type: boolean
+        payment_status:
+          type: string
+          readOnly: true
+          default: PENDING
+        payment_method:
+          type: string
+          readOnly: true
+          default: COD
+        subtotal_before_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        delivery_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        coupon:
+          type: integer
+          nullable: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Total payable (after discount + delivery fee).
+        shipping_address:
+          type: string
+        notes:
+          type: string
+        message:
+          type: string
+          description: Customer message with the order.
+        item_count:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - delivery_method_duration
+      - delivery_method_name
+      - id
+      - item_count
+      - payment_method
+      - payment_status
+      - total
+      - updated_at
+      - user
+      - user_email
+      - user_username
     OrderSettlement:
       type: object
       properties:
@@ -7168,6 +7457,9 @@ components:
       - updated_at
     PaginatedAdList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7188,6 +7480,9 @@ components:
             $ref: '#/components/schemas/Ad'
     PaginatedAppLogoList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7208,6 +7503,9 @@ components:
             $ref: '#/components/schemas/AppLogo'
     PaginatedB2BCommissionEntryList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7228,6 +7526,9 @@ components:
             $ref: '#/components/schemas/B2BCommissionEntry'
     PaginatedB2BCustomerProfileList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7248,6 +7549,9 @@ components:
             $ref: '#/components/schemas/B2BCustomerProfile'
     PaginatedBlogCategoryList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7268,6 +7572,9 @@ components:
             $ref: '#/components/schemas/BlogCategory'
     PaginatedBlogPostList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7288,6 +7595,9 @@ components:
             $ref: '#/components/schemas/BlogPost'
     PaginatedBrandList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7308,6 +7618,9 @@ components:
             $ref: '#/components/schemas/Brand'
     PaginatedCategoryList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7326,8 +7639,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Category'
-    PaginatedComboList:
+    PaginatedComboListList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7345,9 +7661,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Combo'
+            $ref: '#/components/schemas/ComboList'
     PaginatedConsultationList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7368,6 +7687,9 @@ components:
             $ref: '#/components/schemas/Consultation'
     PaginatedCouponList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7388,6 +7710,9 @@ components:
             $ref: '#/components/schemas/Coupon'
     PaginatedDeliveryMethodList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7408,6 +7733,9 @@ components:
             $ref: '#/components/schemas/DeliveryMethod'
     PaginatedIngredientList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7428,6 +7756,9 @@ components:
             $ref: '#/components/schemas/Ingredient'
     PaginatedNotificationCampaignList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7446,8 +7777,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/NotificationCampaign'
-    PaginatedOrderList:
+    PaginatedOrderListList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7465,9 +7799,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Order'
+            $ref: '#/components/schemas/OrderList'
     PaginatedOrderSettlementList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7488,6 +7825,9 @@ components:
             $ref: '#/components/schemas/OrderSettlement'
     PaginatedPageList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7506,8 +7846,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Page'
-    PaginatedPrescriptionList:
+    PaginatedPrescriptionListList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7525,9 +7868,12 @@ components:
         results:
           type: array
           items:
-            $ref: '#/components/schemas/Prescription'
+            $ref: '#/components/schemas/PrescriptionList'
     PaginatedProductListList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7548,6 +7894,9 @@ components:
             $ref: '#/components/schemas/ProductList'
     PaginatedProductReviewList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7568,6 +7917,9 @@ components:
             $ref: '#/components/schemas/ProductReview'
     PaginatedSidebarCategoryList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7588,6 +7940,9 @@ components:
             $ref: '#/components/schemas/SidebarCategory'
     PaginatedUnitList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7608,6 +7963,9 @@ components:
             $ref: '#/components/schemas/Unit'
     PaginatedUserAddressList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7628,6 +7986,9 @@ components:
             $ref: '#/components/schemas/UserAddress'
     PaginatedUserManagementList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7648,6 +8009,9 @@ components:
             $ref: '#/components/schemas/UserManagement'
     PaginatedUserNotificationList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7668,6 +8032,9 @@ components:
             $ref: '#/components/schemas/UserNotification'
     PaginatedUserPushSubscriptionList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7688,6 +8055,9 @@ components:
             $ref: '#/components/schemas/UserPushSubscription'
     PaginatedWishlistItemList:
       type: object
+      required:
+      - count
+      - results
       properties:
         count:
           type: integer
@@ -7716,7 +8086,7 @@ components:
         new_password:
           type: string
           writeOnly: true
-          minLength: 8
+          minLength: 6
       required:
       - new_password
     PasswordResetRequest:
@@ -7725,8 +8095,21 @@ components:
         email:
           type: string
           format: email
+        phone:
+          type: string
+    PasswordResetVerifyOTP:
+      type: object
+      properties:
+        phone:
+          type: string
+          maxLength: 20
+        otp:
+          type: string
+          maxLength: 8
+          minLength: 6
       required:
-      - email
+      - otp
+      - phone
     PatchedAd:
       type: object
       properties:
@@ -7915,6 +8298,9 @@ components:
         parent:
           type: integer
           nullable: true
+        level:
+          type: string
+          readOnly: true
         sidebar_category:
           type: integer
           nullable: true
@@ -8011,6 +8397,20 @@ components:
           pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
           nullable: true
           description: Optional struck-through price for showing discount on combo.
+        custom_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: Admin-set fixed price for the whole combo bundle. Overrides
+            product sum for cart if no discount_price.
+        discount_price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          nullable: true
+          description: If set, this is the effective sale price used for CartItem.price_at_order
+            (and thus charged at checkout). Takes highest precedence.
         bg_color:
           type: string
           description: Optional background color for combo card (e.g. hex code or
@@ -8386,11 +8786,7 @@ components:
             'gm Cream'.
           maxLength: 100
         quantity:
-          type: integer
-          maximum: 4294967295
-          minimum: 0
-          format: int64
-          description: Number of items or volume e.g. 10, 20, 80.
+          type: string
         name:
           type: string
           readOnly: true
@@ -8564,7 +8960,7 @@ components:
         password:
           type: string
           writeOnly: true
-          minLength: 8
+          minLength: 6
         role:
           $ref: '#/components/schemas/RoleEnum'
         role_display:
@@ -8915,6 +9311,74 @@ components:
       - product
       - product_name
       - quantity_prescribed
+    PrescriptionList:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+        user_email:
+          type: string
+          readOnly: true
+        save_prescription:
+          type: boolean
+          description: Save prescription for future reference/reorder.
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusFd4Enum'
+          readOnly: true
+        is_seen:
+          type: boolean
+        issue_date:
+          type: string
+          format: date
+          nullable: true
+          description: Prescription issue date; must not be older than 6 months.
+        patient_name_on_rx:
+          type: string
+          description: Patient name as on prescription; must match account holder.
+          maxLength: 200
+        doctor_name:
+          type: string
+          maxLength: 200
+        doctor_reg_number:
+          type: string
+          maxLength: 100
+        has_signature:
+          type: boolean
+          description: Doctor signature present (set at verification).
+        verified_by:
+          type: integer
+          readOnly: true
+          nullable: true
+        verified_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        item_count:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - item_count
+      - status
+      - updated_at
+      - user
+      - user_email
+      - verified_at
+      - verified_by
     PrescriptionStatusHistory:
       type: object
       description: Status timeline entry; date/time in Bangladeshi time (Asia/Dhaka).
@@ -9628,11 +10092,7 @@ components:
             'gm Cream'.
           maxLength: 100
         quantity:
-          type: integer
-          maximum: 4294967295
-          minimum: 0
-          format: int64
-          description: Number of items or volume e.g. 10, 20, 80.
+          type: string
         name:
           type: string
           readOnly: true
@@ -9816,7 +10276,7 @@ components:
         password:
           type: string
           writeOnly: true
-          minLength: 8
+          minLength: 6
         role:
           $ref: '#/components/schemas/RoleEnum'
         role_display:

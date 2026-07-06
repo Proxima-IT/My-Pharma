@@ -25,6 +25,8 @@ from rest_framework.views import APIView
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema_view, extend_schema, OpenApiParameter, inline_serializer, OpenApiResponse
 from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.helpers import forced_singular_serializer
+from drf_spectacular.openapi import AutoSchema
 
 from authentication.permissions import (
     IsSuperAdmin,
@@ -108,6 +110,9 @@ from .serializers import (
     BuyNowSerializer,
     WishlistItemSerializer,
     WishlistItemCreateSerializer,
+    ComboListSerializer,
+    OrderListSerializer,
+    PrescriptionListSerializer,
 )
 from .services import (
     get_or_create_cart,
@@ -1009,10 +1014,18 @@ class ProductViewSet(viewsets.ModelViewSet):
                     Levenshtein = None
 
                 if Levenshtein:
-                    # Fetch minimal fields for all active products to calculate distance in memory
-                    all_products = Product.objects.filter(is_active=True).only(
-                        "id", "name", "brand__name", "ingredient__name"
-                    ).select_related("brand", "ingredient")
+                    # Fetch minimal fields for active products matching the starting letter to calculate distance in memory
+                    first_char = q_lower[0] if q_lower else ""
+                    if first_char:
+                        all_products = Product.objects.filter(is_active=True).filter(
+                            Q(name__istartswith=first_char) |
+                            Q(brand__name__istartswith=first_char) |
+                            Q(ingredient__name__istartswith=first_char)
+                        ).only(
+                            "id", "name", "brand__name", "ingredient__name"
+                        ).select_related("brand", "ingredient")
+                    else:
+                        all_products = []
                     
                     fuzzy_pks = []
                     for product in all_products:
@@ -1131,6 +1144,8 @@ class OrderViewSet(viewsets.ModelViewSet):
             return BuyNowPreviewSerializer
         if self.action == "buy_now":
             return BuyNowSerializer
+        if self.action == "list":
+            return OrderListSerializer
         return OrderSerializer
 
     def create(self, request, *args, **kwargs):
@@ -1493,6 +1508,11 @@ class OrderViewSet(viewsets.ModelViewSet):
                 notes=notes,
                 prescription=prescription,
             )
+            # Clear any dangling related items due to potential database referential integrity issues
+            OrderItem.objects.filter(order=order).delete()
+            OrderStatusHistory.objects.filter(order=order).delete()
+            OrderImage.objects.filter(order=order).delete()
+            OrderSettlement.objects.filter(order=order).delete()
             
             # Apply coupon allocation logic to price_at_order if applicable
             coupon_discount = Decimal("0.00")
@@ -1850,6 +1870,13 @@ def _order_item_display_name(item) -> str:
     return "Item"
 
 
+class CartAutoSchema(AutoSchema):
+    def _is_list_view(self, *args, **kwargs):
+        if hasattr(self.view, "action") and self.view.action == 'list':
+            return False
+        return super()._is_list_view(*args, **kwargs)
+
+
 # ---- Cart: one cart per user; add, update/remove items, summary, place order ----
 @extend_schema_view(
     list=extend_schema(
@@ -1888,6 +1915,7 @@ def _order_item_display_name(item) -> str:
     ),
 )
 class CartViewSet(viewsets.GenericViewSet):
+    schema = CartAutoSchema()
     """GET /api/cart/ – my cart with items and summary. POST add, POST place-order."""
     permission_classes = [IsAuthenticated, IsRegisteredUser]
     serializer_class = CartSerializer
@@ -1896,7 +1924,7 @@ class CartViewSet(viewsets.GenericViewSet):
     @extend_schema(
         tags=["Cart"],
         summary="Get my cart",
-        responses={200: OpenApiResponse(response=CartSerializer)},
+        responses={200: forced_singular_serializer(CartSerializer)},
     )
     def list(self, request, *args, **kwargs):
         cart = get_or_create_cart(request.user)
@@ -2159,6 +2187,12 @@ class CartViewSet(viewsets.GenericViewSet):
                 shipping_address=shipping_text,
                 notes=notes,
             )
+            # Clear any dangling related items due to potential database referential integrity issues
+            OrderItem.objects.filter(order=order).delete()
+            OrderStatusHistory.objects.filter(order=order).delete()
+            OrderImage.objects.filter(order=order).delete()
+            OrderSettlement.objects.filter(order=order).delete()
+
             for item in cart_items:
                 if item.product_id:
                     OrderItem.objects.create(
@@ -2406,6 +2440,12 @@ def _create_order_from_prescription(prescription):
         notes=combined_notes,
         total=Decimal("0"),
     )
+    # Clear any dangling related items due to potential database referential integrity issues
+    OrderItem.objects.filter(order=order).delete()
+    OrderStatusHistory.objects.filter(order=order).delete()
+    OrderImage.objects.filter(order=order).delete()
+    OrderSettlement.objects.filter(order=order).delete()
+
     total = Decimal("0")
     for pi in items:
         price = pi.product.price
@@ -2457,6 +2497,8 @@ class PrescriptionViewSet(viewsets.ModelViewSet):
             return PrescriptionUploadSerializer
         if self.action in ("verify", "partial_update", "update"):
             return PrescriptionVerifySerializer
+        if self.action == "list":
+            return PrescriptionListSerializer
         return PrescriptionSerializer
 
     def get_permissions(self):
@@ -3280,7 +3322,7 @@ class AdViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(tags=["Combos"], summary="Delete combo (admin)"),
 )
 class ComboViewSet(viewsets.ModelViewSet):
-    queryset = Combo.objects.all()
+    queryset = Combo.objects.prefetch_related("products").all()
     serializer_class = ComboSerializer
     filterset_fields = ["is_active"]
 
@@ -3290,10 +3332,25 @@ class ComboViewSet(viewsets.ModelViewSet):
         return [IsAuthenticated(), IsPharmacyAdminOrSuper()]
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        if self.action == "retrieve":
+            qs = Combo.objects.prefetch_related(
+                "products__category",
+                "products__brand",
+                "products__ingredient",
+                "products__unit",
+                "products__images",
+                "products__dosage_options"
+            )
+        else:
+            qs = Combo.objects.prefetch_related("products")
         if self.action in ("list", "retrieve") and not (getattr(self.request, "user", None) and self.request.user.is_authenticated):
             return qs.filter(is_active=True)
         return qs
+
+    def get_serializer_class(self):
+        if self.action == "list":
+            return ComboListSerializer
+        return ComboSerializer
 
 
 # ---- Product reviews (rating + comment + images). List/retrieve: anyone; create: authenticated (must have purchased); update/delete: owner ----

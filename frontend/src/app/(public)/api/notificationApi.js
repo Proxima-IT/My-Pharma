@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '@/app/(shared)/lib/apiConfig';
+import { API_BASE_URL, fetchWithAuth } from '@/app/(shared)/lib/apiConfig';
 import {
   notificationDebug,
   notificationError,
@@ -47,7 +47,7 @@ async function fetchWithRetry(url, options = {}, retries = 1, timeoutMs = 10000)
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const response = await fetch(url, {
+      const response = await fetchWithAuth(url, {
         ...options,
         signal: controller.signal,
       });
@@ -72,9 +72,7 @@ export const notificationApi = {
   getNotifications: async (token, params = {}) => {
     const query = new URLSearchParams(params).toString();
     notificationDebug('Fetching notifications.', { query });
-    const res = await fetch(`${API_BASE_URL}/notifications/?${query}`, {
-      headers: { ...getAuthHeader(token) },
-    });
+    const res = await fetchWithAuth(`${API_BASE_URL}/notifications/?${query}`);
     if (!res.ok) {
       notificationError('Failed to fetch notifications.', { status: res.status });
       throw new Error('Failed to fetch notifications');
@@ -88,12 +86,8 @@ export const notificationApi = {
    */
   markAsRead: async (token, id) => {
     notificationDebug('Marking notification as read.', { id });
-    const res = await fetch(`${API_BASE_URL}/notifications/${id}/read/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/notifications/${id}/read/`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader(token),
-      },
     });
     if (!res.ok) {
       notificationError('Failed to mark notification as read.', {
@@ -111,12 +105,8 @@ export const notificationApi = {
    */
   markAllRead: async token => {
     notificationDebug('Marking all notifications as read.');
-    const res = await fetch(`${API_BASE_URL}/notifications/read-all/`, {
+    const res = await fetchWithAuth(`${API_BASE_URL}/notifications/read-all/`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader(token),
-      },
     });
     if (!res.ok) {
       notificationError('Failed to mark all notifications as read.', {
@@ -136,10 +126,6 @@ export const notificationApi = {
     console.log('[notificationApi] updatePermissionState payload:', data);
     const res = await fetchWithRetry(`${API_BASE_URL}/notifications/permission/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader(token),
-      },
       body: JSON.stringify(data),
     }, 2);
     if (!res.ok) {
@@ -160,10 +146,6 @@ export const notificationApi = {
     console.log('[notificationApi] saveSubscription token prefix:', (payload.fcm_token || '').slice(0, 20));
     const res = await fetchWithRetry(`${API_BASE_URL}/notifications/subscriptions/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...getAuthHeader(token),
-      },
       body: JSON.stringify(payload),
     }, 2);
     if (!res.ok) {
@@ -180,9 +162,7 @@ export const notificationApi = {
    */
   getPermissionPreferences: async token => {
     notificationDebug('Fetching notification permission preferences.');
-    const res = await fetch(`${API_BASE_URL}/notifications/permission/`, {
-      headers: { ...getAuthHeader(token) },
-    });
+    const res = await fetchWithAuth(`${API_BASE_URL}/notifications/permission/`);
     if (!res.ok) {
       notificationError('Failed to fetch notification permission preferences.', {
         status: res.status,

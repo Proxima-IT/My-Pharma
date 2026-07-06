@@ -241,10 +241,10 @@ export default function AdminOrdersPage() {
                       {item.total ? (
                         formatCurrency(item.total)
                       ) : activeTab === 'Prescription' &&
-                        item.items?.length > 0 ? (
+                        (item.item_count || 0) > 0 ? (
                         <span className="text-[#3A5A40] text-[10px] font-bold uppercase tracking-widest">
-                          {item.items.length} Item
-                          {item.items.length > 1 ? 's' : ''} Assigned
+                          {item.item_count} Item
+                          {(item.item_count || 0) > 1 ? 's' : ''} Assigned
                         </span>
                       ) : activeTab === 'Prescription' ? (
                         <span className="text-amber-500 text-[10px] font-bold uppercase tracking-widest">

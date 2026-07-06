@@ -84,12 +84,6 @@ const CartCard = ({ item, onUpdate, onRemove }) => {
             </span>
           </div>
 
-          {/* Clean Description Snippet */}
-          <p className="text-[13px] text-gray-500 font-medium pt-1 line-clamp-1 leading-tight">
-            {stripFormats(item.product_description) ||
-              'No description available'}
-          </p>
-
           <div className="flex items-center gap-2 text-[14px] text-gray-700 font-bold uppercase tracking-tighter">
             <span>
               {item.product_unit_name || (isCombo ? 'Combo Pack' : 'Unit N/A')}
