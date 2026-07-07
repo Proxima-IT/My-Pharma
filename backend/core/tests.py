@@ -420,6 +420,49 @@ class BuyNowApiTests(APITestCase):
         order = Order.objects.get(pk=response.data["id"])
         self.assertEqual(order.prescription, prescription)
 
+    def test_buy_now_cleans_dangling_records(self):
+        from decimal import Decimal
+        from .models import Order, OrderItem, OrderStatusHistory, OrderImage, OrderSettlement
+        
+        # Predict next order ID
+        dummy = Order.objects.create(
+            user=self.user,
+            total=Decimal("0.00"),
+            shipping_address="Temp",
+        )
+        next_order_id = dummy.id + 1
+        dummy.delete()
+        
+        # Create dangling records
+        _create_dangling_records(next_order_id, self.product)
+        
+        # Verify dangling records exist
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderStatusHistory.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderImage.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderSettlement.objects.filter(order_id=next_order_id).count(), 1)
+        
+        # Place order via buy now API
+        payload = {
+            "product": self.product.id,
+            "quantity": 1,
+            "shipping_address_id": self.address.id,
+            "payment_method": "COD",
+        }
+        response = self.client.post("/api/orders/buy-now/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["id"], next_order_id)
+        
+        # Verify dangling records were cleaned up and new correct ones created
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id, dosage="Dangling Dosage").count(), 0)
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderStatusHistory.objects.filter(order_id=next_order_id, status="DELIVERED").count(), 0)
+        self.assertEqual(OrderImage.objects.filter(order_id=next_order_id).count(), 0)
+        
+        settlement = OrderSettlement.objects.get(order_id=next_order_id)
+        self.assertEqual(settlement.payment_method, OrderSettlement.PaymentMethod.COD)
+        self.assertEqual(settlement.payment_status, OrderSettlement.PaymentStatus.PENDING)
+
 
 class WishlistApiTests(APITestCase):
     def setUp(self):
@@ -621,6 +664,32 @@ class OrderApiTests(APITestCase):
         self.assertIsInstance(pdf_bytes, bytes)
         self.assertTrue(pdf_bytes.startswith(b"%PDF"))
 
+        # Test with standard 6-part comma shipping address format
+        self.order.shipping_address = "John Doe, john@example.com, +8801700000000, Dhaka, Dhanmondi, 123 Street Name"
+        self.order.save()
+        pdf_bytes = generate_invoice_pdf(self.order)
+        self.assertIsInstance(pdf_bytes, bytes)
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+
+        # Test with PAID settlement
+        from core.models import OrderSettlement
+        settlement = OrderSettlement.objects.create(
+            order=self.order,
+            payment_method=OrderSettlement.PaymentMethod.ONLINE,
+            payment_status=OrderSettlement.PaymentStatus.PAID,
+            gross_amount=100.00
+        )
+        pdf_bytes = generate_invoice_pdf(self.order)
+        self.assertIsInstance(pdf_bytes, bytes)
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+
+        # Test with PENDING settlement
+        settlement.payment_status = OrderSettlement.PaymentStatus.PENDING
+        settlement.save()
+        pdf_bytes = generate_invoice_pdf(self.order)
+        self.assertIsInstance(pdf_bytes, bytes)
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+
     def test_invoice_download_by_owner(self):
         self.client.force_authenticate(user=self.customer)
         response = self.client.get(f"/api/orders/{self.order.id}/invoice/")
@@ -720,6 +789,131 @@ class OrderApiTests(APITestCase):
         response = self.client.post("/api/orders/track/", payload, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_create_order_cleans_dangling_records(self):
+        from decimal import Decimal
+        from .models import Order, OrderItem, OrderStatusHistory, OrderImage, OrderSettlement, DeliveryMethod
+        
+        # Predict next order ID
+        dummy = Order.objects.create(
+            user=self.customer,
+            total=Decimal("0.00"),
+            shipping_address="Temp",
+        )
+        next_order_id = dummy.id + 1
+        dummy.delete()
+        
+        # Set up data
+        delivery_method = DeliveryMethod.objects.create(
+            name="Express",
+            delivery_type="EXPRESS",
+            price=Decimal("60.00"),
+            is_active=True
+        )
+        # Create active product
+        from .models import Category
+        category, _ = Category.objects.get_or_create(name="Medicines", slug="meds")
+        product = Product.objects.create(
+            name="Test Napa",
+            slug="test-napa",
+            category=category,
+            price=Decimal("150.00"),
+            quantity_in_stock=50,
+            is_active=True,
+        )
+        
+        # Create dangling records
+        _create_dangling_records(next_order_id, product)
+        
+        self.client.force_authenticate(user=self.customer)
+        payload = {
+            "shipping_address": "Test address, Dhaka",
+            "notes": "Test notes",
+            "delivery_method": delivery_method.id,
+            "items": [
+                {
+                    "product": product.id,
+                    "quantity": 2,
+                    "dosage": "500mg"
+                }
+            ]
+        }
+        response = self.client.post("/api/orders/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["id"], next_order_id)
+        
+        # Verify dangling records were cleaned up and new correct ones created
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id, dosage="Dangling Dosage").count(), 0)
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderStatusHistory.objects.filter(order_id=next_order_id, status="DELIVERED").count(), 0)
+        self.assertEqual(OrderImage.objects.filter(order_id=next_order_id).count(), 0)
+
+    def test_cart_checkout_cleans_dangling_records(self):
+        from decimal import Decimal
+        from .models import Order, OrderItem, OrderStatusHistory, OrderImage, OrderSettlement, DeliveryMethod, Cart, CartItem
+        from authentication.models import UserAddress
+        
+        # Predict next order ID
+        dummy = Order.objects.create(
+            user=self.customer,
+            total=Decimal("0.00"),
+            shipping_address="Temp",
+        )
+        next_order_id = dummy.id + 1
+        dummy.delete()
+        
+        # Set up data
+        delivery_method = DeliveryMethod.objects.create(
+            name="Express",
+            delivery_type="EXPRESS",
+            price=Decimal("60.00"),
+            is_active=True
+        )
+        from .models import Category
+        category, _ = Category.objects.get_or_create(name="Medicines", slug="meds")
+        product = Product.objects.create(
+            name="Test Napa",
+            slug="test-napa-cart",
+            category=category,
+            price=Decimal("150.00"),
+            quantity_in_stock=50,
+            is_active=True,
+        )
+        
+        # Create dangling records
+        _create_dangling_records(next_order_id, product)
+        
+        address = UserAddress.objects.create(
+            user=self.customer,
+            full_name="Jane Doe",
+            phone="01712222222",
+            district="Dhaka",
+            thana="Tejgaon",
+            address="Some Address"
+        )
+        
+        cart, _ = Cart.objects.get_or_create(user=self.customer)
+        CartItem.objects.create(cart=cart, product=product, quantity=1, price_at_order=Decimal("150.00"))
+        
+        self.client.force_authenticate(user=self.customer)
+        payload = {
+            "shipping_address_id": address.id,
+            "delivery_method_id": delivery_method.id,
+            "payment_method": "COD"
+        }
+        response = self.client.post("/api/cart/place-order/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["id"], next_order_id)
+        
+        # Verify dangling records were cleaned up
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id, dosage="Dangling Dosage").count(), 0)
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderStatusHistory.objects.filter(order_id=next_order_id, status="DELIVERED").count(), 0)
+        self.assertEqual(OrderImage.objects.filter(order_id=next_order_id).count(), 0)
+        
+        settlement = OrderSettlement.objects.get(order_id=next_order_id)
+        self.assertEqual(settlement.payment_method, OrderSettlement.PaymentMethod.COD)
+        self.assertEqual(settlement.payment_status, OrderSettlement.PaymentStatus.PENDING)
+
 
 class PrescriptionOrderApiTests(APITestCase):
     def setUp(self):
@@ -741,4 +935,105 @@ class PrescriptionOrderApiTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertIn("is_seen", response.data)
         self.assertFalse(response.data["is_seen"])
+
+    def test_prescription_approval_cleans_dangling_records(self):
+        from decimal import Decimal
+        from .models import Prescription, PrescriptionItem, Order, OrderItem, OrderStatusHistory, OrderImage, OrderSettlement, Product, Category
+        from .views import _create_order_from_prescription
+        
+        # Predict next order ID
+        dummy = Order.objects.create(
+            user=self.customer,
+            total=Decimal("0.00"),
+            shipping_address="Temp",
+        )
+        next_order_id = dummy.id + 1
+        dummy.delete()
+        
+        # Set up prescription and items
+        prescription = Prescription.objects.create(
+            user=self.customer,
+            status=Prescription.Status.APPROVED
+        )
+        category, _ = Category.objects.get_or_create(name="Medicines", slug="meds")
+        product = Product.objects.create(
+            name="Prescription Napa",
+            slug="rx-napa-test",
+            category=category,
+            price=Decimal("150.00"),
+            quantity_in_stock=50,
+            is_active=True,
+            requires_prescription=True
+        )
+        PrescriptionItem.objects.create(
+            prescription=prescription,
+            product=product,
+            quantity_prescribed=3
+        )
+        
+        # Create dangling records
+        _create_dangling_records(next_order_id, product)
+        
+        # Verify dangling records exist
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderStatusHistory.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderImage.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderSettlement.objects.filter(order_id=next_order_id).count(), 1)
+        
+        # Call function directly
+        _create_order_from_prescription(prescription)
+        
+        # Verify order was created with next_order_id
+        order = Order.objects.get(prescription=prescription)
+        self.assertEqual(order.id, next_order_id)
+        
+        # Verify dangling records were cleaned up
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id, dosage="Dangling Dosage").count(), 0)
+        self.assertEqual(OrderItem.objects.filter(order_id=next_order_id).count(), 1)
+        self.assertEqual(OrderStatusHistory.objects.filter(order_id=next_order_id, status="DELIVERED").count(), 0)
+        self.assertEqual(OrderImage.objects.filter(order_id=next_order_id).count(), 0)
+
+
+def _create_dangling_records(order_id, product):
+    from django.db import connection
+    from decimal import Decimal
+    from .models import OrderItem, OrderStatusHistory, OrderImage, OrderSettlement
+    
+    with connection.cursor() as cursor:
+        if connection.vendor == 'mysql':
+            cursor.execute("SET FOREIGN_KEY_CHECKS=0;")
+        elif connection.vendor == 'sqlite':
+            cursor.execute("PRAGMA foreign_keys = OFF;")
+            
+    try:
+        OrderItem.objects.create(
+            order_id=order_id,
+            product=product,
+            quantity=5,
+            price_at_order=Decimal("50.00"),
+            dosage="Dangling Dosage"
+        )
+        OrderStatusHistory.objects.create(
+            order_id=order_id,
+            status="DELIVERED"
+        )
+        OrderImage.objects.create(
+            order_id=order_id,
+            image="dangling_image.jpg",
+            order_display=0
+        )
+        OrderSettlement.objects.create(
+            order_id=order_id,
+            payment_method="ONLINE",
+            payment_status="PAID",
+            gross_amount=Decimal("250.00"),
+            net_payable=Decimal("250.00"),
+            status="SETTLED"
+        )
+    finally:
+        with connection.cursor() as cursor:
+            if connection.vendor == 'mysql':
+                cursor.execute("SET FOREIGN_KEY_CHECKS=1;")
+            elif connection.vendor == 'sqlite':
+                cursor.execute("PRAGMA foreign_keys = ON;")
 

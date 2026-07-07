@@ -155,16 +155,25 @@ def generate_invoice_pdf(order) -> bytes:
     email = customer.email if customer.email and not customer.email.endswith("@ph.local") else "N/A"
     address_text = order.shipping_address or "N/A"
 
-    payment_method = "Cash on Delivery"
+    address_parts = [p.strip() for p in address_text.split(',')]
+    if len(address_parts) >= 6:
+        name = address_parts[0]
+        # address_parts[1] is email
+        phone_number = address_parts[2]
+        district = address_parts[3]
+        thana = address_parts[4]
+        street_address = ", ".join(address_parts[5:])
+        formatted_address = f"<b>Name:</b> {name}<br/><b>Address:</b> {street_address}, {thana}, {district}<br/><b>Phone:</b> {phone_number}"
+    else:
+        formatted_address = address_text.replace("\n", "<br/>")
+
+    payment_status_text = "Pending"
     try:
         if hasattr(order, "settlement") and order.settlement:
-            pm = order.settlement.payment_method
-            if pm == "ONLINE":
-                payment_method = "SSL Commerz"
-            elif pm == "COD":
-                payment_method = "Cash on Delivery"
+            if order.settlement.payment_status == "PAID":
+                payment_status_text = "Success"
             else:
-                payment_method = pm
+                payment_status_text = "Pending"
     except Exception:
         pass
 
@@ -175,7 +184,7 @@ def generate_invoice_pdf(order) -> bytes:
         ],
         [
             Paragraph(f"<b>Name:</b> {full_name}<br/><b>Phone:</b> {phone}<br/><b>Email:</b> {email}", body_style),
-            Paragraph(f"<b>Status:</b> {order.get_status_display()}<br/><b>Payment:</b> {payment_method}", body_style)
+            Paragraph(f"<b>Status:</b> {order.get_status_display()}<br/><b>Payment:</b> {payment_status_text}", body_style)
         ],
         [
             Spacer(1, 10),
@@ -186,7 +195,7 @@ def generate_invoice_pdf(order) -> bytes:
             ""
         ],
         [
-            Paragraph(address_text.replace("\n", "<br/>"), body_style),
+            Paragraph(formatted_address, body_style),
             ""
         ]
     ]
@@ -287,7 +296,7 @@ def generate_invoice_pdf(order) -> bytes:
     # Footer
     footer_text = Paragraph(
         "<center>Thank you for choosing My Pharma! If you have any inquiries regarding this invoice, "
-        "please contact support at support@mypharma.com or call 09612-XXXXXX.</center>",
+        "please contact support at support@mypharma.com.bd or call +8801335236650.</center>",
         ParagraphStyle('FooterText', parent=body_style, fontSize=8, textColor=colors.HexColor("#999999"))
     )
     story.append(footer_text)

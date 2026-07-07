@@ -204,7 +204,7 @@ const Footer = () => {
                       Hotline
                     </p>
                     <p className="text-xs text-white font-bold">
-                      +8809612316708
+                      +8801335236650
                     </p>
                   </div>
                 </div>
@@ -217,7 +217,7 @@ const Footer = () => {
                       Support
                     </p>
                     <p className="text-xs text-white font-bold">
-                      support@mypharma.com
+                      support@mypharma.com.bd
                     </p>
                   </div>
                 </div>
