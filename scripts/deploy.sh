@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Deployment script for My Pharma production stack
+# Deployment script for My Pharma via Dokploy
 set -euo pipefail
 
-# Configurations
-DEPLOY_HOST="${DEPLOY_HOST:-46.202.194.251}"
-DEPLOY_USER="${DEPLOY_USER:-root}"
-DEPLOY_PASS="${DEPLOY_PASS:-@@@SA123456sa@@@}"
-TARGET_DIR="${TARGET_DIR:-/root/My-Pharma}"
+# Load environment variables if available
+if [ -f .env ]; then
+    # Load DOKPLOY_WEBHOOK_URL if defined
+    export $(grep -v '^#' .env | xargs) 2>/dev/null || true
+fi
+
+# Configuration
+DOKPLOY_WEBHOOK_URL="${DOKPLOY_WEBHOOK_URL:-}"
 
 echo "=========================================="
-echo " Starting Deployment for My Pharma"
+# Clickable links for file paths
+echo " Starting Dokploy Deployment for My Pharma"
 echo "=========================================="
 
 # 1. Verify Git status
@@ -28,23 +32,24 @@ fi
 echo "➡️ Pushing local commits to GitHub (prod-dock)..."
 git push origin prod-dock
 
-echo "➡️ Connecting to production server ($DEPLOY_HOST) to pull changes..."
-# Verify sshpass is installed
-if ! command -v sshpass &> /dev/null; then
-    echo "❌ sshpass is not installed. Please install it (e.g., brew install sshpass on macOS) or run manually."
-    exit 1
+echo "✅ Code pushed to GitHub successfully."
+
+# 2. Trigger Dokploy deployment
+if [ -n "${DOKPLOY_WEBHOOK_URL}" ]; then
+    echo "➡️ Triggering Dokploy deployment via webhook..."
+    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "${DOKPLOY_WEBHOOK_URL}")
+    if [ "$RESPONSE" -eq 200 ] || [ "$RESPONSE" -eq 204 ]; then
+        echo "🎉 Dokploy deployment triggered successfully! (HTTP $RESPONSE)"
+    else
+        echo "⚠️ Webhook sent, but server returned HTTP status $RESPONSE. Please check your Dokploy dashboard."
+    fi
+else
+    echo "ℹ️ Note: No DOKPLOY_WEBHOOK_URL found in .env."
+    echo "   If your Dokploy service has 'Trigger Type: On Push' enabled, the deployment is already running!"
+    echo "   Otherwise, please go to your Dokploy panel at http://a1.mypharma.com.bd and click Deploy."
 fi
 
-# Run git pull on the server
-sshpass -p "$DEPLOY_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${DEPLOY_USER}@${DEPLOY_HOST}" "cd $TARGET_DIR && git pull"
-
-echo "➡️ Building and starting production Docker containers on the server..."
-# Mark run-prod.sh as executable and run it
-sshpass -p "$DEPLOY_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${DEPLOY_USER}@${DEPLOY_HOST}" "cd $TARGET_DIR && chmod +x scripts/run-prod.sh && ./scripts/run-prod.sh"
-
-echo "➡️ Verifying container status..."
-sshpass -p "$DEPLOY_PASS" ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "${DEPLOY_USER}@${DEPLOY_HOST}" "cd $TARGET_DIR && docker compose ps"
-
 echo "=========================================="
-echo " 🎉 Deployment Completed Successfully!"
+echo " Done! You can monitor the progress on:"
+echo " 🌐 http://a1.mypharma.com.bd/dashboard"
 echo "=========================================="
