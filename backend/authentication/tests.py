@@ -219,3 +219,77 @@ class PasswordStrengthTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("password", response.data)
 
+
+class GoogleAuthFallbackTests(APITestCase):
+    @patch("authentication.services._get_firebase_public_keys")
+    def test_manual_verification_fallback_success(self, mock_get_keys):
+        from cryptography import x509
+        from cryptography.hazmat.primitives import hashes, serialization
+        from cryptography.hazmat.primitives.asymmetric import rsa
+        from cryptography.x509.oid import NameOID
+        import datetime
+        import jwt
+        from django.test import override_settings
+        from authentication.services import verify_google_firebase_id_token
+
+        # 1. Generate private key & self-signed certificate for mock Firebase
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=2048,
+        )
+
+        subject = issuer = x509.Name([
+            x509.NameAttribute(NameOID.COMMON_NAME, "mock-project"),
+        ])
+        cert = x509.CertificateBuilder().subject_name(
+            subject
+        ).issuer_name(
+            issuer
+        ).public_key(
+            private_key.public_key()
+        ).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=1)
+        ).not_valid_after(
+            datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(days=10)
+        ).sign(private_key, hashes.SHA256())
+
+        cert_pem = cert.public_bytes(serialization.Encoding.PEM).decode("utf-8")
+
+        # 2. Mock public keys endpoint response
+        mock_get_keys.return_value = {"mock-kid": cert_pem}
+
+        # 3. Create mock Firebase ID Token
+        now = datetime.datetime.now(datetime.timezone.utc)
+        payload = {
+            "aud": "mock-project",
+            "iss": "https://securetoken.google.com/mock-project",
+            "email": "test-fallback@example.com",
+            "email_verified": True,
+            "firebase": {"sign_in_provider": "google.com"},
+            "sub": "mock-uid",
+            "exp": now + datetime.timedelta(hours=1),
+            "iat": now - datetime.timedelta(minutes=1),
+        }
+        id_token = jwt.encode(
+            payload,
+            private_key,
+            algorithm="RS256",
+            headers={"kid": "mock-kid"},
+        )
+
+        # 4. Execute verify function with overridden settings
+        with override_settings(
+            FIREBASE_INITIALIZED=False,
+            FIREBASE_AUTH_PROJECT_ID="mock-project",
+            FIREBASE_AUTH_REQUIRE_EMAIL_VERIFIED=True
+        ):
+            claims = verify_google_firebase_id_token(id_token)
+
+        self.assertEqual(claims["email"], "test-fallback@example.com")
+        self.assertEqual(claims["uid"], "mock-uid")
+        self.assertEqual(claims["provider"], "google.com")
+        self.assertTrue(claims["email_verified"])
+
+

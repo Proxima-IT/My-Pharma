@@ -162,7 +162,7 @@ const Cart = () => {
             )}
 
             {(() => {
-              const cartSubtotal = parseFloat(summary?.subtotal_before_discount ?? summary?.subtotal ?? 0);
+              const cartSubtotal = parseFloat(summary?.sub_total ?? summary?.subtotal_before_discount ?? summary?.subtotal ?? 0);
               const isCartValid = items.length > 0 && cartSubtotal >= 100;
               const cartValidationError = items.length > 0 && cartSubtotal < 100
                 ? 'Minimum order amount is ৳100.'

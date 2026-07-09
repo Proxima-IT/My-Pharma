@@ -453,8 +453,8 @@ def _init_firebase():
                     FIREBASE_SERVICE_ACCOUNT_FILE,
                 )
 
-        # Priority 2: Inline JSON string
-        if FIREBASE_SERVICE_ACCOUNT_JSON:
+        # Priority 2: Inline JSON string (must start with '{' to be valid JSON)
+        if FIREBASE_SERVICE_ACCOUNT_JSON and FIREBASE_SERVICE_ACCOUNT_JSON.strip().startswith("{"):
             cred_dict = _json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)

@@ -297,6 +297,85 @@ def register_with_email(email: str, password: str) -> User:
     return user
 
 
+_FIREBASE_PUBLIC_KEYS = {}
+_FIREBASE_KEYS_EXPIRY = 0
+
+
+def _get_firebase_public_keys() -> dict:
+    global _FIREBASE_PUBLIC_KEYS, _FIREBASE_KEYS_EXPIRY
+    import time
+    import requests
+    now = time.time()
+    if not _FIREBASE_PUBLIC_KEYS or now > _FIREBASE_KEYS_EXPIRY:
+        try:
+            res = requests.get(
+                "https://www.googleapis.com/robot/v1/metadata/x509/securetoken@system.gserviceaccount.com",
+                timeout=10
+            )
+            if res.status_code == 200:
+                _FIREBASE_PUBLIC_KEYS = res.json()
+                # Parse Cache-Control header for max-age
+                cache_control = res.headers.get("Cache-Control", "")
+                max_age = 3600
+                for part in cache_control.split(","):
+                    if "max-age" in part:
+                        try:
+                            max_age = int(part.split("=")[1].strip())
+                        except Exception:
+                            pass
+                _FIREBASE_KEYS_EXPIRY = now + max_age
+        except Exception as exc:
+            logger.warning("Failed to fetch Firebase public keys: %s", exc)
+    return _FIREBASE_PUBLIC_KEYS
+
+
+def manual_verify_firebase_token(id_token: str, project_id: str) -> dict:
+    """Manually verify Firebase ID token JWT claims and signature using public keys."""
+    import jwt
+    from jwt.exceptions import ExpiredSignatureError, InvalidSignatureError, InvalidTokenError
+
+    try:
+        headers = jwt.get_unverified_header(id_token)
+    except Exception:
+        raise ValueError("invalid_token")
+
+    kid = headers.get("kid")
+    if not kid:
+        raise ValueError("invalid_token")
+
+    public_keys = _get_firebase_public_keys()
+    cert_str = public_keys.get(kid)
+    if not cert_str:
+        raise ValueError("invalid_token")
+
+    # Load public key from PEM certificate using cryptography
+    try:
+        from cryptography.x509 import load_pem_x509_certificate
+        cert_obj = load_pem_x509_certificate(cert_str.encode("utf-8"))
+        public_key = cert_obj.public_key()
+    except Exception as exc:
+        logger.error("Failed to load PEM certificate: %s", exc)
+        raise ValueError("invalid_token")
+
+    try:
+        decoded = jwt.decode(
+            id_token,
+            public_key,
+            algorithms=["RS256"],
+            audience=project_id,
+            issuer=f"https://securetoken.google.com/{project_id}",
+            options={"verify_iat": True},
+        )
+        return decoded
+    except ExpiredSignatureError:
+        raise ValueError("invalid_token")
+    except InvalidSignatureError:
+        raise ValueError("invalid_token")
+    except InvalidTokenError as exc:
+        logger.warning("Manual token validation failed: %s", exc)
+        raise ValueError("invalid_token")
+
+
 def verify_google_firebase_id_token(id_token: str) -> dict:
     """
     Verify Firebase ID token for Google sign-in and return normalized claims.
@@ -304,25 +383,30 @@ def verify_google_firebase_id_token(id_token: str) -> dict:
     firebase_not_configured, invalid_token, provider_mismatch, project_mismatch,
     email_missing, email_not_verified
     """
-    if not getattr(settings, "FIREBASE_INITIALIZED", False):
-        raise ValueError("firebase_not_configured")
+    decoded = None
+    project_id = getattr(settings, "FIREBASE_AUTH_PROJECT_ID", "")
 
-    try:
-        from firebase_admin import auth as firebase_auth
-    except Exception:
-        raise ValueError("firebase_not_configured")
+    # Try official Firebase Admin SDK first
+    if getattr(settings, "FIREBASE_INITIALIZED", False):
+        try:
+            from firebase_admin import auth as firebase_auth
+            decoded = firebase_auth.verify_id_token(id_token, check_revoked=False)
+        except Exception as exc:
+            logger.warning("Firebase Admin SDK ID token verification failed: %s", exc)
+            # If the token signature/expiry is invalid, raise error
+            raise ValueError("invalid_token")
 
-    try:
-        decoded = firebase_auth.verify_id_token(id_token, check_revoked=False)
-    except Exception as exc:
-        logger.warning("Firebase ID token verification failed: %s", exc)
-        raise ValueError("invalid_token")
+    # Fallback to manual JWT verification if Admin SDK is not initialized/configured
+    if not decoded:
+        if not project_id:
+            raise ValueError("firebase_not_configured")
+        decoded = manual_verify_firebase_token(id_token, project_id)
 
     provider = ((decoded.get("firebase") or {}).get("sign_in_provider") or "").strip()
     if provider != "google.com":
         raise ValueError("provider_mismatch")
 
-    expected_project_id = (getattr(settings, "FIREBASE_AUTH_PROJECT_ID", "") or "").strip()
+    expected_project_id = (project_id or "").strip()
     token_project_id = (decoded.get("aud") or "").strip()
     if expected_project_id and token_project_id and token_project_id != expected_project_id:
         raise ValueError("project_mismatch")
@@ -336,7 +420,7 @@ def verify_google_firebase_id_token(id_token: str) -> dict:
         raise ValueError("email_not_verified")
 
     return {
-        "uid": (decoded.get("uid") or decoded.get("user_id") or "").strip(),
+        "uid": (decoded.get("uid") or decoded.get("user_id") or decoded.get("sub") or "").strip(),
         "email": email,
         "email_verified": bool(decoded.get("email_verified")),
         "name": (decoded.get("name") or "").strip(),
