@@ -57,39 +57,44 @@ export default function ProductBundleSlider() {
 
   return (
     <div className="relative w-full">
-      {/* Navigation Arrows (only when more than 1 bundle) */}
-      {bundles.length > 1 && (
-        <div className="flex items-center justify-end gap-2 mb-3">
-          <button
-            onClick={() => scroll('left')}
-            disabled={!canScrollLeft}
-            className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-              canScrollLeft
-                ? 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50 cursor-pointer'
-                : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-            }`}
-          >
-            <MdArrowForwardIos className="rotate-180" size={12} />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            disabled={!canScrollRight}
-            className={`w-8 h-8 rounded-full border flex items-center justify-center transition-all ${
-              canScrollRight
-                ? 'bg-black text-white border-black hover:bg-gray-800 cursor-pointer'
-                : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
-            }`}
-          >
-            <MdArrowForwardIos size={12} />
-          </button>
-        </div>
-      )}
+      {/* Header & Navigation Arrows (inline layout) */}
+      <div className="flex items-center justify-between mb-4 px-0.5">
+        <h3 className="text-sm sm:text-base font-bold text-gray-900 tracking-tight">
+          Bundle/Combo Package
+        </h3>
+        {bundles.length > 2 && (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => scroll('left')}
+              disabled={!canScrollLeft}
+              className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                canScrollLeft
+                  ? 'bg-white text-gray-900 border-gray-200 hover:bg-gray-50 cursor-pointer'
+                  : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+              }`}
+            >
+              <MdArrowForwardIos className="rotate-180" size={10} />
+            </button>
+            <button
+              onClick={() => scroll('right')}
+              disabled={!canScrollRight}
+              className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                canScrollRight
+                  ? 'bg-black text-white border-black hover:bg-gray-800 cursor-pointer'
+                  : 'bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed'
+              }`}
+            >
+              <MdArrowForwardIos size={10} />
+            </button>
+          </div>
+        )}
+      </div>
 
-      {/* Scrollable Container — always single card visible */}
+      {/* Scrollable Container — two cards visible side-by-side */}
       <div
         ref={scrollContainerRef}
         onScroll={checkScrollButtons}
-        className="flex gap-4 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory touch-pan-x"
+        className="flex gap-3 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory touch-pan-x"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -98,7 +103,7 @@ export default function ProductBundleSlider() {
         {bundles.map(bundle => (
           <div
             key={bundle.id}
-            className="flex-shrink-0 snap-start w-full"
+            className="flex-shrink-0 snap-start w-[calc(50%-6px)]"
           >
             <BundlePreviewCard bundle={bundle} />
           </div>

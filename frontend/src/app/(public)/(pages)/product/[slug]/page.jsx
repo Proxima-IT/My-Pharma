@@ -157,10 +157,7 @@ const ProductSingle = ({ params }) => {
           </div>
 
           {/* Bundle/Combo Offerings */}
-          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[24px] p-6 lg:p-5">
-            <h3 className="text-lg lg:text-base font-black text-gray-900 tracking-tight mb-3 px-1 uppercase">
-              Bundle Packages
-            </h3>
+          <div className="bg-white border border-gray-100 rounded-[32px] lg:rounded-[24px] p-4 sm:p-5">
             <ProductBundleSlider />
           </div>
 
