@@ -18,12 +18,30 @@ class HasSwaggerAccessKey(BasePermission):
         user = request.user
         return bool(user and user.is_authenticated and user.is_staff)
 
+class SecureSpectacularSwaggerView(SpectacularSwaggerView):
+    def _get_schema_url(self, request):
+        url = super()._get_schema_url(request)
+        key = request.GET.get("key")
+        token = request.GET.get("token")
+        
+        from urllib.parse import urlparse, urlunparse, parse_qsl, urlencode
+        u = urlparse(url)
+        q = dict(parse_qsl(u.query))
+        if key:
+            q["key"] = key
+        if token:
+            q["token"] = token
+            
+        parts = list(u)
+        parts[4] = urlencode(q)
+        return urlunparse(parts)
+
 urlpatterns = [
     path("", SpectacularAPIView.as_view(
         permission_classes=[HasSwaggerAccessKey],
         authentication_classes=[SessionAuthentication, JWTAuthWithBlacklist, JWTQueryParamAuthentication]
     ), name="schema"),
-    path("swagger/", SpectacularSwaggerView.as_view(
+    path("swagger/", SecureSpectacularSwaggerView.as_view(
         url_name="schema",
         permission_classes=[HasSwaggerAccessKey],
         authentication_classes=[SessionAuthentication, JWTAuthWithBlacklist, JWTQueryParamAuthentication]
