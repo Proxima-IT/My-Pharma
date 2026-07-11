@@ -21,6 +21,7 @@ const nextConfig = {
         hostname: 'localhost',
         port: '8000',
         pathname: '/media/**',
+      },
       {
         protocol: 'https',
         hostname: 'bluepillc.com',
