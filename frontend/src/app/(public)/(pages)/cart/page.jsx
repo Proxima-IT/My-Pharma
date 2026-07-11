@@ -206,7 +206,7 @@ const Cart = () => {
 
       <div className="mt-20 space-y-20">
         <DealsSection />
-        <SmartHealthBundle />
+        <SmartHealthBundle compact={true} />
       </div>
     </div>
   );

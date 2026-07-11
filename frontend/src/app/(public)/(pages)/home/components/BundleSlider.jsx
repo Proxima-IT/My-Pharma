@@ -4,9 +4,10 @@ import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MdArrowForwardIos } from 'react-icons/md';
 import BundleCard from './BundleCard';
+import BundlePreviewCard from '@/app/(public)/(pages)/product/[slug]/components/BundlePreviewCard';
 import { useBundleData } from '@/app/(public)/hooks/useBundleData';
 
-export default function BundleSlider({ cardsToShow }) {
+export default function BundleSlider({ cardsToShow, compact }) {
   const { bundles, loading } = useBundleData();
   const scrollContainerRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -51,10 +52,16 @@ export default function BundleSlider({ cardsToShow }) {
   const getCardWidth = () => {
     if (windowWidth === 0) return '100%';
     if (cardsToShow === 1) return '100%';
-    if (windowWidth < 640) return '100%';
-    if (windowWidth < 1024) return 'calc((100% - 20px) / 2)';
-    if (windowWidth < 1280) return 'calc((100% - 20px) / 2)';
-    return 'calc((100% - 40px) / 3)';
+    if (windowWidth < 640) {
+      return compact ? 'calc((100% - 12px) / 2)' : '100%';
+    }
+    if (windowWidth < 1024) {
+      return compact ? 'calc((100% - 24px) / 3)' : 'calc((100% - 20px) / 2)';
+    }
+    if (windowWidth < 1280) {
+      return compact ? 'calc((100% - 36px) / 4)' : 'calc((100% - 20px) / 2)';
+    }
+    return compact ? 'calc((100% - 48px) / 5)' : 'calc((100% - 40px) / 3)';
   };
 
   if (loading) {
@@ -70,8 +77,8 @@ export default function BundleSlider({ cardsToShow }) {
   return (
     <div className="relative w-full animate-in fade-in duration-700">
       {/* Header & Navigation */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-        <h1 className="font-bold text-xl sm:text-2xl text-gray-900 tracking-tight">
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${compact ? 'mb-5' : 'mb-8'}`}>
+        <h1 className={`font-bold text-gray-900 tracking-tight ${compact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl'}`}>
           Smart health bundles at better value
         </h1>
         <div className="flex items-center gap-3">
@@ -111,7 +118,7 @@ export default function BundleSlider({ cardsToShow }) {
       <div
         ref={scrollContainerRef}
         onScroll={checkScrollButtons}
-        className="flex gap-5 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory touch-pan-x pb-4"
+        className={`flex ${compact ? 'gap-3' : 'gap-5'} overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory touch-pan-x pb-4`}
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
@@ -123,7 +130,11 @@ export default function BundleSlider({ cardsToShow }) {
             className="flex-shrink-0 snap-start"
             style={{ width: getCardWidth() }}
           >
-            <BundleCard bundle={bundle} />
+            {compact ? (
+              <BundlePreviewCard bundle={bundle} />
+            ) : (
+              <BundleCard bundle={bundle} />
+            )}
           </div>
         ))}
       </div>
