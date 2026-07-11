@@ -49,6 +49,18 @@ else
     echo "   Otherwise, please go to your Dokploy panel at http://a1.mypharma.com.bd and click Deploy."
 fi
 
+# 3. Reload/Restart Nginx gateway via SSH
+SERVER_SSH_HOST="${SERVER_SSH_HOST:-}"
+if [ -n "${SERVER_SSH_HOST}" ]; then
+    SSH_USER="${SERVER_SSH_USER:-root}"
+    echo "➡️ Reloading Nginx gateway configuration on the server via SSH..."
+    if ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no "${SSH_USER}@${SERVER_SSH_HOST}" "docker exec mypharma-gateway nginx -s reload 2>/dev/null || docker restart mypharma-gateway" 2>/dev/null; then
+        echo "✅ Nginx gateway reloaded/restarted successfully."
+    else
+        echo "⚠️ Failed to reload Nginx gateway via SSH. Please make sure the container 'mypharma-gateway' is running on the server."
+    fi
+fi
+
 echo "=========================================="
 echo " Done! You can monitor the progress on:"
 echo " 🌐 http://a1.mypharma.com.bd/dashboard"
