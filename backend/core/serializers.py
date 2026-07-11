@@ -437,6 +437,7 @@ def _product_image_urls(product, request=None):
 
 class ProductListSerializer(serializers.ModelSerializer):
     category_name = SafeCharField(source="category.name", read_only=True)
+    category_slug = SafeCharField(source="category.slug", read_only=True)
     brand_name = SafeCharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = SafeCharField(source="ingredient.name", read_only=True, allow_null=True)
     unit_name = serializers.SerializerMethodField()
@@ -448,7 +449,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = (
-            "id", "name", "slug", "category", "category_name", "brand", "brand_name",
+            "id", "name", "slug", "category", "category_name", "category_slug", "brand", "brand_name",
             "ingredient", "ingredient_name", "requires_prescription", "is_generic",
             "price", "original_price", "discount_percentage", "image",
             "images",
@@ -551,6 +552,7 @@ class ComboListSerializer(serializers.ModelSerializer):
 
 class ProductDetailSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source="category.name", read_only=True)
+    category_slug = SafeCharField(source="category.slug", read_only=True)
     brand_name = serializers.CharField(source="brand.name", read_only=True, allow_null=True)
     ingredient_name = serializers.CharField(source="ingredient.name", read_only=True, allow_null=True)
     unit_name = serializers.SerializerMethodField()
@@ -563,7 +565,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = (
-            "id", "name", "slug", "category", "category_name", "brand", "brand_name",
+            "id", "name", "slug", "category", "category_name", "category_slug", "brand", "brand_name",
             "ingredient", "ingredient_name", "requires_prescription", "is_generic",
             "description", "price", "original_price", "discount_percentage", "image",
             "images",

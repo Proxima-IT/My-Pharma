@@ -108,7 +108,7 @@ const ProductDetailsTabs = ({ product, onReviewSuccess }) => {
       {
         label: 'Category',
         value: product.category_name || 'N/A',
-        href: categorySlug ? `/category/${categorySlug}` : null
+        href: product?.category_slug ? `/category/${product.category_slug}` : (categorySlug ? `/category/${categorySlug}` : null)
       },
       { label: 'Therapeutic Class', value: product.therapeutic_class || 'N/A' },
       { label: 'Storage', value: product.storage_conditions || 'N/A' },

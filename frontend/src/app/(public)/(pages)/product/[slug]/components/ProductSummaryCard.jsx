@@ -103,9 +103,8 @@ const ProductSummaryCard = ({ product }) => {
 
   return (
     <div className="bg-white rounded-[32px] border border-gray-100 p-5 lg:p-5 xl:p-8 w-full space-y-4 lg:space-y-4 xl:space-y-7 shadow-none transition-all">
-      {/* 1. Clickable Category - Using mapped slug */}
       <Link
-        href={categorySlug ? `/category/${categorySlug}` : '#'}
+        href={product?.category_slug ? `/category/${product.category_slug}` : (categorySlug ? `/category/${categorySlug}` : '#')}
         className="text-[11px] lg:text-[12px] xl:text-[15px] font-bold text-[#10B981] uppercase tracking-tight hover:underline block w-fit"
       >
         {product?.category_name || 'Category'}
