@@ -57,7 +57,7 @@ DEBUG = os.environ.get("DEBUG", "true").lower() in ("true", "1", "yes")
 # Build from env so Docker media proxy (Host: backend:8000) is accepted; always include internal hosts.
 _allowed = [
     h.strip()
-    for h in os.environ.get("ALLOWED_HOSTS", "bluepillc.com,www.bluepillc.com,46.202.194.251").split(",")
+    for h in os.environ.get("ALLOWED_HOSTS", "bluepillc.com,www.bluepillc.com").split(",")
     if h.strip()
 ]
 _internal = ["backend", "backend:8000", "localhost", "127.0.0.1"]
@@ -73,13 +73,11 @@ CORS_ALLOW_ALL_ORIGINS = False
 _default_cors_allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://46.202.194.251:3000",
     "https://app.mypharma.com",
     "http://bluepillc.com",
     "http://www.bluepillc.com",
     "https://bluepillc.com",
     "https://www.bluepillc.com",
-    "http://46.202.194.251",
     "https://mypharma.com.bd",
     "https://www.mypharma.com.bd",
 ]
@@ -98,13 +96,11 @@ CORS_ALLOWED_ORIGIN_REGEXES = _parse_csv_env("CORS_ALLOWED_ORIGIN_REGEXES", _def
 _default_csrf_trusted_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://46.202.194.251:3000",
     "https://app.mypharma.com",
     "http://bluepillc.com",
     "http://www.bluepillc.com",
     "https://bluepillc.com",
     "https://www.mypharma.com.bd",
-    "http://46.202.194.251",
     "https://mypharma.com.bd",
     "https://www.mypharma.com.bd",
 ]

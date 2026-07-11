@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactCompiler: true,
-  output: 'standalone',
+
 
   experimental: {
     memoryBasedWorkersCount: true,
@@ -21,13 +21,6 @@ const nextConfig = {
         hostname: 'localhost',
         port: '8000',
         pathname: '/media/**',
-      },
-      {
-        protocol: 'http',
-        hostname: '46.202.194.251',
-        port: '8000',
-        pathname: '/media/**',
-      },
       {
         protocol: 'https',
         hostname: 'bluepillc.com',
