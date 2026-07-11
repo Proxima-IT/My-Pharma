@@ -1293,3 +1293,28 @@ class SSLCommerzPaymentTests(APITestCase):
         response = self.client.get("/api/schema/swagger/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_swagger_endpoint_allows_query_param_token(self):
+        from rest_framework_simplejwt.tokens import AccessToken
+        from authentication.constants import UserRole, UserStatus
+        from authentication.models import User
+
+        admin_user = User.objects.create_user(
+            email="query_admin@example.com",
+            password="StrongPass123!",
+            role=UserRole.SUPER_ADMIN,
+            status=UserStatus.ACTIVE,
+            is_staff=True,
+            email_verified=True,
+        )
+        token = str(AccessToken.for_user(admin_user))
+
+        # Logout completely
+        self.client.logout()
+
+        # Try accessing with query param token
+        response = self.client.get(f"/api/schema/?token={token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(f"/api/schema/swagger/?token={token}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
