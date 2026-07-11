@@ -1,53 +1,73 @@
-# 7. Order Management Workflow
+# Order Management Workflow
 
-Order status state machine and actions by status. Aligned with [ADMIN_API.md](ADMIN_API.md).
+Hey dev! This document maps out the lifecycle of an order in My Pharma, detailing the state machine, business rules, and how database statuses translate to user and admin actions.
 
 ---
 
 ## Order Status State Machine
 
+Our backend database uses specific text choices defined in `Order.Status`. Here is how they transition:
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING : Order Placed
+    PENDING --> CONFIRMED : Admin Approves / Auto Rx Verified
+    CONFIRMED --> PROCESSING : Pharmacy starts packing
+    PROCESSING --> SHIPPED : Shipped to courier
+    SHIPPED --> DELIVERED : Delivered to customer
+    
+    PENDING --> CANCELLED : Cancelled (User/Admin)
+    CONFIRMED --> CANCELLED : Cancelled (User/Admin)
+    PROCESSING --> CANCELLED : Cancelled (User/Admin)
 ```
-PLACED → VERIFIED → PACKED → SHIPPED → DELIVERED
 
-CANCELLED (allowed before SHIPPED status)
+| DB Status (`Order.Status`) | Display Name | Trigger / Business Meaning |
+| :--- | :--- | :--- |
+| `PENDING` | Pending | Order is placed but not yet verified (e.g., Rx verification or payment validation pending). |
+| `CONFIRMED` | Confirmed | Order is validated (prescriptions approved if any, stock confirmed). Default status for approved prescription orders. |
+| `PROCESSING` | Processing | Pharmacy staff is packing the order. |
+| `SHIPPED` | Shipped | Order has been handed over to the delivery rider/courier. |
+| `DELIVERED` | Delivered | Order is successfully received by the customer. Triggers auto-settlement creation. |
+| `CANCELLED` | Cancelled | Order is cancelled. Can only occur *before* the order transitions to `SHIPPED`. |
+
+---
+
+## Actions by Status
+
+Here is what is permitted at each stage of the lifecycle:
+
+### `PENDING` (Pending)
+* **User Actions:** Can cancel the order (`can_cancel_order()`), track order.
+* **Admin Actions:** Verify prescriptions (if Rx check required), cancel order.
+* **System Actions:** Send confirmation notifications (FCM, SMS).
+
+### `CONFIRMED` (Confirmed)
+* **User Actions:** Can cancel the order, track order.
+* **Admin Actions:** Transition to `PROCESSING` (Pack order), cancel order.
+* **System Actions:** Generate invoice email.
+
+### `PROCESSING` (Processing)
+* **User Actions:** Track order. Can cancel the order if packing is not completed.
+* **Admin Actions:** Transition to `SHIPPED`, cancel order.
+* **System Actions:** Generate invoice PDF.
+
+### `SHIPPED` (Shipped)
+* **User Actions:** Track order. **Cancellation is NOT allowed** once shipped.
+* **Admin Actions:** Mark as `DELIVERED`.
+* **System Actions:** Send tracking updates to user.
+
+### `DELIVERED` (Delivered)
+* **User Actions:** Rate products, request a return (allowed within `RETURN_ALLOWED_DAYS = 7` days for unopened items).
+* **Admin Actions:** Process returns/refunds.
+* **System Actions:** Auto-generate `OrderSettlement` record for the pharmacy payout ledger.
+
+---
+
+## Cancellation Business Rules
+
+A user or admin can cancel an order only if it has not yet been shipped. The helper property `can_cancel_order` enforces this:
+```python
+# Returns True if order status is PENDING, CONFIRMED, or PROCESSING.
+# Returns False if status is SHIPPED, DELIVERED, or CANCELLED.
 ```
-
-| Status | Description |
-|--------|-------------|
-| **PLACED** | Order placed; awaiting verification (e.g. Rx check). |
-| **VERIFIED** | Verified (e.g. prescription verified); ready to pack. |
-| **PACKED** | Packed; ready to ship. |
-| **SHIPPED** | Shipped; in transit. |
-| **DELIVERED** | Delivered to customer. |
-| **CANCELLED** | Cancelled (only before SHIPPED). |
-
----
-
-## Order Actions by Status
-
-| Status | User actions | Admin actions | System actions |
-|--------|--------------|---------------|----------------|
-| **Placed** | Cancel, Track | Verify Rx, Cancel | Send confirmation |
-| **Verified** | Cancel, Track | Pack, Cancel | Update inventory |
-| **Packed** | Track | Ship, Cancel | Generate invoice |
-| **Shipped** | Track | Mark Delivered | Send tracking updates |
-| **Delivered** | Rate, Return* | Process Return | Request review |
-
-\*Returns allowed within **7 days** for **unopened items** only (see constants: `RETURN_ALLOWED_DAYS`).
-
----
-
-## Backend Implementation
-
-- **Order model:** `status` one of PLACED, VERIFIED, PACKED, SHIPPED, DELIVERED, CANCELLED.
-- **User cancel:** PATCH order with `status=CANCELLED` allowed only when status is PLACED, VERIFIED, or PACKED (`can_cancel_order()`).
-- **Admin:** Pharmacy/Super can set any status via PATCH `/api/orders/{id}/`.
-- **Returns:** Logic (7 days, unopened) implemented in business rules; return processing is admin action.
-
----
-
-## References
-
-- [ADMIN_API.md](ADMIN_API.md) – Orders endpoints
-- [CART_CHECKOUT.md](CART_CHECKOUT.md) – Checkout flow
-- [PAYMENT_LOGIC.md](PAYMENT_LOGIC.md) – Payment flow
+When an order is cancelled, the inventory deducted during order placement is automatically restored back to `Product.quantity_in_stock`.

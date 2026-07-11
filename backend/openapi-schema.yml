@@ -3474,12 +3474,30 @@ paths:
           description: ''
     post:
       operationId: orders_create
+      description: Creates a new order. For online payments, initializes an SSLCommerz
+        payment session and returns the payment metadata (gateway_url, tran_id).
       summary: 'Place order (multipart: images, message, duration)'
       tags:
       - Orders
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderWrite'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OrderWrite'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OrderWrite'
+        required: true
       responses:
         '201':
-          description: No response body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderCreateResponse'
+          description: ''
   /api/orders/{id}/:
     get:
       operationId: orders_retrieve
@@ -7115,6 +7133,140 @@ components:
       - user
       - user_email
       - user_username
+    OrderCreateResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+        user_email:
+          type: string
+          readOnly: true
+        user_username:
+          type: string
+          readOnly: true
+        prescription:
+          type: integer
+          nullable: true
+          description: Linked prescription when order contains prescription-only medicines.
+        delivery_method:
+          type: integer
+          nullable: true
+          description: Selected delivery method.
+        delivery_method_name:
+          type: string
+          readOnly: true
+          nullable: true
+        delivery_method_duration:
+          type: string
+          readOnly: true
+          nullable: true
+        status:
+          $ref: '#/components/schemas/Status657Enum'
+        is_seen:
+          type: boolean
+        payment_status:
+          type: string
+          readOnly: true
+          default: PENDING
+        payment_method:
+          type: string
+          readOnly: true
+        subtotal_before_discount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        discount_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        delivery_fee:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+        coupon:
+          type: integer
+          nullable: true
+        total:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,10}(?:\.\d{0,2})?$
+          readOnly: true
+          description: Total payable (after discount + delivery fee).
+        shipping_address:
+          type: string
+        notes:
+          type: string
+        message:
+          type: string
+          description: Customer message with the order.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          readOnly: true
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderImage'
+          readOnly: true
+        status_history:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStatusHistory'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        payment_required:
+          type: boolean
+          readOnly: true
+          default: false
+        payment_provider:
+          type: string
+          readOnly: true
+        gateway_url:
+          type: string
+          format: uri
+          readOnly: true
+        tran_id:
+          type: string
+          readOnly: true
+        payment_init_failed:
+          type: boolean
+          readOnly: true
+          default: false
+        detail:
+          type: string
+          readOnly: true
+      required:
+      - created_at
+      - delivery_method_duration
+      - delivery_method_name
+      - detail
+      - gateway_url
+      - id
+      - images
+      - items
+      - payment_init_failed
+      - payment_method
+      - payment_provider
+      - payment_required
+      - payment_status
+      - status_history
+      - total
+      - tran_id
+      - updated_at
+      - user
+      - user_email
+      - user_username
     OrderImage:
       type: object
       properties:
@@ -7182,6 +7334,22 @@ components:
       - item_type
       - price_at_order
       - product_name
+      - quantity
+    OrderItemWrite:
+      type: object
+      properties:
+        product:
+          type: integer
+          nullable: true
+        quantity:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+        dosage:
+          type: string
+          maxLength: 50
+      required:
       - quantity
     OrderList:
       type: object
@@ -7424,6 +7592,35 @@ components:
       - id
       - status
       - time_bd
+    OrderWrite:
+      type: object
+      properties:
+        shipping_address:
+          type: string
+        notes:
+          type: string
+        message:
+          type: string
+          description: Customer message with the order.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItemWrite'
+        prescription:
+          type: integer
+          nullable: true
+          description: Required when order contains prescription-only medicines; must
+            be APPROVED and owned by you.
+        delivery_method:
+          type: integer
+          nullable: true
+        payment_method:
+          allOf:
+          - $ref: '#/components/schemas/PaymentMethodB67Enum'
+          writeOnly: true
+          default: COD
+      required:
+      - items
     Page:
       type: object
       properties:
@@ -9086,6 +9283,24 @@ components:
           type: string
           format: date-time
           readOnly: true
+    PaymentMethodB67Enum:
+      enum:
+      - COD
+      - BKASH
+      - NAGAD
+      - ROCKET
+      - UPAY
+      - CARD
+      - ONLINE
+      type: string
+      description: |-
+        * `COD` - Cash on Delivery
+        * `BKASH` - bKash
+        * `NAGAD` - Nagad
+        * `ROCKET` - Rocket
+        * `UPAY` - Upay
+        * `CARD` - Card
+        * `ONLINE` - Online
     PaymentStatusEnum:
       enum:
       - PENDING
@@ -9111,7 +9326,7 @@ components:
             by admin.
         payment_method:
           allOf:
-          - $ref: '#/components/schemas/PlaceOrderFromCartPaymentMethodEnum'
+          - $ref: '#/components/schemas/PaymentMethodB67Enum'
           default: COD
           description: |-
             COD or online channel (BKASH/NAGAD/ROCKET/UPAY/CARD/ONLINE).
@@ -9125,24 +9340,6 @@ components:
             * `ONLINE` - Online
       required:
       - shipping_address_id
-    PlaceOrderFromCartPaymentMethodEnum:
-      enum:
-      - COD
-      - BKASH
-      - NAGAD
-      - ROCKET
-      - UPAY
-      - CARD
-      - ONLINE
-      type: string
-      description: |-
-        * `COD` - Cash on Delivery
-        * `BKASH` - bKash
-        * `NAGAD` - Nagad
-        * `ROCKET` - Rocket
-        * `UPAY` - Upay
-        * `CARD` - Card
-        * `ONLINE` - Online
     Prescription:
       type: object
       properties:

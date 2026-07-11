@@ -58,6 +58,7 @@ from .serializers import (
     ProductDosageCreateSerializer,
     InventoryProductSerializer,
     OrderSerializer,
+    OrderCreateResponseSerializer,
     OrderWriteSerializer,
     OrderStatusSerializer,
     DeliveryMethodSerializer,
@@ -1107,7 +1108,13 @@ class ProductViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(tags=["Orders"], summary="List orders"),
     retrieve=extend_schema(tags=["Orders"], summary="Get order by id"),
-    create=extend_schema(tags=["Orders"], summary="Place order (multipart: images, message, duration)"),
+    create=extend_schema(
+        tags=["Orders"],
+        summary="Place order (multipart: images, message, duration)",
+        description="Creates a new order. For online payments, initializes an SSLCommerz payment session and returns the payment metadata (gateway_url, tran_id).",
+        request=OrderWriteSerializer,
+        responses={201: OrderCreateResponseSerializer},
+    ),
     partial_update=extend_schema(tags=["Orders"], summary="Update order status/duration (admin)"),
     update=extend_schema(tags=["Orders"], summary="Update order status/duration (admin)"),
 )
@@ -1163,8 +1170,106 @@ class OrderViewSet(viewsets.ModelViewSet):
         for i, f in enumerate(request.FILES.getlist("images", [])):
             OrderImage.objects.create(order=order, image=f, order_display=i)
         OrderStatusHistory.objects.create(order=order, status=Order.Status.PENDING)
+
+        payment_method = serializer.validated_data.get("payment_method", PaymentTransaction.Method.COD)
+        is_online = _is_online_payment_method(payment_method)
+
+        if is_online:
+            try:
+                # Parse shipping address for customer details
+                parts = (order.shipping_address or "").split(",")
+                customer_name = (request.user.username or request.user.email or "Customer").strip()[:50]
+                customer_email = (request.user.email or (parts[1].strip() if len(parts) > 1 else "") or "customer@example.com").strip()
+                customer_phone = (request.user.phone or (parts[2].strip() if len(parts) > 2 else "") or "").strip() or "01700000000"
+                product_names = ", ".join(
+                    [_order_item_display_name(oi) for oi in order.items.select_related("product", "combo").all()[:3]]
+                ) or "Pharmacy Order"
+
+                sslcz = _get_sslcommerz_client()
+                tran_id = f"PAY-{request.user.id}-{uuid.uuid4().hex[:20].upper()}"
+                total_payable = Decimal(str(order.total)).quantize(Decimal("0.01"))
+                multi_card_name = _ssl_multi_card_name(payment_method)
+
+                post_body = {
+                    "total_amount": str(total_payable),
+                    "currency": "BDT",
+                    "tran_id": tran_id,
+                    "success_url": _build_ssl_backend_url("success"),
+                    "fail_url": _build_ssl_backend_url("fail"),
+                    "cancel_url": _build_ssl_backend_url("cancel"),
+                    "ipn_url": _build_ssl_backend_url("ipn"),
+                    "emi_option": 0,
+                    "cus_name": customer_name,
+                    "cus_email": customer_email,
+                    "cus_phone": customer_phone,
+                    "cus_add1": (parts[-1].strip() if parts else "")[:255],
+                    "cus_city": (parts[-2].strip() if len(parts) > 1 else "Dhaka")[:50],
+                    "cus_country": "Bangladesh",
+                    "shipping_method": "NO",
+                    "num_of_item": order.items.count() or 1,
+                    "product_name": product_names[:255],
+                    "product_category": "Pharmacy",
+                    "product_profile": "general",
+                    "value_a": str(request.user.id),
+                    "value_b": str(order.id),
+                }
+                if multi_card_name:
+                    post_body["multi_card_name"] = multi_card_name
+
+                session_response = sslcz.createSession(post_body)
+                gateway_url = (session_response or {}).get("GatewayPageURL")
+                if not gateway_url:
+                    raise ValueError((session_response or {}).get("failedreason") or "GatewayPageURL missing from SSLCommerz response.")
+
+                PaymentTransaction.objects.create(
+                    user=request.user,
+                    order=order,
+                    method=payment_method,
+                    amount=total_payable,
+                    currency="BDT",
+                    tran_id=tran_id,
+                    session_key=(session_response or {}).get("sessionkey", ""),
+                    gateway_url=gateway_url,
+                    status=PaymentTransaction.Status.INITIATED,
+                    shipping_address=order.shipping_address or "",
+                    notes=order.notes or "",
+                    subtotal_before_discount=order.subtotal_before_discount or Decimal("0"),
+                    discount_amount=order.discount_amount or Decimal("0"),
+                    delivery_fee=order.delivery_fee or Decimal("0"),
+                    coupon_id_ref=getattr(order.coupon, "id", None),
+                    delivery_method_id_ref=getattr(order.delivery_method, "id", None),
+                    cart_snapshot=[],
+                    request_payload=post_body,
+                    gateway_response=session_response or {},
+                )
+
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_method": payment_method,
+                        "payment_provider": "SSLCOMMERZ",
+                        "gateway_url": gateway_url,
+                        "tran_id": tran_id,
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            except Exception as exc:
+                return Response(
+                    {
+                        **OrderSerializer(order, context={"request": request}).data,
+                        "payment_required": True,
+                        "payment_init_failed": True,
+                        "detail": f"Order placed but payment initialization failed: {exc}",
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+
         return Response(
-            OrderSerializer(order, context={"request": request}).data,
+            {
+                **OrderSerializer(order, context={"request": request}).data,
+                "payment_required": False,
+            },
             status=status.HTTP_201_CREATED,
         )
 
@@ -2465,6 +2570,16 @@ def _create_order_from_prescription(prescription):
     prescription.status = Prescription.Status.USED
     prescription.save(update_fields=["status"])
     OrderStatusHistory.objects.create(order=order, status=Order.Status.CONFIRMED)
+
+    # Create default OrderSettlement for the prescription order
+    OrderSettlement.objects.create(
+        order=order,
+        payment_method=OrderSettlement.PaymentMethod.COD,
+        payment_status=OrderSettlement.PaymentStatus.PENDING,
+        gross_amount=order.total,
+        net_payable=order.total,
+        status=OrderSettlement.Status.PENDING,
+    )
 
 
 # ---- Prescription ordering: User upload (multipart + images); Admin full CRUD + verify + status timeline ----

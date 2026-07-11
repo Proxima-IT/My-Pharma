@@ -888,6 +888,27 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "total", "created_at", "updated_at")
 
 
+class OrderCreateResponseSerializer(OrderSerializer):
+    payment_required = serializers.BooleanField(read_only=True, default=False)
+    payment_method = serializers.CharField(read_only=True, required=False)
+    payment_provider = serializers.CharField(read_only=True, required=False)
+    gateway_url = serializers.URLField(read_only=True, required=False)
+    tran_id = serializers.CharField(read_only=True, required=False)
+    payment_init_failed = serializers.BooleanField(read_only=True, default=False)
+    detail = serializers.CharField(read_only=True, required=False)
+
+    class Meta(OrderSerializer.Meta):
+        fields = OrderSerializer.Meta.fields + (
+            "payment_required",
+            "payment_method",
+            "payment_provider",
+            "gateway_url",
+            "tran_id",
+            "payment_init_failed",
+            "detail",
+        )
+
+
 class OrderListSerializer(serializers.ModelSerializer):
     user_email = serializers.CharField(source="user.email", read_only=True)
     user_username = serializers.CharField(source="user.username", read_only=True)
@@ -935,10 +956,15 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True,
     )
+    payment_method = serializers.ChoiceField(
+        choices=PaymentTransaction.Method.choices,
+        default=PaymentTransaction.Method.COD,
+        write_only=True,
+    )
 
     class Meta:
         model = Order
-        fields = ("shipping_address", "notes", "message", "items", "prescription", "delivery_method")
+        fields = ("shipping_address", "notes", "message", "items", "prescription", "delivery_method", "payment_method")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -951,6 +977,7 @@ class OrderWriteSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         items_data = validated_data.pop("items")
         prescription = validated_data.pop("prescription", None)
+        payment_method = validated_data.pop("payment_method", PaymentTransaction.Method.COD)
         user = self.context["request"].user
 
         # If any product requires prescription, prescription is required and must be APPROVED
@@ -1013,6 +1040,17 @@ class OrderWriteSerializer(serializers.ModelSerializer):
         if prescription and prescription.status == Prescription.Status.APPROVED:
             prescription.status = Prescription.Status.USED
             prescription.save(update_fields=["status"])
+
+        # Create OrderSettlement record for the order
+        is_online = payment_method in {"ONLINE", "BKASH", "NAGAD", "ROCKET", "UPAY", "CARD"}
+        OrderSettlement.objects.create(
+            order=order,
+            payment_method=OrderSettlement.PaymentMethod.ONLINE if is_online else OrderSettlement.PaymentMethod.COD,
+            payment_status=OrderSettlement.PaymentStatus.PENDING,
+            gross_amount=order.total,
+            net_payable=order.total,
+            status=OrderSettlement.Status.PENDING,
+        )
 
         return order
 

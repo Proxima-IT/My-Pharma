@@ -1,4 +1,5 @@
 from django.core.files.uploadedfile import SimpleUploadedFile
+from unittest.mock import patch
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -1036,4 +1037,259 @@ def _create_dangling_records(order_id, product):
                 cursor.execute("SET FOREIGN_KEY_CHECKS=1;")
             elif connection.vendor == 'sqlite':
                 cursor.execute("PRAGMA foreign_keys = ON;")
+
+
+class SSLCommerzPaymentTests(APITestCase):
+    def setUp(self):
+        from decimal import Decimal
+        from authentication.models import User
+        from authentication.constants import UserRole, UserStatus
+        from .models import Order, DeliveryMethod, Product, Category, OrderSettlement
+
+        self.customer = User.objects.create_user(
+            email="pay_customer@example.com",
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+            email_verified=True,
+        )
+
+        self.delivery_method = DeliveryMethod.objects.create(
+            name="Express Delivery",
+            delivery_type="EXPRESS",
+            price=Decimal("60.00"),
+            is_active=True,
+        )
+
+        self.category = Category.objects.create(name="Medicines", slug="meds")
+        self.product = Product.objects.create(
+            name="Napa Extend",
+            slug="napa-extend",
+            category=self.category,
+            price=Decimal("15.00"),
+            quantity_in_stock=100,
+            is_active=True,
+        )
+
+    @patch("core.views._get_sslcommerz_client")
+    def test_standard_order_creation_online_payment(self, mock_client_factory):
+        # Mock SSLCommerz client
+        mock_sslcz = mock_client_factory.return_value
+        mock_sslcz.createSession.return_value = {
+            "GatewayPageURL": "http://mock-sslcommerz-gateway.com/pay",
+            "sessionkey": "mocksession12345",
+        }
+
+        self.client.force_authenticate(user=self.customer)
+        payload = {
+            "shipping_address": "Customer Name, customer@example.com, 01711111111, Dhaka, Dhaka, Test House 1",
+            "notes": "Test online order",
+            "delivery_method": self.delivery_method.id,
+            "payment_method": "BKASH",
+            "items": [
+                {
+                    "product": self.product.id,
+                    "quantity": 2,
+                }
+            ],
+        }
+
+        response = self.client.post("/api/orders/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertTrue(response.data["payment_required"])
+        self.assertEqual(response.data["payment_method"], "BKASH")
+        self.assertEqual(response.data["gateway_url"], "http://mock-sslcommerz-gateway.com/pay")
+        self.assertIn("tran_id", response.data)
+
+        # Verify settlement is created and maps to ONLINE/PENDING
+        from .models import OrderSettlement
+        settlement = OrderSettlement.objects.get(order_id=response.data["id"])
+        self.assertEqual(settlement.payment_method, OrderSettlement.PaymentMethod.ONLINE)
+        self.assertEqual(settlement.payment_status, OrderSettlement.PaymentStatus.PENDING)
+
+    def test_standard_order_creation_cod_payment(self):
+        self.client.force_authenticate(user=self.customer)
+        payload = {
+            "shipping_address": "Customer Name, customer@example.com, 01711111111, Dhaka, Dhaka, Test House 1",
+            "notes": "Test COD order",
+            "delivery_method": self.delivery_method.id,
+            "payment_method": "COD",
+            "items": [
+                {
+                    "product": self.product.id,
+                    "quantity": 2,
+                }
+            ],
+        }
+
+        response = self.client.post("/api/orders/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(response.data["payment_required"])
+
+        # Verify settlement is created and maps to COD/PENDING
+        from .models import OrderSettlement
+        settlement = OrderSettlement.objects.get(order_id=response.data["id"])
+        self.assertEqual(settlement.payment_method, OrderSettlement.PaymentMethod.COD)
+        self.assertEqual(settlement.payment_status, OrderSettlement.PaymentStatus.PENDING)
+
+    @patch("core.views._get_sslcommerz_client")
+    def test_order_pay_endpoint_initiates_session(self, mock_client_factory):
+        from decimal import Decimal
+        from .models import Order, OrderSettlement
+        order = Order.objects.create(
+            user=self.customer,
+            status=Order.Status.PENDING,
+            total=Decimal("90.00"),
+            shipping_address="Customer Name, customer@example.com, 01711111111, Dhaka, Dhaka, Test House 1",
+        )
+        OrderSettlement.objects.create(
+            order=order,
+            payment_method=OrderSettlement.PaymentMethod.ONLINE,
+            payment_status=OrderSettlement.PaymentStatus.PENDING,
+            gross_amount=order.total,
+            net_payable=order.total,
+            status=OrderSettlement.Status.PENDING,
+        )
+
+        mock_sslcz = mock_client_factory.return_value
+        mock_sslcz.createSession.return_value = {
+            "GatewayPageURL": "http://mock-sslcommerz-gateway.com/pay",
+            "sessionkey": "mocksession12345",
+        }
+
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.post(f"/api/orders/{order.id}/pay/", {"payment_method": "NAGAD"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["gateway_url"], "http://mock-sslcommerz-gateway.com/pay")
+
+    @patch("core.views._get_sslcommerz_client")
+    def test_sslcommerz_success_callback(self, mock_client_factory):
+        from decimal import Decimal
+        from .models import Order, OrderSettlement, PaymentTransaction
+        order = Order.objects.create(
+            user=self.customer,
+            status=Order.Status.PENDING,
+            total=Decimal("90.00"),
+            shipping_address="Customer Name, customer@example.com, 01711111111, Dhaka, Dhaka, Test House 1",
+        )
+        settlement = OrderSettlement.objects.create(
+            order=order,
+            payment_method=OrderSettlement.PaymentMethod.ONLINE,
+            payment_status=OrderSettlement.PaymentStatus.PENDING,
+            gross_amount=order.total,
+            net_payable=order.total,
+            status=OrderSettlement.Status.PENDING,
+        )
+        tran_id = "PAY-TEST-TRANSACTION-ID-123"
+        payment_txn = PaymentTransaction.objects.create(
+            user=self.customer,
+            order=order,
+            method="BKASH",
+            amount=Decimal("90.00"),
+            currency="BDT",
+            tran_id=tran_id,
+            status=PaymentTransaction.Status.INITIATED,
+        )
+
+        mock_sslcz = mock_client_factory.return_value
+        mock_sslcz.validationTransactionOrder.return_value = {
+            "status": "VALID",
+            "amount": "90.00",
+            "currency_amount": "90.00",
+            "currency_type": "BDT",
+            "val_id": "val_id_12345",
+        }
+
+        payload = {
+            "tran_id": tran_id,
+            "val_id": "val_id_12345",
+            "amount": "90.00",
+        }
+        # Success callback is public/AllowAny
+        response = self.client.post("/api/payments/sslcommerz/success/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("user/orders/", response.url)
+
+        # Verify settlement is PAID and transaction is SUCCESS
+        settlement.refresh_from_db()
+        self.assertEqual(settlement.payment_status, OrderSettlement.PaymentStatus.PAID)
+        payment_txn.refresh_from_db()
+        self.assertEqual(payment_txn.status, PaymentTransaction.Status.SUCCESS)
+
+    def test_sslcommerz_fail_callback(self):
+        from decimal import Decimal
+        from .models import Order, OrderSettlement, PaymentTransaction
+        order = Order.objects.create(
+            user=self.customer,
+            status=Order.Status.PENDING,
+            total=Decimal("90.00"),
+            shipping_address="Customer, customer@example.com, 01711111111, Dhaka, Dhaka, Test House 1",
+        )
+        settlement = OrderSettlement.objects.create(
+            order=order,
+            payment_method=OrderSettlement.PaymentMethod.ONLINE,
+            payment_status=OrderSettlement.PaymentStatus.PENDING,
+            gross_amount=order.total,
+            net_payable=order.total,
+            status=OrderSettlement.Status.PENDING,
+        )
+        tran_id = "PAY-TEST-TRANSACTION-ID-456"
+        payment_txn = PaymentTransaction.objects.create(
+            user=self.customer,
+            order=order,
+            method="BKASH",
+            amount=Decimal("90.00"),
+            currency="BDT",
+            tran_id=tran_id,
+            status=PaymentTransaction.Status.INITIATED,
+        )
+
+        payload = {
+            "tran_id": tran_id,
+        }
+        response = self.client.post("/api/payments/sslcommerz/fail/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_302_FOUND)
+        self.assertIn("checkout", response.url)
+        self.assertIn("payment_status=failed", response.url)
+
+        # Verify settlement is PENDING and transaction is FAILED
+        settlement.refresh_from_db()
+        self.assertEqual(settlement.payment_status, OrderSettlement.PaymentStatus.PENDING)
+        payment_txn.refresh_from_db()
+        self.assertEqual(payment_txn.status, PaymentTransaction.Status.FAILED)
+
+    def test_swagger_endpoint_requires_admin(self):
+        # Anonymous users should be denied
+        self.client.logout()
+        response = self.client.get("/api/schema/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        response = self.client.get("/api/schema/swagger/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        # Standard customer users should be denied
+        self.client.force_authenticate(user=self.customer)
+        response = self.client.get("/api/schema/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        response = self.client.get("/api/schema/swagger/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        # Admin/staff users should be allowed
+        from authentication.constants import UserRole, UserStatus
+        from authentication.models import User
+        admin_user = User.objects.create_user(
+            email="schema_admin@example.com",
+            password="StrongPass123!",
+            role=UserRole.SUPER_ADMIN,
+            status=UserStatus.ACTIVE,
+            is_staff=True,
+            email_verified=True,
+        )
+        self.client.force_authenticate(user=admin_user)
+        response = self.client.get("/api/schema/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get("/api/schema/swagger/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
