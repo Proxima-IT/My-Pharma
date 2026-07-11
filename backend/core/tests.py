@@ -1262,10 +1262,10 @@ class SSLCommerzPaymentTests(APITestCase):
         # Anonymous users should be denied
         self.client.logout()
         response = self.client.get("/api/schema/")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         response = self.client.get("/api/schema/swagger/")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         # Standard customer users should be denied
         self.client.force_authenticate(user=self.customer)
