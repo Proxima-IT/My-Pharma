@@ -1318,3 +1318,20 @@ class SSLCommerzPaymentTests(APITestCase):
         response = self.client.get(f"/api/schema/swagger/?token={token}")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_swagger_endpoint_allows_query_param_key(self):
+        from django.conf import settings
+        
+        # Logout completely
+        self.client.logout()
+
+        # Try accessing with valid dev key
+        response = self.client.get(f"/api/schema/?key={settings.SWAGGER_ACCESS_KEY}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(f"/api/schema/swagger/?key={settings.SWAGGER_ACCESS_KEY}")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Try accessing with invalid dev key (should be denied)
+        response = self.client.get("/api/schema/?key=wrong-key")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+

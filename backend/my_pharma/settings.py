@@ -522,3 +522,6 @@ LOGGING = {
         },
     },
 }
+
+# Swagger/OpenAPI Dev Access Key
+SWAGGER_ACCESS_KEY = os.getenv("SWAGGER_ACCESS_KEY", "mypharma-dev-2026-secret")
