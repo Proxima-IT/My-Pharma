@@ -86,6 +86,18 @@ class RequestOTPView(APIView):
         ser.is_valid(raise_exception=True)
         email = ser.validated_data.get("email", "")
         phone = ser.validated_data.get("phone", "")
+        purpose = ser.validated_data.get("purpose", "")
+        if purpose == "register":
+            if email and User.objects.filter(email__iexact=email).exclude(deleted_at__isnull=False).exists():
+                return Response(
+                    {"detail": "An account with this email already exists.", "code": "email_exists"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if phone and User.objects.filter(phone=phone).exclude(deleted_at__isnull=False).exists():
+                return Response(
+                    {"detail": "An account with this phone number already exists.", "code": "phone_exists"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         try:
             if email:
                 request_otp_for_email(
@@ -131,6 +143,11 @@ class RegisterPhoneView(APIView):
         ser = RegisterPhoneRequestSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         phone = ser.validated_data["phone"]
+        if User.objects.filter(phone=phone).exclude(deleted_at__isnull=False).exists():
+            return Response(
+                {"detail": "An account with this phone number already exists.", "code": "phone_exists"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         try:
             request_otp_for_phone(
                 phone,

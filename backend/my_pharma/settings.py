@@ -389,7 +389,7 @@ MIMSMS_TIMEOUT_SECONDS = int(os.environ.get("MIMSMS_TIMEOUT_SECONDS", "15"))
 # ------------------------------------------------------------------------------
 SSLCOMMERZ_STORE_ID = os.environ.get("SSLCOMMERZ_STORE_ID", "").strip()
 SSLCOMMERZ_STORE_PASS = os.environ.get("SSLCOMMERZ_STORE_PASS", "").strip()
-SSLCOMMERZ_IS_SANDBOX = os.environ.get("SSLCOMMERZ_IS_SANDBOX", "true").lower() in ("true", "1", "yes")
+SSLCOMMERZ_IS_SANDBOX = os.environ.get("SSLCOMMERZ_IS_SANDBOX", "false").lower() in ("true", "1", "yes")
 
 # Public backend URL where SSLCommerz can call success/fail/cancel/ipn.
 # Example: https://api.mypharma.com

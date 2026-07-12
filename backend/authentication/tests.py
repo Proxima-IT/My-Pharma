@@ -293,3 +293,52 @@ class GoogleAuthFallbackTests(APITestCase):
         self.assertTrue(claims["email_verified"])
 
 
+class RegistrationOtpValidationTests(APITestCase):
+    def setUp(self):
+        self.existing_email = "existing@example.com"
+        self.existing_phone = "01712345678"
+        self.existing_phone_normalized = "8801712345678"
+        
+        self.user = User.objects.create_user(
+            email=self.existing_email,
+            phone=self.existing_phone_normalized,
+            password="StrongPass123!",
+            role=UserRole.REGISTERED_USER,
+            status=UserStatus.ACTIVE,
+        )
+        cache.clear()
+
+    @patch("authentication.tasks.send_otp_email.delay")
+    def test_request_otp_email_already_exists(self, mock_send_email):
+        response = self.client.post(
+            "/api/auth/request-otp/",
+            {"email": self.existing_email, "purpose": "register"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("An account with this email already exists.", response.data["detail"])
+        mock_send_email.assert_not_called()
+
+    @patch("authentication.tasks.send_otp_sms.delay")
+    def test_request_otp_phone_already_exists(self, mock_send_sms):
+        response = self.client.post(
+            "/api/auth/request-otp/",
+            {"phone": self.existing_phone, "purpose": "register"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("An account with this phone number already exists.", response.data["detail"])
+        mock_send_sms.assert_not_called()
+
+    @patch("authentication.tasks.send_otp_email.delay")
+    def test_request_otp_email_new_success(self, mock_send_email):
+        response = self.client.post(
+            "/api/auth/request-otp/",
+            {"email": "new_user@example.com", "purpose": "register"},
+            format="json"
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        mock_send_email.assert_called_once()
+
+
+
